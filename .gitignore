@@ -3,3 +3,6 @@
 
 # macOS metadata
 .DS_Store
+
+# target
+target/

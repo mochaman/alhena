@@ -104,7 +104,7 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "1.4";
+    public final static String VERSION = "1.5";
     private static volatile boolean interrupted;
     private static int redirectCount;
 

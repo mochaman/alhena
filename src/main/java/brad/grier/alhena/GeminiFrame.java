@@ -787,11 +787,11 @@ public final class GeminiFrame extends JFrame {
 
             switch (visiblePage().textPane.getDocMode()) {
                 case GeminiTextPane.HISTORY_MODE ->
-                    loadHistory(visiblePage().textPane, null);
+                    loadHistory(visiblePage().textPane, visiblePage());
                 case GeminiTextPane.BOOKMARK_MODE ->
-                    loadBookmarks(visiblePage().textPane, null);
+                    loadBookmarks(visiblePage().textPane, visiblePage());
                 case GeminiTextPane.CERT_MODE ->
-                    loadCerts(visiblePage().textPane, null);
+                    loadCerts(visiblePage().textPane, visiblePage());
                 case GeminiTextPane.INFO_MODE -> {
                 }
                 case GeminiTextPane.DEFAULT_MODE -> {
