@@ -1,7 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package brad.grier.alhena;
 
 import java.awt.EventQueue;
@@ -19,8 +16,9 @@ import java.util.List;
 import org.h2.jdbcx.JdbcConnectionPool;
 
 /**
- *
- * @author Brad
+ * Database methods.
+ * 
+ * @author Brad Grier
  */
 public class DB {
 
@@ -31,16 +29,15 @@ public class DB {
     }
 
     public static void init() throws Exception {
-        //String homeDir = System.getProperty("user.homea");
+
         String homeDir = System.getProperty("alhena.home");
         if (System.getenv("ALHENAPSWD") != null) {
             cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena;CIPHER=AES", "sa", "sa " + System.getenv("ALHENAPSWD"));
-        } else {    
+        } else { 
             char[] pswd = {'i', 'a', 'm', 't', 'h', 'e', 'w', 'a', 'l', 'n', 'u', 't', '!'};
             cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena;CIPHER=AES", "sa", "sa " + new String(pswd));
         }
 
-//cp = JdbcConnectionPool.create("jdbc:h2:./gemini", "sa", "sa");
         try (Connection connection = cp.getConnection()) {
             if (!tableExists(connection, "HISTORY")) {
                 String sql = """
@@ -53,8 +50,7 @@ public class DB {
                  """;
                 runStatement(connection, sql);
                 runStatement(connection, "ALTER TABLE HISTORY ADD CONSTRAINT UNIQUE_URL_PER_DAY UNIQUE (URL, TIME_STAMP_DATE)");
-                //ALTER TABLE history ADD COLUMN time_stamp_date DATE AS (CAST(time_stamp AS DATE));
-                //ALTER TABLE history ADD CONSTRAINT unique_url_p237er_day UNIQUE (url, time_stamp_date);   
+ 
             }
             if (!tableExists(connection, "BOOKMARKS")) {
                 String sql = """
@@ -96,8 +92,6 @@ public class DB {
                 );
                  """;
                 runStatement(connection, sql);
-                //runStatement(connection, "INSERT INTO CLIENTCERTS (domain, cert, privatekey, active) VALUES ('astrobotany.mozz.us', FILE_READ('certs/astrobotany.mozz.us.cert', null), FILE_READ('certs/astrobotany.mozz.us.key', null), true)");
-                //runStatement(connection, "INSERT INTO CLIENTCERTS (domain, cert, privatekey, active) VALUES ('astrobotany.mozz.us', FILE_READ('certs/new/astrobotany.mozz.us.cert', null), FILE_READ('certs/new/astrobotany.mozz.us.key', null), false)");
 
             }
 
@@ -152,7 +146,6 @@ public class DB {
                 INSERT (url, time_stamp) VALUES (src.url, src.time_stamp);
             """;
         try (Connection con = cp.getConnection()) {
-            // try (var ps = con.prepareStatement("INSERT INTO HISTORY (URL) VALUES (?)")) {
             try (var ps = con.prepareStatement(mergeSql)) {
                 ps.setString(1, url);
                 long ts = System.currentTimeMillis();
@@ -351,15 +344,15 @@ public class DB {
 
             try (ResultSet rs = st.executeQuery("SELECT URL, TIME_STAMP FROM HISTORY ORDER BY TIME_STAMP DESC")) {
                 String saveDate = null;
-                // Formatter
+
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy");
                 while (rs.next()) {
                     count++;
                     Timestamp ts = rs.getTimestamp(2);
-                    // Convert to LocalDateTime
+                    // convert to LocalDateTime
                     LocalDateTime localDateTime = ts.toLocalDateTime();
 
-                    // Format the LocalDateTime
+                    // format the LocalDateTime
                     String formattedDate = localDateTime.format(formatter);
                     if (saveDate == null || !saveDate.equals(formattedDate)) {
                         EventQueue.invokeLater(() -> {
@@ -379,15 +372,8 @@ public class DB {
         return count;
     }
 
-    // public static void close() throws SQLException {
-    //     try (Connection con = cp.getConnection()) {
-    //         try (var st = con.createStatement()) {
-    //             st.execute("SHUTDOWN COMPACT");
-    //         }
-    //     }
-    // }
     public static CertInfo getServerCert(String domain) throws SQLException {
-        //Object[] res = new Object[3];
+
         CertInfo cr = null;
         try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT FINGERPRINT, EXPIRES, TIME_STAMP FROM SERVERCERTS WHERE DOMAIN = ?")) {
             ps.setString(1, domain);

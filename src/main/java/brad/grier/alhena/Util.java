@@ -46,8 +46,9 @@ import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 
 /**
- *
- * @author brad
+ * Static utility methods
+ * 
+ * @author Brad Grier
  */
 public class Util {
 
@@ -130,13 +131,11 @@ public class Util {
                         break;
                     }
                 }
-                //((JTextField)components[1]).requestFocusInWindow();
-                //throw new UnsupportedOperationException("Not supported yet.");
             }
 
             @Override
             public void windowLostFocus(WindowEvent e) {
-                //throw new UnsupportedOperationException("Not supported yet.");
+                
             }
 
         });
@@ -144,8 +143,7 @@ public class Util {
 
         if (optionPane.getValue() instanceof Integer result) {
             if (result == JOptionPane.OK_OPTION) {
-                //return (String)optionPane.getInputValue();
-                //return pswd ? new String(((JPasswordField) textField).getPassword()) : textField.getText();
+
                 return "Ok";
             }
         }
@@ -157,8 +155,8 @@ public class Util {
     public static String inputDialog(Frame c, String title, String msg, boolean pswd, String inputFieldText) {
         JTextArea textArea = new JTextArea(1, 35);
 
-        textArea.setLineWrap(true);  // Enable line wrapping
-        textArea.setWrapStyleWord(true);  // Wrap at word boundaries
+        textArea.setLineWrap(true); 
+        textArea.setWrapStyleWord(true);
         textArea.setToolTipText("shift+return for line break");
         Dimension ps = textArea.getPreferredSize();
 
@@ -168,7 +166,7 @@ public class Util {
         if (inputFieldText != null) {
             textField.setText(inputFieldText);
         }
-        //msg += "\nshift+return for line break\n";
+
         Object[] message = {
             msg, textField
         };
@@ -243,12 +241,12 @@ public class Util {
             @Override
             public void windowGainedFocus(WindowEvent e) {
                 textField.requestFocusInWindow();
-                //throw new UnsupportedOperationException("Not supported yet.");
+
             }
 
             @Override
             public void windowLostFocus(WindowEvent e) {
-                //throw new UnsupportedOperationException("Not supported yet.");
+
             }
 
         });
@@ -256,7 +254,6 @@ public class Util {
 
         if (optionPane.getValue() instanceof Integer result) {
             if (result == JOptionPane.OK_OPTION) {
-                //return (String)optionPane.getInputValue();
                 return pswd ? new String(((JPasswordField) textField).getPassword()) : textField.getText();
             }
         }
@@ -270,7 +267,7 @@ public class Util {
             Font customFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(16f);
 
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(customFont);
-            // Use the font...
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -308,11 +305,10 @@ public class Util {
             fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
         }
 
-        // Add JFileChooser to dialog
         dialog.setLayout(new BorderLayout());
         dialog.add(fileChooser, BorderLayout.CENTER);
         File[] selectedFile = {null};
-        // Handle selection
+
         fileChooser.addActionListener(event -> {
             if (JFileChooser.APPROVE_SELECTION.equals(event.getActionCommand())) {
                 File returnedFile = fileChooser.getSelectedFile();
@@ -326,7 +322,6 @@ public class Util {
                 } else {
                     selectedFile[0] = returnedFile;
                 }
-                // System.out.println("Selected File: " + selectedFile.getAbsolutePath());
             }
             dialog.dispose();
         });
@@ -335,22 +330,20 @@ public class Util {
         dialog.setLocationRelativeTo(f);
         dialog.setVisible(true);
 
-        return selectedFile[0];  // Returns selected file or null if canceled
+        return selectedFile[0];
     }
 
-    // private static final int previewWidth = 515;
-    // private static final int previewHeight = 386;
+
     public static BufferedImage getImage(byte[] imageBytes, int previewWidth, int previewHeight) {
 
         BufferedImage img = null;
-        //Painter painter = ThumbnailPanel.get().getPreviewPainter();
+
         try {
             ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
             img = ImageIO.read(bis);
             if (img.getWidth() < previewWidth) {
                 previewWidth = img.getWidth();
             }
-            //img = ImageTree.getImage(data, new Dimension(1024, 1024));
 
             double aspect = (double) img.getWidth() / (double) img.getHeight();
 
@@ -376,11 +369,9 @@ public class Util {
             } else {
                 img = getScaledInstance(img, scaledWidth, scaledHeight, RenderingHints.VALUE_INTERPOLATION_BILINEAR, false, false);
             }
-
-            //img = ImagePanel.getScaledInstance(img, scaledWidth, scaledHeight, RenderingHints.VALUE_INTERPOLATION_BILINEAR, true);
         } catch (IOException ex) {
             ex.printStackTrace();
-            //Logger.getLogger(ImageButton.class.getName()).log(Level.SEVERE, null, ex);
+            
         }
 
         return img;
@@ -479,8 +470,8 @@ public class Util {
     }
 
     public static File copyFromJar(String homeDir) {
-        String resourcePath = "default.gmi"; // Path inside JAR (src/main/resources/config/cacerts)
-        Path outputPath = Paths.get(homeDir + "/default.gmi"); // Destination on disk
+        String resourcePath = "default.gmi";
+        Path outputPath = Paths.get(homeDir + "/default.gmi"); 
 
         try (InputStream inputStream = GeminiClient.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
