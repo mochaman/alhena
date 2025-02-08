@@ -1,0 +1,32 @@
+# Welcome to Alhena 💫
+
+Alhena is a Gemini client written in Java.
+
+* Modern UI with multiple themes
+* Full color emojis on Mac OS
+* Inline image viewer
+* Asynchronous networking and file I/O
+* Host-based certificate management
+* Bookmarks and history
+* Multiple windows and tabs
+
+### Ultimatum Labs
+=> gemini://ultimatumlabs.com/alhena.gmi Alhena Home
+=> gemini://ultimatumlabs.com A Gemini server written in vert.x
+=> https://ultimatumlabs.com Demands, Wishes and Ultimatums
+
+### Cool Links
+=> gemini://gemi.dev/ gemi.dev
+=> gemini://gemi.dev/cgi-bin/waffle.cgi/ News
+=> gemini://gemi.dev/cgi-bin/chilly.cgi/ Weather
+=> gemini://gemi.dev/cgi-bin/wp.cgi/ Wikipedia
+=> gemini://gemi.dev/cgi-bin/mines.cgi/ Minesweeper
+=> gemini://tilde.team/~stack/ Word Puzzles
+=> gemini://astrobotany.mozz.us/ Gardening Game
+=> gemini://bbs.geminispace.org/ Gemini BBS
+
+### Gemini Capsules
+=> gemini://kennedy.gemi.dev/observatory/known-hosts Kennedy
+=> gemini://tlgs.one/known-hosts TLGS
+=> gemini://gemini.bortzmeyer.org/software/lupa/lupa-capsules.gmi Lupa Database
+

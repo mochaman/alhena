@@ -1,0 +1,906 @@
+package brad.grier.alhena;
+
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Graphics;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import javax.swing.ImageIcon;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultCaret;
+import javax.swing.text.DefaultStyledDocument;
+import javax.swing.text.Element;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
+
+import brad.grier.alhena.GeminiFrame.ClosableTabPanel;
+
+/**
+ *
+ * @author Brad
+ */
+public class GeminiTextPane extends JTextPane {
+
+    private StyledDocument doc;
+    private List<ClickableRange> clickableRegions = new ArrayList<>();
+    private int currentCursor = Cursor.DEFAULT_CURSOR;
+    private boolean preformattedMode;
+    private String currentStatus = GeminiClient.WELCOME_MESSAGE;
+    private final String monospacedFamily;
+    private final String proportionalFamily; // Noto Sans
+    private final GeminiFrame f;
+    private StringBuilder currentPage;
+    private String docURL;
+    private boolean useNotoEmoji;
+    private ClickableRange saveRange;
+    private String bufferedLine = null;
+    private Color hoverColor, linkColor;
+    private SimpleAttributeSet hoverStyle, normalStyle, visitedStyle;
+    private int textFontSize = 15;
+    private int linkFontSize = 15;
+    private int quoteFontStyle = 15;
+
+    public final static int DEFAULT_MODE = 0;
+    public final static int BOOKMARK_MODE = 1;
+    public final static int HISTORY_MODE = 2;
+    public final static int CERT_MODE = 3;
+    public final static int INFO_MODE = 4;
+    public int currentMode = DEFAULT_MODE;
+
+    private String firstHeading;
+    private ClickableRange lastClicked;
+    private boolean plainTextMode;
+    private String lastSearch;
+    private int lastSearchIdx;    
+
+    //private String currentTheme;
+    // IBM Plex Mono works
+
+    public GeminiTextPane(GeminiFrame f, String url) {
+        this.f = f;
+        docURL = url;
+
+        monospacedFamily = "Source Code Pro";
+        proportionalFamily = "SansSerif";
+
+        Insets insets = getMargin();
+        setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
+        //docURL = "  ";
+        //setFocusable(false);
+        setEditable(false);
+        setCaret(new DefaultCaret() {
+            @Override
+            public void paint(Graphics g) {
+                // do nothing to prevent caret from being painted
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+
+                int pos = viewToModel2D(e.getPoint());
+                boolean entered = false;
+
+                for (ClickableRange range : clickableRegions) {
+                    if (pos >= range.start && pos < range.end) {
+
+                        Rectangle rect = getCharacterBounds(GeminiTextPane.this, range.start, range.end);
+                        if (rect != null && rect.contains(e.getPoint())) {
+                            entered = true;
+
+                            if (!range.url.equals(currentStatus)) {
+                                AttributeSet originalStyle = doc.getCharacterElement(range.start).getAttributes();
+                                Color hoverC = StyleConstants.getForeground(originalStyle).brighter();
+                                SimpleAttributeSet sa = new SimpleAttributeSet();
+                                StyleConstants.setForeground(sa, hoverC);
+
+                                f.setStatus(range.url);
+                                currentStatus = range.url;
+
+                                doc.setCharacterAttributes(range.start, range.end - range.start, sa, false);
+                                if (saveRange != null) {
+                                    
+                                    SimpleAttributeSet sas = f.isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
+                                    doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
+
+                                }
+                                saveRange = range;
+
+                            }
+
+                            break;
+                        }
+                    }
+                }
+
+                // fix this
+                if (!entered && !" ".equals(currentStatus) && currentStatus != null && !currentStatus.equals(GeminiClient.WELCOME_MESSAGE)) {
+                    
+                    f.setStatus(" ");
+                    
+                    if (saveRange != null) {
+                        SimpleAttributeSet sas = f.isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
+
+                        doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
+                        saveRange = null;
+                    }
+                    currentStatus = " ";
+
+                }
+               
+                if (entered && currentCursor != Cursor.HAND_CURSOR) {
+
+                    currentCursor = Cursor.HAND_CURSOR;
+                    setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                } else if (!entered && currentCursor != Cursor.DEFAULT_CURSOR) {
+                    currentCursor = Cursor.DEFAULT_CURSOR;
+                    setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+                }
+                
+
+            }
+        });
+
+        addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+                if (doc != null) {
+                    int pos = viewToModel2D(e.getPoint());
+                    boolean linkClicked = false;
+                    if (pos >= 0 && pos < doc.getLength()) {
+                        for (ClickableRange range : clickableRegions) {
+                            if (pos >= range.start && pos < range.end) {
+                                Rectangle rect = getCharacterBounds(GeminiTextPane.this, range.start, range.end);
+                                if (rect != null && rect.contains(e.getPoint())) {
+                                    linkClicked = true;
+                                    if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
+
+                                        JPopupMenu popupMenu = new JPopupMenu();
+
+                                        String selectedText = getSelectedText();
+                                        if (selectedText != null && !selectedText.isEmpty()) {
+                                            JMenuItem copyItem = new JMenuItem("Copy");
+
+                                            copyItem.addActionListener(ev -> {
+                                                copyText(selectedText);
+                                            });
+                                            popupMenu.add(copyItem);
+
+                                        }
+                                        JMenuItem copyLinkItem = new JMenuItem("Copy Link");
+
+                                        copyLinkItem.addActionListener(ev -> {
+                                            copyText(range.url);
+                                        });
+                                        popupMenu.add(copyLinkItem);
+
+                                        popupMenu.add(new JSeparator());
+                                        JMenuItem menuItem1 = new JMenuItem("Open in New Tab");
+
+                                        menuItem1.addActionListener(ev -> {
+                                            f.newTab(range.url);
+                                        });
+                                        popupMenu.add(menuItem1);
+                                        JMenuItem menuItem2 = new JMenuItem("Open in New Window");
+
+                                        menuItem2.addActionListener(ev -> {
+                                            GeminiClient.newWindow(range.url, docURL);
+
+                                        });
+                                        popupMenu.add(menuItem2);
+
+                                        switch (currentMode) {
+                                            case CERT_MODE -> {
+                                                popupMenu.add(new JSeparator());
+                                                int id = Integer.parseInt(range.directive.substring(0, range.directive.indexOf(",")));
+                                                boolean active = range.directive.substring(range.directive.indexOf(",") + 1).equals("true");
+                                                JMenuItem exportItem = new JMenuItem("Export");
+                                                exportItem.addActionListener(al -> {
+                                                    f.exportCert(id, GeminiTextPane.this);
+                                                }); popupMenu.add(exportItem);
+                                                String command = active ? "Deactivate" : "Activate";
+                                                JMenuItem actionItem = new JMenuItem(command);
+                                                actionItem.addActionListener(al -> {
+                                                    try {
+                                                        f.toggleCert(id, !active, new URI(range.url).getHost());
+                                                    } catch (URISyntaxException ex) {
+                                                        ex.printStackTrace();
+                                                    }
+                                                }); popupMenu.add(actionItem);
+                                                JMenuItem delItem = new JMenuItem("Delete");
+                                                delItem.addActionListener(al -> {
+                                                    f.deleteCert(id);
+                                                }); popupMenu.add(delItem);
+                                            }
+                                            case HISTORY_MODE -> {
+                                                popupMenu.add(new JSeparator());
+                                                JMenuItem forgetItem = new JMenuItem("Forget Link");
+                                                forgetItem.addActionListener(al -> {
+                                                    f.deleteFromHistory(range.url);
+                                                }); popupMenu.add(forgetItem);
+                                                JMenuItem clearItem = new JMenuItem("Delete History");
+
+                                                clearItem.addActionListener(al -> {
+                                                    f.clearHistory();
+                                                }); popupMenu.add(clearItem);
+                                            }
+                                            case BOOKMARK_MODE -> {
+                                                popupMenu.add(new JSeparator());
+                                                JMenuItem editItem = new JMenuItem("Edit Bookmark");
+                                                editItem.addActionListener(ev -> {
+                                                    f.updateBookmark(f, range.directive);
+                                                    
+                                                }); popupMenu.add(editItem);
+                                                JMenuItem deleteItem = new JMenuItem("Delete Bookmark");
+                                                deleteItem.addActionListener(ev -> {
+                                                    f.deleteBookmark(f, range.directive);
+                                                    
+                                                }); popupMenu.add(deleteItem);
+                                            }
+                                            default -> {
+                                            }
+                                        }
+
+                                        popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                                        
+                                    } else {
+                                        
+                                        if (range.imageIndex != -1) {
+                                            removeImageAtIndex(range);
+                                            range.imageIndex = -1;                                            
+
+                                        } else {
+                                            lastClicked = range;
+                                            range.action.run();
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!linkClicked) {
+                        if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
+                            JPopupMenu popupMenu = new JPopupMenu();
+
+                            String selectedText = getSelectedText();
+                            if (selectedText != null && !selectedText.isEmpty()) {
+                                JMenuItem copyItem = new JMenuItem("Copy");
+
+                                copyItem.addActionListener(ev -> {
+                                    copyText(selectedText);
+                                });
+                                popupMenu.add(copyItem);
+                                popupMenu.add(new JSeparator());
+
+                            }
+
+                            JMenuItem homePageMenuItem = new JMenuItem("Set As Home Page");
+                            homePageMenuItem.addActionListener(al -> {
+                                DB.insertPref("home", docURL);
+                            });
+
+                            popupMenu.add(homePageMenuItem);
+                            homePageMenuItem.setEnabled(currentMode != INFO_MODE);
+                            String menuText = plainTextMode ? "View As GemText" : "View As Plain Text";
+                            JMenuItem ptMenuItem = new JMenuItem(menuText);
+                            ptMenuItem.addActionListener(al -> {
+                                plainTextMode = !plainTextMode;
+                                f.toggleView(GeminiTextPane.this, plainTextMode);
+                            });
+
+                            popupMenu.add(ptMenuItem);
+
+                            popupMenu.add(new JSeparator());
+                            JMenuItem saveItem = new JMenuItem("Save Page");
+                            saveItem.addActionListener(al -> {
+                                f.savePage(GeminiTextPane.this, currentPage, currentMode);
+                            });
+
+
+                            popupMenu.add(saveItem);
+
+                            if (currentMode == DEFAULT_MODE) {
+                                JMenuItem pemItem = new JMenuItem("Import PEM");
+                                pemItem.addActionListener(al -> {
+                                    f.importPem(getURI());
+                                });
+                                popupMenu.add(pemItem);
+                            }
+
+                            if (currentMode == HISTORY_MODE) {
+                                popupMenu.add(new JSeparator());
+                                JMenuItem clearItem = new JMenuItem("Delete History");
+
+                                clearItem.addActionListener(al -> {
+                                    f.clearHistory();
+                                });
+                                popupMenu.add(clearItem);
+                            }
+
+                            popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                        }
+                    }
+                }
+            }
+        }
+        );
+    }
+
+    public URI getURI() {
+
+        return getDocURL().map(u -> {
+            try {
+                return new URI(u);
+            } catch (URISyntaxException ex) {
+                return null;
+            }
+        }).orElse(null);
+
+    }
+
+    public int getDocMode() {
+        return currentMode;
+    }
+
+    private void removeImageAtIndex(ClickableRange rg) {
+        
+        int index = rg.imageIndex;
+        try {
+            Element element = doc.getCharacterElement(index + 2);
+            AttributeSet attrs = element.getAttributes();
+
+            if (StyleConstants.getIcon(attrs) != null) {
+                doc.remove(index + 2, 1); // Remove the image
+                doc.remove(index + 1, 2);
+                boolean start = false;
+                for (ClickableRange range : clickableRegions) {
+                    if (range == rg) {
+                        start = true;
+                        continue;
+                    }
+                    if (start) {
+                        range.start = range.start - 3;
+                        range.end = range.end - 3;
+                    }
+                }
+            }
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void copyText(String text) {
+
+        if (text != null && !text.isEmpty()) {
+            StringSelection stringSelection = new StringSelection(text);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(stringSelection, null);
+        }
+    }
+
+    public boolean awatingImage() {
+        return lastClicked != null;
+    }
+
+    public void insertImage(byte[] imageBytes) {
+
+        int width = 0;
+        width = (int) (f.getWidth() * .85);
+        BufferedImage image = Util.getImage(imageBytes, width, width * 2);
+
+        ImageIcon icon = new ImageIcon(image);
+
+        SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
+        StyleConstants.setIcon(emojiStyle, icon);
+
+        try {
+            if (lastClicked == null) {
+                doc.insertString(0, " ", emojiStyle);
+            } else {
+
+                doc.insertString(lastClicked.end + 1, "\n\n", null);
+                doc.insertString(lastClicked.end + 2, " ", emojiStyle);
+                lastClicked.imageIndex = lastClicked.end;
+                boolean start = false;
+                for (ClickableRange range : clickableRegions) {
+                    if (range == lastClicked) {
+                        start = true;
+                        continue;
+                    }
+                    if (start) {
+                        range.start = range.start + 3;
+                        range.end = range.end + 3;
+                    }
+                }
+                lastClicked = null;
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public String getFirstHeading() {
+        return firstHeading;
+    }
+
+    private String createHeading() {
+        if (currentPage == null) {
+            return null;
+        }
+
+        int hIdx = currentPage.indexOf("#");
+        if (hIdx != -1) {
+            int idx = currentPage.indexOf("\n");
+            if (idx > hIdx) {
+                String heading = currentPage.substring(hIdx, currentPage.indexOf("\n", hIdx));
+                // remove emojis using a regular expression
+                heading = heading.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "");
+
+                if (heading.startsWith("###")) {
+                    return heading.substring(3).trim();
+                } else if (heading.startsWith("##")) {
+                    return heading.substring(2).trim();
+                } else {
+                    return heading.substring(1).trim();
+                }
+            }
+        }
+        return null;
+    }
+
+    public void find(String word) {
+        try {
+            requestFocus();
+            int startIdx = word.equals(lastSearch) ? lastSearchIdx : 0;
+            lastSearch = word;
+
+            String text = doc.getText(0, doc.getLength());
+
+            int pos = text.indexOf(word, startIdx);
+            if (pos >= 0) {
+                // select the word
+                setCaretPosition(pos);
+                moveCaretPosition(pos + word.length());
+                lastSearchIdx = pos + word.length();
+                // scroll to the position
+                Rectangle viewRect = modelToView2D(pos).getBounds();
+                scrollRectToVisible(viewRect);
+            } else {
+                select(0, 0);
+                f.setStatus("'" + word + "' Not Found");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void end(Page p) {
+        if (bufferedLine != null) {
+            String lrl = bufferedLine;
+            bufferedLine = null;
+            lastLine(lrl, false);
+        }
+        JTabbedPane tabbedPane = p.frame().tabbedPane;
+        firstHeading = createHeading();
+        String title = f.createTitle(docURL, firstHeading);
+        if (title != null) {
+            if (tabbedPane != null) {
+                for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                    
+                    if (tabbedPane.getComponentAt(i) == p) {
+
+                        if (p == tabbedPane.getSelectedComponent()) {
+                            f.updateComboBox(docURL);
+                            f.setTitle(title);
+                        } else {
+                            ClosableTabPanel ctp = (ClosableTabPanel) tabbedPane.getTabComponentAt(i);
+                            ctp.setTitle(title);
+                        }
+                        break;
+                    }
+                }
+            } else if (p.isVisible()) {
+
+                // firstHeading = createHeading();
+                if (currentMode != INFO_MODE) {
+                    f.updateComboBox(docURL);
+                    f.setTitle(title);
+                }
+            }
+        }
+
+    }
+
+    // for one and done messages
+    public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest, Page p) {
+        updatePage(geminiDoc, pfMode, docURL, newRequest, p);
+        end(p); // not so much for the bufferedLine but so we can signal
+    }
+
+    public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest, Page p) {
+        useNotoEmoji = f.useNotoEmoji;
+        if (!docURL.equals(this.docURL) && newRequest) {
+
+            if (currentMode == DEFAULT_MODE)
+            try {
+                DB.insertHistory(docURL);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        switch (docURL) {
+            case GeminiFrame.HISTORY_LABEL ->
+                currentMode = HISTORY_MODE;
+            case GeminiFrame.BOOKMARK_LABEL ->
+                currentMode = BOOKMARK_MODE;
+            case GeminiFrame.CERT_LABEL ->
+                currentMode = CERT_MODE;
+            case GeminiFrame.INFO_LABEL ->
+                currentMode = INFO_MODE;
+            default -> {
+            }
+        }
+
+        this.docURL = docURL;
+        f.refreshNav(null);
+
+        currentPage = new StringBuilder();
+
+        bufferedLine = null; // probably not necessary here
+
+        f.setStatus(" ");
+        preformattedMode = pfMode;
+        plainTextMode = pfMode;
+        // map to track clickable regions and their actions
+        clickableRegions.clear();
+        saveRange = null;
+        currentCursor = Cursor.DEFAULT_CURSOR;
+        currentStatus = null;
+        doc = new DefaultStyledDocument();
+
+        setStyledDocument(doc);
+        buildStyles();
+        // create a SimpleAttributeSet to define the indentation
+        SimpleAttributeSet indentAttributes = new SimpleAttributeSet();
+        StyleConstants.setLeftIndent(indentAttributes, 50); // Set left indentation in points
+        StyleConstants.setRightIndent(indentAttributes, 50); // Optional: Adjust the right margin
+        StyleConstants.setLineSpacing(indentAttributes, 0.3f); // Optional: Set line spacing if needed
+
+        // apply the attributes to the entire document
+        doc.setParagraphAttributes(0, doc.getLength(), indentAttributes, false);
+
+        addPage(geminiDoc, p);
+
+    }
+
+    public void addPage(String geminiDoc, Page p) {
+        currentPage.append(geminiDoc);
+
+        if (bufferedLine != null) {
+            geminiDoc = bufferedLine + geminiDoc;
+            bufferedLine = null;
+        }
+        if (geminiDoc.endsWith("\n")) {
+
+            geminiDoc.lines().forEach(line -> {
+                lastLine(line, false); // no way to know if a line is the last line
+            });
+        } else {
+            int lastNl = geminiDoc.lastIndexOf("\n");
+            if (lastNl == -1) {
+                // no newlines at all save
+                bufferedLine = geminiDoc;
+            } else {
+                bufferedLine = geminiDoc.substring(lastNl + 1);
+                geminiDoc.substring(0, lastNl + 1).lines().forEach(line -> {
+                    lastLine(line, false); // no way to know if a line is the last line
+                });
+            }
+
+        }
+
+        if (p != null) {
+            p.loading();
+        }
+
+    }
+
+    private void buildStyles() {
+        boolean isDark = UIManager.getBoolean("laf.dark");
+        //System.out.println("Is the current theme dark? " + isDark);
+        linkColor = UIManager.getColor("Component.linkColor");
+        hoverColor = linkColor.brighter();
+
+        //Color textColor = UIManager.getColor("Component.textColor");
+        // hoverColor = Color.MAGENTA;
+        // linkColor = Color.BLUE;
+        Style pfStyle = doc.addStyle("```", null);
+        StyleConstants.setFontFamily(pfStyle, monospacedFamily);
+        //StyleConstants.setForeground(pfStyle, textColor);
+        StyleConstants.setFontSize(pfStyle, 14);
+        StyleConstants.setBold(pfStyle, false);
+        StyleConstants.setItalic(pfStyle, false);
+        StyleConstants.setUnderline(pfStyle, false);
+
+        Style h1Style = doc.addStyle("###", null);
+        StyleConstants.setFontFamily(h1Style, proportionalFamily);
+        //StyleConstants.setForeground(h1Style, textColor);
+        StyleConstants.setFontSize(h1Style, 18);
+        StyleConstants.setBold(h1Style, true);
+        StyleConstants.setItalic(h1Style, false);
+        StyleConstants.setUnderline(h1Style, false);
+
+        Style h2Style = doc.addStyle("##", h1Style);
+        StyleConstants.setFontSize(h2Style, 24);
+
+        Style h3Style = doc.addStyle("#", h1Style);
+        StyleConstants.setFontSize(h3Style, 32);
+
+        Style linkStyle = doc.addStyle("=>", h1Style);
+        StyleConstants.setFontSize(linkStyle, linkFontSize);
+        StyleConstants.setForeground(linkStyle, linkColor);
+        StyleConstants.setBold(linkStyle, true);
+
+        Style clickedStyle = doc.addStyle("visited", linkStyle);
+        StyleConstants.setForeground(clickedStyle, isDark ? linkColor.darker() : linkColor.brighter());
+        //StyleConstants.setBold(clickedStyle, false);
+
+        Style quoteStyle = doc.addStyle(">", h1Style);
+        StyleConstants.setFontSize(quoteStyle, quoteFontStyle);
+        StyleConstants.setItalic(quoteStyle, true);
+        StyleConstants.setBold(quoteStyle, false);
+
+        Style textStyle = doc.addStyle("text", h1Style);
+        StyleConstants.setFontSize(textStyle, textFontSize);
+        StyleConstants.setBold(textStyle, false);
+
+        Style listStyle = doc.addStyle("*", textStyle);
+
+        hoverStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(hoverStyle, hoverColor);
+
+        normalStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(normalStyle, linkColor);
+
+        visitedStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(visitedStyle, isDark ? linkColor.darker() : linkColor.brighter());
+
+    }
+
+    // Segoe UI is nice on Windows
+    private void lastLine(String line, boolean lastLine) {
+
+        if (line.startsWith("```") && !plainTextMode) {
+            preformattedMode = !preformattedMode;
+        } else if (preformattedMode) {
+            
+            if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) && line.startsWith("=>")) {
+                line = "=> " + line.substring(line.indexOf(":") + 1);
+            }
+            addStyledText(lastLine, line, "```", null);
+        } else if (line.startsWith("###")) {            
+            addStyledText(lastLine, line.substring(3).trim(), "###", null);
+        } else if (line.startsWith("##")) {            
+            addStyledText(lastLine, line.substring(2).trim(), "##", null);
+        } else if (line.startsWith("#")) {
+            addStyledText(lastLine, line.substring(1).trim(), "#", null);
+        } else if (line.startsWith("=>")) {
+            String ll = line.substring(2).trim();
+
+            int i;
+            for (i = 0; i < ll.length(); i++) {
+                if (Character.isWhitespace(ll.charAt(i))) {
+                    break;
+                }
+            }
+            String url = ll.substring(0, i);
+            String directive = null;
+            if (currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) {
+                int cIdx = url.indexOf(":");
+                directive = url.substring(0, cIdx);
+                url = url.substring(cIdx + 1);
+                if (currentMode == CERT_MODE) {
+                    url = "gemini://" + url;
+                }
+
+            }
+            String finalUrl = url;
+            String label = ll.substring(i).trim();
+
+            String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
+            
+            ClickableRange cr = addStyledText(lastLine, label.isEmpty() ? url : label, linkStyle,
+                    () -> {
+
+                        f.addClickedLink(finalUrl);
+                        f.fetchURL(finalUrl);
+
+                    });
+            cr.url = url;
+            cr.directive = directive;
+            
+        } else if (line.startsWith(">")) {
+            addStyledText(lastLine, line.substring(1).trim(), ">", null);
+        } else if (line.startsWith("*")) {
+            addStyledText(lastLine, "🔹 " + line.substring(1).trim(), "*", null);
+
+        } else {
+            addStyledText(lastLine, line, "text", null);
+        }
+    }
+
+    public boolean containsEmoji(String text) {
+        // Check if any code point in the string falls within emoji ranges
+        return text.codePoints().anyMatch(codePoint
+                -> (codePoint >= 0x1F600 && codePoint <= 0x1F64F)
+                || // emoticons
+                (codePoint >= 0x1F300 && codePoint <= 0x1F5FF)
+                || // misc Symbols and Pictographs
+                (codePoint >= 0x1F680 && codePoint <= 0x1F6FF)
+                || // transport and Map Symbols
+                (codePoint >= 0x2600 && codePoint <= 0x26FF)
+                || // misc Symbols
+                (codePoint >= 0x2700 && codePoint <= 0x27BF)
+                || // dingbats
+                (codePoint >= 0x1F900 && codePoint <= 0x1F9FF) // Supplemental Symbols and Pictographs
+        );
+    }
+
+    private ClickableRange addStyledText(boolean lastLine, String text, String styleName, Runnable action) {
+
+        Style style = doc.getStyle(styleName);
+
+        ClickableRange cr = null;
+        try {
+
+            int start = doc.getLength();
+
+            if (containsEmoji(text)) {
+
+                String fontFamily = StyleConstants.getFontFamily(style);
+
+                for (int i = 0; i < text.length(); i++) {
+                    char c = text.charAt(i);
+                    if (Character.isHighSurrogate(c)) {
+                        if (useNotoEmoji || styleName.equals("```")) {
+                            StyleConstants.setFontFamily(style, "Noto Emoji");
+                        }
+
+                        int codePoint = text.codePointAt(i);
+                        i++;
+                        char[] chars = Character.toChars(codePoint);
+
+                        try {
+                            doc.insertString(doc.getLength(), new String(chars), style); // Use emoji style
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    } else {
+                        StyleConstants.setFontFamily(style, fontFamily);
+
+                        doc.insertString(doc.getLength(), String.valueOf(c), style);
+
+                    }
+                }
+                StyleConstants.setFontFamily(style, fontFamily);
+            } else {
+                doc.insertString(start, text, style);
+            }
+
+            if (action != null) {
+                int end = doc.getLength();
+
+                // add range to clickable ranges
+                cr = new ClickableRange(start, end, action);
+                clickableRegions.add(cr);
+            }
+            int caretPosition = getCaretPosition();
+            if (!lastLine) {
+                doc.insertString(doc.getLength(), "\n", style);
+            }
+            setCaretPosition(caretPosition); // prevent scrolling as content added
+
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+        return cr;
+    }
+
+
+    private static class ClickableRange {
+
+        int start;
+        int end;
+        Runnable action;
+        String url;
+        String directive;
+        int imageIndex = -1;
+
+        ClickableRange(int start, int end, Runnable action) {
+            this.start = start;
+            this.end = end;
+            this.action = action;
+
+        }
+    }
+
+    private Rectangle getCharacterBounds(JTextPane textPane, int start, int end) {
+        try {
+            Rectangle startRect = textPane.modelToView2D(start).getBounds();
+            Rectangle endRect = textPane.modelToView2D(end).getBounds();
+
+            if (startRect.y == endRect.y) { // Same line
+                return new Rectangle(startRect.x, startRect.y, endRect.x - startRect.x, startRect.height);
+            } else {
+                // handle multi-line text
+                Rectangle combinedRect = new Rectangle(startRect);
+
+                int currentPos = start;
+                while (currentPos < end) {
+                    Rectangle currentRect = textPane.modelToView2D(currentPos).getBounds();
+
+                    // extend the combined rectangle to include the current rectangle
+                    combinedRect.add(currentRect);
+
+                    // move to the next character
+                    currentPos++;
+                }
+
+                return combinedRect;
+            }
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public Optional<String> getDocURL() {
+        return Optional.ofNullable(docURL);
+    }
+
+    // for new tabs/windows only!
+    public void setDocURL(String du) {
+        docURL = du;
+    }
+
+    // for new tabs only!
+    public String getDocURLString() {
+        return docURL;
+    }
+
+    public record CurrentPage(StringBuilder currentPage, boolean pMode) {
+
+    }
+
+    public CurrentPage current() {
+        return new CurrentPage(currentPage, preformattedMode);
+    }
+
+}
