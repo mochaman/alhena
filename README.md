@@ -9,6 +9,7 @@
 ## Features
 
 - Modern UI with multiple themes
+- Color emojis on Mac OS
 - Inline image viewer
 - Asynchronous networking and file access
 - Client certificate management
@@ -26,7 +27,7 @@ cd alhena
 mvn package
 ```
 
-The `alhena.jar` will be created in the `target/` directory and copied to `target/lib`. To run, provide the path to /lib/alhena.jar for -jar. For example (if in the target direct 
+The `alhena.jar` will be created and copied to `target/lib`. To run, call java -jar with the path to /lib/alhena.jar. For example (if already in the target directory): 
 
 ```sh
 java -jar ./lib/alhena.jar
