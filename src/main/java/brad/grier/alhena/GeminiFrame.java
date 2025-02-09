@@ -1161,7 +1161,7 @@ public final class GeminiFrame extends JFrame {
     public void exportCert(int id, GeminiTextPane textPane) {
         try {
             ClientCertInfo certInfo = DB.getClientCertInfo(id);
-            String pem = certInfo.cert() + "\n" + certInfo.privateKey();
+            String pem = certInfo.cert() + certInfo.privateKey();
             showCustomPage(INFO_LABEL, new InfoPageInfo(certInfo.domain() + "." + certInfo.id() + ".pem", pem));
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -1296,6 +1296,7 @@ public final class GeminiFrame extends JFrame {
                     }
 
                     DB.insertClientCert(host, cert, key);
+                    GeminiClient.createNetClient();
                     Util.infoDialog(this, "Added", "PEM added for : " + host);
 
                 }
