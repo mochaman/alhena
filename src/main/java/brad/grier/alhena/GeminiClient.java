@@ -104,9 +104,11 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "1.7";
+    public final static String VERSION = "1.8";
     private static volatile boolean interrupted;
     private static int redirectCount;
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
+    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -116,7 +118,7 @@ public class GeminiClient {
                 if (e.getID() == KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     interrupted = true;
 
-                    // closing and recreating the client doesn't for ending connection handshake
+                    // closing and recreating the client doesn't work for ending connection handshake
                     // close vertx and recreate
                     vertx.close();
                     VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
@@ -273,11 +275,16 @@ public class GeminiClient {
                     fileUrl = new URL(url);
                     File file = new File(fileUrl.toURI());
                     if (file.exists()) {
-                        if (url.endsWith(".gmi") || url.endsWith(".gemini") || url.endsWith(".txt") || url.endsWith(".log")) {
+
+                        boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                        if (matches) {
                             //boolean[] first = {true};
                             String fUrl = url;
                             boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
                             p.textPane.updatePage("", pformatted, fUrl, true, p);
+                            boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                            
+                            Buffer imageBuffer = Buffer.buffer();
 
                             vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
                                 if (result.succeeded()) {
@@ -285,20 +292,31 @@ public class GeminiClient {
 
                                     // read the file in chunks
                                     asyncFile.handler(buffer -> {
-
-                                        bg(() -> {
-                                            p.textPane.addPage(buffer.toString(), p);
-                                        });
+                                        if (isImage) {
+                                            imageBuffer.appendBuffer(buffer);
+                                        } else {
+                                            bg(() -> {
+                                                p.textPane.addPage(buffer.toString(), p);
+                                            });
+                                        }
 
                                     });
 
                                     // process the content when reading is done
                                     asyncFile.endHandler(v -> {
+                                        if (isImage) {
+                                            bg(() -> {
+                                                p.textPane.end(" ", false, fUrl, true, p);
+                                                p.textPane.insertImage(imageBuffer.getBytes());
+                                                p.frame().showGlassPane(false);
+                                            });
 
-                                        bg(() -> {
-                                            p.textPane.end(p);
-                                            p.frame().showGlassPane(false);
-                                        });
+                                        } else {
+                                            bg(() -> {
+                                                p.textPane.end(p);
+                                                p.frame().showGlassPane(false);
+                                            });
+                                        }
 
                                         asyncFile.close();
 
@@ -827,11 +845,10 @@ public class GeminiClient {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-            // cert.checkValidity();
             byte[] certBytes = cert.getEncoded();
             byte[] hash = md.digest(certBytes);
 
-            // Convert to hex
+            // convert to hex
             StringBuilder hexString = new StringBuilder();
             for (byte b : hash) {
                 hexString.append(String.format("%02X", b));

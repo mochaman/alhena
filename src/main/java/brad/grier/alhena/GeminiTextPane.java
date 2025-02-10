@@ -7,12 +7,17 @@ import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -79,11 +84,19 @@ public class GeminiTextPane extends JTextPane {
     private boolean plainTextMode;
     private String lastSearch;
     private int lastSearchIdx;
-    private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+    private final int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private Point mousePoint;
+    private static final List<String> dropExtensions;
+    private boolean imageOnly;
 
-    //private String currentTheme;
-    // IBM Plex Mono works
+    static{
+        dropExtensions = new ArrayList<>(GeminiClient.fileExtensions);
+        dropExtensions.add(".png");
+        dropExtensions.add(".jpg");
+    }
+
+    // IBM Plex Mono works for proper alignment too
+
     public GeminiTextPane(GeminiFrame f, String url) {
         this.f = f;
         docURL = url;
@@ -178,6 +191,36 @@ public class GeminiTextPane extends JTextPane {
 
             }
         });
+
+        setDropTarget(new DropTarget() {
+            public synchronized void drop(DropTargetDropEvent evt) {
+                try {
+                    evt.acceptDrop(DnDConstants.ACTION_COPY);
+                    List<File> droppedFiles = (List<File>) evt.getTransferable()
+                            .getTransferData(DataFlavor.javaFileListFlavor);
+
+                    for (File file : droppedFiles) {
+                        String lcName = file.getName().toLowerCase();
+                        boolean matches = dropExtensions.stream().anyMatch(lcName::endsWith);
+                        if (matches) {
+
+                            if (lcName.endsWith(".pem")) {
+                                f.importPem(new URI(getDocURLString()), file);
+                            } else {
+                                f.openFile(file);
+                            }
+                        }
+
+                        break;
+
+                    }
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
     }
 
     private void showPopup(MouseEvent e) {
@@ -328,6 +371,7 @@ public class GeminiTextPane extends JTextPane {
                     homePageMenuItem.setEnabled(currentMode != INFO_MODE);
                     String menuText = plainTextMode ? "View As GemText" : "View As Plain Text";
                     JMenuItem ptMenuItem = new JMenuItem(menuText);
+                    ptMenuItem.setEnabled(!imageOnly);
                     ptMenuItem.addActionListener(al -> {
                         plainTextMode = !plainTextMode;
                         f.toggleView(GeminiTextPane.this, plainTextMode);
@@ -335,8 +379,20 @@ public class GeminiTextPane extends JTextPane {
 
                     popupMenu.add(ptMenuItem);
 
+                    JMenuItem crtMenuItem = new JMenuItem("View Server Cert");
+                    URI uri = getURI();
+                    crtMenuItem.setEnabled(!imageOnly && currentMode == DEFAULT_MODE && uri != null && uri.getScheme().equals("gemini"));
+                    crtMenuItem.addActionListener(al ->{
+
+                        f.viewServerCert(GeminiTextPane.this, getURI());    
+                    });
+                    
+                    popupMenu.add(crtMenuItem);
+                    
+
                     popupMenu.add(new JSeparator());
                     JMenuItem saveItem = new JMenuItem("Save Page");
+                    saveItem.setEnabled(!imageOnly);
                     saveItem.addActionListener(al -> {
                         f.savePage(GeminiTextPane.this, currentPage, currentMode);
                     });
@@ -345,8 +401,9 @@ public class GeminiTextPane extends JTextPane {
 
                     if (currentMode == DEFAULT_MODE) {
                         JMenuItem pemItem = new JMenuItem("Import PEM");
+                        pemItem.setEnabled(!imageOnly);
                         pemItem.addActionListener(al -> {
-                            f.importPem(getURI());
+                            f.importPem(getURI(), null);
                         });
                         popupMenu.add(pemItem);
                     }
@@ -458,6 +515,7 @@ public class GeminiTextPane extends JTextPane {
         try {
             if (lastClicked == null) {
                 doc.insertString(0, " ", emojiStyle);
+                imageOnly = true;
             } else {
 
                 doc.insertString(lastClicked.end + 1, "\n\n", null);

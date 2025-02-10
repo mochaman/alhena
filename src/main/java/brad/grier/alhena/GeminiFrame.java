@@ -32,7 +32,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
@@ -460,7 +462,7 @@ public final class GeminiFrame extends JFrame {
         JMenu fileMenu = new JMenu("File");
         //fileMenu.setBorder(new EmptyBorder(0, 0, 0, 10));
         fileMenu.add(createMenuItem("Open File", null, () -> {
-            openFile();
+            openFile(null);
         }));
         fileMenu.add(new JSeparator());
         int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
@@ -600,10 +602,9 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-
     private void prefill(JTextField textField, char typedChar) {
         String text = textField.getText();
-        
+
         if (typedChar == KeyEvent.VK_BACK_SPACE) {
             return;
         }
@@ -612,11 +613,10 @@ public final class GeminiFrame extends JFrame {
         if (text.equalsIgnoreCase("g")) {
             textField.setText("gemini://");
             textField.setCaretPosition(9);
-        }
-        else if (text.equalsIgnoreCase("h")) {
+        } else if (text.equalsIgnoreCase("h")) {
             textField.setText("https://");
             textField.setCaretPosition(8);
-        }else if(text.equalsIgnoreCase("f")){
+        } else if (text.equalsIgnoreCase("f")) {
             textField.setText("file://");
             textField.setCaretPosition(7);
         }
@@ -768,7 +768,6 @@ public final class GeminiFrame extends JFrame {
 
                 };
                 pb.runOnLoad(r);
-
                 GeminiClient.processURL(url, pb, null, currentPB);
 
             } else {
@@ -1305,12 +1304,20 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    public void importPem(URI uri) {
+    public void importPem(URI uri, File f) {
         String host = uri.getHost();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("PEM files (*.pem)", "pem");
-        File f = Util.getFile(this, null, true, "Select PEM File", filter);
+        if (host == null || !uri.getScheme().equals("gemini")) {
+            Util.infoDialog(this, "Invalid", "Invalid domain. Can't import PEM file.");
+            return;
+        }
+        if (f == null) {
+            FileNameExtensionFilter filter = new FileNameExtensionFilter("PEM files (*.pem)", "pem");
+            f = Util.getFile(this, null, true, "Select PEM File", filter);
+        }
+
         if (f != null) {
             try {
+
                 String pem = Files.readString(Path.of(f.getAbsolutePath()));
                 int idx = pem.indexOf("-----BEGIN PRIVATE KEY");
                 if (idx == -1) {
@@ -1337,10 +1344,20 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    public void openFile() {
-        //String host = getLastURI().getHost();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("Gemini, Text Files (*.gemini, *.gmi, *.txt, *.log)", "txt", "log", "gemini", "gmi");
-        File file = Util.getFile(this, null, true, "Select File", filter);
+    public void openFile(File file) {
+
+        if (file == null) {
+            String desc = GeminiClient.fileExtensions.stream().collect(Collectors.joining(", "));
+            String[] exts = GeminiClient.fileExtensions.toArray(new String[0]);
+            String[] cleanExtensions = GeminiClient.fileExtensions.stream()
+                    .map(ext -> ext.substring(1))
+                    .toArray(String[]::new);
+
+            FileNameExtensionFilter filter = new FileNameExtensionFilter(desc, cleanExtensions);
+
+            file = Util.getFile(this, null, true, "Select File", filter);
+        }
+
         if (file != null && file.exists()) {
             try {
                 URI fileUri = file.toURI();
@@ -1407,6 +1424,20 @@ public final class GeminiFrame extends JFrame {
         String url = textPane.getDocURLString();
         CurrentPage res = textPane.current();
         streamChunks(res.currentPage(), 100, url, isPlainText);
+    }
+
+    public void viewServerCert(GeminiTextPane textPane, URI uri) {
+        String host = uri.getHost();
+        // if (host == null || !uri.getScheme().equals("gemini")) {
+        //     Util.infoDialog(this, "Invalid", "Can't view server cert for this url");
+        //     return;
+        // }
+        Optional<Page> page = Optional.ofNullable(SwingUtilities.getAncestorOfClass(Page.class, textPane))
+                .map(component -> (Page) component);
+        InfoPageInfo pageInfo = new InfoPageInfo("servercert: " + host, page.get().getCert().toString());
+        showCustomPage(INFO_LABEL, pageInfo);
+        
+        //streamChunks(res.currentPage(), 100, url, true);
     }
 
     public void newTab(String url) {
