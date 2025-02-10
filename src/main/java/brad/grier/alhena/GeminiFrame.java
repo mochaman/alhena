@@ -13,6 +13,7 @@ import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -125,14 +126,13 @@ public final class GeminiFrame extends JFrame {
             ArrayList<Page> histList = new ArrayList<>();
             histList.add(page);
 
-            //pageHistIndexMap.put(page, new AtomicInteger(0));
             pageHistoryMap.put(page, histList);
         } else {
 
             page.setRootPage(rootPage);
-            //AtomicInteger ai = pageHistIndexMap.get(rootPage);
+
             ArrayList<Page> histList = pageHistoryMap.get(rootPage);
-            //int histIdx = ai.incrementAndGet(); // ai ++
+
             int histIdx = rootPage.incAndGetArrayIndex(); // should get same result if calling on page.
             if (histIdx < histList.size()) {
                 List<Page> sl = histList.subList(histIdx, histList.size());
@@ -262,7 +262,6 @@ public final class GeminiFrame extends JFrame {
         });
 
         comboBox = new JComboBox();
-        //comboBox.addMouseListener(new ContextMenuMouseListener());
 
         comboBox.setEditable(true);
 
@@ -290,7 +289,15 @@ public final class GeminiFrame extends JFrame {
                 }
             }
         });
-        comboBox.getEditor().getEditorComponent().addMouseListener(new ContextMenuMouseListener());
+
+        JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
+        textField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                SwingUtilities.invokeLater(() -> prefill(textField, e.getKeyChar()));
+            }
+        });
+        textField.addMouseListener(new ContextMenuMouseListener());
         Font buttonFont = new Font("Noto Emoji Regular", Font.BOLD, 18);
         backButton = new JButton("⬅");
         backButton.setToolTipText("Click to go back");
@@ -318,10 +325,10 @@ public final class GeminiFrame extends JFrame {
                 } else {
                     int idx = tabbedPane.getSelectedIndex();
                     tabbedPane.setComponentAt(idx, prev);
-                   
+
                 }
                 if (prev.getThemeId() != currentThemeId) {
-                    
+
                     SwingUtilities.updateComponentTreeUI(prev);
                     prev.setThemeId(currentThemeId);
                     refreshFromCache(prev);
@@ -591,6 +598,28 @@ public final class GeminiFrame extends JFrame {
             init(url, pb);
         }
 
+    }
+
+
+    private void prefill(JTextField textField, char typedChar) {
+        String text = textField.getText();
+        
+        if (typedChar == KeyEvent.VK_BACK_SPACE) {
+            return;
+        }
+
+        // If user starts typing "g", prefill with "gemini://"
+        if (text.equalsIgnoreCase("g")) {
+            textField.setText("gemini://");
+            textField.setCaretPosition(9);
+        }
+        else if (text.equalsIgnoreCase("h")) {
+            textField.setText("https://");
+            textField.setCaretPosition(8);
+        }else if(text.equalsIgnoreCase("f")){
+            textField.setText("file://");
+            textField.setCaretPosition(7);
+        }
     }
 
     // don't leak this from your constructor says IDE
@@ -915,7 +944,7 @@ public final class GeminiFrame extends JFrame {
                         int idx = tabbedPane.getSelectedIndex();
 
                         if (currentTabIdx == idx) {
-                            tabbedPane.setComponentAt(idx, histPage);                     
+                            tabbedPane.setComponentAt(idx, histPage);
                             refreshNav(histPage);
                         }
 
@@ -1296,6 +1325,7 @@ public final class GeminiFrame extends JFrame {
                     }
 
                     DB.insertClientCert(host, cert, key);
+                    GeminiClient.addCertToTrustStore(host, visiblePage().getCert());
                     GeminiClient.createNetClient();
                     Util.infoDialog(this, "Added", "PEM added for : " + host);
 
@@ -1613,7 +1643,7 @@ public final class GeminiFrame extends JFrame {
             vPage = (Page) selected;
 
         } else {
-            
+
             vPage = (Page) centerComponent;
         }
 

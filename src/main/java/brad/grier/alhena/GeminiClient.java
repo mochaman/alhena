@@ -104,7 +104,7 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "1.6";
+    public final static String VERSION = "1.7";
     private static volatile boolean interrupted;
     private static int redirectCount;
 
@@ -252,7 +252,7 @@ public class GeminiClient {
     }
 
     public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
-
+        // this method needs to be refactored
         url = url.trim();
         if (url.contains("://")) {
             if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("https://")) {
@@ -260,13 +260,16 @@ public class GeminiClient {
                 return;
 
             }
+            if (url.length() == url.indexOf("//") + 2) {
+                return;
+            }
         }
         try {
             if (url.startsWith("file:/")) {
                 p.frame().showGlassPane(true);
                 URL fileUrl;
                 try {
-                    
+
                     fileUrl = new URL(url);
                     File file = new File(fileUrl.toURI());
                     if (file.exists()) {
@@ -291,7 +294,7 @@ public class GeminiClient {
 
                                     // process the content when reading is done
                                     asyncFile.endHandler(v -> {
-                                        
+
                                         bg(() -> {
                                             p.textPane.end(p);
                                             p.frame().showGlassPane(false);
@@ -300,16 +303,16 @@ public class GeminiClient {
                                         asyncFile.close();
 
                                     });
-                                    
+
                                     asyncFile.exceptionHandler(throwable -> {
-                                        
+
                                         bg(() -> {
                                             p.textPane.end("## Error reading file\n", false, fUrl, true, p);
                                             p.frame().showGlassPane(false);
                                         });
                                     });
                                 } else {
-                                    
+
                                     bg(() -> {
                                         p.textPane.end("## Error opening file\n", false, fUrl, true, p);
                                         p.frame().showGlassPane(false);
@@ -503,8 +506,9 @@ public class GeminiClient {
                 try {
                     List<Certificate> certList = connection.result().peerCertificates();
                     cert[0] = (X509Certificate) certList.get(0);
+                    p.setCert(cert[0]);
                     String res = verifyFingerPrint(host + ":" + port[0], cert[0]);
-                    //System.out.println("res: " + res);
+
                     if (res != null) {
                         try {
                             // this blocks vertx event loop
@@ -973,7 +977,7 @@ public class GeminiClient {
         }
     }
 
-    private static void addCertToTrustStore(String host, X509Certificate cert) {
+    public static void addCertToTrustStore(String host, X509Certificate cert) {
         // add server certs for sites that require a client certificate
 
         String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path

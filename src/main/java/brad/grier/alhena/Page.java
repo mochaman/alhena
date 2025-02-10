@@ -1,6 +1,7 @@
 package brad.grier.alhena;
 
 import java.awt.BorderLayout;
+import java.security.cert.X509Certificate;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -140,6 +141,15 @@ public class Page extends JPanel {
     @Override
     public String toString() {
         return textPane.getDocURLString();
+    }
+
+    private X509Certificate cert;
+    public void setCert(X509Certificate cert){
+        this.cert = cert;
+    }
+
+    public X509Certificate getCert(){
+        return cert;
     }
 
 }
