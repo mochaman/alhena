@@ -41,12 +41,12 @@ Prebuilt binaries are available for various platforms. Java is NOT required. Eac
 
 | Platform            | Type  | Download Link |
 |---------------------|------|--------------|
-| **Windows x64**     | MSI  | [Download](https://metaloupe.com/alhena/alhena-1.6_windows_x64.zip) |
-| **Mac x64 (Intel)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.6_x64.dmg) |
-| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.6_aarch64.dmg) |
-| **Linux x64**       | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.6_linux_x64.tgz) |
-| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.6_linux_aarch64.tgz) |
-| **FreeBSD x64**     | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.6_freebsd_x64.tgz) |
+| **Windows x64**     | MSI  | [Download](https://metaloupe.com/alhena/alhena-1.7_windows_x64.zip) |
+| **Mac x64 (Intel)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.7_x64.dmg) |
+| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.7_aarch64.dmg) |
+| **Linux x64**       | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.7_linux_x64.tgz) |
+| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.7_linux_aarch64.tgz) |
+| **FreeBSD x64**     | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.7_freebsd_x64.tgz) |
 
 
 ## 🐳 Docker
