@@ -820,6 +820,9 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void refreshFromCache(Page pb) {
+        if (pb.textPane.imageOnly()) {
+            return;
+        }
         showGlassPane(true);
         String url = pb.textPane.getDocURLString();
         CurrentPage res = pb.textPane.current();
@@ -1417,7 +1420,7 @@ public final class GeminiFrame extends JFrame {
                 .map(component -> (Page) component);
         InfoPageInfo pageInfo = new InfoPageInfo("servercert: " + host, page.get().getCert().toString());
         showCustomPage(INFO_LABEL, pageInfo);
-        
+
         //streamChunks(res.currentPage(), 100, url, true);
     }
 

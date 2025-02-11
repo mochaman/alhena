@@ -94,6 +94,10 @@ import io.vertx.core.net.NetSocket;
 import io.vertx.core.spi.tls.SslContextFactory;
 import io.vertx.core.streams.Pump;
 
+/**
+ * Static main class to manage frame creation and connectivity
+ * 
+ */
 public class GeminiClient {
 
     private static Vertx vertx;
@@ -104,7 +108,7 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "1.9";
+    public final static String VERSION = "2.0";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");

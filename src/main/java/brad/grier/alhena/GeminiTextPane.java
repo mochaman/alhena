@@ -31,10 +31,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
@@ -92,6 +95,16 @@ public class GeminiTextPane extends JTextPane {
     private Point mousePoint;
     private static final List<String> dropExtensions;
     private boolean imageOnly;
+    private JScrollPane scrollPane;
+    private static final int INITIAL_SCROLL_SPEED = 1; 
+    private static final int MAX_SCROLL_SPEED = 50;
+    private static final int INITIAL_DELAY = 100;
+    private static final int MIN_DELAY = 30; 
+    private static final int EDGE_MARGIN = 50; 
+
+    private Timer scrollTimer;
+    private int scrollDirection = 0; 
+    private int holdTime = 0;
 
     static {
         dropExtensions = new ArrayList<>(GeminiClient.fileExtensions);
@@ -121,8 +134,20 @@ public class GeminiTextPane extends JTextPane {
         });
 
         addMouseMotionListener(new MouseAdapter() {
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    if (scrollPane == null) {
+                        scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
+                    }
+                    checkScroll(e, GeminiTextPane.this, scrollPane);
+                }
+            }
+
             @Override
             public void mouseMoved(MouseEvent e) {
+
                 mousePoint = e.getPoint();
                 int pos = viewToModel2D(e.getPoint());
                 boolean entered = false;
@@ -187,6 +212,22 @@ public class GeminiTextPane extends JTextPane {
         });
 
         addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && currentCursor != Cursor.HAND_CURSOR) {
+                    if (scrollPane == null) {
+                        scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
+                    }
+
+                    checkScroll(e, GeminiTextPane.this, scrollPane);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                stopScrolling();
+            }
 
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -502,6 +543,10 @@ public class GeminiTextPane extends JTextPane {
 
     public boolean awatingImage() {
         return lastClicked != null;
+    }
+
+    public boolean imageOnly() {
+        return imageOnly;
     }
 
     public void insertImage(byte[] imageBytes) {
@@ -880,7 +925,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public boolean containsEmoji(String text) {
-        // Check if any code point in the string falls within emoji ranges
+        // check if any code point in the string falls within emoji ranges
         return text.codePoints().anyMatch(codePoint
                 -> (codePoint >= 0x1F600 && codePoint <= 0x1F64F)
                 || // emoticons
@@ -892,7 +937,7 @@ public class GeminiTextPane extends JTextPane {
                 || // misc Symbols
                 (codePoint >= 0x2700 && codePoint <= 0x27BF)
                 || // dingbats
-                (codePoint >= 0x1F900 && codePoint <= 0x1F9FF) // Supplemental Symbols and Pictographs
+                (codePoint >= 0x1F900 && codePoint <= 0x1F9FF) // supplemental Symbols and Pictographs
         );
     }
 
@@ -905,7 +950,7 @@ public class GeminiTextPane extends JTextPane {
                 || block == Character.UnicodeBlock.TRANSPORT_AND_MAP_SYMBOLS
                 || block == Character.UnicodeBlock.EMOTICONS
                 || block == Character.UnicodeBlock.SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS
-                || block == Character.UnicodeBlock.DINGBATS; // Add Dingbats!
+                || block == Character.UnicodeBlock.DINGBATS;
     }
 
     private ClickableRange addStyledText(boolean lastLine, String text, String styleName, Runnable action) {
@@ -932,12 +977,13 @@ public class GeminiTextPane extends JTextPane {
 
                         int codePoint = text.codePointAt(i);
                         i++;
-
+                        //System.out.println(String.format("emoji_u%x", codePoint));
                         ImageIcon icon = Util.loadPNGIcon("/png/" + String.format("emoji_u%x", codePoint) + ".png", fontHeight, fontHeight);
                         if (icon == null) {
-                            System.out.println("null: " + String.format("emoji_u%x", codePoint));
+                            //System.out.println("null: " + String.format("emoji_u%x", codePoint));
                             try {
                                 char[] chars = Character.toChars(codePoint);
+                                i--;
                                 doc.insertString(doc.getLength(), new String(chars), style); // Use emoji style
                             } catch (Exception ex) {
                                 ex.printStackTrace();
@@ -1049,6 +1095,55 @@ public class GeminiTextPane extends JTextPane {
 
     public CurrentPage current() {
         return new CurrentPage(currentPage, preformattedMode);
+    }
+
+    private void checkScroll(MouseEvent e, JTextPane textPane, JScrollPane scrollPane) {
+        Point point = e.getPoint();
+        Rectangle viewRect = scrollPane.getViewport().getViewRect();
+
+        if (point.y <= viewRect.y + EDGE_MARGIN) {
+            startScrolling(scrollPane, -1); // Scroll up
+        } else if (point.y >= viewRect.y + viewRect.height - EDGE_MARGIN) {
+            startScrolling(scrollPane, 1); // Scroll down
+        } else {
+            stopScrolling();
+        }
+    }
+
+    private void startScrolling(JScrollPane scrollPane, int direction) {
+        if (scrollTimer != null && scrollTimer.isRunning() && scrollDirection == direction) {
+            return;
+        }
+        stopScrolling(); // Ensure only one timer is running
+
+        scrollDirection = direction;
+        holdTime = 0; // Reset hold time
+
+        scrollTimer = new Timer(INITIAL_DELAY, e -> {
+            holdTime++; // Increment hold time
+
+            // Dynamically adjust speed based on hold time
+            int scrollSpeed = Math.min(INITIAL_SCROLL_SPEED + holdTime, MAX_SCROLL_SPEED);
+            int newDelay = Math.max(INITIAL_DELAY - (holdTime * 5), MIN_DELAY); // Reduce delay over time
+
+            // Apply new speed and delay
+            JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+            int newValue = verticalBar.getValue() + (scrollSpeed * direction);
+            verticalBar.setValue(newValue);
+            // Reset caret position to avoid selection
+            setCaretPosition(getCaretPosition());
+            scrollTimer.setDelay(newDelay); // Update timer delay
+        });
+        scrollTimer.start();
+    }
+
+    private void stopScrolling() {
+        if (scrollTimer != null) {
+            scrollTimer.stop();
+            scrollTimer = null;
+        }
+        scrollDirection = 0;
+        holdTime = 0; // Reset hold time
     }
 
 }
