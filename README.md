@@ -9,7 +9,7 @@
 ## Features
 
 - Modern UI with multiple themes
-- Color emojis on Mac OS
+- Color emojis on all platforms
 - Inline image viewer
 - Asynchronous networking and file access
 - Client certificate management
@@ -41,12 +41,12 @@ Prebuilt binaries are available for various platforms. Java is NOT required. Eac
 
 | Platform            | Type  | Download Link |
 |---------------------|------|--------------|
-| **Windows x64**     | MSI  | [Download](https://metaloupe.com/alhena/alhena-1.8_windows_x64.zip) |
-| **Mac x64 (Intel)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.8_x64.dmg) |
-| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.8_aarch64.dmg) |
-| **Linux x64**       | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.8_linux_x64.tgz) |
-| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.8_linux_aarch64.tgz) |
-| **FreeBSD x64**     | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.8_freebsd_x64.tgz) |
+| **Windows x64**     | MSI  | [Download](https://metaloupe.com/alhena/alhena-1.9_windows_x64.zip) |
+| **Mac x64 (Intel)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.9_x64.dmg) |
+| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://metaloupe.com/alhena/alhena-1.9_aarch64.dmg) |
+| **Linux x64**       | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.9_linux_x64.tgz) |
+| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.9_linux_aarch64.tgz) |
+| **FreeBSD x64**     | TGZ  | [Download](https://metaloupe.com/alhena/alhena-1.9_freebsd_x64.tgz) |
 
 
 ## 🐳 Docker
