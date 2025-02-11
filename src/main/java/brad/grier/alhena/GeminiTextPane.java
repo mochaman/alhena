@@ -2,6 +2,8 @@ package brad.grier.alhena;
 
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Insets;
 import java.awt.Point;
@@ -24,6 +26,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
@@ -71,7 +74,8 @@ public class GeminiTextPane extends JTextPane {
     private int textFontSize = 15;
     private int linkFontSize = 15;
     private int quoteFontStyle = 15;
-
+    // doubtful there will actually be multi-threaded access but better safe than sorry
+    private static final ConcurrentHashMap<Integer, Integer> sizeMap = new ConcurrentHashMap<>();
     public final static int DEFAULT_MODE = 0;
     public final static int BOOKMARK_MODE = 1;
     public final static int HISTORY_MODE = 2;
@@ -89,20 +93,20 @@ public class GeminiTextPane extends JTextPane {
     private static final List<String> dropExtensions;
     private boolean imageOnly;
 
-    static{
+    static {
         dropExtensions = new ArrayList<>(GeminiClient.fileExtensions);
         dropExtensions.add(".png");
         dropExtensions.add(".jpg");
     }
 
     // IBM Plex Mono works for proper alignment too
-
     public GeminiTextPane(GeminiFrame f, String url) {
         this.f = f;
         docURL = url;
 
         monospacedFamily = "Source Code Pro";
         proportionalFamily = "SansSerif";
+        //proportionalFamily = "Roboto Medium";
 
         Insets insets = getMargin();
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
@@ -382,13 +386,12 @@ public class GeminiTextPane extends JTextPane {
                     JMenuItem crtMenuItem = new JMenuItem("View Server Cert");
                     URI uri = getURI();
                     crtMenuItem.setEnabled(!imageOnly && currentMode == DEFAULT_MODE && uri != null && uri.getScheme().equals("gemini"));
-                    crtMenuItem.addActionListener(al ->{
+                    crtMenuItem.addActionListener(al -> {
 
-                        f.viewServerCert(GeminiTextPane.this, getURI());    
+                        f.viewServerCert(GeminiTextPane.this, getURI());
                     });
-                    
+
                     popupMenu.add(crtMenuItem);
-                    
 
                     popupMenu.add(new JSeparator());
                     JMenuItem saveItem = new JMenuItem("Save Page");
@@ -789,6 +792,22 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
+    private int getFontHeight(AttributeSet attrSet) {
+        String fontFamily = StyleConstants.getFontFamily(attrSet);
+        int fontSize = StyleConstants.getFontSize(attrSet);
+        Integer fs = sizeMap.get(fontSize);
+        if (fs != null) {
+            return fs;
+        }
+
+        Font font = new Font(fontFamily, Font.PLAIN, fontSize);
+
+        FontMetrics metrics = getFontMetrics(font);
+        int fontHeight = metrics.getHeight() - metrics.getDescent();
+        sizeMap.put(fontSize, fontHeight);
+        return fontSize;
+    }
+
     // Segoe UI is nice on Windows
     private void lastLine(String line, boolean lastLine) {
 
@@ -877,6 +896,18 @@ public class GeminiTextPane extends JTextPane {
         );
     }
 
+    public static boolean isEmoji(char c) {
+        Character.UnicodeBlock block = Character.UnicodeBlock.of(c);
+
+        return Character.isHighSurrogate(c)
+                || block == Character.UnicodeBlock.MISCELLANEOUS_SYMBOLS
+                || block == Character.UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS
+                || block == Character.UnicodeBlock.TRANSPORT_AND_MAP_SYMBOLS
+                || block == Character.UnicodeBlock.EMOTICONS
+                || block == Character.UnicodeBlock.SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS
+                || block == Character.UnicodeBlock.DINGBATS; // Add Dingbats!
+    }
+
     private ClickableRange addStyledText(boolean lastLine, String text, String styleName, Runnable action) {
 
         Style style = doc.getStyle(styleName);
@@ -889,26 +920,40 @@ public class GeminiTextPane extends JTextPane {
             if (containsEmoji(text)) {
 
                 String fontFamily = StyleConstants.getFontFamily(style);
-
+                int fontHeight = getFontHeight(style);
                 for (int i = 0; i < text.length(); i++) {
                     char c = text.charAt(i);
-                    if (Character.isHighSurrogate(c)) {
+
+                    if (isEmoji(c)) {
+
                         if (useNotoEmoji || styleName.equals("```")) {
                             StyleConstants.setFontFamily(style, "Noto Emoji");
                         }
 
                         int codePoint = text.codePointAt(i);
                         i++;
-                        char[] chars = Character.toChars(codePoint);
 
-                        try {
-                            doc.insertString(doc.getLength(), new String(chars), style); // Use emoji style
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
+                        ImageIcon icon = Util.loadPNGIcon("/png/" + String.format("emoji_u%x", codePoint) + ".png", fontHeight, fontHeight);
+                        if (icon == null) {
+                            System.out.println("null: " + String.format("emoji_u%x", codePoint));
+                            try {
+                                char[] chars = Character.toChars(codePoint);
+                                doc.insertString(doc.getLength(), new String(chars), style); // Use emoji style
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+
+                        } else {
+                            SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
+                            StyleConstants.setIcon(emojiStyle, icon);
+                            try {
+                                doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
                         }
                     } else {
                         StyleConstants.setFontFamily(style, fontFamily);
-
                         doc.insertString(doc.getLength(), String.valueOf(c), style);
 
                     }

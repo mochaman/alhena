@@ -104,7 +104,7 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "1.8";
+    public final static String VERSION = "1.9";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -201,7 +201,8 @@ public class GeminiClient {
         Util.loadFont("SourceCodePro-Regular.ttf");
         // load a comprehensive emoji font
         // this is used by default except on macintosh which can display color emojis
-        Util.loadFont("NotoEmoji-Regular.ttf");
+        Util.loadFont("NotoEmoji-Regular.ttf"); //hmm
+        //Util.loadFont("Roboto-Medium.ttf");
 
         // initialize the database
         DB.init();

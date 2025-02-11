@@ -8,6 +8,7 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.Transparency;
 import java.awt.event.ActionEvent;
@@ -267,7 +268,7 @@ public class Util {
             Font customFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(16f);
 
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(customFont);
-
+            System.out.println(customFont.getFamily());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -484,6 +485,20 @@ public class Util {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static ImageIcon loadPNGIcon(String filePath, int width, int height) {
+
+        try (InputStream is = GeminiTextPane.class.getResourceAsStream(filePath)) {
+            if (is == null) {
+                return null;
+            }
+            Image scaledImg = ImageIO.read(is).getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            return new ImageIcon(scaledImg);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
 }

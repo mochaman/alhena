@@ -94,6 +94,7 @@ public final class GeminiFrame extends JFrame {
     private JMenuItem emojiItem;
     public boolean useNotoEmoji;
     private Map<String, ThemeInfo> themes = Map.ofEntries(
+            Map.entry("FlatCyanLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCyanLightIJTheme", false)),
             Map.entry("FlatLightFlatIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatLightFlatIJTheme", false)),
             Map.entry("FlatHighContrastIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHighContrastIJTheme", true)),
             Map.entry("FlatCarbonIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCarbonIJTheme", true)),
@@ -301,7 +302,8 @@ public final class GeminiFrame extends JFrame {
         });
         textField.addMouseListener(new ContextMenuMouseListener());
         Font buttonFont = new Font("Noto Emoji Regular", Font.BOLD, 18);
-        backButton = new JButton("⬅");
+        backButton = new JButton("⬅"); //emoji_u303d.png
+        //backButton = new JButton(Util.loadPNGIcon("/png/emoji_u2b05.png", 18, 18)); //emoji_u303d.png
         backButton.setToolTipText("Click to go back");
         forwardButton = new JButton("➡");
         forwardButton.setToolTipText("Click to go forward");
@@ -546,24 +548,6 @@ public final class GeminiFrame extends JFrame {
                 });
         windowsMenu.add(lightThemeMenu);
         windowsMenu.add(darkThemeMenu);
-
-        if (SystemInfo.isMacOS) {
-
-            Supplier<String> s = () -> {
-                return useNotoEmoji ? "Use Color Emojis" : "Use Noto Emojis";
-            };
-
-            emojiItem = createMenuItem(s.get(), null, () -> {
-                useNotoEmoji = !useNotoEmoji;
-                currentThemeId++;
-
-                DB.insertPref("noto", useNotoEmoji ? "true" : "false");
-
-                emojiItem.setText(s.get());
-                refreshFromCache(visiblePage());
-            });
-            windowsMenu.add(emojiItem);
-        }
 
         menuBar.add(windowsMenu);
 
@@ -1428,10 +1412,7 @@ public final class GeminiFrame extends JFrame {
 
     public void viewServerCert(GeminiTextPane textPane, URI uri) {
         String host = uri.getHost();
-        // if (host == null || !uri.getScheme().equals("gemini")) {
-        //     Util.infoDialog(this, "Invalid", "Can't view server cert for this url");
-        //     return;
-        // }
+
         Optional<Page> page = Optional.ofNullable(SwingUtilities.getAncestorOfClass(Page.class, textPane))
                 .map(component -> (Page) component);
         InfoPageInfo pageInfo = new InfoPageInfo("servercert: " + host, page.get().getCert().toString());
