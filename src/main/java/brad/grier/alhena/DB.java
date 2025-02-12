@@ -356,14 +356,14 @@ public class DB {
                     String formattedDate = localDateTime.format(formatter);
                     if (saveDate == null || !saveDate.equals(formattedDate)) {
                         EventQueue.invokeLater(() -> {
-                            textPane.addPage("\n### " + formattedDate + "\n\n", null);
+                            textPane.addPage("\n### " + formattedDate + "\n\n");
                         });
 
                         saveDate = formattedDate;
                     }
                     String l1 = rs.getString(1);
                     EventQueue.invokeLater(() -> {
-                        textPane.addPage("=> " + l1 + "\n", null);
+                        textPane.addPage("=> " + l1 + "\n");
                     });
 
                 }

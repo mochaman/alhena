@@ -35,7 +35,7 @@ public class Page extends JPanel {
             arrayIndex = 0;
         }
         setLayout(new BorderLayout());
-        textPane = new GeminiTextPane(frame, url);
+        textPane = new GeminiTextPane(frame, this, url);
 
         add(new JScrollPane(textPane), BorderLayout.CENTER);
 

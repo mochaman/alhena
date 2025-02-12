@@ -108,7 +108,7 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "2.0";
+    public final static String VERSION = "2.1";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -263,7 +263,7 @@ public class GeminiClient {
         url = url.trim();
         if (url.contains("://")) {
             if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("https://")) {
-                p.textPane.end("## Bad scheme\n", false, url, true, p);
+                p.textPane.end("## Bad scheme\n", false, url, true);
                 return;
 
             }
@@ -286,7 +286,7 @@ public class GeminiClient {
                             //boolean[] first = {true};
                             String fUrl = url;
                             boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
-                            p.textPane.updatePage("", pformatted, fUrl, true, p);
+                            p.textPane.updatePage("", pformatted, fUrl, true);
                             boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                             
                             Buffer imageBuffer = Buffer.buffer();
@@ -301,7 +301,7 @@ public class GeminiClient {
                                             imageBuffer.appendBuffer(buffer);
                                         } else {
                                             bg(() -> {
-                                                p.textPane.addPage(buffer.toString(), p);
+                                                p.textPane.addPage(buffer.toString());
                                             });
                                         }
 
@@ -311,14 +311,14 @@ public class GeminiClient {
                                     asyncFile.endHandler(v -> {
                                         if (isImage) {
                                             bg(() -> {
-                                                p.textPane.end(" ", false, fUrl, true, p);
+                                                p.textPane.end(" ", false, fUrl, true);
                                                 p.textPane.insertImage(imageBuffer.getBytes());
                                                 p.frame().showGlassPane(false);
                                             });
 
                                         } else {
                                             bg(() -> {
-                                                p.textPane.end(p);
+                                                p.textPane.end();
                                                 p.frame().showGlassPane(false);
                                             });
                                         }
@@ -330,29 +330,29 @@ public class GeminiClient {
                                     asyncFile.exceptionHandler(throwable -> {
 
                                         bg(() -> {
-                                            p.textPane.end("## Error reading file\n", false, fUrl, true, p);
+                                            p.textPane.end("## Error reading file\n", false, fUrl, true);
                                             p.frame().showGlassPane(false);
                                         });
                                     });
                                 } else {
 
                                     bg(() -> {
-                                        p.textPane.end("## Error opening file\n", false, fUrl, true, p);
+                                        p.textPane.end("## Error opening file\n", false, fUrl, true);
                                         p.frame().showGlassPane(false);
                                     });
                                 }
                             });
 
                         } else {
-                            p.textPane.end("## Invalid file type\n", false, url, true, p);
+                            p.textPane.end("## Invalid file type\n", false, url, true);
                             p.frame().showGlassPane(false);
                         }
                     } else {
-                        p.textPane.end("## File not found\n", false, url, true, p);
+                        p.textPane.end("## File not found\n", false, url, true);
                         p.frame().showGlassPane(false);
                     }
                 } catch (Exception ex) {
-                    p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true, p);
+                    p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
                     ex.printStackTrace();
                     p.frame().showGlassPane(false);
                 }
@@ -389,14 +389,14 @@ public class GeminiClient {
                             if (contentType != null && contentType.startsWith("text/html")) {
                                 resp.body().onSuccess(buffer -> {
                                     bg(() -> {
-                                        p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true, p);
+                                        p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
                                         p.frame().showGlassPane(false);
                                     });
                                     req.end();
                                 }).onFailure(ex -> {
                                     ex.printStackTrace();
                                     bg(() -> {
-                                        p.textPane.end("error getting web page\n", true, finalURL, true, p);
+                                        p.textPane.end("error getting web page\n", true, finalURL, true);
                                         p.frame().showGlassPane(false);
                                     });
                                     req.end();
@@ -449,7 +449,7 @@ public class GeminiClient {
                         } else {
                             ar2.cause().printStackTrace();
                             bg(() -> {
-                                p.textPane.end("broke\n", true, finalURL, true, p);
+                                p.textPane.end("broke\n", true, finalURL, true);
                                 p.frame().showGlassPane(false);
                             });
 
@@ -636,11 +636,11 @@ public class GeminiClient {
                                 if (mime.startsWith("text/gemini")) {
 
                                     bg(() -> {
-                                        p.textPane.updatePage(chunk, false, origURL, true, p);
+                                        p.textPane.updatePage(chunk, false, origURL, true);
                                     });
                                 } else if (mime.startsWith("text/")) {
                                     bg(() -> {
-                                        p.textPane.updatePage(chunk, true, origURL, true, p);
+                                        p.textPane.updatePage(chunk, true, origURL, true);
                                     });
                                 } else if (mime.startsWith("image/")) {
                                     imageStartIdx[0] = i + 1;
@@ -683,7 +683,7 @@ public class GeminiClient {
                                     redirectCount = 0;
                                     connection.result().close();
                                     bg(() -> {
-                                        p.textPane.updatePage("## Too many redirects", false, origURL, true, p);
+                                        p.textPane.updatePage("## Too many redirects", false, origURL, true);
                                         p.frame().showGlassPane(false);
                                     });
                                     return;
@@ -698,7 +698,7 @@ public class GeminiClient {
                                 String errorMsg = saveBuffer.getString(0, i - 1).trim();
                                 //char respType = (char) saveBuffer.getByte(1);
                                 bg(() -> {
-                                    p.textPane.updatePage("## Server Response: " + errorMsg, false, origURL, true, p);
+                                    p.textPane.updatePage("## Server Response: " + errorMsg, false, origURL, true);
                                 });
                             }
                             case '6' -> {
@@ -711,7 +711,7 @@ public class GeminiClient {
                                     String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
                                     bg(() -> {
-                                        p.textPane.updatePage("## Server Response: " + errorMsg, false, origURL, true, p);
+                                        p.textPane.updatePage("## Server Response: " + errorMsg, false, origURL, true);
                                     });
                                 }
                             }
@@ -719,7 +719,7 @@ public class GeminiClient {
                                 redirectCount = 0;
                                 connection.result().close();
                                 bg(() -> {
-                                    p.textPane.updatePage("## Invalid response", false, origURL, true, p);
+                                    p.textPane.updatePage("## Invalid response", false, origURL, true);
                                     p.frame().showGlassPane(false);
                                 });
                                 return;
@@ -736,7 +736,7 @@ public class GeminiClient {
 
                                 bg(() -> {
                                     //System.out.println("buffer: " + buffer.length());
-                                    p.textPane.addPage(buffer.toString(), p);
+                                    p.textPane.addPage(buffer.toString());
                                 });
                             }
 
@@ -761,7 +761,7 @@ public class GeminiClient {
                                 tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
 
                             } else {
-                                p.textPane.end(" ", false, origURL, true, p);
+                                p.textPane.end(" ", false, origURL, true);
                                 p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
                             }
                             p.frame().showGlassPane(false);
@@ -769,7 +769,7 @@ public class GeminiClient {
                     } else {
                         bg(() -> {
                             p.frame().showGlassPane(false);
-                            p.textPane.end(p);
+                            p.textPane.end();
 
                         });
                     }
@@ -782,7 +782,7 @@ public class GeminiClient {
                     p.frame().showGlassPane(false);
                 } else {
                     bg(() -> {
-                        p.textPane.end(connection.cause().toString() + "\n", true, origURL, true, p);
+                        p.textPane.end(connection.cause().toString() + "\n", true, origURL, true);
                         p.frame().showGlassPane(false);
                     });
                     connection.cause().printStackTrace();
@@ -896,7 +896,7 @@ public class GeminiClient {
                 });
 
             } else {
-                p.textPane.end("# Failed to open file: " + outFile, false, url, true, null);
+                p.textPane.end("# Failed to open file: " + outFile, false, url, true);
                 p.frame().showGlassPane(false);
                 fileRes.cause().printStackTrace();
 

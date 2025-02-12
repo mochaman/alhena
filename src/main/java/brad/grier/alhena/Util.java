@@ -268,7 +268,7 @@ public class Util {
             Font customFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(16f);
 
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(customFont);
-            System.out.println(customFont.getFamily());
+
         } catch (Exception e) {
             e.printStackTrace();
         }

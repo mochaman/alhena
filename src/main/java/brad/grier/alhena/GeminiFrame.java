@@ -91,8 +91,8 @@ public final class GeminiFrame extends JFrame {
     public static final String CERT_LABEL = "Certs";
     public static final String INFO_LABEL = "Info";
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL); // make immutable
-    private JMenuItem emojiItem;
-    public boolean useNotoEmoji;
+
+
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatCyanLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCyanLightIJTheme", false)),
             Map.entry("FlatLightFlatIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatLightFlatIJTheme", false)),
@@ -242,13 +242,15 @@ public final class GeminiFrame extends JFrame {
             getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
             //getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
         }
-        String pref = DB.getPref("noto");
-        if (pref == null) {
-            useNotoEmoji = !SystemInfo.isMacOS;
-        } else {
-            // have to check in case db moved from mac to linux/windows
-            useNotoEmoji = pref.equals("false") && !SystemInfo.isMacOS ? true : pref.equals("true");
-        }
+
+        // keep this around
+        // String pref = DB.getPref("noto");
+        // if (pref == null) {
+        //     useNotoEmoji = !SystemInfo.isMacOS;
+        // } else {
+        //     // have to check in case db moved from mac to linux/windows
+        //     useNotoEmoji = pref.equals("false") && !SystemInfo.isMacOS ? true : pref.equals("true");
+        // }
 
         boolean addToHistory = url != null || baseUrl != null;
         Page pb = newPage(baseUrl, null, addToHistory);
@@ -301,11 +303,13 @@ public final class GeminiFrame extends JFrame {
             }
         });
         textField.addMouseListener(new ContextMenuMouseListener());
-        Font buttonFont = new Font("Noto Emoji Regular", Font.BOLD, 18);
+        Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
         backButton = new JButton("⬅"); //emoji_u303d.png
+        //backButton = new JButton("◀️");
         //backButton = new JButton(Util.loadPNGIcon("/png/emoji_u2b05.png", 18, 18)); //emoji_u303d.png
         backButton.setToolTipText("Click to go back");
         forwardButton = new JButton("➡");
+        //forwardButton = new JButton("▶️");
         forwardButton.setToolTipText("Click to go forward");
         backButton.setFont(buttonFont);
 
@@ -819,7 +823,7 @@ public final class GeminiFrame extends JFrame {
         });
     }
 
-    private void refreshFromCache(Page pb) {
+    public void refreshFromCache(Page pb) {
         if (pb.textPane.imageOnly()) {
             return;
         }
@@ -841,7 +845,7 @@ public final class GeminiFrame extends JFrame {
             final int fEndIdx = endIdx;
             EventQueue.invokeLater(() -> {
 
-                visiblePage().textPane.updatePage(b.substring(fIdx, fEndIdx), pfMode, url, false, null);
+                visiblePage().textPane.updatePage(b.substring(fIdx, fEndIdx), pfMode, url, false);
 
             });
             idx = endIdx;
@@ -852,7 +856,7 @@ public final class GeminiFrame extends JFrame {
                 final int fEndIdx2 = endIdx;
                 EventQueue.invokeLater(() -> {
 
-                    visiblePage().textPane.addPage(b.substring(fIdx2, fEndIdx2), null);
+                    visiblePage().textPane.addPage(b.substring(fIdx2, fEndIdx2));
 
                 });
                 idx = endIdx;
@@ -861,7 +865,7 @@ public final class GeminiFrame extends JFrame {
             EventQueue.invokeLater(() -> {
                 Page visiblePane = visiblePage();
                 Page groupPane = getRootPage(visiblePane);
-                visiblePane.textPane.end(visiblePane);
+                visiblePane.textPane.end();
                 backButton.setEnabled(hasPrev(groupPane));
                 forwardButton.setEnabled(hasNext(groupPane));
                 showGlassPane(false);
@@ -1014,7 +1018,7 @@ public final class GeminiFrame extends JFrame {
             }
             List<Bookmark> bookmarks = DB.loadBookmarks();
             if (!bookmarks.isEmpty()) {
-                textPane.updatePage("#Bookmarks🔖\nRight click to edit or delete a bookmark.\n\n", false, BOOKMARK_LABEL, true, p);
+                textPane.updatePage("#Bookmarks🔖\nRight click to edit or delete a bookmark.\n\n", false, BOOKMARK_LABEL, true);
 
                 LinkedHashMap<String, ArrayList<Bookmark>> folders = new LinkedHashMap<>();
                 bookmarks.forEach(bm -> {
@@ -1027,20 +1031,20 @@ public final class GeminiFrame extends JFrame {
 
                 folders.entrySet().stream().forEach(entry -> {
                     if (!entry.getKey().equals("ROOT")) {
-                        textPane.addPage("\n##" + entry.getKey() + "\n", p);
+                        textPane.addPage("\n##" + entry.getKey() + "\n");
                     } else {
-                        textPane.addPage("\n", p);
+                        textPane.addPage("\n");
                     }
                     entry.getValue().stream().forEach(bm -> {
-                        textPane.addPage("=> " + bm.id() + ":" + bm.url() + " " + bm.label() + "\n", p);
+                        textPane.addPage("=> " + bm.id() + ":" + bm.url() + " " + bm.label() + "\n");
                     });
 
                 });
-                textPane.end(p);
+                textPane.end();
 
                 //updateComboBox(BOOKMARK_LABEL);
             } else {
-                textPane.end("#Bookmarks🔖\n", false, BOOKMARK_LABEL, true, p);
+                textPane.end("#Bookmarks🔖\n", false, BOOKMARK_LABEL, true);
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -1055,7 +1059,7 @@ public final class GeminiFrame extends JFrame {
             }
             List<DBClientCertInfo> certs = DB.loadCerts();
             if (!certs.isEmpty()) {
-                textPane.updatePage("#Client Certificates 🔑\nRight click to activate, inactivate or delete a cert.\n", false, CERT_LABEL, true, p);
+                textPane.updatePage("#Client Certificates 🔑\nRight click to activate, inactivate or delete a cert.\n", false, CERT_LABEL, true);
 
                 LinkedHashMap<Boolean, ArrayList<DBClientCertInfo>> types = new LinkedHashMap<>();
                 certs.forEach(c -> {
@@ -1070,13 +1074,13 @@ public final class GeminiFrame extends JFrame {
                         .filter(types::containsKey) // Ensure key exists
                         .forEach(active -> {
                             String label = active ? "Active" : "Inactive";
-                            textPane.addPage("\n## " + label + " Certs\n\n", p);
+                            textPane.addPage("\n## " + label + " Certs\n\n");
 
                             types.get(active).forEach(cert -> {
                                 try {
                                     X509Certificate xc = (X509Certificate) GeminiClient.loadCertificate(cert.cert());
                                     X500Principal principal = xc.getSubjectX500Principal();
-                                    textPane.addPage("=> " + cert.id() + "," + cert.active() + ":" + cert.domain() + " " + cert.domain() + " [" + principal.getName() + "]\n", p);
+                                    textPane.addPage("=> " + cert.id() + "," + cert.active() + ":" + cert.domain() + " " + cert.domain() + " [" + principal.getName() + "]\n");
                                 } catch (Exception ex) {
                                     ex.printStackTrace();
                                 }
@@ -1084,10 +1088,10 @@ public final class GeminiFrame extends JFrame {
                             });
                         });
 
-                textPane.end(p);
+                textPane.end();
 
             } else {
-                textPane.end("#Client Certificates 🔑\n", false, CERT_LABEL, true, p);
+                textPane.end("#Client Certificates 🔑\n", false, CERT_LABEL, true);
 
             }
         } catch (SQLException ex) {
@@ -1102,7 +1106,7 @@ public final class GeminiFrame extends JFrame {
             ct.setTitle(info.title);
         }
 
-        textPane.end(info.content, true, INFO_LABEL, false, p);
+        textPane.end(info.content, true, INFO_LABEL, false);
         textPane.setDocURL(info.title);
 
         // problem: end already sets comboBoxk
@@ -1121,7 +1125,7 @@ public final class GeminiFrame extends JFrame {
             ct.setTitle(HISTORY_LABEL);
         }
         //setTitle("History");
-        textPane.updatePage("# History 📜\n", false, HISTORY_LABEL, true, p);
+        textPane.updatePage("# History 📜\n", false, HISTORY_LABEL, true);
         new Thread(() -> {
             int[] count = {0};
             try {
@@ -1130,10 +1134,10 @@ public final class GeminiFrame extends JFrame {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-            textPane.end(p);
+            textPane.end();
             EventQueue.invokeLater(() -> {
                 if (count[0] == 0) {
-                    textPane.addPage("\n### Nothing to see\n", null);
+                    textPane.addPage("\n### Nothing to see\n");
                 } else {
                     //vertx.eventBus().send("status", count[0] + " links");
                     setStatus(count[0] + " links");

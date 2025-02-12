@@ -2,6 +2,7 @@ package brad.grier.alhena;
 
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -30,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
@@ -50,6 +52,17 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 import com.formdev.flatlaf.util.SystemInfo;
+import com.techsenger.ansi4j.core.api.Environment;
+import com.techsenger.ansi4j.core.api.Fragment;
+import com.techsenger.ansi4j.core.api.FragmentType;
+import com.techsenger.ansi4j.core.api.FunctionFragment;
+import com.techsenger.ansi4j.core.api.ParserFactory;
+import com.techsenger.ansi4j.core.api.TextFragment;
+import com.techsenger.ansi4j.core.api.iso6429.ControlFunctionType;
+import com.techsenger.ansi4j.core.api.iso6429.ControlSequenceFunction;
+import com.techsenger.ansi4j.core.api.spi.ParserFactoryConfig;
+import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
+import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
 import brad.grier.alhena.GeminiFrame.ClosableTabPanel;
 
@@ -65,11 +78,11 @@ public class GeminiTextPane extends JTextPane {
     private boolean preformattedMode;
     private String currentStatus = GeminiClient.WELCOME_MESSAGE;
     private final String monospacedFamily;
-    private final String proportionalFamily; // Noto Sans
+    private final String proportionalFamily;
     private final GeminiFrame f;
-    private StringBuilder currentPage;
+    // use StringBuilder instead of StringBuffer as only updated in EventDispatch at creation
+    private StringBuilder pageBuffer;
     private String docURL;
-    private boolean useNotoEmoji;
     private ClickableRange saveRange;
     private String bufferedLine = null;
     private Color hoverColor, linkColor;
@@ -96,15 +109,16 @@ public class GeminiTextPane extends JTextPane {
     private static final List<String> dropExtensions;
     private boolean imageOnly;
     private JScrollPane scrollPane;
-    private static final int INITIAL_SCROLL_SPEED = 1; 
+    private static final int INITIAL_SCROLL_SPEED = 1;
     private static final int MAX_SCROLL_SPEED = 50;
     private static final int INITIAL_DELAY = 100;
-    private static final int MIN_DELAY = 30; 
-    private static final int EDGE_MARGIN = 50; 
+    private static final int MIN_DELAY = 30;
+    private static final int EDGE_MARGIN = 50;
 
     private Timer scrollTimer;
-    private int scrollDirection = 0; 
+    private int scrollDirection = 0;
     private int holdTime = 0;
+    private Page page;
 
     static {
         dropExtensions = new ArrayList<>(GeminiClient.fileExtensions);
@@ -113,8 +127,9 @@ public class GeminiTextPane extends JTextPane {
     }
 
     // IBM Plex Mono works for proper alignment too
-    public GeminiTextPane(GeminiFrame f, String url) {
+    public GeminiTextPane(GeminiFrame f, Page page, String url) {
         this.f = f;
+        this.page = page;
         docURL = url;
 
         monospacedFamily = "Source Code Pro";
@@ -141,7 +156,7 @@ public class GeminiTextPane extends JTextPane {
                     if (scrollPane == null) {
                         scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
                     }
-                    checkScroll(e, GeminiTextPane.this, scrollPane);
+                    checkScroll(e, scrollPane);
                 }
             }
 
@@ -160,7 +175,8 @@ public class GeminiTextPane extends JTextPane {
                             entered = true;
 
                             if (!range.url.equals(currentStatus)) {
-                                AttributeSet originalStyle = doc.getCharacterElement(range.start).getAttributes();
+                                // +1 needed since using png for emoji
+                                AttributeSet originalStyle = doc.getCharacterElement(range.start + 1).getAttributes();
                                 Color hoverC = StyleConstants.getForeground(originalStyle).brighter();
                                 SimpleAttributeSet sa = new SimpleAttributeSet();
                                 StyleConstants.setForeground(sa, hoverC);
@@ -220,7 +236,7 @@ public class GeminiTextPane extends JTextPane {
                         scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
                     }
 
-                    checkScroll(e, GeminiTextPane.this, scrollPane);
+                    checkScroll(e, scrollPane);
                 }
             }
 
@@ -438,7 +454,7 @@ public class GeminiTextPane extends JTextPane {
                     JMenuItem saveItem = new JMenuItem("Save Page");
                     saveItem.setEnabled(!imageOnly);
                     saveItem.addActionListener(al -> {
-                        f.savePage(GeminiTextPane.this, currentPage, currentMode);
+                        f.savePage(GeminiTextPane.this, pageBuffer, currentMode);
                     });
 
                     popupMenu.add(saveItem);
@@ -593,15 +609,15 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private String createHeading() {
-        if (currentPage == null) {
+        if (pageBuffer == null) {
             return null;
         }
 
-        int hIdx = currentPage.indexOf("#");
+        int hIdx = pageBuffer.indexOf("#");
         if (hIdx != -1) {
-            int idx = currentPage.indexOf("\n");
+            int idx = pageBuffer.indexOf("\n");
             if (idx > hIdx) {
-                String heading = currentPage.substring(hIdx, currentPage.indexOf("\n", hIdx));
+                String heading = pageBuffer.substring(hIdx, pageBuffer.indexOf("\n", hIdx));
                 // remove emojis using a regular expression
                 heading = heading.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "");
 
@@ -643,22 +659,22 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    public void end(Page p) {
+    public void end() {
         if (bufferedLine != null) {
             String lrl = bufferedLine;
             bufferedLine = null;
             lastLine(lrl, false);
         }
-        JTabbedPane tabbedPane = p.frame().tabbedPane;
+        JTabbedPane tabbedPane = page.frame().tabbedPane;
         firstHeading = createHeading();
         String title = f.createTitle(docURL, firstHeading);
         if (title != null) {
             if (tabbedPane != null) {
                 for (int i = 0; i < tabbedPane.getTabCount(); i++) {
 
-                    if (tabbedPane.getComponentAt(i) == p) {
+                    if (tabbedPane.getComponentAt(i) == page) {
 
-                        if (p == tabbedPane.getSelectedComponent()) {
+                        if (page == tabbedPane.getSelectedComponent()) {
                             f.updateComboBox(docURL);
                             f.setTitle(title);
                         } else {
@@ -668,26 +684,109 @@ public class GeminiTextPane extends JTextPane {
                         break;
                     }
                 }
-            } else if (p.isVisible()) {
+            } else if (page.isVisible()) {
 
-                // firstHeading = createHeading();
                 if (currentMode != INFO_MODE) {
                     f.updateComboBox(docURL);
                     f.setTitle(title);
                 }
             }
         }
+        if (pageBuffer != null) {
+            pageBuffer.trimToSize();
+        }
+        scanForAnsi();
 
+    }
+
+    private void scanForAnsi() {
+
+        StringBuilder localBuilder = pageBuffer;
+        if (!hasAnsi && localBuilder != null) {
+            new Thread(() -> {
+
+                for (int i = 0; i < localBuilder.length(); i++) {
+                    if (localBuilder.charAt(i) == 27) {
+                        EventQueue.invokeLater(() -> {
+                            if (GeminiTextPane.this.isShowing()) {
+                                
+                                Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page without the styling?", JOptionPane.YES_NO_OPTION);
+                                if (res instanceof Integer result) {
+                                    if (result == JOptionPane.YES_OPTION) {
+                                        hasAnsi = true;
+                                        f.refreshFromCache(page);
+                                    }
+                                }
+                            }
+                        });
+                        break;
+                    }
+                }
+
+            }).start();
+        }
     }
 
     // for one and done messages
-    public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest, Page p) {
-        updatePage(geminiDoc, pfMode, docURL, newRequest, p);
-        end(p); // not so much for the bufferedLine but so we can signal
+    public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
+        updatePage(geminiDoc, pfMode, docURL, newRequest);
+        end();
     }
 
-    public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest, Page p) {
-        useNotoEmoji = f.useNotoEmoji;
+    private ParserFactory factory;
+    private boolean hasAnsi;
+
+    private void handleAnsi(String line, AttributeSet style) {
+        if (factory == null) {
+            ParserFactoryConfig config = new ParserFactoryConfig();
+            config.setEnvironment(Environment._8_BIT);
+            config.setFunctionTypes(List.of(ControlFunctionType.C0_SET, ControlFunctionType.C1_SET));
+            ParserFactoryService factoryService = new ParserFactoryProvider();
+            factory = factoryService.createFactory(config);
+        }
+        var parser = factory.createParser(line);
+        Fragment fragment = null;
+        while ((fragment = parser.parse()) != null) {
+            if (fragment.getType() == FragmentType.TEXT) {
+                TextFragment textFragment = (TextFragment) fragment;
+
+                convert(textFragment.getText(), style);
+
+                //System.out.println("'" + textFragment.getText() + "'");
+            } else if (fragment.getType() == FragmentType.FUNCTION) {
+                FunctionFragment functionFragment = (FunctionFragment) fragment;
+                //or functionFragment.getFunction() == ControlSequenceFunctionAlias.SELECT_GRAPHIC_RENDITION
+                if (functionFragment.getFunction() == ControlSequenceFunction.SGR) {
+
+                }
+            }
+        }
+    }
+
+    private void convert(String txt, AttributeSet style) {
+        if (!txt.startsWith("[")) {
+            try {
+                doc.insertString(doc.getLength(), txt, style);
+            } catch (BadLocationException ex) {
+                ex.printStackTrace();
+            }
+        } else {
+
+            String line = txt.substring(txt.indexOf("m") + 1);
+
+            try {
+
+                // DO NOT CALL insertString method in this class!!!!!
+                doc.insertString(doc.getLength(), line, style);
+            } catch (BadLocationException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+    }
+
+    public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
+
         if (!docURL.equals(this.docURL) && newRequest) {
 
             if (currentMode == DEFAULT_MODE)
@@ -714,7 +813,7 @@ public class GeminiTextPane extends JTextPane {
         this.docURL = docURL;
         f.refreshNav(null);
 
-        currentPage = new StringBuilder();
+        pageBuffer = new StringBuilder();
 
         bufferedLine = null; // probably not necessary here
 
@@ -739,12 +838,12 @@ public class GeminiTextPane extends JTextPane {
         // apply the attributes to the entire document
         doc.setParagraphAttributes(0, doc.getLength(), indentAttributes, false);
 
-        addPage(geminiDoc, p);
+        addPage(geminiDoc);
 
     }
 
-    public void addPage(String geminiDoc, Page p) {
-        currentPage.append(geminiDoc);
+    public void addPage(String geminiDoc) {
+        pageBuffer.append(geminiDoc);
 
         if (bufferedLine != null) {
             geminiDoc = bufferedLine + geminiDoc;
@@ -769,24 +868,20 @@ public class GeminiTextPane extends JTextPane {
 
         }
 
-        if (p != null) {
-            p.loading();
+        if (page != null) {  
+            page.loading();
         }
 
     }
 
     private void buildStyles() {
         boolean isDark = UIManager.getBoolean("laf.dark");
-        //System.out.println("Is the current theme dark? " + isDark);
+
         linkColor = UIManager.getColor("Component.linkColor");
         hoverColor = linkColor.brighter();
 
-        //Color textColor = UIManager.getColor("Component.textColor");
-        // hoverColor = Color.MAGENTA;
-        // linkColor = Color.BLUE;
         Style pfStyle = doc.addStyle("```", null);
         StyleConstants.setFontFamily(pfStyle, monospacedFamily);
-        //StyleConstants.setForeground(pfStyle, textColor);
         StyleConstants.setFontSize(pfStyle, 14);
         StyleConstants.setBold(pfStyle, false);
         StyleConstants.setItalic(pfStyle, false);
@@ -794,7 +889,6 @@ public class GeminiTextPane extends JTextPane {
 
         Style h1Style = doc.addStyle("###", null);
         StyleConstants.setFontFamily(h1Style, proportionalFamily);
-        //StyleConstants.setForeground(h1Style, textColor);
         StyleConstants.setFontSize(h1Style, 18);
         StyleConstants.setBold(h1Style, true);
         StyleConstants.setItalic(h1Style, false);
@@ -813,7 +907,6 @@ public class GeminiTextPane extends JTextPane {
 
         Style clickedStyle = doc.addStyle("visited", linkStyle);
         StyleConstants.setForeground(clickedStyle, isDark ? linkColor.darker() : linkColor.brighter());
-        //StyleConstants.setBold(clickedStyle, false);
 
         Style quoteStyle = doc.addStyle(">", h1Style);
         StyleConstants.setFontSize(quoteStyle, quoteFontStyle);
@@ -958,74 +1051,80 @@ public class GeminiTextPane extends JTextPane {
         Style style = doc.getStyle(styleName);
 
         ClickableRange cr = null;
-        try {
 
-            int start = doc.getLength();
+        int start = doc.getLength();
 
-            if (containsEmoji(text)) {
+        if (containsEmoji(text)) {
 
-                String fontFamily = StyleConstants.getFontFamily(style);
-                int fontHeight = getFontHeight(style);
-                for (int i = 0; i < text.length(); i++) {
-                    char c = text.charAt(i);
+            String fontFamily = StyleConstants.getFontFamily(style);
+            int fontHeight = getFontHeight(style);
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
 
-                    if (isEmoji(c)) {
+                if (isEmoji(c)) {
 
-                        if (useNotoEmoji || styleName.equals("```")) {
-                            StyleConstants.setFontFamily(style, "Noto Emoji");
-                        }
+                    if (/*useNotoEmoji || */styleName.equals("```")) {
+                        StyleConstants.setFontFamily(style, "Noto Emoji");
+                    }
 
-                        int codePoint = text.codePointAt(i);
-                        i++;
-                        //System.out.println(String.format("emoji_u%x", codePoint));
-                        ImageIcon icon = Util.loadPNGIcon("/png/" + String.format("emoji_u%x", codePoint) + ".png", fontHeight, fontHeight);
-                        if (icon == null) {
-                            //System.out.println("null: " + String.format("emoji_u%x", codePoint));
-                            try {
-                                char[] chars = Character.toChars(codePoint);
-                                i--;
-                                doc.insertString(doc.getLength(), new String(chars), style); // Use emoji style
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                            }
+                    int codePoint = text.codePointAt(i);
+                    i++;
+                    //System.out.println(String.format("emoji_u%x", codePoint));
+                    ImageIcon icon = Util.loadPNGIcon("/png/" + String.format("emoji_u%x", codePoint) + ".png", fontHeight, fontHeight);
+                    if (icon == null) {
+                        //System.out.println("null: " + String.format("emoji_u%x", codePoint));
 
-                        } else {
-                            SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
-                            StyleConstants.setIcon(emojiStyle, icon);
-                            try {
-                                doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                            }
-                        }
+                        char[] chars = Character.toChars(codePoint);
+                        i--;
+                        insertString(doc.getLength(), new String(chars), style); // Use emoji style
+
                     } else {
-                        StyleConstants.setFontFamily(style, fontFamily);
-                        doc.insertString(doc.getLength(), String.valueOf(c), style);
+                        SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
+                        StyleConstants.setIcon(emojiStyle, icon);
+
+                        insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
 
                     }
+                } else {
+                    StyleConstants.setFontFamily(style, fontFamily);
+                    insertString(doc.getLength(), String.valueOf(c), style);
+
                 }
-                StyleConstants.setFontFamily(style, fontFamily);
-            } else {
-                doc.insertString(start, text, style);
             }
-
-            if (action != null) {
-                int end = doc.getLength();
-
-                // add range to clickable ranges
-                cr = new ClickableRange(start, end, action);
-                clickableRegions.add(cr);
-            }
-            int caretPosition = getCaretPosition();
-            if (!lastLine) {
-                doc.insertString(doc.getLength(), "\n", style);
-            }
-            setCaretPosition(caretPosition); // prevent scrolling as content added
-
-        } catch (BadLocationException e) {
-            e.printStackTrace();
+            StyleConstants.setFontFamily(style, fontFamily);
+        } else {
+            insertString(start, text, style);
         }
+
+        if (action != null) {
+            int end = doc.getLength();
+
+            // add range to clickable ranges
+            cr = new ClickableRange(start, end, action);
+            clickableRegions.add(cr);
+        }
+        int caretPosition = getCaretPosition();
+        if (!lastLine) {
+            try {
+                doc.insertString(doc.getLength(), "\n", style);
+            } catch (BadLocationException ex) {
+            }
+        }
+        setCaretPosition(caretPosition); // prevent scrolling as content added
+
         return cr;
+    }
+
+    private void insertString(int length, String txt, AttributeSet style) {
+        try {
+            if (hasAnsi && preformattedMode) {
+                handleAnsi(txt, style);
+            } else {
+                doc.insertString(length, txt, style);
+            }
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
+        }
     }
 
     private static class ClickableRange {
@@ -1094,10 +1193,10 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public CurrentPage current() {
-        return new CurrentPage(currentPage, preformattedMode);
+        return new CurrentPage(pageBuffer, preformattedMode);
     }
 
-    private void checkScroll(MouseEvent e, JTextPane textPane, JScrollPane scrollPane) {
+    private void checkScroll(MouseEvent e, JScrollPane scrollPane) {
         Point point = e.getPoint();
         Rectangle viewRect = scrollPane.getViewport().getViewRect();
 
