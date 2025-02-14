@@ -55,11 +55,9 @@ import com.formdev.flatlaf.util.SystemInfo;
 import com.techsenger.ansi4j.core.api.Environment;
 import com.techsenger.ansi4j.core.api.Fragment;
 import com.techsenger.ansi4j.core.api.FragmentType;
-import com.techsenger.ansi4j.core.api.FunctionFragment;
 import com.techsenger.ansi4j.core.api.ParserFactory;
 import com.techsenger.ansi4j.core.api.TextFragment;
 import com.techsenger.ansi4j.core.api.iso6429.ControlFunctionType;
-import com.techsenger.ansi4j.core.api.iso6429.ControlSequenceFunction;
 import com.techsenger.ansi4j.core.api.spi.ParserFactoryConfig;
 import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
 import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
@@ -132,7 +130,8 @@ public class GeminiTextPane extends JTextPane {
         this.page = page;
         docURL = url;
 
-        monospacedFamily = "Source Code Pro";
+        //monospacedFamily = "Source Code Pro";
+        monospacedFamily = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
         proportionalFamily = "SansSerif";
         //proportionalFamily = "Roboto Medium";
 
@@ -663,8 +662,9 @@ public class GeminiTextPane extends JTextPane {
         if (bufferedLine != null) {
             String lrl = bufferedLine;
             bufferedLine = null;
-            lastLine(lrl, false);
+            processLine(lrl, false);
         }
+
         JTabbedPane tabbedPane = page.frame().tabbedPane;
         firstHeading = createHeading();
         String title = f.createTitle(docURL, firstHeading);
@@ -696,7 +696,8 @@ public class GeminiTextPane extends JTextPane {
             pageBuffer.trimToSize();
         }
         scanForAnsi();
-
+        bStyle = null;
+        defPP = null;
     }
 
     private void scanForAnsi() {
@@ -709,8 +710,8 @@ public class GeminiTextPane extends JTextPane {
                     if (localBuilder.charAt(i) == 27) {
                         EventQueue.invokeLater(() -> {
                             if (GeminiTextPane.this.isShowing()) {
-                                
-                                Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page without the styling?", JOptionPane.YES_NO_OPTION);
+
+                                Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page?", JOptionPane.YES_NO_OPTION);
                                 if (res instanceof Integer result) {
                                     if (result == JOptionPane.YES_OPTION) {
                                         hasAnsi = true;
@@ -736,7 +737,7 @@ public class GeminiTextPane extends JTextPane {
     private ParserFactory factory;
     private boolean hasAnsi;
 
-    private void handleAnsi(String line, AttributeSet style) {
+    private void handleAnsi(String line, Style style) {
         if (factory == null) {
             ParserFactoryConfig config = new ParserFactoryConfig();
             config.setEnvironment(Environment._8_BIT);
@@ -744,6 +745,15 @@ public class GeminiTextPane extends JTextPane {
             ParserFactoryService factoryService = new ParserFactoryProvider();
             factory = factoryService.createFactory(config);
         }
+        if (bStyle == null) {
+            bStyle = new SimpleAttributeSet();
+
+            // probably not needed anymore
+            bStyle.addAttribute(StyleConstants.FontFamily, monospacedFamily);
+            bStyle.addAttribute(StyleConstants.FontSize, 14);
+
+        }
+
         var parser = factory.createParser(line);
         Fragment fragment = null;
         while ((fragment = parser.parse()) != null) {
@@ -751,38 +761,156 @@ public class GeminiTextPane extends JTextPane {
                 TextFragment textFragment = (TextFragment) fragment;
 
                 convert(textFragment.getText(), style);
-
-                //System.out.println("'" + textFragment.getText() + "'");
-            } else if (fragment.getType() == FragmentType.FUNCTION) {
-                FunctionFragment functionFragment = (FunctionFragment) fragment;
-                //or functionFragment.getFunction() == ControlSequenceFunctionAlias.SELECT_GRAPHIC_RENDITION
-                if (functionFragment.getFunction() == ControlSequenceFunction.SGR) {
-
-                }
             }
+
         }
     }
+    SimpleAttributeSet bStyle;
 
-    private void convert(String txt, AttributeSet style) {
+    private void convert(String txt, Style style) {
+
         if (!txt.startsWith("[")) {
+
             try {
-                doc.insertString(doc.getLength(), txt, style);
+                doc.insertString(doc.getLength(), txt, bStyle);
             } catch (BadLocationException ex) {
                 ex.printStackTrace();
             }
         } else {
+            int mIdx = txt.indexOf('m');
+            String line = txt.substring(mIdx + 1);
+            if (!SystemInfo.isWindows) {
+                String ansi = txt.substring(0, mIdx + 1);
 
-            String line = txt.substring(txt.indexOf("m") + 1);
+                String[] tokens = ansi.split(";");
+                switch (tokens[0]) {
+                    case "[38" -> {
+                        // foreground color
+                        if (tokens[1].equals("5")) {
 
+                            if (tokens.length == 4) {
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
+                                ansiFG(c);
+
+                            } else if (tokens.length == 3) {
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2].substring(0, tokens[2].indexOf('m'))));
+                                ansiFG(c);
+
+                            }
+
+                        }
+                    }
+                    case "[30m" ->
+                        ansiFG(AnsiColor.BLACK);
+                    case "[31m" ->
+                        ansiFG(AnsiColor.RED);
+                    case "[32m" ->
+                        ansiFG(AnsiColor.GREEN);
+                    case "[33m" ->
+                        ansiFG(AnsiColor.YELLOW);
+                    case "[34m" ->
+                        ansiFG(AnsiColor.BLUE);
+                    case "[35m" ->
+                        ansiFG(AnsiColor.MAGENTA);
+                    case "[36m" ->
+                        ansiFG(AnsiColor.CYAN);
+                    case "[37m" ->
+                        ansiFG(AnsiColor.WHITE);
+                    case "[40m" ->
+                        ansiBG(Color.BLACK);
+                    case "[41m" ->
+                        ansiBG(AnsiColor.RED);
+                    case "[42m" ->
+                        ansiBG(AnsiColor.GREEN);
+                    case "[43m" ->
+                        ansiBG(AnsiColor.YELLOW);
+                    case "[44m" ->
+                        ansiBG(AnsiColor.BLUE);
+                    case "[45m" ->
+                        ansiBG(AnsiColor.MAGENTA);
+                    case "[46m" ->
+                        ansiBG(AnsiColor.CYAN);
+                    case "[47m" ->
+                        ansiBG(AnsiColor.WHITE);
+                    case "[48" -> {
+                        // foreground color
+                        if (tokens[1].equals("5")) {
+
+                            if (tokens.length == 4) {
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
+                                ansiBG(c);
+
+                            } else if (tokens.length == 3) {
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2].substring(0, tokens[2].indexOf('m'))));
+                                ansiBG(c);
+
+                            }
+
+                        }
+                    }
+                    case "[90m" ->
+                        ansiFG(AnsiColor.BRIGHT_BLACK);
+                    case "[91m" ->
+                        ansiFG(AnsiColor.BRIGHT_RED);
+                    case "[92m" ->
+                        ansiFG(AnsiColor.BRIGHT_GREEN);
+                    case "[93m" ->
+                        ansiFG(AnsiColor.BRIGHT_YELLOW);
+                    case "[94m" ->
+                        ansiFG(AnsiColor.BRIGHT_BLUE);
+                    case "[95m" ->
+                        ansiFG(AnsiColor.BRIGHT_MAGENTA);
+                    case "[96m" ->
+                        ansiFG(AnsiColor.BRIGHT_CYAN);
+                    case "[97m" ->
+                        ansiFG(AnsiColor.BRIGHT_WHITE);
+                    case "[100m" ->
+                        ansiBG(AnsiColor.BRIGHT_BLACK);
+                    case "[101m" ->
+                        ansiBG(AnsiColor.BRIGHT_RED);
+                    case "[102m" ->
+                        ansiBG(AnsiColor.BRIGHT_GREEN);
+                    case "[103m" ->
+                        ansiBG(AnsiColor.BRIGHT_YELLOW);
+                    case "[104m" ->
+                        ansiBG(AnsiColor.BRIGHT_BLUE);
+                    case "[105m" ->
+                        ansiBG(AnsiColor.BRIGHT_MAGENTA);
+                    case "[106m" ->
+                        ansiBG(AnsiColor.BRIGHT_CYAN);
+                    case "[107m" ->
+                        ansiBG(AnsiColor.BRIGHT_WHITE);
+                    case "[0m" -> {
+                        bStyle = new SimpleAttributeSet();
+                        bStyle.addAttribute(StyleConstants.FontFamily, "Monospaced");
+                        bStyle.addAttribute(StyleConstants.FontSize, 14);
+
+                    }
+                    case "[1m" -> {
+                        StyleConstants.setBold(bStyle, true);
+                    }
+                    default ->
+                        System.out.println("unknown: " + txt);
+                }
+            }
             try {
 
-                // DO NOT CALL insertString method in this class!!!!!
-                doc.insertString(doc.getLength(), line, style);
+                // DO NOT CALL the insertString method in this class!!!!!
+                doc.insertString(doc.getLength(), line, bStyle);
+
             } catch (BadLocationException ex) {
                 ex.printStackTrace();
             }
         }
 
+    }
+
+    private void ansiFG(Color c) {
+        StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark")));
+    }
+
+    private void ansiBG(Color c) {
+        StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark")));
     }
 
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
@@ -829,18 +957,20 @@ public class GeminiTextPane extends JTextPane {
 
         setStyledDocument(doc);
         buildStyles();
-        // create a SimpleAttributeSet to define the indentation
-        SimpleAttributeSet indentAttributes = new SimpleAttributeSet();
-        StyleConstants.setLeftIndent(indentAttributes, 50); // Set left indentation in points
-        StyleConstants.setRightIndent(indentAttributes, 50); // Optional: Adjust the right margin
-        StyleConstants.setLineSpacing(indentAttributes, 0.3f); // Optional: Set line spacing if needed
-
-        // apply the attributes to the entire document
-        doc.setParagraphAttributes(0, doc.getLength(), indentAttributes, false);
+        if (defPP == null) { // create and save the default paragraph attributes
+            defPP = new SimpleAttributeSet();
+            StyleConstants.setLeftIndent(defPP, 50); // Set left indentation in points
+            StyleConstants.setRightIndent(defPP, 50); // Optional: Adjust the right margin
+            StyleConstants.setLineSpacing(defPP, 0.3f); // Optional: Set line spacing if needed
+            StyleConstants.setForeground(defPP, getForeground());
+        }
+        doc.setParagraphAttributes(0, doc.getLength(), defPP, false);
 
         addPage(geminiDoc);
 
     }
+
+    private SimpleAttributeSet defPP;
 
     public void addPage(String geminiDoc) {
         pageBuffer.append(geminiDoc);
@@ -852,7 +982,7 @@ public class GeminiTextPane extends JTextPane {
         if (geminiDoc.endsWith("\n")) {
 
             geminiDoc.lines().forEach(line -> {
-                lastLine(line, false); // no way to know if a line is the last line
+                processLine(line, false); // no way to know if a line is the last line
             });
         } else {
             int lastNl = geminiDoc.lastIndexOf("\n");
@@ -862,13 +992,13 @@ public class GeminiTextPane extends JTextPane {
             } else {
                 bufferedLine = geminiDoc.substring(lastNl + 1);
                 geminiDoc.substring(0, lastNl + 1).lines().forEach(line -> {
-                    lastLine(line, false); // no way to know if a line is the last line
+                    processLine(line, false); // no way to know if a line is the last line
                 });
             }
 
         }
 
-        if (page != null) {  
+        if (page != null) {
             page.loading();
         }
 
@@ -887,6 +1017,9 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setItalic(pfStyle, false);
         StyleConstants.setUnderline(pfStyle, false);
 
+        // added for ansi
+        // StyleConstants.setForeground(pfStyle, getForeground());
+        // StyleConstants.setBackground(pfStyle, getBackground());
         Style h1Style = doc.addStyle("###", null);
         StyleConstants.setFontFamily(h1Style, proportionalFamily);
         StyleConstants.setFontSize(h1Style, 18);
@@ -945,12 +1078,37 @@ public class GeminiTextPane extends JTextPane {
         sizeMap.put(fontSize, fontHeight);
         return fontSize;
     }
+    private int pfModeStart, pfModeEnd;
+    private AttributeSet pAttributes;
 
     // Segoe UI is nice on Windows
-    private void lastLine(String line, boolean lastLine) {
+    private void processLine(String line, boolean lastLine) {
 
         if (line.startsWith("```") && !plainTextMode) {
             preformattedMode = !preformattedMode;
+
+            if (preformattedMode) {
+                pfModeStart = doc.getLength();
+                if (pfModeStart == 0) {
+                    pAttributes = defPP;
+                } else {
+                    pAttributes = getParagraphAttributes();
+                }
+
+            } else {
+
+                SimpleAttributeSet indentAttributes = new SimpleAttributeSet();
+                StyleConstants.setLeftIndent(indentAttributes, 50); // Set left indentation in points
+                StyleConstants.setRightIndent(indentAttributes, 50); // Optional: Adjust the right margin
+                StyleConstants.setLineSpacing(indentAttributes, 0.0f); // Optional: Set line spacing if needed
+                Color pfColor = UIManager.getBoolean("laf.dark") ? AnsiColor.blend(linkColor, Color.WHITE, .1f) : AnsiColor.blend(linkColor, Color.BLACK, .1f);
+                StyleConstants.setForeground(indentAttributes, pfColor);
+
+                doc.setParagraphAttributes(pfModeStart, /*doc.getLength()*/ pfModeEnd, indentAttributes, true);
+
+                doc.setParagraphAttributes(doc.getLength(), doc.getLength(), pAttributes, true);
+            }
+
         } else if (preformattedMode) {
 
             if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) && line.startsWith("=>")) {
@@ -1053,6 +1211,7 @@ public class GeminiTextPane extends JTextPane {
         ClickableRange cr = null;
 
         int start = doc.getLength();
+        pfModeEnd = start;
 
         if (containsEmoji(text)) {
 
@@ -1082,7 +1241,10 @@ public class GeminiTextPane extends JTextPane {
                         SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
                         StyleConstants.setIcon(emojiStyle, icon);
 
-                        insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
+                        try {
+                            doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
+                        } catch (BadLocationException ex) {
+                        }
 
                     }
                 } else {
@@ -1115,7 +1277,7 @@ public class GeminiTextPane extends JTextPane {
         return cr;
     }
 
-    private void insertString(int length, String txt, AttributeSet style) {
+    private void insertString(int length, String txt, Style style) {
         try {
             if (hasAnsi && preformattedMode) {
                 handleAnsi(txt, style);

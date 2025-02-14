@@ -569,13 +569,14 @@ public final class GeminiFrame extends JFrame {
             File file = Util.copyFromJar(homeDir);
             URI fileUri = file.toURI();
 
-            GeminiClient.processURL(fileUri.toString(), visiblePage(), null, visiblePage());
+            //GeminiClient.processURL(fileUri.toString(), visiblePage(), null, visiblePage());
+            fetchURL(fileUri.toString());
 
         }));
 
         aboutMenu.add(createMenuItem("Changes", null, () -> {
-
-            GeminiClient.processURL("gemini://ultimatumlabs.com/alhena_changes.gmi", visiblePage(), null, visiblePage());
+            fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi");
+            //GeminiClient.processURL("gemini://ultimatumlabs.com/alhena_changes.gmi", visiblePage(), null, visiblePage());
         }));
 
         menuBar.add(aboutMenu);
@@ -1193,6 +1194,7 @@ public final class GeminiFrame extends JFrame {
             if (result == JOptionPane.YES_OPTION) {
                 try {
                     DB.deleteClientCert(id);
+                    GeminiClient.createNetClient();
                     refresh();
                     Util.infoDialog(this, "Delete", "Certificate deleted");
                 } catch (SQLException ex) {

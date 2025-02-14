@@ -96,7 +96,7 @@ import io.vertx.core.streams.Pump;
 
 /**
  * Static main class to manage frame creation and connectivity
- * 
+ *
  */
 public class GeminiClient {
 
@@ -108,7 +108,7 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "2.1";
+    public final static String VERSION = "2.2";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -201,8 +201,10 @@ public class GeminiClient {
 
         }
 
-        // load monospaced font known to correctly align ascii art
-        Util.loadFont("SourceCodePro-Regular.ttf");
+        // load monospaced font for windows known to correctly align ascii art
+        if (SystemInfo.isWindows) {
+            Util.loadFont("SourceCodePro-Regular.ttf");
+        }
         // load a comprehensive emoji font
         // this is used by default except on macintosh which can display color emojis
         Util.loadFont("NotoEmoji-Regular.ttf"); //hmm
@@ -288,7 +290,7 @@ public class GeminiClient {
                             boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
                             p.textPane.updatePage("", pformatted, fUrl, true);
                             boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-                            
+
                             Buffer imageBuffer = Buffer.buffer();
 
                             vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {

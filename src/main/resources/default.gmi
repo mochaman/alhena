@@ -12,6 +12,7 @@ Alhena is a Gemini browser written in Java. It's also a star in Gemini.
 * Modern UI with multiple themes
 * Full color emojis on all platforms
 * Inline image viewer
+* ANSI color on preformatted text (non-Windows)
 * Asynchronous networking and file I/O
 * Host-based certificate management
 * Bookmarks and history
@@ -32,6 +33,7 @@ Alhena is a Gemini browser written in Java. It's also a star in Gemini.
 => gemini://tilde.team/~stack/ Word Puzzles
 => gemini://astrobotany.mozz.us/ Gardening Game
 => gemini://bbs.geminispace.org/ Gemini BBS
+=> gemini://geminiprotocol.net/ About Gemini
 
 ### 🚀 Gemini Capsules
 => gemini://kennedy.gemi.dev/observatory/known-hosts Kennedy
