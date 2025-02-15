@@ -8,7 +8,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <exec.mainClass>brad.grier.alhena.GeminiClient</exec.mainClass>
-        <vertx.version>4.5.11</vertx.version>  
+        <vertx.version>4.5.13</vertx.version>  
     </properties>
     <dependencies>
         <dependency>
@@ -16,11 +16,6 @@
             <artifactId>vertx-core</artifactId>
             <version>${vertx.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-web-client</artifactId>
-            <version>${vertx.version}</version>
-        </dependency>     
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
