@@ -1067,6 +1067,7 @@ public class GeminiTextPane extends JTextPane {
         String fontFamily = StyleConstants.getFontFamily(attrSet);
         int fontSize = StyleConstants.getFontSize(attrSet);
         Integer fs = sizeMap.get(fontSize);
+
         if (fs != null) {
             return fs;
         }
@@ -1076,7 +1077,8 @@ public class GeminiTextPane extends JTextPane {
         FontMetrics metrics = getFontMetrics(font);
         int fontHeight = metrics.getHeight() - metrics.getDescent();
         sizeMap.put(fontSize, fontHeight);
-        return fontSize;
+        //System.out.println("fontHeight: " + fontHeight + " " +metrics.charWidth('2'));
+        return fontHeight;
     }
     private int pfModeStart, pfModeEnd;
     private AttributeSet pAttributes;
@@ -1216,7 +1218,7 @@ public class GeminiTextPane extends JTextPane {
         if (containsEmoji(text)) {
 
             String fontFamily = StyleConstants.getFontFamily(style);
-            int fontHeight = getFontHeight(style);
+            int fontHeight = getFontHeight(style) + 2;
             for (int i = 0; i < text.length(); i++) {
                 char c = text.charAt(i);
 
