@@ -1,8 +1,8 @@
-# Alhena 🌟
+# Alhena 2.3 🌟
 
 **Alhena** is a full-featured, multi-platform Gemini browser with a modern UI, asynchronous networking, and certificate management.
 
-[![Alhena Screenshot](https://metaloupe.com/alhena/alhena4.png)](https://metaloupe.com/alhena/alhena.html)
+[![Alhena Screenshot](https://metaloupe.com/alhena/alhena2.png)](https://metaloupe.com/alhena/alhena.html)
 
 🔗 **[Official Website & More Info](https://metaloupe.com/alhena/alhena.html)**
 
@@ -43,12 +43,12 @@ Prebuilt binaries are available for various platforms. Java is NOT required. Eac
 
 | Platform            | Type  | Download Link |
 |---------------------|------|--------------|
-| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.2/alhena-2.2_windows_x64.zip) |
-| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.2/alhena-2.2_x64.dmg) |
-| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.2/alhena-2.2_aarch64.dmg) |
-| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.2/alhena-2.2_linux_x64.tgz) |
-| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.2/alhena-2.2_linux_aarch64.tgz) |
-| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.2/alhena-2.2_freebsd_x64.tgz) |
+| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_windows_x64.zip) |
+| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_x64.dmg) |
+| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_aarch64.dmg) |
+| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_linux_x64.tgz) |
+| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_linux_aarch64.tgz) |
+| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_freebsd_x64.tgz) |
 
 
 ## 🐳 Docker
@@ -72,7 +72,7 @@ Dark Theme:
 ![Dark Theme](https://metaloupe.com/alhena/alhena1.png)
 
 Light Theme:  
-![Light Theme](https://metaloupe.com/alhena/alhena2.png)
+![Light Theme](https://metaloupe.com/alhena/alhena4.png)
 
 Inline Images:  
 ![Inline Images](https://metaloupe.com/alhena/alhena3.png)
