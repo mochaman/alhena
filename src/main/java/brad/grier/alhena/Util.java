@@ -43,12 +43,14 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.JTextComponent;
 
+import org.drjekyll.fontchooser.FontChooser;
+
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 
 /**
  * Static utility methods
- * 
+ *
  * @author Brad Grier
  */
 public class Util {
@@ -136,7 +138,7 @@ public class Util {
 
             @Override
             public void windowLostFocus(WindowEvent e) {
-                
+
             }
 
         });
@@ -152,11 +154,10 @@ public class Util {
 
     }
 
-
     public static String inputDialog(Frame c, String title, String msg, boolean pswd, String inputFieldText) {
         JTextArea textArea = new JTextArea(1, 35);
 
-        textArea.setLineWrap(true); 
+        textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setToolTipText("shift+return for line break");
         Dimension ps = textArea.getPreferredSize();
@@ -183,11 +184,11 @@ public class Util {
         optionPane.setWantsInput(false);
 
         JDialog dialog = optionPane.createDialog(c, title);
-
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         textArea.getDocument().addDocumentListener(new DocumentListener() {
 
             private void updateSize() {
-                EventQueue.invokeLater(()->{
+                EventQueue.invokeLater(() -> {
                     dialog.pack();
                 });
 
@@ -284,8 +285,51 @@ public class Util {
         }
     }
 
+
+    public static Font getFont(GeminiFrame f, Font font) {
+        FontChooser fontChooser = new FontChooser(font);
+        Object[] message = {
+            fontChooser
+        };
+        Object[] options = {"OK", "Cancel", "Reset"};
+        JOptionPane optionPane = new JOptionPane(
+                message, // Message
+                JOptionPane.PLAIN_MESSAGE, // Message type
+                JOptionPane.DEFAULT_OPTION, // Option type
+                null, // Icon (null for default)
+                options, // Options (null for default buttons)
+                options[0] // Initial value
+        );
+
+        optionPane.setWantsInput(false);
+        JDialog dialog = optionPane.createDialog("Choose Font");
+
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+        if (SystemInfo.isMacOS) {
+
+            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+            //dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+
+        }
+        dialog.setVisible(true);
+        Object selectedValue = optionPane.getValue(); 
+        if(selectedValue instanceof String val){
+            if(val.equals("OK"))
+                return fontChooser.getSelectedFont();
+            else if(val.equals("Reset")){
+                return new Font("SansSerif", Font.PLAIN, 15);
+            }else{
+                return null;
+            }
+        }
+        return null; // never happens
+        //return fontChooser.getSelectedFont();
+    }
+
     public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter) {
         JDialog dialog = new JDialog(f, title, true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         if (SystemInfo.isMacOS) {
 
             dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
@@ -334,7 +378,6 @@ public class Util {
         return selectedFile[0];
     }
 
-
     public static BufferedImage getImage(byte[] imageBytes, int previewWidth, int previewHeight) {
 
         BufferedImage img = null;
@@ -372,7 +415,7 @@ public class Util {
             }
         } catch (IOException ex) {
             ex.printStackTrace();
-            
+
         }
 
         return img;
@@ -452,7 +495,7 @@ public class Util {
     }
 
     public static String getHome() {
-        
+
         String homePage = DB.getPref("home");
         if (homePage == null) {
             String homeDir = System.getProperty("alhena.home");
@@ -472,7 +515,7 @@ public class Util {
 
     public static File copyFromJar(String homeDir) {
         String resourcePath = "default.gmi";
-        Path outputPath = Paths.get(homeDir + "/default.gmi"); 
+        Path outputPath = Paths.get(homeDir + "/default.gmi");
 
         try (InputStream inputStream = GeminiClient.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {

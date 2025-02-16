@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,9 +54,12 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import org.drjekyll.fontchooser.FontDialog;
 
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
@@ -91,7 +95,9 @@ public final class GeminiFrame extends JFrame {
     public static final String CERT_LABEL = "Certs";
     public static final String INFO_LABEL = "Info";
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL); // make immutable
-
+    public String proportionalFamily = "SansSerif";
+    public int fontSize = 15;
+    private Font saveFont;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatCyanLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCyanLightIJTheme", false)),
@@ -243,14 +249,22 @@ public final class GeminiFrame extends JFrame {
             //getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
         }
 
-        // keep this around
-        // String pref = DB.getPref("noto");
-        // if (pref == null) {
-        //     useNotoEmoji = !SystemInfo.isMacOS;
-        // } else {
-        //     // have to check in case db moved from mac to linux/windows
-        //     useNotoEmoji = pref.equals("false") && !SystemInfo.isMacOS ? true : pref.equals("true");
-        // }
+        proportionalFamily = DB.getPref("fontfamily");
+        proportionalFamily = proportionalFamily == null ? "SansSerif" : proportionalFamily;
+        String fs = DB.getPref("fontsize");
+        fontSize = fs == null ? 15 : Integer.parseInt(fs);
+        String dbFont = DB.getPref("font");
+        dbFont = dbFont == null ? "SansSerif" : dbFont;
+        saveFont = new Font(dbFont, Font.PLAIN, fontSize);
+
+        // test to see if db font exists - maybe deleted from system or db moved to another os
+        // fonts created with invalid names are created anyway with Dialog font family
+        if(saveFont.getFamily().equals("Dialog") && !saveFont.getName().equals("Dialog")){
+            
+            saveFont = new Font("SansSerif", Font.PLAIN, 15);
+            proportionalFamily = "SansSerif";
+            fontSize = 15;
+        }
 
         boolean addToHistory = url != null || baseUrl != null;
         Page pb = newPage(baseUrl, null, addToHistory);
@@ -553,6 +567,26 @@ public final class GeminiFrame extends JFrame {
         windowsMenu.add(lightThemeMenu);
         windowsMenu.add(darkThemeMenu);
 
+        windowsMenu.add(createMenuItem("Font", null, () -> {
+            Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, 15);
+            Font font = Util.getFont(GeminiFrame.this, defFont);
+            if (font != null) {
+                saveFont = font;
+                // System.out.println(font.getFontName() + " " + font.getFamily());
+                proportionalFamily = font.getFamily();
+                fontSize = font.getSize();
+                currentThemeId++;
+                GeminiClient.updateFrames();
+                refreshFromCache(visiblePage());
+
+                visiblePage().setThemeId(currentThemeId);
+                DB.insertPref("font", font.getName());
+                DB.insertPref("fontfamily", proportionalFamily);
+                DB.insertPref("fontsize", String.valueOf(fontSize));
+            }
+
+        }));
+
         menuBar.add(windowsMenu);
 
         JMenu aboutMenu = new JMenu("Help");
@@ -592,6 +626,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void prefill(JTextField textField, char typedChar) {
+
         String text = textField.getText();
 
         if (typedChar == KeyEvent.VK_BACK_SPACE) {
