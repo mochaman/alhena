@@ -63,7 +63,12 @@
             <artifactId>ansi4j-core-impl</artifactId>
             <version>2.0.0</version>
         </dependency>
-                         
+        <dependency>
+            <groupId>org.drjekyll</groupId>
+            <artifactId>fontchooser</artifactId>
+            <version>2.4</version>
+        </dependency>
+  
     </dependencies>    
     
     <build>
