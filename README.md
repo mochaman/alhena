@@ -1,4 +1,4 @@
-# Alhena 2.3 🌟
+# Alhena 2.4 🌟
 
 **Alhena** is a full-featured, multi-platform Gemini browser with a modern UI, asynchronous networking, and certificate management.
 
