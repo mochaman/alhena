@@ -12,7 +12,8 @@ Alhena is a Gemini browser written in Java. It's also a star in Gemini.
 * Modern UI with multiple themes
 * Full color emojis on all platforms
 * Inline image viewer
-* ANSI color on preformatted text (non-Windows)
+* ANSI color on preformatted text
+* Font chooser for proportional text
 * Asynchronous networking and file I/O
 * Host-based certificate management
 * Bookmarks and history
