@@ -127,7 +127,7 @@ public class GeminiTextPane extends JTextPane {
         this.f = f;
         this.page = page;
         docURL = url;
-
+        setFocusable(false);
         monospacedFamily = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
 
         Insets insets = getMargin();
