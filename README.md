@@ -10,7 +10,8 @@
 
 - Modern UI with multiple themes
 - Color emojis on all platforms
-- ANSI color on non-Windows
+- ANSI color on all platforms
+- Font chooser for proportional fonts
 - Inline image viewer
 - Asynchronous networking and file access
 - Client certificate management
@@ -43,12 +44,12 @@ Prebuilt binaries are available for various platforms. Java is NOT required. Eac
 
 | Platform            | Type  | Download Link |
 |---------------------|------|--------------|
-| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_windows_x64.zip) |
-| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_x64.dmg) |
-| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_aarch64.dmg) |
-| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_linux_x64.tgz) |
-| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_linux_aarch64.tgz) |
-| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.3/alhena-2.3_freebsd_x64.tgz) |
+| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_windows_x64.zip) |
+| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_x64.dmg) |
+| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_aarch64.dmg) |
+| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_linux_x64.tgz) |
+| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_linux_aarch64.tgz) |
+| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_freebsd_x64.tgz) |
 
 
 ## 🐳 Docker
