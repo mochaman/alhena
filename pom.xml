@@ -90,7 +90,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>brad.grier.alhena.GeminiClient</mainClass>
+                            <mainClass>brad.grier.alhena.Alhena</mainClass>
                             
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>.</classpathPrefix>
