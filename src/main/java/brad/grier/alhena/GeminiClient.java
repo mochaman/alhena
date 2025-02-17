@@ -56,6 +56,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 import org.bouncycastle.asn1.x500.X500Name;
@@ -108,7 +109,7 @@ public class GeminiClient {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "2.4";
+    public final static String VERSION = "2.5";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -131,6 +132,17 @@ public class GeminiClient {
                     createNetClient();
 
                     return true; // consume
+                }
+                KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
+                for(GeminiFrame gf : frameList){
+                    // textpane eats keys
+                    if(gf.visiblePage().textPane.hasFocus()){
+                        Runnable r = gf.actionMap.get(keyStroke);    
+                        if(r != null){
+                            r.run();
+                        }
+                        return true;
+                    }     
                 }
                 return false; // allow event to be processed
             }

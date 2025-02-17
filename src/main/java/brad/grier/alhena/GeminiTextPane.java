@@ -127,7 +127,7 @@ public class GeminiTextPane extends JTextPane {
         this.f = f;
         this.page = page;
         docURL = url;
-        setFocusable(false);
+        // setFocusable(false);
         monospacedFamily = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
 
         Insets insets = getMargin();
@@ -645,7 +645,7 @@ public class GeminiTextPane extends JTextPane {
                 Rectangle viewRect = modelToView2D(pos).getBounds();
                 scrollRectToVisible(viewRect);
             } else {
-                select(0, 0);
+                //select(0, 0);
                 f.setStatus("'" + word + "' Not Found");
             }
         } catch (Exception e) {
@@ -1029,7 +1029,7 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setFontSize(h3Style, f.fontSize + 17); // 32
 
         Style linkStyle = doc.addStyle("=>", h1Style);
-        StyleConstants.setFontSize(linkStyle, f.fontSize );
+        StyleConstants.setFontSize(linkStyle, f.fontSize);
         StyleConstants.setForeground(linkStyle, linkColor);
         StyleConstants.setBold(linkStyle, true);
 

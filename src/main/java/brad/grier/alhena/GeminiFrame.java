@@ -28,7 +28,6 @@ import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,12 +53,9 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
-
-import org.drjekyll.fontchooser.FontDialog;
 
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
@@ -259,8 +255,8 @@ public final class GeminiFrame extends JFrame {
 
         // test to see if db font exists - maybe deleted from system or db moved to another os
         // fonts created with invalid names are created anyway with Dialog font family
-        if(saveFont.getFamily().equals("Dialog") && !saveFont.getName().equals("Dialog")){
-            
+        if (saveFont.getFamily().equals("Dialog") && !saveFont.getName().equals("Dialog")) {
+
             saveFont = new Font("SansSerif", Font.PLAIN, 15);
             proportionalFamily = "SansSerif";
             fontSize = 15;
@@ -508,8 +504,20 @@ public final class GeminiFrame extends JFrame {
         JMenu viewMenu = new JMenu("View");
 
         for (String label : CUSTOM_LABELS) {
+            KeyStroke ks = null;
             if (!label.equals(INFO_LABEL)) {
-                viewMenu.add(createMenuItem(label, null, () -> {
+                switch (label) {
+                    case HISTORY_LABEL ->
+                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_Y, mod);
+                    case BOOKMARK_LABEL ->
+                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_B, mod);
+                    case CERT_LABEL ->
+                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, (mod | KeyEvent.SHIFT_DOWN_MASK));
+                    default -> {
+                    }
+                }
+
+                viewMenu.add(createMenuItem(label, ks, () -> {
 
                     showCustomPage(label, null);
 
@@ -567,7 +575,7 @@ public final class GeminiFrame extends JFrame {
         windowsMenu.add(lightThemeMenu);
         windowsMenu.add(darkThemeMenu);
 
-        windowsMenu.add(createMenuItem("Font", null, () -> {
+        windowsMenu.add(createMenuItem("Font", KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
             Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, 15);
             Font font = Util.getFont(GeminiFrame.this, defFont);
             if (font != null) {
@@ -1566,9 +1574,11 @@ public final class GeminiFrame extends JFrame {
         dispose();
     }
 
+    public HashMap<KeyStroke, Runnable> actionMap = new HashMap<>();
+
     private JMenuItem createMenuItem(String text, KeyStroke keyStroke, Runnable r) {
         JMenuItem menuItem = new JMenuItem(text);
-
+        actionMap.put(keyStroke, r);
         menuItem.addActionListener(al -> {
             r.run();
         });
