@@ -474,14 +474,14 @@ public final class GeminiFrame extends JFrame {
         statusField.setBorder(new EmptyBorder(5, 5, 5, 5)); // Add padding
 
         menuBar = new JMenuBar();
-
+        int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
         JMenu fileMenu = new JMenu("File");
         //fileMenu.setBorder(new EmptyBorder(0, 0, 0, 10));
-        fileMenu.add(createMenuItem("Open File", null, () -> {
+        fileMenu.add(createMenuItem("Open File", KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
             openFile(null);
         }));
         fileMenu.add(new JSeparator());
-        int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+        
         fileMenu.add(createMenuItem("New Tab", KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
 
             newTab(null);
