@@ -3,7 +3,6 @@ package brad.grier.alhena;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.EventQueue;
-import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Taskbar;
 import java.awt.Taskbar.Feature;
@@ -117,35 +116,32 @@ public class GeminiClient {
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        manager.addKeyEventDispatcher(new KeyEventDispatcher() {
-            @Override
-            public boolean dispatchKeyEvent(KeyEvent e) {
-                if (e.getID() == KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    interrupted = true;
-
-                    // closing and recreating the client doesn't work for ending connection handshake
-                    // close vertx and recreate
-                    vertx.close();
-                    VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
-                    vertx = Vertx.vertx(options);
-                    client = null;
-                    createNetClient();
-
-                    return true; // consume
-                }
-                KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
-                for(GeminiFrame gf : frameList){
-                    // textpane eats keys
-                    if(gf.visiblePage().textPane.hasFocus()){
-                        Runnable r = gf.actionMap.get(keyStroke);    
-                        if(r != null){
-                            r.run();
-                        }
-                        return true;
-                    }     
-                }
-                return false; // allow event to be processed
+        manager.addKeyEventDispatcher((KeyEvent e) -> {
+            if (e.getID() == KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                interrupted = true;
+                
+                // closing and recreating the client doesn't work for ending connection handshake
+                // close vertx and recreate
+                vertx.close();
+                VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
+                vertx = Vertx.vertx(options);
+                client = null;
+                createNetClient();
+                
+                return true; // consume
             }
+            KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
+            for(GeminiFrame gf : frameList){
+                // textpane eats keys
+                if(gf.visiblePage().textPane.hasFocus()){
+                    Runnable r = gf.actionMap.get(keyStroke);
+                    if(r != null){
+                        r.run();
+                    }
+                    return true;
+                }
+            }
+            return false; // allow event to be processed
         });
 
         // look for file and not directory in case user created alhena directory for install purposes
@@ -219,8 +215,7 @@ public class GeminiClient {
         }
         // load a comprehensive emoji font
         // this is used by default except on macintosh which can display color emojis
-        Util.loadFont("NotoEmoji-Regular.ttf"); //hmm
-        //Util.loadFont("Roboto-Regular.ttf");
+        Util.loadFont("NotoEmoji-Regular.ttf");
 
         // initialize the database
         DB.init();
