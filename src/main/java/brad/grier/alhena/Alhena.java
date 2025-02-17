@@ -113,31 +113,40 @@ public class Alhena {
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
+    private static int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher((KeyEvent e) -> {
             if (e.getID() == KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                interrupted = true;
-                
-                // closing and recreating the client doesn't work for ending connection handshake
-                // close vertx and recreate
-                vertx.close();
-                VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
-                vertx = Vertx.vertx(options);
-                client = null;
-                createNetClient();
-                
-                return true; // consume
+
+                Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+                if (gf != null && gf.getGlassPane().isShowing()) {
+
+                    interrupted = true;
+                    // closing and recreating the client doesn't work for ending connection handshake
+                    // close vertx and recreate
+                    vertx.close();
+                    VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
+                    vertx = Vertx.vertx(options);
+                    client = null;
+                    createNetClient();
+
+                    return true; // consume
+                }
+                return false;
             }
-            KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
-            for(GeminiFrame gf : frameList){
-                // textpane eats keys
-                if(gf.visiblePage().textPane.hasFocus()){
-                    Runnable r = gf.actionMap.get(keyStroke);
-                    if(r != null){
-                        r.run();
-                    }
+            
+            Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+
+            // textpane eats keys
+            if (gf != null && gf.visiblePage().textPane.hasFocus()) {
+                KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
+                Runnable r = gf.actionMap.get(keyStroke);
+                if (r != null) {
+                    r.run();
                     return true;
                 }
             }
@@ -251,7 +260,10 @@ public class Alhena {
     }
 
     public static void updateFrames() {
-        for (JFrame jf : frameList) {
+        GeminiFrame.currentThemeId++;
+        for (GeminiFrame jf : frameList) {
+            jf.refreshFromCache(jf.visiblePage());
+            jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
             SwingUtilities.updateComponentTreeUI(jf);
         }
     }

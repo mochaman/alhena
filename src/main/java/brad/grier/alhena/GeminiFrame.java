@@ -91,9 +91,9 @@ public final class GeminiFrame extends JFrame {
     public static final String CERT_LABEL = "Certs";
     public static final String INFO_LABEL = "Info";
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL); // make immutable
-    public String proportionalFamily = "SansSerif";
-    public int fontSize = 15;
-    private Font saveFont;
+    public static String proportionalFamily = "SansSerif";
+    public static int fontSize = 15;
+    private static Font saveFont;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatCyanLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCyanLightIJTheme", false)),
@@ -481,7 +481,7 @@ public final class GeminiFrame extends JFrame {
             openFile(null);
         }));
         fileMenu.add(new JSeparator());
-        
+
         fileMenu.add(createMenuItem("New Tab", KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
 
             newTab(null);
@@ -489,7 +489,8 @@ public final class GeminiFrame extends JFrame {
         }));
 
         fileMenu.add(createMenuItem("New Window", KeyStroke.getKeyStroke(KeyEvent.VK_N, mod), () -> {
-            Alhena.newWindow(null, null);
+            String home = Util.getHome();
+            Alhena.newWindow(home, home);
         }));
 
         if (!SystemInfo.isMacOS) {
@@ -560,11 +561,11 @@ public final class GeminiFrame extends JFrame {
                             FlatLaf theme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
                             FlatLaf.setup(theme);
 
-                            currentThemeId++;
+                            //currentThemeId++;
                             Alhena.updateFrames();
 
-                            refreshFromCache(visiblePage());
-                            visiblePage().setThemeId(currentThemeId);
+                            // refreshFromCache(visiblePage());
+                            // visiblePage().setThemeId(currentThemeId);
                             DB.insertPref("theme", value.className());
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -583,11 +584,11 @@ public final class GeminiFrame extends JFrame {
                 // System.out.println(font.getFontName() + " " + font.getFamily());
                 proportionalFamily = font.getFamily();
                 fontSize = font.getSize();
-                currentThemeId++;
+                //currentThemeId++;
                 Alhena.updateFrames();
-                refreshFromCache(visiblePage());
+                // refreshFromCache(visiblePage());
 
-                visiblePage().setThemeId(currentThemeId);
+                // visiblePage().setThemeId(currentThemeId);
                 DB.insertPref("font", font.getName());
                 DB.insertPref("fontfamily", proportionalFamily);
                 DB.insertPref("fontsize", String.valueOf(fontSize));
@@ -1470,7 +1471,6 @@ public final class GeminiFrame extends JFrame {
         InfoPageInfo pageInfo = new InfoPageInfo("servercert: " + host, page.get().getCert().toString());
         showCustomPage(INFO_LABEL, pageInfo);
 
-        //streamChunks(res.currentPage(), 100, url, true);
     }
 
     public void newTab(String url) {

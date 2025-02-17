@@ -2,7 +2,7 @@ package brad.grier.alhena;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
+import java.awt.Dialog;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.Frame;
@@ -72,7 +72,8 @@ public class Util {
 
         JOptionPane optionPane = new JOptionPane(msg, JOptionPane.INFORMATION_MESSAGE);
         JDialog dialog = optionPane.createDialog(c, title);
-
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         // Enable the transparent title bar on the dialog
         if (SystemInfo.isMacOS) {
             dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
@@ -87,7 +88,8 @@ public class Util {
 
         JOptionPane optionPane = new JOptionPane(question, JOptionPane.QUESTION_MESSAGE, msgType);
         JDialog dialog = optionPane.createDialog(parent, title);
-
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
 
             dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
@@ -118,7 +120,8 @@ public class Util {
         optionPane.setWantsInput(false);
 
         JDialog dialog = optionPane.createDialog(c, title);
-
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
 
             dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
@@ -160,7 +163,7 @@ public class Util {
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setToolTipText("shift+return for line break");
-        Dimension ps = textArea.getPreferredSize();
+        //Dimension ps = textArea.getPreferredSize();
 
         JTextComponent textField = pswd ? new JPasswordField() : textArea;
         textField.addMouseListener(new ContextMenuMouseListener());
@@ -184,6 +187,7 @@ public class Util {
         optionPane.setWantsInput(false);
 
         JDialog dialog = optionPane.createDialog(c, title);
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         textArea.getDocument().addDocumentListener(new DocumentListener() {
 
@@ -302,8 +306,8 @@ public class Util {
         );
 
         optionPane.setWantsInput(false);
-        JDialog dialog = optionPane.createDialog("Choose Font");
-
+        JDialog dialog = optionPane.createDialog(f, "Choose Font");
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
         if (SystemInfo.isMacOS) {
@@ -328,8 +332,9 @@ public class Util {
     }
 
     public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter) {
-        JDialog dialog = new JDialog(f, title, true);
+        JDialog dialog = new JDialog(f, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
 
             dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
