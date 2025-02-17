@@ -74,7 +74,7 @@ public class GeminiTextPane extends JTextPane {
     private List<ClickableRange> clickableRegions = new ArrayList<>();
     private int currentCursor = Cursor.DEFAULT_CURSOR;
     private boolean preformattedMode;
-    private String currentStatus = GeminiClient.WELCOME_MESSAGE;
+    private String currentStatus = Alhena.WELCOME_MESSAGE;
     private final String monospacedFamily;
     private final GeminiFrame f;
     // use StringBuilder instead of StringBuffer as only updated in EventDispatch at creation
@@ -117,7 +117,7 @@ public class GeminiTextPane extends JTextPane {
     private AttributeSet pAttributes;
 
     static {
-        dropExtensions = new ArrayList<>(GeminiClient.fileExtensions);
+        dropExtensions = new ArrayList<>(Alhena.fileExtensions);
         dropExtensions.add(".png");
         dropExtensions.add(".jpg");
     }
@@ -195,7 +195,7 @@ public class GeminiTextPane extends JTextPane {
                 }
 
                 // fix this
-                if (!entered && !" ".equals(currentStatus) && currentStatus != null && !currentStatus.equals(GeminiClient.WELCOME_MESSAGE)) {
+                if (!entered && !" ".equals(currentStatus) && currentStatus != null && !currentStatus.equals(Alhena.WELCOME_MESSAGE)) {
 
                     f.setStatus(" ");
 
@@ -319,7 +319,7 @@ public class GeminiTextPane extends JTextPane {
                                 JMenuItem menuItem2 = new JMenuItem("Open in New Window");
 
                                 menuItem2.addActionListener(ev -> {
-                                    GeminiClient.newWindow(range.url, docURL);
+                                    Alhena.newWindow(range.url, docURL);
 
                                 });
                                 popupMenu.add(menuItem2);

@@ -98,7 +98,7 @@ import io.vertx.core.streams.Pump;
  * Static main class to manage frame creation and connectivity
  *
  */
-public class GeminiClient {
+public class Alhena {
 
     private static Vertx vertx;
     private static NetClient client;
@@ -194,7 +194,7 @@ public class GeminiClient {
         if (Taskbar.isTaskbarSupported()) {
             Taskbar taskbar = Taskbar.getTaskbar();
             if (taskbar.isSupported(Feature.ICON_IMAGE)) {
-                URL iconUrl = GeminiClient.class.getClassLoader().getResource("alhena_256x256.png");
+                URL iconUrl = Alhena.class.getClassLoader().getResource("alhena_256x256.png");
                 taskbar.setIconImage(new ImageIcon(iconUrl).getImage());
             }
         }

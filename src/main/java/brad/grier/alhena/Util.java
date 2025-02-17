@@ -517,7 +517,7 @@ public class Util {
         String resourcePath = "default.gmi";
         Path outputPath = Paths.get(homeDir + "/default.gmi");
 
-        try (InputStream inputStream = GeminiClient.class.getClassLoader().getResourceAsStream(resourcePath)) {
+        try (InputStream inputStream = Alhena.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
                 throw new FileNotFoundException("Resource not found: " + resourcePath);
             }

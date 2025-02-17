@@ -235,7 +235,7 @@ public final class GeminiFrame extends JFrame {
 
     public GeminiFrame(String url, String baseUrl, String themeName) {
 
-        URL iconUrl = GeminiClient.class.getClassLoader().getResource("alhena_32x32.png");
+        URL iconUrl = Alhena.class.getClassLoader().getResource("alhena_32x32.png");
         Image ii = new ImageIcon(iconUrl).getImage();
         setIconImage(ii);
 
@@ -271,7 +271,7 @@ public final class GeminiFrame extends JFrame {
             @Override
             public void windowClosing(WindowEvent evt) {
 
-                GeminiClient.exit(GeminiFrame.this);
+                Alhena.exit(GeminiFrame.this);
 
             }
         });
@@ -469,7 +469,7 @@ public final class GeminiFrame extends JFrame {
 
         //add(pb.scrollPane, BorderLayout.CENTER);
         add(pb, BorderLayout.CENTER);
-        statusField = new JLabel(GeminiClient.WELCOME_MESSAGE);
+        statusField = new JLabel(Alhena.WELCOME_MESSAGE);
 
         statusField.setBorder(new EmptyBorder(5, 5, 5, 5)); // Add padding
 
@@ -489,13 +489,13 @@ public final class GeminiFrame extends JFrame {
         }));
 
         fileMenu.add(createMenuItem("New Window", KeyStroke.getKeyStroke(KeyEvent.VK_N, mod), () -> {
-            GeminiClient.newWindow(null, null);
+            Alhena.newWindow(null, null);
         }));
 
         if (!SystemInfo.isMacOS) {
             fileMenu.add(new JSeparator());
             fileMenu.add(createMenuItem("Quit", KeyStroke.getKeyStroke(KeyEvent.VK_Q, mod), () -> {
-                GeminiClient.exit(GeminiFrame.this);
+                Alhena.exit(GeminiFrame.this);
             }));
         }
         fileMenu.setMnemonic('F');
@@ -561,7 +561,7 @@ public final class GeminiFrame extends JFrame {
                             FlatLaf.setup(theme);
 
                             currentThemeId++;
-                            GeminiClient.updateFrames();
+                            Alhena.updateFrames();
 
                             refreshFromCache(visiblePage());
                             visiblePage().setThemeId(currentThemeId);
@@ -584,7 +584,7 @@ public final class GeminiFrame extends JFrame {
                 proportionalFamily = font.getFamily();
                 fontSize = font.getSize();
                 currentThemeId++;
-                GeminiClient.updateFrames();
+                Alhena.updateFrames();
                 refreshFromCache(visiblePage());
 
                 visiblePage().setThemeId(currentThemeId);
@@ -601,7 +601,7 @@ public final class GeminiFrame extends JFrame {
         aboutMenu.setMnemonic('H');
         if (!SystemInfo.isMacOS) {
             aboutMenu.add(createMenuItem("About", null, () -> {
-                JOptionPane.showMessageDialog(this, GeminiClient.PROG_NAME + " " + GeminiClient.VERSION + "\nWritten by Brad Grier");
+                JOptionPane.showMessageDialog(this, Alhena.PROG_NAME + " " + Alhena.VERSION + "\nWritten by Brad Grier");
 
             }));
         }
@@ -659,7 +659,7 @@ public final class GeminiFrame extends JFrame {
         if (CUSTOM_LABELS.contains(url) && !url.equals(INFO_LABEL)) {
             showCustomPage(url, true, null);
         } else {
-            GeminiClient.processURL(url, page, null, page);
+            Alhena.processURL(url, page, null, page);
         }
     }
 
@@ -800,7 +800,7 @@ public final class GeminiFrame extends JFrame {
 
                 };
                 pb.runOnLoad(r);
-                GeminiClient.processURL(url, pb, null, currentPB);
+                Alhena.processURL(url, pb, null, currentPB);
 
             } else {
                 int currentTabIdx = tabbedPane.getSelectedIndex();
@@ -829,11 +829,11 @@ public final class GeminiFrame extends JFrame {
                 };
                 pb.runOnLoad(r);
 
-                GeminiClient.processURL(url, pb, null, currentPB);
+                Alhena.processURL(url, pb, null, currentPB);
             }
         } else {
             Page nPage = addPageToHistory(null, currentPB);
-            GeminiClient.processURL(url, nPage, null, currentPB);
+            Alhena.processURL(url, nPage, null, currentPB);
 
         }
     }
@@ -856,7 +856,7 @@ public final class GeminiFrame extends JFrame {
                 }
                 case GeminiTextPane.DEFAULT_MODE -> {
                     if (!cURL.isEmpty()) {
-                        GeminiClient.processURL(cURL, visiblePage(), null, visiblePage());
+                        Alhena.processURL(cURL, visiblePage(), null, visiblePage());
                     }
                 }
                 default -> {
@@ -1122,7 +1122,7 @@ public final class GeminiFrame extends JFrame {
 
                             types.get(active).forEach(cert -> {
                                 try {
-                                    X509Certificate xc = (X509Certificate) GeminiClient.loadCertificate(cert.cert());
+                                    X509Certificate xc = (X509Certificate) Alhena.loadCertificate(cert.cert());
                                     X500Principal principal = xc.getSubjectX500Principal();
                                     textPane.addPage("=> " + cert.id() + "," + cert.active() + ":" + cert.domain() + " " + cert.domain() + " [" + principal.getName() + "]\n");
                                 } catch (Exception ex) {
@@ -1237,7 +1237,7 @@ public final class GeminiFrame extends JFrame {
             if (result == JOptionPane.YES_OPTION) {
                 try {
                     DB.deleteClientCert(id);
-                    GeminiClient.createNetClient();
+                    Alhena.createNetClient();
                     refresh();
                     Util.infoDialog(this, "Delete", "Certificate deleted");
                 } catch (SQLException ex) {
@@ -1251,7 +1251,7 @@ public final class GeminiFrame extends JFrame {
     public void toggleCert(int id, boolean active, String url) {
         try {
             DB.toggleCert(id, active, url, false);
-            GeminiClient.createNetClient();
+            Alhena.createNetClient();
             refresh();
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -1368,8 +1368,8 @@ public final class GeminiFrame extends JFrame {
                     }
 
                     DB.insertClientCert(host, cert, key);
-                    GeminiClient.addCertToTrustStore(host, visiblePage().getCert());
-                    GeminiClient.createNetClient();
+                    Alhena.addCertToTrustStore(host, visiblePage().getCert());
+                    Alhena.createNetClient();
                     Util.infoDialog(this, "Added", "PEM added for : " + host);
 
                 }
@@ -1383,9 +1383,9 @@ public final class GeminiFrame extends JFrame {
     public void openFile(File file) {
 
         if (file == null) {
-            String desc = GeminiClient.fileExtensions.stream().collect(Collectors.joining(", "));
-            String[] exts = GeminiClient.fileExtensions.toArray(new String[0]);
-            String[] cleanExtensions = GeminiClient.fileExtensions.stream()
+            String desc = Alhena.fileExtensions.stream().collect(Collectors.joining(", "));
+            String[] exts = Alhena.fileExtensions.toArray(new String[0]);
+            String[] cleanExtensions = Alhena.fileExtensions.stream()
                     .map(ext -> ext.substring(1))
                     .toArray(String[]::new);
 
@@ -1549,7 +1549,7 @@ public final class GeminiFrame extends JFrame {
 
             tabbedPane.setSelectedComponent(pb);
             // GeminiClient.processURL(url, this, pb.textPane, null, null);
-            GeminiClient.processURL(url, pb, null, currentPage);
+            Alhena.processURL(url, pb, null, currentPage);
         }
 
     }
