@@ -1,4 +1,4 @@
-# Alhena 2.4 🌟
+# Alhena 2.5 🌟
 
 **Alhena** is a full-featured, multi-platform Gemini browser with a modern UI, asynchronous networking, and certificate management.
 
@@ -44,12 +44,12 @@ Prebuilt binaries are available for various platforms. Java is NOT required. Eac
 
 | Platform            | Type  | Download Link |
 |---------------------|------|--------------|
-| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_windows_x64.zip) |
-| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_x64.dmg) |
-| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_aarch64.dmg) |
-| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_linux_x64.tgz) |
-| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_linux_aarch64.tgz) |
-| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.4/alhena-2.4_freebsd_x64.tgz) |
+| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.5/alhena-2.5_windows_x64.zip) |
+| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.5/alhena-2.5_x64.dmg) |
+| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.5/alhena-2.5_aarch64.dmg) |
+| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.5/alhena-2.5_linux_x64.tgz) |
+| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.5/alhena-2.5_linux_aarch64.tgz) |
+| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.5/alhena-2.5_freebsd_x64.tgz) |
 
 
 ## 🐳 Docker
