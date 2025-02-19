@@ -425,7 +425,7 @@ public class DB {
         }
     }
 
-    public static String getPref(String key) {
+    public static String getPref(String key, String defVal) {
         String pref = null;
         try {
             try (Connection con = cp.getConnection()) {
@@ -442,7 +442,7 @@ public class DB {
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return pref;
+        return pref == null ? defVal : pref;
     }
 
     public static String getUrlLabel(String url) {
