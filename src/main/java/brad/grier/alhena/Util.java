@@ -501,7 +501,7 @@ public class Util {
 
     public static String getHome() {
 
-        String homePage = DB.getPref("home");
+        String homePage = DB.getPref("home", null);
         if (homePage == null) {
             String homeDir = System.getProperty("alhena.home");
             File file = new File(homeDir + "/default.gmi");
