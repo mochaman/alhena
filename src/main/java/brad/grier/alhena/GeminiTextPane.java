@@ -2,6 +2,7 @@ package brad.grier.alhena;
 
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Desktop;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -323,6 +324,28 @@ public class GeminiTextPane extends JTextPane {
 
                                 });
                                 popupMenu.add(menuItem2);
+                                
+
+                                if (Alhena.browsingSupported && range.url.startsWith("http")) {
+                                    boolean useBrowser = DB.getPref("browser", "false").equals("true");
+                                    // show the opposite of the setting - this then becomes the default
+                                    String label = useBrowser ? "Alhena" : "Browser";
+                                    JMenuItem httpMenuItem = new JMenuItem("Open In " + label);
+                                    httpMenuItem.addActionListener(al -> {
+                                        if (!useBrowser) {
+                                            try {
+                                                Desktop.getDesktop().browse(new URI(range.url));
+                                            } catch (Exception ex) {
+                                                ex.printStackTrace();
+                                            }
+                                        } else {
+                                            f.fetchURL(range.url);
+                                        }
+                                        DB.insertPref("browser", String.valueOf(!useBrowser));
+                                    });
+                                    
+                                    popupMenu.add(httpMenuItem);
+                                }
 
                                 switch (currentMode) {
                                     case CERT_MODE -> {
@@ -564,7 +587,7 @@ public class GeminiTextPane extends JTextPane {
         int width = 0;
         width = (int) (f.getWidth() * .85);
         BufferedImage image = Util.getImage(imageBytes, width, width * 2);
-
+        
         ImageIcon icon = new ImageIcon(image);
 
         SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
@@ -1144,7 +1167,20 @@ public class GeminiTextPane extends JTextPane {
 
             ClickableRange cr = addStyledText(lastLine, label.isEmpty() ? url : label, linkStyle,
                     () -> {
-                        if (currentMode == CERT_MODE) {
+                        if (finalUrl.startsWith("https") && Alhena.browsingSupported && DB.getPref("browser", "false").equals("true")) {
+                            try {
+                                Desktop.getDesktop().browse(new URI(finalUrl));
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+                        } else if (finalUrl.startsWith("mailto:") && Alhena.mailSupported) {
+                            try {
+                                Desktop.getDesktop().mail(new URI(finalUrl));
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+
+                        } else if (currentMode == CERT_MODE) {
                             try {
                                 int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
                                 boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
@@ -1217,8 +1253,8 @@ public class GeminiTextPane extends JTextPane {
 
                 if (isEmoji(c)) {
 
-                    if (/*useNotoEmoji || */styleName.equals("```")) {
-                        StyleConstants.setFontFamily(style, "Noto Emoji");
+                    if (styleName.equals("```")) {
+                        StyleConstants.setFontFamily(style, "Noto Emoji"); // if not found in pngs
                     }
 
                     int codePoint = text.codePointAt(i);
