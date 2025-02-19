@@ -7,8 +7,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 /**
- * A class that encapsulates the JTextPane and JScrollPane used in the main view and tabs
- * 
+ * A class that encapsulates the JTextPane and JScrollPane used in the main view
+ * and tabs
+ *
  * @author Brad Grier
  */
 public class Page extends JPanel {
@@ -20,6 +21,7 @@ public class Page extends JPanel {
     private GeminiFrame frame;
     private int arrayIndex = 0; // only tracked in root pages
     private Runnable completed;
+    private JScrollPane scrollPane;
 
     private Page() {
 
@@ -31,32 +33,43 @@ public class Page extends JPanel {
         this.rootPage = rootPage;
         this.frame = frame;
         this.themeId = themeId;
-        if(rootPage == ROOT_PAGE){
+        if (rootPage == ROOT_PAGE) {
             arrayIndex = 0;
         }
         setLayout(new BorderLayout());
         textPane = new GeminiTextPane(frame, this, url);
+        scrollPane = new JScrollPane(textPane);
+        String ss = DB.getPref("scrollspeed", null);
+        
+        if (ss != null){
+            int scrollSpeed = Integer.parseInt(ss);
 
-        add(new JScrollPane(textPane), BorderLayout.CENTER);
+            scrollPane.getVerticalScrollBar().setUnitIncrement(scrollSpeed);
+        }
+        add(scrollPane, BorderLayout.CENTER);
 
     }
 
-    public void runOnLoad(Runnable r){
+    public void setScrollIncrement(int inc){
+        scrollPane.getVerticalScrollBar().setUnitIncrement(inc);
+    }
+
+    public void runOnLoad(Runnable r) {
         completed = r;
     }
 
-    public void loading(){
-        if(completed != null){
+    public void loading() {
+        if (completed != null) {
             completed.run();
         }
     }
 
-    public boolean isRoot(){
+    public boolean isRoot() {
         return rootPage == ROOT_PAGE;
     }
 
     public void setRootPage(Page page) {
-        if (isRoot() && page != ROOT_PAGE) { 
+        if (isRoot() && page != ROOT_PAGE) {
             // already a root page - once a root, always a root
             // a reminder for future me
             throw new IllegalStateException();
@@ -65,10 +78,10 @@ public class Page extends JPanel {
 
     }
 
-    public int getArrayIndex(){
-        if(isRoot()){
+    public int getArrayIndex() {
+        if (isRoot()) {
             return arrayIndex;
-        }else{
+        } else {
             return rootPage.getArrayIndex();
         }
     }
@@ -128,7 +141,7 @@ public class Page extends JPanel {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
-            return true; 
+            return true;
 
         }
         if (!(obj instanceof Page other)) {
@@ -144,11 +157,12 @@ public class Page extends JPanel {
     }
 
     private X509Certificate cert;
-    public void setCert(X509Certificate cert){
+
+    public void setCert(X509Certificate cert) {
         this.cert = cert;
     }
 
-    public X509Certificate getCert(){
+    public X509Certificate getCert() {
         return cert;
     }
 
