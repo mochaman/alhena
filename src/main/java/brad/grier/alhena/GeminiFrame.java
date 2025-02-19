@@ -10,6 +10,7 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.MenuItem;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
@@ -96,6 +97,17 @@ public final class GeminiFrame extends JFrame {
     private static Font saveFont;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
+            Map.entry("FlatMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", true)),
+            Map.entry("FlatDarkPurpleIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDarkPurpleIJTheme", true)),
+            Map.entry("FlatMonokaiProIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatMonokaiProIJTheme", true)),
+            Map.entry("FlatGradiantoMidnightBlueIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoMidnightBlueIJTheme", true)),
+            Map.entry("FlatMoonlightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMoonlightIJTheme", true)),
+            Map.entry("FlatMaterialLighterIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialLighterIJTheme", false)),
+            Map.entry("FlatGitHubIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatGitHubIJTheme", false)),
+            Map.entry("FlatLightOwlIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatLightOwlIJTheme", false)),
+            Map.entry("FlatVuesionIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatVuesionIJTheme", true)),
+            Map.entry("FlatNordIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatNordIJTheme", true)),
+            Map.entry("FlatHiberbeeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHiberbeeDarkIJTheme", true)),
             Map.entry("FlatCyanLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCyanLightIJTheme", false)),
             Map.entry("FlatLightFlatIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatLightFlatIJTheme", false)),
             Map.entry("FlatHighContrastIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHighContrastIJTheme", true)),
@@ -114,6 +126,28 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatSpacegrayIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSpacegrayIJTheme", true)),
             Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", false))
     );
+
+    public void setScrollIncrement(int inc){
+        pageHistoryMap.entrySet().stream().forEach(entry ->{
+            entry.getValue().forEach(page ->{
+                page.setScrollIncrement(inc);    
+            });
+
+        });
+    }
+
+    public void getInfo(StringBuilder sb){
+        pageHistoryMap.entrySet().stream().forEach(entry ->{
+            entry.getValue().forEach(page ->{
+                StringBuilder sbdoc = page.textPane.current().currentPage();
+                if(sbdoc != null){
+                    
+                    sb.append(page.textPane.getDocURLString() + ": " + sbdoc.length() + " bytes").append("\n");
+                }
+            });
+
+        });
+    }
 
     public boolean isClickedLink(String link) {
         return clickedLinks.contains(link);
@@ -234,8 +268,10 @@ public final class GeminiFrame extends JFrame {
     }
 
     public GeminiFrame(String url, String baseUrl, String themeName) {
-
-        URL iconUrl = Alhena.class.getClassLoader().getResource("alhena_32x32.png");
+        // Ubuntu seems to use the frame icon for the dock icon, using the 64x64 image improves the
+        // resolution of the dock image at some cost to the frame image (bad downscaling)
+        String pngName = SystemInfo.isWindows ? "alhena_32x32.png" : "alhena_64x64.png";
+        URL iconUrl = Alhena.class.getClassLoader().getResource(pngName);
         Image ii = new ImageIcon(iconUrl).getImage();
         setIconImage(ii);
 
@@ -245,12 +281,13 @@ public final class GeminiFrame extends JFrame {
             //getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
         }
 
-        proportionalFamily = DB.getPref("fontfamily");
-        proportionalFamily = proportionalFamily == null ? "SansSerif" : proportionalFamily;
-        String fs = DB.getPref("fontsize");
-        fontSize = fs == null ? 15 : Integer.parseInt(fs);
-        String dbFont = DB.getPref("font");
-        dbFont = dbFont == null ? "SansSerif" : dbFont;
+        proportionalFamily = DB.getPref("fontfamily", "SansSerif");
+        //proportionalFamily = proportionalFamily == null ? "SansSerif" : proportionalFamily;
+        String fs = DB.getPref("fontsize", "15");
+        //fontSize = fs == null ? 15 : Integer.parseInt(fs);
+        fontSize = Integer.parseInt(fs);
+        String dbFont = DB.getPref("font", "SansSerif");
+        //dbFont = dbFont == null ? "SansSerif" : dbFont;
         saveFont = new Font(dbFont, Font.PLAIN, fontSize);
 
         // test to see if db font exists - maybe deleted from system or db moved to another os
@@ -622,6 +659,10 @@ public final class GeminiFrame extends JFrame {
             //GeminiClient.processURL("gemini://ultimatumlabs.com/alhena_changes.gmi", visiblePage(), null, visiblePage());
         }));
 
+        aboutMenu.add(createMenuItem("Details", null, ()->{
+            fetchURL("alhena:info");
+        }));
+
         menuBar.add(aboutMenu);
         setJMenuBar(menuBar);
         add(statusField, BorderLayout.SOUTH);
@@ -632,6 +673,15 @@ public final class GeminiFrame extends JFrame {
             init(url, pb);
         }
 
+    }
+
+    private MenuItem mi;
+    public void setMenuItem(MenuItem mi){
+        this.mi = mi;    
+    }
+
+    public MenuItem getMenuItem(){
+        return mi;
     }
 
     private void prefill(JTextField textField, char typedChar) {
@@ -1045,6 +1095,9 @@ public final class GeminiFrame extends JFrame {
             titleLabel.setText(title);
         } else {
             super.setTitle(title);
+        }
+        if(mi != null){
+            mi.setLabel(title);
         }
         if (tabbedPane != null) {
             int idx = tabbedPane.getSelectedIndex();
@@ -1759,7 +1812,7 @@ public final class GeminiFrame extends JFrame {
                     int index = tabbedPane.indexOfTabComponent(this);
                     Page page = (Page) tabbedPane.getComponentAt(index);
 
-                    pageHistoryMap.remove(page.getRootPage());
+                    pageHistoryMap.remove(getRootPage(page));
 
                     if (index != -1) {
                         tabbedPane.remove(index);
