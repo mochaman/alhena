@@ -4,6 +4,8 @@ import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.EventQueue;
 import java.awt.KeyboardFocusManager;
+import java.awt.MenuItem;
+import java.awt.PopupMenu;
 import java.awt.Taskbar;
 import java.awt.Taskbar.Feature;
 import java.awt.event.KeyEvent;
@@ -108,12 +110,12 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "2.5";
+    public final static String VERSION = "2.6";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
-    private static int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+    public static boolean browsingSupported, mailSupported;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -137,7 +139,7 @@ public class Alhena {
                 }
                 return false;
             }
-            
+
             Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
 
@@ -206,6 +208,11 @@ public class Alhena {
                 URL iconUrl = Alhena.class.getClassLoader().getResource("alhena_256x256.png");
                 taskbar.setIconImage(new ImageIcon(iconUrl).getImage());
             }
+            if (taskbar.isSupported(Feature.MENU)) {
+
+                taskbar.setMenu(createPopupMenu());
+            }
+
         }
         if (Desktop.isDesktopSupported()) {
             Desktop desktop = Desktop.getDesktop();
@@ -214,6 +221,12 @@ public class Alhena {
                     Component c = frameList.size() == 1 ? frameList.get(0) : null;
                     Util.infoDialog(c, "About", PROG_NAME + " " + VERSION + "\nWritten by Brad Grier");
                 });
+            }
+            if (desktop.isSupported(Desktop.Action.BROWSE)) {
+                browsingSupported = true;
+            }
+            if (desktop.isSupported(Desktop.Action.MAIL)) {
+                mailSupported = true;
             }
 
         }
@@ -231,7 +244,7 @@ public class Alhena {
 
         EventQueue.invokeLater(() -> {
 
-            String theme = DB.getPref("theme");
+            String theme = DB.getPref("theme", null);
             if (theme != null) {
                 Util.setupTheme(theme);
             } else {
@@ -240,9 +253,7 @@ public class Alhena {
             }
 
             String u = Util.getHome();
-            GeminiFrame gf = new GeminiFrame(u, u, theme);
-
-            frameList.add(gf);
+            newWindow(u, u);
 
         });
 
@@ -254,9 +265,42 @@ public class Alhena {
 
     }
 
+    private static PopupMenu createPopupMenu() {
+        PopupMenu popupMenu = new PopupMenu();
+
+        MenuItem frameItem = new MenuItem("New Window");
+        frameItem.addActionListener(al -> {
+            String home = Util.getHome();
+            Alhena.newWindow(home, home);
+        });
+        int idx = 1;
+        for (GeminiFrame gf : frameList) {
+            MenuItem mi = gf.getMenuItem();
+            if (mi == null) {
+                mi = new MenuItem("Window: " + idx++);
+                gf.setMenuItem(mi);
+                mi.addActionListener(al -> {
+                    gf.toFront();
+                });
+            }
+
+            popupMenu.add(mi);
+        }
+
+        popupMenu.add(frameItem);
+        return popupMenu;
+    }
+
     public static void newWindow(String url, String baseUrl) {
-        String theme = DB.getPref("theme");
+        String theme = DB.getPref("theme", null);
         frameList.add(new GeminiFrame(url, baseUrl, theme));
+        if (Taskbar.isTaskbarSupported()) {
+            Taskbar taskbar = Taskbar.getTaskbar();
+            if (taskbar.isSupported(Feature.MENU)) {
+
+                taskbar.setMenu(createPopupMenu());
+            }
+        }
     }
 
     public static void updateFrames() {
@@ -275,6 +319,13 @@ public class Alhena {
         } else {
             gf.shutDown();
             frameList.remove(gf);
+            if (Taskbar.isTaskbarSupported()) {
+                Taskbar taskbar = Taskbar.getTaskbar();
+                if (taskbar.isSupported(Feature.MENU)) {
+
+                    taskbar.setMenu(createPopupMenu());
+                }
+            }
         }
 
     }
@@ -282,6 +333,11 @@ public class Alhena {
     public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
         // this method needs to be refactored
         url = url.trim();
+
+        if (url.startsWith("alhena:")) {
+            processCommand(url, p);
+            return;
+        }
         if (url.contains("://")) {
             if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("https://")) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
@@ -1215,6 +1271,73 @@ public class Alhena {
             list.append(processElement(li, null)).append("\n");
         }
         return list.toString();
+    }
+
+    private static void processCommand(String url, Page p) {
+        boolean plainText = false;
+        String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
+        String message = "## Unknown command\n";
+        if (cmd.length == 1) {
+            if (cmd[0].equals("scrollspeed")) {
+                message = "# scrollspeed\n###Set the mouse wheel speed: scrollspeed=10\nscrollspeed=default resets. Negative numbers reverse scroll direction.";
+
+            } else if (cmd[0].equals("info")) {
+                plainText = true;
+                message = getAlhenaInfo().toString();
+            }
+
+        } else if (cmd.length == 2) {
+            if (cmd[0].equals("scrollspeed")) {
+                try {
+                    if (cmd[1].equals("default")) {
+                        DB.insertPref("scrollspeed", null);
+                        message = "## scrollspeed reset\n";
+                    } else {
+                        int val = Integer.parseInt(cmd[1]);
+                        DB.insertPref("scrollspeed", cmd[1]);
+                        for (GeminiFrame gf : frameList) {
+                            gf.setScrollIncrement(val);
+                        }
+                        message = "## " + cmd[0] + " set to " + cmd[1] + "\n";
+                    }
+
+                } catch (NumberFormatException ex) {
+                    message = "## Value must be a number\n";
+                }
+
+            }
+        }
+        p.textPane.end(message, plainText, url, true);
+
+    }
+
+    public static StringBuilder getAlhenaInfo() {
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append(PROG_NAME + " " + VERSION + "\n\n");
+        sb.append("Java version: ").append(System.getProperty("java.version")).append("\n");
+        sb.append("Vendor: ").append(System.getProperty("java.vendor")).append("\n");
+        sb.append("OS name: ").append(System.getProperty("os.name")).append("\n");
+        sb.append("Architecture: ").append(System.getProperty("os.arch")).append("\n");
+        sb.append("OS version: ").append(System.getProperty("os.version")).append("\n\n");
+
+        Runtime runtime = Runtime.getRuntime();
+
+        long maxMemory = runtime.maxMemory();
+        long totalMemory = runtime.totalMemory();
+        long allocatedMemory = totalMemory - runtime.freeMemory();
+        long freeMemory = runtime.freeMemory();
+        sb.append("Max memory: " + maxMemory / (1024 * 1024) + " MB\n");
+        sb.append("Total memory: " + totalMemory / (1024 * 1024) + " MB\n");
+        sb.append("Allocated memory: " + allocatedMemory / (1024 * 1024) + " MB\n");
+        sb.append("Free memory: " + freeMemory / (1024 * 1024) + " MB\n\n");
+
+        sb.append("Documents: \n");
+        for (GeminiFrame gf : frameList) {
+            gf.getInfo(sb);
+        }
+
+        return sb;
     }
 
 }
