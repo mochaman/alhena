@@ -1,7 +1,16 @@
-
 package brad.grier.alhena;
 
 import java.awt.EventQueue;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Date;
@@ -11,18 +20,23 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.h2.jdbcx.JdbcConnectionPool;
 
+import brad.grier.alhena.PipedEncryption.Encryptor;
+
 /**
  * Database methods.
- * 
+ *
  * @author Brad Grier
  */
 public class DB {
 
     private static JdbcConnectionPool cp;
+    private static String VERSION = "1";
 
     public static record CertInfo(String fingerPrint, Timestamp expires, Timestamp lastModified) {
 
@@ -33,11 +47,18 @@ public class DB {
         String homeDir = System.getProperty("alhena.home");
         if (System.getenv("ALHENAPSWD") != null) {
             cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena;CIPHER=AES", "sa", "sa " + System.getenv("ALHENAPSWD"));
-        } else { 
+        } else {
             char[] pswd = {'i', 'a', 'm', 't', 'h', 'e', 'w', 'a', 'l', 'n', 'u', 't', '!'};
             cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena;CIPHER=AES", "sa", "sa " + new String(pswd));
         }
+        initV1();
 
+    }
+
+    // THE SQL HERE IS SET IN STONE TO SUPPORT IMPORT/EXPORT - NO CHANGES!!!!
+    // ANY TABLE CHANGES NEED TO BE VIA ALTER STATEMENTS IN AN initV2() METHOD, ETC WHICH
+    // MUST THEN BE CALLED FROM restoreDB() ONCE ADDED
+    private static void initV1() throws Exception {
         try (Connection connection = cp.getConnection()) {
             if (!tableExists(connection, "HISTORY")) {
                 String sql = """
@@ -50,7 +71,7 @@ public class DB {
                  """;
                 runStatement(connection, sql);
                 runStatement(connection, "ALTER TABLE HISTORY ADD CONSTRAINT UNIQUE_URL_PER_DAY UNIQUE (URL, TIME_STAMP_DATE)");
- 
+
             }
             if (!tableExists(connection, "BOOKMARKS")) {
                 String sql = """
@@ -107,7 +128,6 @@ public class DB {
                 runStatement(connection, sql);
                 runStatement(connection, "CREATE INDEX idx_prefs ON PREFS (PREFKEY);");
             }
-
         }
     }
 
@@ -463,6 +483,69 @@ public class DB {
             ex.printStackTrace();
         }
         return label;
+    }
+
+    public static void dumpDB(X509Certificate cert, File outputFile) throws Exception {
+        Encryptor encryptor = new Encryptor(cert, outputFile);
+        try (Connection con = cp.getConnection(); var st = con.createStatement();) {
+            ResultSet rs = st.executeQuery("SCRIPT");
+
+            while (rs.next()) {
+                //System.out.println(rs.getString(1)); // Prints SQL statements
+                encryptor.writeString(rs.getString(1));
+            }
+            encryptor.close();
+        }
+    }
+
+    public static void dumpDB(File outputFile) throws Exception {
+        //File tempFile = Files.createTempFile("backup_", ".sql").toFile();
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+            ResultSet rs = st.executeQuery("SCRIPT");
+            st.execute("SCRIPT DROP TO '" + outputFile.getAbsolutePath() + "' COMPRESSION ZIP");
+
+        }
+        addFileToZip(outputFile.getAbsolutePath(), "version.txt", VERSION);
+        //Files.writeString(Path.of("file.txt"), "Hello, World!");
+    }
+
+    public static int restoreDB(File inputFile) throws Exception {
+        int version = 0;
+        try (FileSystem zipFs = FileSystems.newFileSystem(inputFile.toPath(), (ClassLoader) null)) {
+            version = Integer.parseInt(Files.readString(zipFs.getPath("/version.txt")).trim());
+        }
+
+        if(version > Integer.parseInt(VERSION)){
+            // backup is newer than current version of Alhena - no go
+            return version;
+        }
+
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+            ResultSet rs = st.executeQuery("SCRIPT");
+            st.execute("RUNSCRIPT FROM '" + inputFile + "' COMPRESSION ZIP");
+        }
+        // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
+        // subsequent database changes
+
+        return 0;
+
+    }
+
+    public static void addFileToZip(String zipFilePath, String entryNameInZip, String contents) {
+        Map<String, String> env = new HashMap<>();
+        env.put("create", "false"); // File should exist
+
+        Path path = Paths.get(zipFilePath);
+        URI uri = URI.create("jar:" + path.toUri());
+
+        try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+            //Path fileToAdd = Paths.get(fileToAddPath);
+            Path targetInZip = fs.getPath(entryNameInZip);
+            Files.write(targetInZip, contents.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+
+            e.printStackTrace();
+        }
     }
 
 }
