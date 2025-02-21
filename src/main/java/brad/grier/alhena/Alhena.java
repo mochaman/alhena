@@ -71,6 +71,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 
@@ -110,7 +111,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "2.6";
+    public final static String VERSION = "2.7";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -250,6 +251,7 @@ public class Alhena {
             } else {
                 FlatLightLaf.setup();
                 theme = "com.formdev.flatlaf.FlatLightLaf";
+                DB.insertPref("theme", theme);
             }
 
             String u = Util.getHome();
@@ -303,9 +305,22 @@ public class Alhena {
         }
     }
 
-    public static void updateFrames() {
+    public static void updateFrames(boolean updateBookmarks) {
+
+        try {
+            Class<?> themeClass = Class.forName(DB.getPref("theme", null));
+            FlatLaf theme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
+            FlatLaf.setup(theme);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
         GeminiFrame.currentThemeId++;
         for (GeminiFrame jf : frameList) {
+            if (updateBookmarks) {
+                jf.updateBookmarks();
+            }
+
             jf.refreshFromCache(jf.visiblePage());
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
             SwingUtilities.updateComponentTreeUI(jf);
@@ -1278,7 +1293,9 @@ public class Alhena {
         String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
         String message = "## Unknown command\n";
         if (cmd.length == 1) {
-            if (cmd[0].equals("scrollspeed")) {
+            if (cmd[0].equals("pngemoji")) {
+                message = "# pngemoji\n###Set emoji rendering type: pngemoji=true\ntrue required for color emojis on non-Mac platforms.";
+            } else if (cmd[0].equals("scrollspeed")) {
                 message = "# scrollspeed\n###Set the mouse wheel speed: scrollspeed=10\nscrollspeed=default resets. Negative numbers reverse scroll direction.";
 
             } else if (cmd[0].equals("info")) {
@@ -1305,6 +1322,17 @@ public class Alhena {
                     message = "## Value must be a number\n";
                 }
 
+            } else if (cmd[0].equals("pngemoji")) {
+                if (!cmd[1].toLowerCase().equals("true") && !cmd[1].toLowerCase().equals("false")) {
+                    message = "## must be true or false\n";
+                } else {
+                    DB.insertPref("pngemoji", cmd[1].toLowerCase());
+                    EventQueue.invokeLater(() -> {
+                        updateFrames(false);
+                    });
+
+                    message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";
+                }
             }
         }
         p.textPane.end(message, plainText, url, true);
@@ -1313,7 +1341,7 @@ public class Alhena {
 
     public static StringBuilder getAlhenaInfo() {
         StringBuilder sb = new StringBuilder();
-        
+
         sb.append(PROG_NAME + " " + VERSION + "\n\n");
         sb.append("Java version: ").append(System.getProperty("java.version")).append("\n");
         sb.append("Vendor: ").append(System.getProperty("java.vendor")).append("\n");
