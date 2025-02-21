@@ -110,20 +110,20 @@ public class AnsiColor {
         return new Color(gray, gray, gray);
     }
 
-    public static Color adjustColor(Color color, boolean isDarkTheme) {
+    public static Color adjustColor(Color color, boolean isDarkTheme, double minLum, double maxLum, double blend) {
 
         double luminance = getLuminance(color);
 
-        double minLuminance = isDarkTheme ? 0.2 : 0.2; // Thresholds for adjustment
-        double maxLuminance = isDarkTheme ? 0.8 : 0.8; // was 0.9
+        double minLuminance = isDarkTheme ? minLum : minLum; // .2 Thresholds for adjustment
+        double maxLuminance = isDarkTheme ? maxLum : maxLum; // was 0.8
 
         if (luminance < minLuminance) {
             // too dark on dark theme
-            return blend(color, Color.WHITE, 0.15);
+            return blend(color, Color.WHITE, blend);
             //return color.brighter();
         } else if (luminance > maxLuminance) {
             // too light on light theme
-            return blend(color, Color.BLACK, 0.15);
+            return blend(color, Color.BLACK, blend);
             //return color.darker();
         }
         return color; // no change
