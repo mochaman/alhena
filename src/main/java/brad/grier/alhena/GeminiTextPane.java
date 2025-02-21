@@ -324,7 +324,6 @@ public class GeminiTextPane extends JTextPane {
 
                                 });
                                 popupMenu.add(menuItem2);
-                                
 
                                 if (Alhena.browsingSupported && range.url.startsWith("http")) {
                                     boolean useBrowser = DB.getPref("browser", "false").equals("true");
@@ -343,7 +342,7 @@ public class GeminiTextPane extends JTextPane {
                                         }
                                         DB.insertPref("browser", String.valueOf(!useBrowser));
                                     });
-                                    
+
                                     popupMenu.add(httpMenuItem);
                                 }
 
@@ -587,7 +586,7 @@ public class GeminiTextPane extends JTextPane {
         int width = 0;
         width = (int) (f.getWidth() * .85);
         BufferedImage image = Util.getImage(imageBytes, width, width * 2);
-        
+
         ImageIcon icon = new ImageIcon(image);
 
         SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
@@ -924,11 +923,11 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private void ansiFG(Color c) {
-        StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark")));
+        StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark"), .2d, .8d, .15d));
     }
 
     private void ansiBG(Color c) {
-        StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark")));
+        StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark"), .2d, .8d, .15d));
     }
 
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
@@ -1022,7 +1021,11 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
+    private boolean pngEmoji = true;
+    private String emojiFont;
     private void buildStyles() {
+        pngEmoji = DB.getPref("pngemoji", "true").equals("true");
+        emojiFont = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
         boolean isDark = UIManager.getBoolean("laf.dark");
 
         linkColor = UIManager.getColor("Component.linkColor");
@@ -1035,24 +1038,27 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setItalic(pfStyle, false);
         StyleConstants.setUnderline(pfStyle, false);
 
-        // added for ansi
-        // StyleConstants.setForeground(pfStyle, getForeground());
-        // StyleConstants.setBackground(pfStyle, getBackground());
+        Color foreground = UIManager.getColor("TextField.foreground");
+
         Style h1Style = doc.addStyle("###", null);
-        StyleConstants.setFontFamily(h1Style, f.proportionalFamily);
-        StyleConstants.setFontSize(h1Style, f.fontSize + 3); // 18
+        StyleConstants.setFontFamily(h1Style, GeminiFrame.proportionalFamily);
+        StyleConstants.setFontSize(h1Style, GeminiFrame.fontSize + 3); // 18
         StyleConstants.setBold(h1Style, true);
         StyleConstants.setItalic(h1Style, false);
         StyleConstants.setUnderline(h1Style, false);
+        //Color hColor = UIManager.getColor("TextField.selectionBackground");
+        Color hColor = AnsiColor.adjustColor(isDark ? linkColor.brighter() : linkColor.darker(), isDark, .1, .9, .2);
+        //hColor = isDark ? hColor.brighter() : hColor.darker();
+        StyleConstants.setForeground(h1Style, hColor);
 
         Style h2Style = doc.addStyle("##", h1Style);
-        StyleConstants.setFontSize(h2Style, f.fontSize + 9); // 24
+        StyleConstants.setFontSize(h2Style, GeminiFrame.fontSize + 9); // 24
 
         Style h3Style = doc.addStyle("#", h1Style);
-        StyleConstants.setFontSize(h3Style, f.fontSize + 17); // 32
+        StyleConstants.setFontSize(h3Style, GeminiFrame.fontSize + 17); // 32
 
         Style linkStyle = doc.addStyle("=>", h1Style);
-        StyleConstants.setFontSize(linkStyle, f.fontSize);
+        StyleConstants.setFontSize(linkStyle, GeminiFrame.fontSize);
         StyleConstants.setForeground(linkStyle, linkColor);
         StyleConstants.setBold(linkStyle, true);
 
@@ -1060,13 +1066,15 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setForeground(clickedStyle, isDark ? linkColor.darker() : linkColor.brighter());
 
         Style quoteStyle = doc.addStyle(">", h1Style);
-        StyleConstants.setFontSize(quoteStyle, f.fontSize);
+        StyleConstants.setFontSize(quoteStyle, GeminiFrame.fontSize);
         StyleConstants.setItalic(quoteStyle, true);
         StyleConstants.setBold(quoteStyle, false);
+        StyleConstants.setForeground(quoteStyle, foreground);
 
         Style textStyle = doc.addStyle("text", h1Style);
-        StyleConstants.setFontSize(textStyle, f.fontSize);
+        StyleConstants.setFontSize(textStyle, GeminiFrame.fontSize);
         StyleConstants.setBold(textStyle, false);
+        StyleConstants.setForeground(textStyle, foreground);
 
         Style listStyle = doc.addStyle("*", textStyle);
 
@@ -1199,7 +1207,7 @@ public class GeminiTextPane extends JTextPane {
 
         } else if (line.startsWith(">")) {
             addStyledText(lastLine, line.substring(1).trim(), ">", null);
-        } else if (line.startsWith("*")) {
+        } else if (line.startsWith("* ")) {
             addStyledText(lastLine, "🔹 " + line.substring(1).trim(), "*", null);
 
         } else {
@@ -1243,42 +1251,57 @@ public class GeminiTextPane extends JTextPane {
         ClickableRange cr = null;
 
         int start = doc.getLength();
-
+        
         if (containsEmoji(text)) {
 
             String fontFamily = StyleConstants.getFontFamily(style);
+            //String emojiFont = SystemInfo.isMacOS ? fontFamily : "Noto Emoji";
             int fontHeight = getFontHeight(style) + 2;
+            int[] cpCount = new int[1];
+            SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
+            List<Integer> codePoints = new ArrayList<>();
             for (int i = 0; i < text.length(); i++) {
                 char c = text.charAt(i);
 
                 if (isEmoji(c)) {
+                    if (pngEmoji) {
+                        // if (styleName.equals("```")) {
+                        //     StyleConstants.setFontFamily(style, "Noto Emoji"); // if not found in pngs
+                        // }
+                        String fileName = getEmojiFilename(text, i, cpCount, codePoints);
+                        ImageIcon icon = Util.loadPNGIcon(fileName, fontHeight, fontHeight);
 
-                    if (styleName.equals("```")) {
-                        StyleConstants.setFontFamily(style, "Noto Emoji"); // if not found in pngs
-                    }
+                        if (icon == null) {
 
-                    int codePoint = text.codePointAt(i);
-                    i++;
-                    //System.out.println(String.format("emoji_u%x", codePoint));
-                    ImageIcon icon = Util.loadPNGIcon("/png/" + String.format("emoji_u%x", codePoint) + ".png", fontHeight, fontHeight);
-                    if (icon == null) {
-                        //System.out.println("null: " + String.format("emoji_u%x", codePoint));
+                            char[] chars = Character.toChars(text.codePointAt(i));
 
-                        char[] chars = Character.toChars(codePoint);
-                        i--;
-                        insertString(doc.getLength(), new String(chars), style); // Use emoji style
+                            i++;
+                            //i += 2;
 
-                    } else {
-                        SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
-                        StyleConstants.setIcon(emojiStyle, icon);
+                            insertString(doc.getLength(), new String(chars), style);
 
-                        try {
-                            doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
-                        } catch (BadLocationException ex) {
+                        } else {
+                            i += cpCount[0] * 2;
+                            i--;
+                            StyleConstants.setIcon(emojiStyle, icon);
+
+                            try {
+                                doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
+                            } catch (BadLocationException ex) {
+                            }
+
                         }
+                    } else {
+                        char[] chars = Character.toChars(text.codePointAt(i));
 
+                        i++;
+                        //i += 2;
+                        StyleConstants.setFontFamily(style, emojiFont);
+
+                        insertString(doc.getLength(), new String(chars), style);
                     }
                 } else {
+
                     StyleConstants.setFontFamily(style, fontFamily);
                     insertString(doc.getLength(), String.valueOf(c), style);
 
@@ -1306,6 +1329,50 @@ public class GeminiTextPane extends JTextPane {
         setCaretPosition(caretPosition); // prevent scrolling as content added
 
         return cr;
+    }
+
+    private static final StringBuilder sb = new StringBuilder();
+
+    private static String getEmojiFilename(String text, int index, int[] cpCount, List<Integer> codePoints) {
+
+        int length = text.length();
+
+        // extract all code points belonging to the emoji sequence
+        int codePoint = text.codePointAt(index);
+        while (index < length) {
+
+            codePoints.add(codePoint);
+
+            // move to the next code point
+            index = text.offsetByCodePoints(index, 1);
+
+            // stop if we reach a non-emoji character
+            if (index >= length || !isEmojiModifier(codePoint = text.codePointAt(index))) {
+                break;
+            }
+        }
+
+        // build the emoji filename
+        sb.setLength(0);
+        //StringBuilder sb = new StringBuilder("/png/emoji_u");
+        sb.append("/png/emoji_u");
+        for (int j = 0; j < codePoints.size(); j++) {
+            if (j > 0) {
+                sb.append("_");
+            }
+            sb.append(Integer.toHexString(codePoints.get(j)));
+        }
+        sb.append(".png");
+        cpCount[0] = codePoints.size();
+        codePoints.clear();
+        return sb.toString();
+    }
+
+    // detect emoji modifiers
+    private static boolean isEmojiModifier(int codePoint) {
+        return (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) // Skin tone modifiers
+                || (codePoint == 0x200D) // Zero-width joiner (ZWJ)
+                || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF); // Regional indicators
     }
 
     private void insertString(int length, String txt, Style style) {
