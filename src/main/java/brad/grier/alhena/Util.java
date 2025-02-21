@@ -1,3 +1,4 @@
+
 package brad.grier.alhena;
 
 import java.awt.BorderLayout;
@@ -53,6 +54,7 @@ import com.formdev.flatlaf.util.SystemInfo;
  *
  * @author Brad Grier
  */
+
 public class Util {
 
     public static void setupTheme(String themeClassName) {
@@ -69,8 +71,12 @@ public class Util {
     }
 
     public static void infoDialog(Component c, String title, String msg) {
+        infoDialog(c, title, msg, JOptionPane.INFORMATION_MESSAGE);
+    }
 
-        JOptionPane optionPane = new JOptionPane(msg, JOptionPane.INFORMATION_MESSAGE);
+    public static void infoDialog(Component c, String title, String msg, int msgType) {
+
+        JOptionPane optionPane = new JOptionPane(msg, msgType);
         JDialog dialog = optionPane.createDialog(c, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
@@ -289,7 +295,6 @@ public class Util {
         }
     }
 
-
     public static Font getFont(GeminiFrame f, Font font) {
         FontChooser fontChooser = new FontChooser(font);
         Object[] message = {
@@ -317,13 +322,13 @@ public class Util {
 
         }
         dialog.setVisible(true);
-        Object selectedValue = optionPane.getValue(); 
-        if(selectedValue instanceof String val){
-            if(val.equals("OK"))
+        Object selectedValue = optionPane.getValue();
+        if (selectedValue instanceof String val) {
+            if (val.equals("OK")) {
                 return fontChooser.getSelectedFont();
-            else if(val.equals("Reset")){
+            } else if (val.equals("Reset")) {
                 return new Font("SansSerif", Font.PLAIN, 15);
-            }else{
+            } else {
                 return null;
             }
         }
@@ -548,5 +553,169 @@ public class Util {
             return null;
         }
     }
+
+    // KEEP FOR LATER - PUSH BUG FIX RELEASE FIRST
+    // public static String getBookmarkJson() {
+    //     JsonObject jo = new JsonObject();
+    //     try {
+    //         List<Bookmark> bookmarks = DB.loadBookmarks();
+    //         Map<String, List<Bookmark>> grouped = bookmarks.stream()
+    //                 .collect(Collectors.groupingBy(Bookmark::folder, LinkedHashMap::new, Collectors.toList()));
+    //         grouped.forEach((folder, items) -> {
+    //             JsonArray ja = new JsonArray();
+    //             jo.put(folder, ja);
+    //             items.forEach(bookmark -> {
+    //                 JsonObject bmJ = new JsonObject();
+    //                 bmJ.put(bookmark.label(), bookmark.url());
+    //                 ja.add(bmJ);
+    //             });
+
+    //         });
+    //         return jo.encodePrettily();
+    //     } catch (SQLException ex) {
+    //         ex.printStackTrace();
+    //     }
+    //     return null;
+    // }
+
+    // public static byte[] encryptFile(byte[] fileData, X509Certificate certificate) throws Exception {
+    //     // Add Bouncy Castle as a security provider
+    //     Security.addProvider(new BouncyCastleProvider());
+
+    //     // Create the generator for encrypted data
+    //     CMSEnvelopedDataGenerator edGen = new CMSEnvelopedDataGenerator();
+
+    //     // Add the recipient's certificate
+    //     edGen.addRecipientInfoGenerator(
+    //             new JceKeyTransRecipientInfoGenerator(certificate)
+    //                     .setProvider("BC")
+    //     );
+
+    //     // Create the encrypted content
+    //     CMSTypedData msg = new CMSProcessableByteArray(fileData);
+
+    //     // Generate the encrypted data using AES-256
+    //     CMSEnvelopedData ed = edGen.generate(
+    //             msg,
+    //             new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
+    //                     .setProvider("BC")
+    //                     .build()
+    //     );
+
+    //     return ed.getEncoded();
+    // }
+
+    // public static byte[] decryptFile(byte[] encryptedData, PrivateKey privateKey) throws Exception {
+    //     // Add Bouncy Castle as a security provider
+    //     Security.addProvider(new BouncyCastleProvider());
+
+    //     // Create the envelope to read the encrypted data
+    //     CMSEnvelopedData envelopedData = new CMSEnvelopedData(encryptedData);
+
+    //     // Set up the recipient information for decryption
+    //     RecipientInformation recipient = envelopedData.getRecipientInfos()
+    //             .getRecipients()
+    //             .iterator()
+    //             .next();
+
+    //     // Create the recipient to process the encryption
+    //     JceKeyTransEnvelopedRecipient jceKey = (JceKeyTransEnvelopedRecipient) new JceKeyTransEnvelopedRecipient(privateKey)
+    //             .setProvider("BC");
+
+    //     // Return the decrypted content
+    //     return recipient.getContent(jceKey);
+    // }
+
+    // public static void encryptFile(String inputFile, String outputFile, X509Certificate certificate) throws Exception {
+
+    //     Security.addProvider(new BouncyCastleProvider());
+    //     // Create the generator for encrypted data
+    //     CMSEnvelopedDataStreamGenerator edGen = new CMSEnvelopedDataStreamGenerator();
+
+    //     // Add the recipient's certificate
+    //     edGen.addRecipientInfoGenerator(
+    //         new JceKeyTransRecipientInfoGenerator(certificate)
+    //             .setProvider("BC")
+    //     );
+
+    //     // Open input and output streams
+    //     try (InputStream in = Files.newInputStream(new File(inputFile).toPath());
+    //          OutputStream out = Files.newOutputStream(new File(outputFile).toPath());
+    //          // Create the encrypted output stream
+    //          OutputStream encryptedOut = edGen.open(
+    //              out,
+    //              new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
+    //                  .setProvider("BC")
+    //                  .build()
+    //          )) {
+            
+    //         // Stream the data
+    //         byte[] buffer = new byte[8192];
+    //         int bytesRead;
+    //         while ((bytesRead = in.read(buffer)) != -1) {
+    //             encryptedOut.write(buffer, 0, bytesRead);
+    //         }
+    //     }
+    // }
+
+    // public static void decryptFile(String inputFile, String outputFile, PrivateKey privateKey) throws Exception {
+    //     Security.addProvider(new BouncyCastleProvider());
+    //     // Set up the recipient
+    //     JceKeyTransEnvelopedRecipient recipient = (JceKeyTransEnvelopedRecipient) new JceKeyTransEnvelopedRecipient(privateKey)
+    //         .setProvider("BC");
+
+    //     // Open streams
+    //     try (InputStream in = Files.newInputStream(new File(inputFile).toPath());
+    //          OutputStream out = Files.newOutputStream(new File(outputFile).toPath())) {
+            
+    //         // Create the parser
+    //         CMSEnvelopedDataParser parser = new CMSEnvelopedDataParser(in);
+            
+    //         // Get the recipient info
+    //         RecipientInformation recipientInfo = parser.getRecipientInfos()
+    //             .getRecipients()
+    //             .iterator()
+    //             .next();
+            
+    //         // Get the decrypted content stream
+    //         try (InputStream decryptedStream = recipientInfo.getContentStream(recipient).getContentStream()) {
+    //             // Stream the data
+    //             byte[] buffer = new byte[8192];
+    //             int bytesRead;
+    //             while ((bytesRead = decryptedStream.read(buffer)) != -1) {
+    //                 out.write(buffer, 0, bytesRead);
+    //             }
+    //         }
+    //     }
+    // }
+
+    // public static String hashAndSign(File file, PrivateKey privateKey) throws Exception {
+    //     MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+    //     try (InputStream fis = new FileInputStream(file);
+    //          DigestInputStream dis = new DigestInputStream(fis, digest)) {
+    //         byte[] buffer = new byte[8192]; // Read in 8 KB chunks
+    //         while (dis.read(buffer) != -1) {
+    //             // Just reading updates the digest
+    //         }
+    //     }
+
+    //     byte[] hash = digest.digest(); // Get the final hash
+
+    //     Signature signer = Signature.getInstance("SHA256withRSA");
+    //     signer.initSign(privateKey);
+    //     signer.update(hash);
+    //     return Base64.getEncoder().encodeToString(signer.sign());
+    //     //return bytesToHex(signer.sign());
+    
+    // }
+
+    // private static String bytesToHex(byte[] bytes) {
+    //     StringBuilder sb = new StringBuilder();
+    //     for (byte b : bytes) {
+    //         sb.append(String.format("%02x", b));
+    //     }
+    //     return sb.toString();
+    // }
 
 }
