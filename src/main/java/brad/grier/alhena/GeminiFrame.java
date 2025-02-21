@@ -127,21 +127,21 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", false))
     );
 
-    public void setScrollIncrement(int inc){
-        pageHistoryMap.entrySet().stream().forEach(entry ->{
-            entry.getValue().forEach(page ->{
-                page.setScrollIncrement(inc);    
+    public void setScrollIncrement(int inc) {
+        pageHistoryMap.entrySet().stream().forEach(entry -> {
+            entry.getValue().forEach(page -> {
+                page.setScrollIncrement(inc);
             });
 
         });
     }
 
-    public void getInfo(StringBuilder sb){
-        pageHistoryMap.entrySet().stream().forEach(entry ->{
-            entry.getValue().forEach(page ->{
+    public void getInfo(StringBuilder sb) {
+        pageHistoryMap.entrySet().stream().forEach(entry -> {
+            entry.getValue().forEach(page -> {
                 StringBuilder sbdoc = page.textPane.current().currentPage();
-                if(sbdoc != null){
-                    
+                if (sbdoc != null) {
+
                     sb.append(page.textPane.getDocURLString() + ": " + sbdoc.length() + " bytes").append("\n");
                 }
             });
@@ -530,6 +530,51 @@ public final class GeminiFrame extends JFrame {
             Alhena.newWindow(home, home);
         }));
 
+        fileMenu.add(new JSeparator());
+        fileMenu.add(createMenuItem("Export Data", null, () -> {
+
+            FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
+            File f = Util.getFile(GeminiFrame.this, "alhenadb.zip", false, "Save", filter);
+            if (f != null) {
+
+                try {
+
+                    DB.dumpDB(f);
+                    Util.infoDialog(GeminiFrame.this, "Complete", "Data successfully exported.");
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
+            }
+
+        }));
+
+        fileMenu.add(createMenuItem("Import Data", null, () -> {
+            FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
+            File f = Util.getFile(GeminiFrame.this, null, true, "Open", filter);
+            if (f != null) {
+
+                Object res = Util.confirmDialog(GeminiFrame.this, "Confirm", "This will overwrite your existing information.\nAre you sure you want to continue?", JOptionPane.YES_NO_OPTION);
+                if (res instanceof Integer result) {
+                    if (result == JOptionPane.YES_OPTION) {
+                        try {
+                            int ver = DB.restoreDB(f);
+                            if (ver != 0) {
+                                Util.infoDialog(GeminiFrame.this, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
+                            } else {
+                                Util.infoDialog(GeminiFrame.this, "Complete", "Data successfully imported.");
+                                Alhena.updateFrames(true);
+                            }
+                        } catch (Exception ex) {
+                            Util.infoDialog(GeminiFrame.this, "Error", "Error importing data.", JOptionPane.ERROR_MESSAGE);
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }));
+
         if (!SystemInfo.isMacOS) {
             fileMenu.add(new JSeparator());
             fileMenu.add(createMenuItem("Quit", KeyStroke.getKeyStroke(KeyEvent.VK_Q, mod), () -> {
@@ -594,16 +639,16 @@ public final class GeminiFrame extends JFrame {
                     jm.add(createMenuItem(key, null, () -> {
                         if (!key.equals(currentThemeId))
                         try {
-                            Class<?> themeClass = Class.forName(value.className());
-                            FlatLaf theme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
-                            FlatLaf.setup(theme);
-
+                            // Class<?> themeClass = Class.forName(value.className());
+                            // FlatLaf theme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
+                            // FlatLaf.setup(theme);
+                            DB.insertPref("theme", value.className());
                             //currentThemeId++;
-                            Alhena.updateFrames();
+                            Alhena.updateFrames(false);
 
                             // refreshFromCache(visiblePage());
                             // visiblePage().setThemeId(currentThemeId);
-                            DB.insertPref("theme", value.className());
+                            // DB.insertPref("theme", value.className());
                         } catch (Exception ex) {
                             ex.printStackTrace();
                         }
@@ -622,7 +667,7 @@ public final class GeminiFrame extends JFrame {
                 proportionalFamily = font.getFamily();
                 fontSize = font.getSize();
                 //currentThemeId++;
-                Alhena.updateFrames();
+                Alhena.updateFrames(false);
                 // refreshFromCache(visiblePage());
 
                 // visiblePage().setThemeId(currentThemeId);
@@ -656,13 +701,32 @@ public final class GeminiFrame extends JFrame {
 
         aboutMenu.add(createMenuItem("Changes", null, () -> {
             fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi");
-            //GeminiClient.processURL("gemini://ultimatumlabs.com/alhena_changes.gmi", visiblePage(), null, visiblePage());
         }));
 
-        aboutMenu.add(createMenuItem("Details", null, ()->{
+        aboutMenu.add(createMenuItem("Details", null, () -> {
             fetchURL("alhena:info");
         }));
 
+        // keep for future sync test
+        // aboutMenu.add(createMenuItem("Sync Upload", null, () -> {
+        //     ClientCertInfo certInfo;
+        //     try {
+        //         certInfo = DB.getClientCertInfo("ultimatumlabs.com");
+        //         PrivateKey pk = Alhena.loadPrivateKey(certInfo.privateKey());
+        //         X509Certificate cert = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
+        //         File file = File.createTempFile("alhenadb", ".zip");
+        //         System.out.println("temp file: " + file.getAbsolutePath());
+        //         DB.dumpDB(file);
+        //         File encFile = File.createTempFile("alhenadb", ".enc");
+        //         System.out.println("enc file: " + encFile.getAbsolutePath());
+        //         Util.encryptFile(file.getAbsolutePath(), encFile.getAbsolutePath(), cert);
+        //         System.out.println(Util.hashAndSign(encFile, pk));
+        //         file.deleteOnExit();
+        //         encFile.deleteOnExit();
+        //     } catch (Exception ex) {
+        //         ex.printStackTrace();
+        //     }
+        // }));
         menuBar.add(aboutMenu);
         setJMenuBar(menuBar);
         add(statusField, BorderLayout.SOUTH);
@@ -675,12 +739,19 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    private MenuItem mi;
-    public void setMenuItem(MenuItem mi){
-        this.mi = mi;    
+    public void updateBookmarks() {
+        bookmarkMenu.invalidate();
+        addBookmarks();
+        bookmarkMenu.validate();
     }
 
-    public MenuItem getMenuItem(){
+    private MenuItem mi;
+
+    public void setMenuItem(MenuItem mi) {
+        this.mi = mi;
+    }
+
+    public MenuItem getMenuItem() {
         return mi;
     }
 
@@ -1096,7 +1167,7 @@ public final class GeminiFrame extends JFrame {
         } else {
             super.setTitle(title);
         }
-        if(mi != null){
+        if (mi != null) {
             mi.setLabel(title);
         }
         if (tabbedPane != null) {
@@ -1790,7 +1861,7 @@ public final class GeminiFrame extends JFrame {
             closeButton.setFocusable(false);
             closeButton.addActionListener((ActionEvent e) -> {
 
-                if (tabbedPane.getTabCount() == 1) {
+                if (tabbedPane.getTabCount() == 2) {
                     GeminiFrame.this.invalidate();
                     ChangeListener[] cl = tabbedPane.getChangeListeners();
                     for (ChangeListener ev : cl) {
@@ -1798,7 +1869,14 @@ public final class GeminiFrame extends JFrame {
                         break; // REMOVES tabbedPanes changeListener but not the L&F changeListener - CAN ORDER CHANGE?
                     }
 
-                    Page page = (Page) tabbedPane.getSelectedComponent();
+                    int index = tabbedPane.indexOfTabComponent(this);
+                    Page page = (Page) tabbedPane.getComponentAt(index);
+
+                    pageHistoryMap.remove(getRootPage(page));
+
+                    tabbedPane.remove(index);
+
+                    page = (Page) tabbedPane.getSelectedComponent();
 
                     tabbedPane.remove(page);
 
@@ -1814,9 +1892,8 @@ public final class GeminiFrame extends JFrame {
 
                     pageHistoryMap.remove(getRootPage(page));
 
-                    if (index != -1) {
-                        tabbedPane.remove(index);
-                    }
+                    tabbedPane.remove(index);
+
                 }
 
             });
