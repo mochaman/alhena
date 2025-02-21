@@ -66,7 +66,8 @@ public class GeminiGlassPane extends JComponent implements ActionListener {
     private Color spinnerColor;
 
     public void start() {
-        spinnerColor = UIManager.getBoolean("laf.dark") ? Color.WHITE : Color.BLACK;
+        //spinnerColor = UIManager.getBoolean("laf.dark") ? Color.WHITE : Color.BLACK;
+        spinnerColor = UIManager.getColor("Component.linkColor");
         if (mIsRunning) {
             if (mIsFadingOut) {
                 mIsFadingOut = false;
