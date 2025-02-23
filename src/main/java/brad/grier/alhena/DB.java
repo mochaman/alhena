@@ -20,6 +20,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,7 @@ import brad.grier.alhena.PipedEncryption.Encryptor;
 public class DB {
 
     private static JdbcConnectionPool cp;
-    private static String VERSION = "1";
+    public static String VERSION = "1";
 
     public static record CertInfo(String fingerPrint, Timestamp expires, Timestamp lastModified) {
 
@@ -53,6 +54,10 @@ public class DB {
         }
         initV1();
 
+    }
+
+    public static JdbcConnectionPool getPool() {
+        return cp;
     }
 
     // THE SQL HERE IS SET IN STONE TO SUPPORT IMPORT/EXPORT - NO CHANGES!!!!
@@ -131,14 +136,19 @@ public class DB {
         }
     }
 
-    private static boolean tableExists(Connection connection, String tableName) throws Exception {
+    public static boolean tableExists(Connection connection, String tableName) throws Exception {
         DatabaseMetaData metaData = connection.getMetaData();
         try (ResultSet resultSet = metaData.getTables(null, null, tableName.toUpperCase(), null)) {
             return resultSet.next();
         }
     }
 
-    private static void runStatement(Connection connection, String sql) throws Exception {
+    public static void runStatement(String sql) throws SQLException {
+        runStatement(cp.getConnection(), sql);
+
+    }
+
+    private static void runStatement(Connection connection, String sql) throws SQLException {
 
         try (var statement = connection.createStatement()) {
             statement.execute(sql);
@@ -155,7 +165,7 @@ public class DB {
 
     // idea here is that history is saved on a daily basis with duplicate entries for any given day
     // rising to the top
-    public static void insertHistory(String url) throws SQLException {
+    public static void insertHistory(String url, Long tStamp) throws SQLException {
         String mergeSql = """
             MERGE INTO history AS h
             USING (SELECT CAST(? AS VARCHAR) AS url, CAST(? AS DATE) AS time_stamp_date, CAST(? AS TIMESTAMP) AS time_stamp) AS src
@@ -168,10 +178,10 @@ public class DB {
         try (Connection con = cp.getConnection()) {
             try (var ps = con.prepareStatement(mergeSql)) {
                 ps.setString(1, url);
-                long ts = System.currentTimeMillis();
+                long ts = tStamp == null ? System.currentTimeMillis() : tStamp;
                 ps.setDate(2, new Date(ts));
                 ps.setTimestamp(3, new Timestamp(ts));
-                ps.execute();
+                ps.executeUpdate();
             }
         }
     }
@@ -188,14 +198,15 @@ public class DB {
         }
     }
 
-    public static void insertClientCert(String domain, String cert, String key) throws SQLException {
+    public static void insertClientCert(String domain, String cert, String key, boolean active, Timestamp ts) throws SQLException {
 
         try (Connection con = cp.getConnection()) {
-            try (var ps = con.prepareStatement("INSERT INTO CLIENTCERTS (DOMAIN, CERT, PRIVATEKEY, ACTIVE) VALUES (?, ?, ?, ?)")) {
+            try (var ps = con.prepareStatement("INSERT INTO CLIENTCERTS (DOMAIN, CERT, PRIVATEKEY, ACTIVE, TIME_STAMP) VALUES (?, ?, ?, ?, ?)")) {
                 ps.setString(1, domain);
                 ps.setString(2, cert);
                 ps.setString(3, key);
-                ps.setBoolean(4, true);
+                ps.setBoolean(4, active);
+                ps.setTimestamp(5, ts == null ? new Timestamp(System.currentTimeMillis()) : ts);
                 ps.execute();
             }
         }
@@ -235,13 +246,14 @@ public class DB {
         return certInfo;
     }
 
-    public static void insertBookmark(String label, String url, String folder) throws SQLException {
+    public static void insertBookmark(String label, String url, String folder, Long ts) throws SQLException {
 
         try (Connection con = cp.getConnection()) {
-            try (var ps = con.prepareStatement("INSERT INTO BOOKMARKS (LABEL, URL, FOLDER) VALUES (?, ?, ?)")) {
+            try (var ps = con.prepareStatement("INSERT INTO BOOKMARKS (LABEL, URL, FOLDER, TIME_STAMP) VALUES (?, ?, ?, ?)")) {
                 ps.setString(1, label);
                 ps.setString(2, url);
                 ps.setString(3, folder);
+                ps.setTimestamp(4, ts == null ? new Timestamp(System.currentTimeMillis()) : new Timestamp(ts));
                 ps.execute();
             }
         }
@@ -407,7 +419,7 @@ public class DB {
         return cr == null ? new CertInfo(null, null, null) : cr;
     }
 
-    public static void upsertCert(String domain, String cert, Timestamp expires) throws SQLException {
+    public static void upsertCert(String domain, String cert, Timestamp expires, Timestamp ts) throws SQLException {
 
         String mergeSql = """
             MERGE INTO SERVERCERTS (DOMAIN, FINGERPRINT, EXPIRES, TIME_STAMP)
@@ -420,7 +432,7 @@ public class DB {
             ps.setString(1, domain);
             ps.setString(2, cert);
             ps.setTimestamp(3, expires);
-            ps.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
+            ps.setTimestamp(4, ts == null ? new Timestamp(System.currentTimeMillis()) : ts);
             ps.executeUpdate();
 
         }
@@ -499,14 +511,44 @@ public class DB {
     }
 
     public static void dumpDB(File outputFile) throws Exception {
-        //File tempFile = Files.createTempFile("backup_", ".sql").toFile();
+        runStatement("DROP TABLE IF EXISTS CACERTS");
+        // create a cacerts table and copy the x509certs from cacerts for each host in clientcerts
+        String sql = """
+            CREATE TABLE CACERTS (
+                DOMAIN VARCHAR(256),
+                CERT VARCHAR(8192)
+            );
+            """;
+        runStatement(sql);
+        List<DBClientCertInfo> cCerts = loadCerts();
+        List<String> domainList = cCerts.stream()
+                .map(DBClientCertInfo::domain) // Extract domains
+                .distinct() // keep only unique domains
+                .toList();
+
+        // extract the certificate from cacerts for each domain
+        HashMap<String, X509Certificate> certMap = Alhena.getServerCerts(domainList);
+
+        certMap.entrySet().stream().forEach(es -> {
+            try {
+                String certPem = "-----BEGIN CERTIFICATE-----\n"
+                        + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(es.getValue().getEncoded())
+                        + "\n-----END CERTIFICATE-----";
+
+                insertCACert(es.getKey(), certPem);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
-            ResultSet rs = st.executeQuery("SCRIPT");
+            //ResultSet rs = st.executeQuery("SCRIPT");
             st.execute("SCRIPT DROP TO '" + outputFile.getAbsolutePath() + "' COMPRESSION ZIP");
 
         }
+        runStatement("DROP TABLE CACERTS");
         addFileToZip(outputFile.getAbsolutePath(), "version.txt", VERSION);
-        //Files.writeString(Path.of("file.txt"), "Hello, World!");
+
     }
 
     public static int restoreDB(File inputFile) throws Exception {
@@ -515,18 +557,24 @@ public class DB {
             version = Integer.parseInt(Files.readString(zipFs.getPath("/version.txt")).trim());
         }
 
-        if(version > Integer.parseInt(VERSION)){
+        if (version > Integer.parseInt(VERSION)) {
             // backup is newer than current version of Alhena - no go
             return version;
         }
 
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
-            ResultSet rs = st.executeQuery("SCRIPT");
+            //ResultSet rs = st.executeQuery("SCRIPT");
             st.execute("RUNSCRIPT FROM '" + inputFile + "' COMPRESSION ZIP");
         }
+
+        if(tableExists(cp.getConnection(), "CACERTS")){ // for some backward compatibility
+            HashMap<String, X509Certificate> certMap = getSavedCerts(cp);
+            Alhena.setServerCerts(certMap);
+            runStatement("DROP TABLE CACERTS");
+        }
+       
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes
-
         return 0;
 
     }
@@ -546,6 +594,31 @@ public class DB {
 
             e.printStackTrace();
         }
+    }
+
+    private static void insertCACert(String domain, String cert) throws SQLException {
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement("INSERT INTO CACERTS (DOMAIN, CERT) VALUES (?, ?)")) {
+                ps.setString(1, domain);
+                ps.setString(2, cert);
+                ps.execute();
+            }
+        }
+    }
+
+    public static HashMap<String, X509Certificate> getSavedCerts(JdbcConnectionPool pool) throws Exception {
+        HashMap<String, X509Certificate> certMap = new HashMap<>();
+        try (Connection con = pool.getConnection(); var st = con.createStatement();) {
+            ResultSet rs = st.executeQuery("SELECT DOMAIN, CERT FROM CACERTS");
+
+            while (rs.next()) {
+                certMap.put(rs.getString(1), (X509Certificate)Alhena.loadCertificate(rs.getString(2)));
+
+            }
+
+        }
+        return certMap;
     }
 
 }
