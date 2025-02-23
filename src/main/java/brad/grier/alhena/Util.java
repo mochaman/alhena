@@ -90,9 +90,17 @@ public class Util {
 
     }
 
-    public static Object confirmDialog(Component parent, String title, String question, int msgType) {
+    public static Object confirmDialog(Component parent, String title, String question, int msgType, Object[] options) {
 
-        JOptionPane optionPane = new JOptionPane(question, JOptionPane.QUESTION_MESSAGE, msgType);
+        //JOptionPane optionPane = new JOptionPane(question, JOptionPane.QUESTION_MESSAGE, msgType);
+        JOptionPane optionPane = new JOptionPane(
+                question, // Message
+                JOptionPane.QUESTION_MESSAGE, // Message type
+                options != null ? JOptionPane.DEFAULT_OPTION : JOptionPane.OK_CANCEL_OPTION,
+                null, // Icon (null for default)
+                options, // Options (null for default buttons)
+                options != null ? options[0] : null  // Initial value
+        );
         JDialog dialog = optionPane.createDialog(parent, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
@@ -368,7 +376,7 @@ public class Util {
             if (JFileChooser.APPROVE_SELECTION.equals(event.getActionCommand())) {
                 File returnedFile = fileChooser.getSelectedFile();
                 if (!isOpenMode && returnedFile.exists()) {
-                    Object res = Util.confirmDialog(dialog, "Exists", "File already exists. Continue?", JOptionPane.YES_NO_OPTION);
+                    Object res = Util.confirmDialog(dialog, "Exists", "File already exists. Continue?", JOptionPane.YES_NO_OPTION, null);
                     if (res instanceof Integer result) {
                         if (result == JOptionPane.YES_OPTION) {
                             selectedFile[0] = returnedFile;
