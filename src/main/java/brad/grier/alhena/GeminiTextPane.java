@@ -728,7 +728,7 @@ public class GeminiTextPane extends JTextPane {
                         EventQueue.invokeLater(() -> {
                             if (GeminiTextPane.this.isShowing()) {
 
-                                Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page?", JOptionPane.YES_NO_OPTION);
+                                Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page?", JOptionPane.YES_NO_OPTION, null);
                                 if (res instanceof Integer result) {
                                     if (result == JOptionPane.YES_OPTION) {
                                         hasAnsi = true;
@@ -936,7 +936,7 @@ public class GeminiTextPane extends JTextPane {
 
             if (currentMode == DEFAULT_MODE)
             try {
-                DB.insertHistory(docURL);
+                DB.insertHistory(docURL, null);
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
