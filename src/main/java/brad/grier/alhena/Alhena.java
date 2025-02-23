@@ -48,6 +48,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -111,7 +112,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "2.7";
+    public final static String VERSION = "2.8";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -324,6 +325,7 @@ public class Alhena {
             jf.refreshFromCache(jf.visiblePage());
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
             SwingUtilities.updateComponentTreeUI(jf);
+            jf.initComboBox(); // combo box loses key listener & mouse listener when theme changes
         }
     }
 
@@ -354,7 +356,7 @@ public class Alhena {
             return;
         }
         if (url.contains("://")) {
-            if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("https://")) {
+            if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("https://") /*&& !url.startsWith("titan://")*/) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
                 return;
 
@@ -554,7 +556,7 @@ public class Alhena {
 
             }
 
-            if (!url.startsWith("gemini://")) {
+            if (!url.startsWith("gemini://") /*&& !url.startsWith("titan://")*/) {
                 if (url.startsWith("//")) {
                     url = "gemini:" + url;
                 } else if (url.startsWith("/")) {
@@ -628,7 +630,7 @@ public class Alhena {
                         try {
                             // this blocks vertx event loop
                             EventQueue.invokeAndWait(() -> {
-                                Object diagRes = Util.confirmDialog(p.frame(), "Certificate Issue", res + "\nDo you want to continue?", JOptionPane.YES_NO_OPTION);
+                                Object diagRes = Util.confirmDialog(p.frame(), "Certificate Issue", res + "\nDo you want to continue?", JOptionPane.YES_NO_OPTION, null);
                                 if (diagRes instanceof Integer result) {
                                     proceed[0] = result == JOptionPane.YES_OPTION;
                                 } else {
@@ -737,7 +739,7 @@ public class Alhena {
                                 } else if (mime.startsWith("image/")) {
                                     imageStartIdx[0] = i + 1;
                                     try {
-                                        DB.insertHistory(origURL);
+                                        DB.insertHistory(origURL, null);
                                     } catch (SQLException ex) {
                                         ex.printStackTrace();
                                     }
@@ -925,7 +927,7 @@ public class Alhena {
             if (dbFingerprint == null) {
 
                 java.sql.Timestamp ts = new java.sql.Timestamp(cert.getNotAfter().getTime());
-                DB.upsertCert(host, fp, ts);   // TOFU  
+                DB.upsertCert(host, fp, ts, null);   // TOFU  
             } else if (!fp.equals(dbFingerprint) && expires.before(new Date())) {
 
                 return "Server certificate has changed without expiring.";
@@ -953,7 +955,7 @@ public class Alhena {
 
             String fp = hexString.substring(0, hexString.length());
             java.sql.Timestamp ts = new java.sql.Timestamp(cert.getNotAfter().getTime());
-            DB.upsertCert(host, fp, ts);
+            DB.upsertCert(host, fp, ts, null);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -977,7 +979,7 @@ public class Alhena {
                     file.close();
                     bg(() -> {
                         try {
-                            DB.insertHistory(url);
+                            DB.insertHistory(url, null);
                         } catch (SQLException ex) {
                             ex.printStackTrace();
                         }
@@ -1122,6 +1124,71 @@ public class Alhena {
         }
     }
 
+    public static HashMap<String, X509Certificate> getServerCerts(List<String> hostList) {
+        // add server certs for sites that require a client certificate
+        HashMap<String, X509Certificate> certMap = new HashMap<>();
+        String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
+        String cacertsPassword = "changeit"; // Default cacerts password
+        File f = new File(cacertsPath);
+        if (f.exists()) {
+            try {
+
+                // load the cacerts keystore
+                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                try (FileInputStream is = new FileInputStream(cacertsPath)) {
+                    keyStore.load(is, cacertsPassword.toCharArray());
+                }
+
+                for (String host : hostList) {
+                    if (keyStore.containsAlias(host)) {
+                        certMap.put(host, (X509Certificate) keyStore.getCertificate(host));
+                    }
+                }
+
+            } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return certMap;
+    }
+
+    // used when restoring database
+    public static void setServerCerts(HashMap<String, X509Certificate> certMap) {
+
+        String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
+        String cacertsPassword = "changeit"; // Default cacerts password
+        File f = new File(cacertsPath);
+        if (f.exists()) {
+            try {
+
+                // load the cacerts keystore
+                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                try (FileInputStream is = new FileInputStream(cacertsPath)) {
+                    keyStore.load(is, cacertsPassword.toCharArray());
+                }
+
+                certMap.entrySet().stream().forEach(es -> {
+                    try {
+                        if (!keyStore.containsAlias(es.getKey())) {
+                            // add the certificate to the keystore
+                            keyStore.setCertificateEntry(es.getKey(), es.getValue());
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+
+                try (FileOutputStream os = new FileOutputStream(cacertsPath)) {
+                    keyStore.store(os, cacertsPassword.toCharArray());
+                }
+
+            } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private static SSLContext createSSLContext(String host, String cn) throws Exception {
         // register Bouncy Castle as a security provider
         Security.addProvider(new BouncyCastleProvider());
@@ -1150,7 +1217,7 @@ public class Alhena {
                     + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(cert.getEncoded())
                     + "\n-----END CERTIFICATE-----";
 
-            DB.insertClientCert(host, certPem, privateKeyPem);
+            DB.insertClientCert(host, certPem, privateKeyPem, true, null);
 
         }
 
