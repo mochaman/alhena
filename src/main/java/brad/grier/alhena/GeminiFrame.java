@@ -58,7 +58,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.DB.Bookmark;
@@ -342,14 +341,7 @@ public final class GeminiFrame extends JFrame {
             }
         });
 
-        JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
-        textField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-                SwingUtilities.invokeLater(() -> prefill(textField, e.getKeyChar()));
-            }
-        });
-        textField.addMouseListener(new ContextMenuMouseListener());
+        initComboBox();
         Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
         backButton = new JButton("⬅"); //emoji_u303d.png
         //backButton = new JButton("◀️");
@@ -554,20 +546,34 @@ public final class GeminiFrame extends JFrame {
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
             File f = Util.getFile(GeminiFrame.this, null, true, "Open", filter);
             if (f != null) {
-
-                Object res = Util.confirmDialog(GeminiFrame.this, "Confirm", "This will overwrite your existing information.\nAre you sure you want to continue?", JOptionPane.YES_NO_OPTION);
-                if (res instanceof Integer result) {
-                    if (result == JOptionPane.YES_OPTION) {
+                Object[] options = {"Merge", "Replace", "Cancel"};
+                Object res = Util.confirmDialog(GeminiFrame.this, "Confirm", "'Replace' will completely overwrite your existing configuration.\n'Merge' will safely combine the data.", JOptionPane.YES_NO_OPTION, options);
+                if (res instanceof String result) {
+                    
+                    if (result.equals("Replace")) {
                         try {
-                            int ver = DB.restoreDB(f);
-                            if (ver != 0) {
+
+                            if (DB.restoreDB(f) != 0) {
                                 Util.infoDialog(GeminiFrame.this, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
                             } else {
                                 Util.infoDialog(GeminiFrame.this, "Complete", "Data successfully imported.");
                                 Alhena.updateFrames(true);
                             }
                         } catch (Exception ex) {
-                            Util.infoDialog(GeminiFrame.this, "Error", "Error importing data.", JOptionPane.ERROR_MESSAGE);
+                            Util.infoDialog(GeminiFrame.this, "Error", "Unable to replace data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
+                            ex.printStackTrace();
+                        }
+                    } else if (result.equals("Merge")) {
+                        try {
+                            DBBackup.init();
+                            if (DBBackup.mergeDB(f) != 0) {
+                                Util.infoDialog(GeminiFrame.this, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
+                            } else {
+                                Util.infoDialog(GeminiFrame.this, "Complete", "Data successfully merged.");
+                                Alhena.updateFrames(true);
+                            }
+                        } catch (Exception ex) {
+                            Util.infoDialog(GeminiFrame.this, "Error", "Unable to merge data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
                             ex.printStackTrace();
                         }
                     }
@@ -745,6 +751,17 @@ public final class GeminiFrame extends JFrame {
         bookmarkMenu.validate();
     }
 
+    public void initComboBox() {
+        JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
+        textField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                SwingUtilities.invokeLater(() -> prefill(textField, e.getKeyChar()));
+            }
+        });
+        textField.addMouseListener(new ContextMenuMouseListener());
+    }
+
     private MenuItem mi;
 
     public void setMenuItem(MenuItem mi) {
@@ -756,7 +773,6 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void prefill(JTextField textField, char typedChar) {
-
         String text = textField.getText();
 
         if (typedChar == KeyEvent.VK_BACK_SPACE) {
@@ -772,6 +788,9 @@ public final class GeminiFrame extends JFrame {
             textField.setCaretPosition(8);
         } else if (text.equalsIgnoreCase("f")) {
             textField.setText("file://");
+            textField.setCaretPosition(7);
+        } else if (text.equalsIgnoreCase("a")) {
+            textField.setText("alhena:");
             textField.setCaretPosition(7);
         }
     }
@@ -826,7 +845,7 @@ public final class GeminiFrame extends JFrame {
                 Util.infoDialog(this, "Required", "Bookmark label and folder required.");
             } else {
                 try {
-                    DB.insertBookmark(labelField.getText().trim(), visiblePage().getUrl(), ((String) bmComboBox.getSelectedItem()).trim());
+                    DB.insertBookmark(labelField.getText().trim(), visiblePage().getUrl(), ((String) bmComboBox.getSelectedItem()).trim(), null);
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                 }
@@ -1328,11 +1347,13 @@ public final class GeminiFrame extends JFrame {
         int bmId = Integer.parseInt(id);
         try {
             Bookmark bm = DB.getBookmark(bmId);
-            Object res = Util.confirmDialog(f, "Delete?", "Are you sure you want to delete this bookmark?\n" + bm.label(), JOptionPane.YES_NO_OPTION);
+            Object res = Util.confirmDialog(f, "Delete?", "Are you sure you want to delete this bookmark?\n" + bm.label(), JOptionPane.YES_NO_OPTION, null);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     DB.deleteBookmark(bmId);
-                    refresh();
+                    Alhena.updateFrames(true);
+                    EventQueue.invokeLater(() -> refresh());
+
                 }
 
             }
@@ -1357,7 +1378,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void deleteCert(int id) {
-        Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete this certificate?", JOptionPane.YES_NO_OPTION);
+        Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete this certificate?", JOptionPane.YES_NO_OPTION, null);
         if (res instanceof Integer result) {
             if (result == JOptionPane.YES_OPTION) {
                 try {
@@ -1398,7 +1419,7 @@ public final class GeminiFrame extends JFrame {
 
     public void clearHistory() {
         try {
-            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history?", JOptionPane.YES_NO_OPTION);
+            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history?", JOptionPane.YES_NO_OPTION, null);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.OK_OPTION) {
                     int rowCount = DB.deleteHistory();
@@ -1456,9 +1477,11 @@ public final class GeminiFrame extends JFrame {
                 }
                 refresh();
             }
-            bookmarkMenu.invalidate();
-            addBookmarks();
-            bookmarkMenu.validate();
+            // bookmarkMenu.invalidate();
+            // addBookmarks();
+            // bookmarkMenu.validate();
+            Alhena.updateFrames(true);
+            EventQueue.invokeLater(() -> refresh());
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -1485,17 +1508,22 @@ public final class GeminiFrame extends JFrame {
                     Util.infoDialog(this, "Format", "Not a recognized PEM format");
                 } else {
                     String cert = pem.substring(0, idx);
-                    String key = pem.substring(idx);
-                    ClientCertInfo ci = DB.getClientCertInfo(host);
-                    if (ci != null) {
-                        DB.toggleCert(ci.id(), false, host, false);
+                    boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(cert) && c.domain().equals(host));
+                    if (exists) {
+                        Util.infoDialog(this, "Not Allowed", "This cert already exists for: " + host, JOptionPane.WARNING_MESSAGE);
+                    } else {
+                        String key = pem.substring(idx);
+                        ClientCertInfo ci = DB.getClientCertInfo(host);
+                        if (ci != null) {
+                            DB.toggleCert(ci.id(), false, host, false); // set existing for host to inactive
 
+                        }
+
+                        DB.insertClientCert(host, cert, key, true, null);
+                        Alhena.addCertToTrustStore(host, visiblePage().getCert());
+                        Alhena.createNetClient();
+                        Util.infoDialog(this, "Added", "PEM added for : " + host);
                     }
-
-                    DB.insertClientCert(host, cert, key);
-                    Alhena.addCertToTrustStore(host, visiblePage().getCert());
-                    Alhena.createNetClient();
-                    Util.infoDialog(this, "Added", "PEM added for : " + host);
 
                 }
             } catch (Exception ex) {
