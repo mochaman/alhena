@@ -618,6 +618,7 @@ public class GeminiTextPane extends JTextPane {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+        f.setBusy(false, page);
     }
 
     public String getFirstHeading() {
@@ -712,9 +713,12 @@ public class GeminiTextPane extends JTextPane {
         if (pageBuffer != null) {
             pageBuffer.trimToSize();
         }
+
         scanForAnsi();
         bStyle = null;
         defPP = null;
+        page.doneLoading();
+        f.setBusy(false, page);
     }
 
     private void scanForAnsi() {
