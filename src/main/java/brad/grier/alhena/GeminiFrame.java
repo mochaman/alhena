@@ -1402,7 +1402,7 @@ public final class GeminiFrame extends JFrame {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-            textPane.end();
+            //textPane.end();
             EventQueue.invokeLater(() -> {
                 if (count[0] == 0) {
                     textPane.addPage("\n### Nothing to see\n");
