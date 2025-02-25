@@ -26,6 +26,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -94,6 +95,7 @@ public final class GeminiFrame extends JFrame {
     public static String proportionalFamily = "SansSerif";
     public static int fontSize = 15;
     private static Font saveFont;
+    public final static String SYNC_SERVER = "ultimatumlabs.com";
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", true)),
@@ -156,7 +158,7 @@ public final class GeminiFrame extends JFrame {
         clickedLinks.add(link);
     }
 
-    private Page addPageToHistory(Page rootPage, Page page) {
+    private Page addPageToHistory(Page rootPage, Page page, boolean pageVisible) {
 
         if (rootPage == null) {
 
@@ -170,13 +172,13 @@ public final class GeminiFrame extends JFrame {
             page.setRootPage(rootPage);
 
             ArrayList<Page> histList = pageHistoryMap.get(rootPage);
-
-            int histIdx = rootPage.incAndGetArrayIndex(); // should get same result if calling on page.
-            if (histIdx < histList.size()) {
-                List<Page> sl = histList.subList(histIdx, histList.size());
-                sl.clear();
+            if (pageVisible) {
+                int histIdx = rootPage.incAndGetArrayIndex(); // should get same result if calling on page.
+                if (histIdx < histList.size()) {
+                    List<Page> sl = histList.subList(histIdx, histList.size());
+                    sl.clear();
+                }
             }
-
             histList.add(page);
         }
 
@@ -355,7 +357,7 @@ public final class GeminiFrame extends JFrame {
         backButton.setEnabled(false);
         backButton.addActionListener(al -> {
 
-            showGlassPane(true);
+            //showGlassPane(true);
             Page vPage = visiblePage();
             Page rootPage = getRootPage(vPage);
             if (hasPrev(rootPage)) {
@@ -387,14 +389,16 @@ public final class GeminiFrame extends JFrame {
 
             }
 
-            showGlassPane(false);
+            //showGlassPane(false);
+            validate();
+            repaint();
 
         });
 
         forwardButton.setFont(buttonFont);
         forwardButton.setEnabled(false);
         forwardButton.addActionListener(al -> {
-            showGlassPane(true);
+            //showGlassPane(true);
             Page vPage = visiblePage();
             Page groupPane = getRootPage(vPage);
             if (hasNext(groupPane)) {
@@ -425,7 +429,9 @@ public final class GeminiFrame extends JFrame {
                 forwardButton.setEnabled(hasNext(groupPane));
             }
 
-            showGlassPane(false);
+            //showGlassPane(false);
+            validate();
+            repaint();
 
         });
 
@@ -523,7 +529,9 @@ public final class GeminiFrame extends JFrame {
         }));
 
         fileMenu.add(new JSeparator());
-        fileMenu.add(createMenuItem("Export Data", null, () -> {
+        JMenu userMenu = new JMenu("User Data");
+
+        userMenu.add(createMenuItem("Export Data", null, () -> {
 
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
             File f = Util.getFile(GeminiFrame.this, "alhenadb.zip", false, "Save", filter);
@@ -542,44 +550,79 @@ public final class GeminiFrame extends JFrame {
 
         }));
 
-        fileMenu.add(createMenuItem("Import Data", null, () -> {
+        userMenu.add(createMenuItem("Import Data", null, () -> {
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
             File f = Util.getFile(GeminiFrame.this, null, true, "Open", filter);
             if (f != null) {
-                Object[] options = {"Merge", "Replace", "Cancel"};
-                Object res = Util.confirmDialog(GeminiFrame.this, "Confirm", "'Replace' will completely overwrite your existing configuration.\n'Merge' will safely combine the data.", JOptionPane.YES_NO_OPTION, options);
-                if (res instanceof String result) {
-                    
-                    if (result.equals("Replace")) {
-                        try {
+                Util.importData(GeminiFrame.this, f, false);
+            }
+        }));
 
-                            if (DB.restoreDB(f) != 0) {
-                                Util.infoDialog(GeminiFrame.this, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
-                            } else {
-                                Util.infoDialog(GeminiFrame.this, "Complete", "Data successfully imported.");
-                                Alhena.updateFrames(true);
+        userMenu.add(new JSeparator());
+
+        userMenu.add(createMenuItem("Sync Upload", null, () -> {
+            try {
+                ClientCertInfo ci = DB.getClientCertInfo(SYNC_SERVER);
+                if (ci == null) {
+                    Object r = Util.confirmDialog(GeminiFrame.this, "Missing Cert", "You do not have an active certificate for " + SYNC_SERVER + "\nDo you want to create one?", JOptionPane.YES_NO_OPTION, null);
+                    if (r instanceof Integer result) {
+                        if (result == JOptionPane.YES_OPTION) {
+                            try {
+                                Alhena.createKeyPair(SYNC_SERVER, "sync");
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
                             }
-                        } catch (Exception ex) {
-                            Util.infoDialog(GeminiFrame.this, "Error", "Unable to replace data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
-                            ex.printStackTrace();
-                        }
-                    } else if (result.equals("Merge")) {
-                        try {
-                            DBBackup.init();
-                            if (DBBackup.mergeDB(f) != 0) {
-                                Util.infoDialog(GeminiFrame.this, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
-                            } else {
-                                Util.infoDialog(GeminiFrame.this, "Complete", "Data successfully merged.");
-                                Alhena.updateFrames(true);
-                            }
-                        } catch (Exception ex) {
-                            Util.infoDialog(GeminiFrame.this, "Error", "Unable to merge data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
-                            ex.printStackTrace();
+                        } else {
+                            Util.infoDialog(GeminiFrame.this, "Canceled", "Sync upload canceled.");
+                            return;
                         }
                     }
                 }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
             }
+            Object r = Util.confirmDialog(GeminiFrame.this, "Sync", "This will overwrite any previously saved information on the server.\nAre you sure you want to upload your encrypted data?", JOptionPane.YES_NO_OPTION, null);
+            if (r instanceof Integer result) {
+                if (result == JOptionPane.YES_OPTION) {
+                    ClientCertInfo certInfo;
+                    try {
+
+                        certInfo = DB.getClientCertInfo(SYNC_SERVER);
+                        PrivateKey pk = Alhena.loadPrivateKey(certInfo.privateKey());
+                        X509Certificate cert = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
+                        File file = File.createTempFile("alhenadb", ".zip");
+                        DB.dumpDB(file);
+                        File encFile = File.createTempFile("alhenadb", ".enc");
+
+                        Util.encryptFile(file.getAbsolutePath(), encFile.getAbsolutePath(), cert);
+                        String hash = Util.hashAndSign(encFile, pk);
+                        file.deleteOnExit();
+                        encFile.deleteOnExit();
+
+                        String titanUrl = "titan://" + SYNC_SERVER + "/sync;token=alhenasync;mime=application/octet-stream;size=" + encFile.length() + "?hash=" + hash;
+                        fetchURL(titanUrl, encFile);
+
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+
         }));
+
+        userMenu.add(createMenuItem("Sync Download", null, () -> {
+            try {
+                File file = File.createTempFile("alhenadb", ".enc");
+
+                fetchURL("gemini://" + SYNC_SERVER + "/sync/", file);
+                file.deleteOnExit();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+
+        }));
+
+        fileMenu.add(userMenu);
 
         if (!SystemInfo.isMacOS) {
             fileMenu.add(new JSeparator());
@@ -713,26 +756,6 @@ public final class GeminiFrame extends JFrame {
             fetchURL("alhena:info");
         }));
 
-        // keep for future sync test
-        // aboutMenu.add(createMenuItem("Sync Upload", null, () -> {
-        //     ClientCertInfo certInfo;
-        //     try {
-        //         certInfo = DB.getClientCertInfo("ultimatumlabs.com");
-        //         PrivateKey pk = Alhena.loadPrivateKey(certInfo.privateKey());
-        //         X509Certificate cert = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
-        //         File file = File.createTempFile("alhenadb", ".zip");
-        //         System.out.println("temp file: " + file.getAbsolutePath());
-        //         DB.dumpDB(file);
-        //         File encFile = File.createTempFile("alhenadb", ".enc");
-        //         System.out.println("enc file: " + encFile.getAbsolutePath());
-        //         Util.encryptFile(file.getAbsolutePath(), encFile.getAbsolutePath(), cert);
-        //         System.out.println(Util.hashAndSign(encFile, pk));
-        //         file.deleteOnExit();
-        //         encFile.deleteOnExit();
-        //     } catch (Exception ex) {
-        //         ex.printStackTrace();
-        //     }
-        // }));
         menuBar.add(aboutMenu);
         setJMenuBar(menuBar);
         add(statusField, BorderLayout.SOUTH);
@@ -908,6 +931,10 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void fetchURL(String url) {
+        fetchURL(url, null);
+    }
+
+    public void fetchURL(String url, File dataFile) {
         if (CUSTOM_LABELS.contains(url)) {
             return;
         }
@@ -924,9 +951,12 @@ public final class GeminiFrame extends JFrame {
                     if (first[0]) {
                         first[0] = false;
                         // check to make sure user hasn't changed things in the interim
+                        pb.setDataFile(null);
+                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == visiblePage());
                         if (currentPB == visiblePage()) {
-                            Page histPage = addPageToHistory(getRootPage(currentPB), pb);
 
+                            setBusy(false, currentPB);
+                            setBusy(true, histPage);
                             invalidate();
 
                             remove(currentPB);
@@ -935,12 +965,16 @@ public final class GeminiFrame extends JFrame {
 
                             revalidate();
                             refreshNav(histPage);
+                        } else {
+                            histPage.runWhenDone(() -> setBusy(false, currentPB));
                         }
+                        refreshNav(visiblePage());
 
                     }
 
                 };
-                pb.runOnLoad(r);
+                pb.runWhenLoading(r);
+                pb.setDataFile(dataFile);
                 Alhena.processURL(url, pb, null, currentPB);
 
             } else {
@@ -952,28 +986,47 @@ public final class GeminiFrame extends JFrame {
                 Runnable r = () -> {
                     if (first[0]) {
                         first[0] = false;
-                        Page histPage = addPageToHistory(getRootPage(currentPB), pb);
+                        pb.setDataFile(null);
+                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == visiblePage());
                         // check to make sure user hasn't changed things in the interim                        
-
+                        if (tabbedPane == null) {
+                            return; // tab removed in the interim
+                        }
                         int idx = tabbedPane.getSelectedIndex();
 
                         if (currentTabIdx == idx) { // make sure we're on the same tab
-                            tabbedPane.setComponentAt(idx, histPage);
+                            if (currentPB == visiblePage()) {
+                                // transfer busyness
+                                setBusy(false, currentPB);
+                                setBusy(true, histPage);
+                                tabbedPane.setComponentAt(idx, histPage);
 
-                            refreshNav(histPage);
-                        } else {
-                            tabbedPane.setComponentAt(currentTabIdx, histPage);
+                                refreshNav(histPage);
+                            } else {
+                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                            }
 
+                        } else { // think and refactor
+                            if (currentPB == visiblePage()) {
+                                // transfer busyness
+                                setBusy(false, currentPB);
+                                setBusy(true, histPage);
+                                tabbedPane.setComponentAt(currentTabIdx, histPage);
+                            } else {
+                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                            }
                         }
 
                     }
                 };
-                pb.runOnLoad(r);
-
+                pb.runWhenLoading(r);
+                pb.setDataFile(dataFile);
                 Alhena.processURL(url, pb, null, currentPB);
             }
         } else {
-            Page nPage = addPageToHistory(null, currentPB);
+            Page nPage = addPageToHistory(null, currentPB, true);
+            nPage.setDataFile(dataFile);
+            nPage.runWhenLoading(() -> nPage.setDataFile(null));
             Alhena.processURL(url, nPage, null, currentPB);
 
         }
@@ -1012,7 +1065,7 @@ public final class GeminiFrame extends JFrame {
         if (pb.textPane.imageOnly()) {
             return;
         }
-        showGlassPane(true);
+        //showGlassPane(true, pb);
         String url = pb.textPane.getDocURLString();
         CurrentPage res = pb.textPane.current();
         streamChunks(res.currentPage(), 100, url, res.pMode());
@@ -1020,17 +1073,20 @@ public final class GeminiFrame extends JFrame {
 
     public void streamChunks(StringBuilder b, int chunkSize, String url, boolean pfMode) {
         if (b == null || b.isEmpty()) {
-            showGlassPane(false);
+            // showGlassPane(false);
             return;
         }
+        Page vp = visiblePage();
+        setBusy(true, vp);
         new Thread(() -> {
             int idx = 0;
             int endIdx = Math.min(chunkSize + idx, b.length());
             final int fIdx = idx;
             final int fEndIdx = endIdx;
+
             EventQueue.invokeLater(() -> {
 
-                visiblePage().textPane.updatePage(b.substring(fIdx, fEndIdx), pfMode, url, false);
+                vp.textPane.updatePage(b.substring(fIdx, fEndIdx), pfMode, url, false);
 
             });
             idx = endIdx;
@@ -1041,19 +1097,19 @@ public final class GeminiFrame extends JFrame {
                 final int fEndIdx2 = endIdx;
                 EventQueue.invokeLater(() -> {
 
-                    visiblePage().textPane.addPage(b.substring(fIdx2, fEndIdx2));
+                    vp.textPane.addPage(b.substring(fIdx2, fEndIdx2));
 
                 });
                 idx = endIdx;
             }
 
             EventQueue.invokeLater(() -> {
-                Page visiblePane = visiblePage();
-                Page groupPane = getRootPage(visiblePane);
-                visiblePane.textPane.end();
+                //Page visiblePane = visiblePage();
+                Page groupPane = getRootPage(vp);
+                vp.textPane.end();
                 backButton.setEnabled(hasPrev(groupPane));
                 forwardButton.setEnabled(hasNext(groupPane));
-                showGlassPane(false);
+                setBusy(false, vp);
             });
 
         }).start();
@@ -1079,8 +1135,10 @@ public final class GeminiFrame extends JFrame {
                 Runnable r = () -> {
                     if (first[0]) {
                         first[0] = false;
+                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == visiblePage());
                         if (currentPB == visiblePage()) { // in case something has changed in the interim
-                            Page histPage = addPageToHistory(getRootPage(currentPB), pb);
+                            setBusy(false, currentPB);
+                            setBusy(true, histPage);
                             invalidate();
 
                             remove(currentPB);
@@ -1088,12 +1146,14 @@ public final class GeminiFrame extends JFrame {
 
                             revalidate();
                             refreshNav(histPage);
+                        } else {
+                            histPage.runWhenDone(() -> setBusy(false, currentPB));
                         }
-
+                        refreshNav(visiblePage());
                     }
 
                 };
-                pb.runOnLoad(r);
+                pb.runWhenLoading(r);
                 switch (label) {
                     case HISTORY_LABEL ->
                         loadHistory(pb.textPane, pb);
@@ -1115,17 +1175,37 @@ public final class GeminiFrame extends JFrame {
                 Runnable r = () -> {
                     if (first[0]) {
                         first[0] = false;
-                        Page histPage = addPageToHistory(getRootPage(currentPB), pb);
+                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == visiblePage());
+                        if (tabbedPane == null) {
+                            return; // tab removed in the interim
+                        }
                         int idx = tabbedPane.getSelectedIndex();
 
                         if (currentTabIdx == idx) {
-                            tabbedPane.setComponentAt(idx, histPage);
-                            refreshNav(histPage);
+                            if (currentPB == visiblePage()) {
+                                setBusy(false, currentPB);
+                                setBusy(true, histPage);
+
+                                tabbedPane.setComponentAt(idx, histPage);
+                                refreshNav(histPage);
+                            } else {
+                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                            }
+                        } else { // added in to replicated what is the main tab handling. custom pages load too fast to test???
+                            if (currentPB == visiblePage()) {
+
+                                setBusy(false, currentPB);
+                                setBusy(true, histPage);
+                                tabbedPane.setComponentAt(currentTabIdx, histPage);
+                            } else {
+                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                            }
+
                         }
 
                     }
                 };
-                pb.runOnLoad(r);
+                pb.runWhenLoading(r);
                 switch (label) {
                     case HISTORY_LABEL ->
                         loadHistory(pb.textPane, pb);
@@ -1143,7 +1223,7 @@ public final class GeminiFrame extends JFrame {
         } else {
             Page visiblePB = visiblePage(); // empty page (new tab/window)
 
-            Page nPage = !inPlace ? addPageToHistory(null, visiblePB) : visiblePB;
+            Page nPage = !inPlace ? addPageToHistory(null, visiblePB, true) : visiblePB;
 
             switch (label) {
                 case HISTORY_LABEL ->
@@ -1247,7 +1327,7 @@ public final class GeminiFrame extends JFrame {
             }
             List<DBClientCertInfo> certs = DB.loadCerts();
             if (!certs.isEmpty()) {
-                textPane.updatePage("#Client Certificates 🔑\nRight click to activate, inactivate or delete a cert.\n", false, CERT_LABEL, true);
+                textPane.updatePage("#Client Certificates 🔑\nClicke to toggle active state. Right click to activate, inactivate or delete a cert.\n", false, CERT_LABEL, true);
 
                 LinkedHashMap<Boolean, ArrayList<DBClientCertInfo>> types = new LinkedHashMap<>();
                 certs.forEach(c -> {
@@ -1306,7 +1386,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void loadHistory(GeminiTextPane textPane, Page p) {
-        showGlassPane(true);
+        setBusy(true, p);
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
             ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
@@ -1337,7 +1417,7 @@ public final class GeminiFrame extends JFrame {
                     p.loading();
                 }
 
-                showGlassPane(false);
+                setBusy(false, p);
             });
 
         }).start();
@@ -1370,7 +1450,8 @@ public final class GeminiFrame extends JFrame {
     public void exportCert(int id, GeminiTextPane textPane) {
         try {
             ClientCertInfo certInfo = DB.getClientCertInfo(id);
-            String pem = certInfo.cert() + certInfo.privateKey();
+            String lf = certInfo.cert().endsWith("\n") ? "" : "\n";
+            String pem = certInfo.cert() + lf + certInfo.privateKey();
             showCustomPage(INFO_LABEL, new InfoPageInfo(certInfo.domain() + "." + certInfo.id() + ".pem", pem));
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -1581,7 +1662,7 @@ public final class GeminiFrame extends JFrame {
 
         File saveFile = Util.getFile(this, suggestedName, false, "Save File", null);
         if (saveFile != null) {
-            showGlassPane(true);
+            setBusy(true, textPane);
 
             try (BufferedWriter bw = new BufferedWriter(new FileWriter(saveFile))) {
 
@@ -1604,12 +1685,12 @@ public final class GeminiFrame extends JFrame {
                 ex.printStackTrace();
             }
 
-            showGlassPane(false);
+            setBusy(false, textPane);
         }
     }
 
     public void toggleView(GeminiTextPane textPane, boolean isPlainText) {
-        showGlassPane(true);
+        // showGlassPane(true, textPane);
         String url = textPane.getDocURLString();
         CurrentPage res = textPane.current();
         streamChunks(res.currentPage(), 100, url, isPlainText);
@@ -1639,10 +1720,16 @@ public final class GeminiFrame extends JFrame {
             });
 
             selectComboBoxItem("");
-
+            // boolean[] doBusy = {false};
             tabbedPane.addChangeListener(ce -> {
 
                 Page page = (Page) tabbedPane.getSelectedComponent();
+
+                if (!page.busy() && getGlassPane().isShowing()) {
+                    showGlassPane(false);
+                } else if (page.busy() && !getGlassPane().isShowing()) {
+                    showGlassPane(true);
+                }
 
                 GeminiTextPane textPane = page.textPane;
 
@@ -1683,8 +1770,8 @@ public final class GeminiFrame extends JFrame {
         }
 
         if (url == null) {
-
             Page pb = newPage(null, null, false);
+            setBusy(false, pb);
             pb.setThemeId(currentThemeId);
 
             addClosableTab(tabbedPane, "New Tab", pb);
@@ -1742,23 +1829,19 @@ public final class GeminiFrame extends JFrame {
         return menuItem;
     }
 
-    public void showGlassPane(boolean visible) {
+    public void setBusy(boolean busy, Component c) {
 
         Runnable r = () -> {
-            if (!(getGlassPane() instanceof GeminiGlassPane)) {
-                setGlassPane(new GeminiGlassPane());
-            }
-            validate();
-            // get the existing blocking glass pane
-            GeminiGlassPane bgp = (GeminiGlassPane) getGlassPane();
-            //bgp.setPainter(painter);
-            bgp.setVisible(visible);
-            if (visible) {
-                bgp.start();
+            Page page;
+            if (c instanceof Page) {
+                page = (Page) c;
             } else {
-                bgp.stop();
+                page = (Page) SwingUtilities.getAncestorOfClass(Page.class, c);
             }
-            bgp.repaint();
+            if (page != null) {
+                page.setBusy(busy);
+            }
+
         };
 
         if (SwingUtilities.isEventDispatchThread()) {
@@ -1766,6 +1849,24 @@ public final class GeminiFrame extends JFrame {
         } else {
             EventQueue.invokeLater(r);
         }
+    }
+
+    // only call on EDT
+    public void showGlassPane(boolean visible) {
+        if (!(getGlassPane() instanceof GeminiGlassPane)) {
+            setGlassPane(new GeminiGlassPane());
+        }
+        validate();
+        // get the existing blocking glass pane
+        GeminiGlassPane bgp = (GeminiGlassPane) getGlassPane();
+        //bgp.setPainter(painter);
+        bgp.setVisible(visible);
+        if (visible) {
+            bgp.start();
+        } else {
+            bgp.stop();
+        }
+        bgp.repaint();
     }
 
     private record ComboItem(String url, Supplier<InfoPageInfo> supplier) {
