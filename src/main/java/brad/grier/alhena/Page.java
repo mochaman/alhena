@@ -1,10 +1,13 @@
 package brad.grier.alhena;
 
 import java.awt.BorderLayout;
+import java.io.File;
 import java.security.cert.X509Certificate;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.SwingUtilities;
 
 /**
  * A class that encapsulates the JTextPane and JScrollPane used in the main view
@@ -20,8 +23,10 @@ public class Page extends JPanel {
     private int themeId;
     private GeminiFrame frame;
     private int arrayIndex = 0; // only tracked in root pages
-    private Runnable completed;
+    private Runnable onLoading;
     private JScrollPane scrollPane;
+    private Runnable onDone;
+    private File dataFile; // shoehorn in titan upload data for sync
 
     private Page() {
 
@@ -40,8 +45,8 @@ public class Page extends JPanel {
         textPane = new GeminiTextPane(frame, this, url);
         scrollPane = new JScrollPane(textPane);
         String ss = DB.getPref("scrollspeed", null);
-        
-        if (ss != null){
+
+        if (ss != null) {
             int scrollSpeed = Integer.parseInt(ss);
 
             scrollPane.getVerticalScrollBar().setUnitIncrement(scrollSpeed);
@@ -50,17 +55,83 @@ public class Page extends JPanel {
 
     }
 
-    public void setScrollIncrement(int inc){
+    private boolean busy = true;
+
+    public boolean busy() {
+        return busy;
+    }
+
+    public void setBusy(boolean b) {
+
+        if (isShowing()) {
+            if (!b && frame.getGlassPane().isShowing()) {
+                frame.showGlassPane(false);
+            } else if (b && !frame.getGlassPane().isShowing()) {
+                frame.showGlassPane(true);
+            }
+        }
+        this.busy = b;
+    }
+
+    public void setDataFile(File file) {
+        dataFile = file;
+    }
+
+    public File getDataFile() {
+
+        return dataFile;
+    }
+
+    public void setScrollIncrement(int inc) {
         scrollPane.getVerticalScrollBar().setUnitIncrement(inc);
     }
 
-    public void runOnLoad(Runnable r) {
-        completed = r;
+    public void runWhenLoading(Runnable r) {
+        onLoading = r;
     }
 
     public void loading() {
-        if (completed != null) {
-            completed.run();
+        if (onLoading != null) {
+            onLoading.run();
+            onLoading = null;
+        }
+    }
+
+    @Override
+    public void setVisible(boolean visible) {
+        super.setVisible(visible);
+        JTabbedPane tabbedPane = (JTabbedPane) SwingUtilities.getAncestorOfClass(JTabbedPane.class, this);
+        if (tabbedPane != null) {
+            if (visible) {
+                if (!busy && frame.getGlassPane().isShowing()) {
+                    frame.showGlassPane(false);
+                } else if (busy && !frame.getGlassPane().isShowing()) {
+                    frame.showGlassPane(true);
+                }
+            }
+        }
+
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        //System.out.println("addNotify: " + this + " " + busy);
+        if (!busy && frame.getGlassPane().isShowing()) {
+            frame.showGlassPane(false);
+        } else if (busy && !frame.getGlassPane().isShowing()) {
+            frame.showGlassPane(true);
+        }
+    }
+
+    public void runWhenDone(Runnable r) {
+        onDone = r;
+    }
+
+    public void doneLoading() {
+        if (onDone != null) {
+            onDone.run();
+            onDone = null;
         }
     }
 
