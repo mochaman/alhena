@@ -112,7 +112,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "2.8";
+    public final static String VERSION = "2.9";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -126,8 +126,9 @@ public class Alhena {
 
                 Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                 GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
-                if (gf != null && gf.getGlassPane().isShowing()) {
-
+                if (gf != null && gf.visiblePage().busy()) {
+                    gf.visiblePage().setBusy(false);
+                    gf.showGlassPane(false);
                     interrupted = true;
                     // closing and recreating the client doesn't work for ending connection handshake
                     // close vertx and recreate
@@ -356,7 +357,8 @@ public class Alhena {
             return;
         }
         if (url.contains("://")) {
-            if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("https://") /*&& !url.startsWith("titan://")*/) {
+            if (!url.startsWith("gemini://") && !url.startsWith("file://")
+                    && !url.startsWith("https://") && !url.startsWith("titan://")) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
                 return;
 
@@ -367,7 +369,7 @@ public class Alhena {
         }
         try {
             if (url.startsWith("file:/")) {
-                p.frame().showGlassPane(true);
+
                 URL fileUrl;
                 try {
 
@@ -379,6 +381,7 @@ public class Alhena {
                         if (matches) {
                             //boolean[] first = {true};
                             String fUrl = url;
+                            p.frame().setBusy(true, cPage);
                             boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
                             p.textPane.updatePage("", pformatted, fUrl, true);
                             boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
@@ -407,13 +410,13 @@ public class Alhena {
                                             bg(() -> {
                                                 p.textPane.end(" ", false, fUrl, true);
                                                 p.textPane.insertImage(imageBuffer.getBytes());
-                                                p.frame().showGlassPane(false);
+                                                //p.frame().showGlassPane(false);
                                             });
 
                                         } else {
                                             bg(() -> {
                                                 p.textPane.end();
-                                                p.frame().showGlassPane(false);
+                                                //p.frame().showGlassPane(false);
                                             });
                                         }
 
@@ -425,30 +428,30 @@ public class Alhena {
 
                                         bg(() -> {
                                             p.textPane.end("## Error reading file\n", false, fUrl, true);
-                                            p.frame().showGlassPane(false);
+                                            //p.frame().showGlassPane(false);
                                         });
                                     });
                                 } else {
 
                                     bg(() -> {
                                         p.textPane.end("## Error opening file\n", false, fUrl, true);
-                                        p.frame().showGlassPane(false);
+                                        //p.frame().showGlassPane(false);
                                     });
                                 }
                             });
 
                         } else {
                             p.textPane.end("## Invalid file type\n", false, url, true);
-                            p.frame().showGlassPane(false);
+                            //p.frame().showGlassPane(false);
                         }
                     } else {
                         p.textPane.end("## File not found\n", false, url, true);
-                        p.frame().showGlassPane(false);
+                        //p.frame().showGlassPane(false);
                     }
                 } catch (Exception ex) {
                     p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
                     ex.printStackTrace();
-                    p.frame().showGlassPane(false);
+                    //p.frame().showGlassPane(false);
                 }
 
                 return;
@@ -456,7 +459,7 @@ public class Alhena {
 
             URI prevURI = redirectUrl == null ? p.textPane.getURI() : new URI(redirectUrl);
 
-            if (url.startsWith("https://") || (!url.startsWith("gemini://") && prevURI.getScheme().equals("https"))) {
+            if (url.startsWith("https://") || (!url.startsWith("gemini://") && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https")))) {
 
                 if (!url.startsWith("https")) {
                     url = prevURI.resolve(url).toString();
@@ -469,7 +472,7 @@ public class Alhena {
                             .setLogActivity(true);
                     httpClient = vertx.createHttpClient(options);
                 }
-                p.frame().showGlassPane(true);
+                p.frame().setBusy(true, cPage);
                 String finalURL = url;
                 URI finalURI = new URI(finalURL);
 
@@ -484,14 +487,14 @@ public class Alhena {
                                 resp.body().onSuccess(buffer -> {
                                     bg(() -> {
                                         p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
-                                        p.frame().showGlassPane(false);
+                                        //p.frame().showGlassPane(false);
                                     });
                                     req.end();
                                 }).onFailure(ex -> {
                                     ex.printStackTrace();
                                     bg(() -> {
                                         p.textPane.end("error getting web page\n", true, finalURL, true);
-                                        p.frame().showGlassPane(false);
+                                        //p.frame().showGlassPane(false);
                                     });
                                     req.end();
                                 });
@@ -544,7 +547,7 @@ public class Alhena {
                             ar2.cause().printStackTrace();
                             bg(() -> {
                                 p.textPane.end("broke\n", true, finalURL, true);
-                                p.frame().showGlassPane(false);
+                                //p.frame().showGlassPane(false);
                             });
 
                         }
@@ -556,7 +559,7 @@ public class Alhena {
 
             }
 
-            if (!url.startsWith("gemini://") /*&& !url.startsWith("titan://")*/) {
+            if (!url.startsWith("gemini://") && !url.startsWith("titan://")) {
                 if (url.startsWith("//")) {
                     url = "gemini:" + url;
                 } else if (url.startsWith("/")) {
@@ -606,7 +609,7 @@ public class Alhena {
     }
 
     private static void fetch(NetClient client, URI uri, Page p, String origURL, Page cPage) {
-        p.frame().showGlassPane(true);
+        p.frame().setBusy(true, cPage);
 
         String host = uri.getHost();
 
@@ -661,6 +664,22 @@ public class Alhena {
                 String urlText = uri.toString();
 
                 connection.result().write(urlText + "\r\n");
+                if (uri.getScheme().equals("titan")) {
+                    if (p.getDataFile() != null) {
+                        try {
+                            connection.result().write(Buffer.buffer(Files.readAllBytes(p.getDataFile().toPath())));
+                        } catch (IOException ex) {
+                            connection.result().close();
+                            p.textPane.end("## Error sending file", false, origURL, true);
+                            return;
+                        }
+                    } else {
+                        connection.result().close();
+                        p.textPane.end("## Nothing to send", false, origURL, true);
+                        return;
+                    }
+
+                }
                 Buffer saveBuffer = Buffer.buffer();
 
                 boolean[] error = {false};
@@ -691,7 +710,7 @@ public class Alhena {
                         switch (respCode) {
                             case '1' -> {
                                 redirectCount = 0;
-
+                                p.frame().setBusy(false, cPage);
                                 String reqMsg = saveBuffer.getString(3, i - 1);
                                 char respType = (char) saveBuffer.getByte(1);
                                 bg(() -> {
@@ -746,26 +765,32 @@ public class Alhena {
 
                                 } else {
                                     File[] file = new File[1];
+                                    connection.result().handler(null);
+                                    connection.result().pause();
+                                    if (p.getDataFile() == null) {
 
-                                    try {
-                                        //error[0] = true;
-                                        connection.result().pause();
-                                        EventQueue.invokeAndWait(() -> {
-                                            String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
-                                            file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+                                        try {
 
-                                        });
-                                    } catch (Exception ex) {
-                                        ex.printStackTrace();
+                                            EventQueue.invokeAndWait(() -> {
+                                                String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
+                                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+
+                                            });
+                                        } catch (Exception ex) {
+                                            ex.printStackTrace();
+                                        }
+
+                                        if (file[0] == null) {
+                                            // canceled
+                                            //textPane.end("# Download canceled", false, origURL, true, r);
+                                            connection.result().close();
+                                            p.frame().showGlassPane(false);
+                                            return;
+                                        }
+                                    } else {
+                                        file[0] = p.getDataFile();
                                     }
 
-                                    if (file[0] == null) {
-                                        // canceled
-                                        //textPane.end("# Download canceled", false, origURL, true, r);
-                                        connection.result().close();
-                                        p.frame().showGlassPane(false);
-                                        return;
-                                    }
 
                                     streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL);
                                     return;
@@ -777,35 +802,36 @@ public class Alhena {
                                     redirectCount = 0;
                                     connection.result().close();
                                     bg(() -> {
-                                        p.textPane.updatePage("## Too many redirects", false, origURL, true);
-                                        p.frame().showGlassPane(false);
+                                        p.textPane.end("## Too many redirects", false, origURL, true);
+                                        //p.frame().showGlassPane(false);
                                     });
                                     return;
                                 }
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
                                 redirectCount++;
-                                //vertx.eventBus().send("fetch", redirectURI);
+
                                 processURL(redirectURI, p, origURL, cPage);
                             }
                             case '4', '5' -> {
                                 redirectCount = 0;
                                 String errorMsg = saveBuffer.getString(0, i - 1).trim();
-                                //char respType = (char) saveBuffer.getByte(1);
+
                                 bg(() -> {
-                                    p.textPane.updatePage("## Server Response: " + errorMsg, false, origURL, true);
+                                    p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
                                 });
                             }
                             case '6' -> {
                                 redirectCount = 0;
                                 char respType = (char) saveBuffer.getByte(1);
                                 if (respType == '0') { // 60 cert required
+                                    p.frame().setBusy(false, cPage);
                                     String msg = saveBuffer.getString(3, i - 1).trim();
                                     certRequired(msg, uri.toString(), host, p, cert[0], cPage);
                                 } else if (respType == 1 || respType == 2) {
                                     String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
                                     bg(() -> {
-                                        p.textPane.updatePage("## Server Response: " + errorMsg, false, origURL, true);
+                                        p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
                                     });
                                 }
                             }
@@ -813,8 +839,8 @@ public class Alhena {
                                 redirectCount = 0;
                                 connection.result().close();
                                 bg(() -> {
-                                    p.textPane.updatePage("## Invalid response", false, origURL, true);
-                                    p.frame().showGlassPane(false);
+                                    p.textPane.end("## Invalid response", false, origURL, true);
+                                    //p.frame().showGlassPane(false);
                                 });
                                 return;
 
@@ -848,7 +874,6 @@ public class Alhena {
                             // insert into existing page and not new page created for the call to processUrl
                             // get rid of this - maybe put spawning page in page ref
 
-                            //GeminiTextPane tPane = p.frame().visiblePage().textPane;
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
@@ -858,11 +883,11 @@ public class Alhena {
                                 p.textPane.end(" ", false, origURL, true);
                                 p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
                             }
-                            p.frame().showGlassPane(false);
+                            //p.frame().showGlassPane(false);
                         });
                     } else {
                         bg(() -> {
-                            p.frame().showGlassPane(false);
+                            //p.frame().showGlassPane(false);
                             p.textPane.end();
 
                         });
@@ -873,11 +898,11 @@ public class Alhena {
                 redirectCount = 0;
                 if (interrupted) {
                     interrupted = false;
-                    p.frame().showGlassPane(false);
+                    p.frame().setBusy(false, cPage);
                 } else {
                     bg(() -> {
-                        p.textPane.end(connection.cause().toString() + "\n", true, origURL, true);
-                        p.frame().showGlassPane(false);
+                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                        //p.frame().showGlassPane(false);
                     });
                     connection.cause().printStackTrace();
                     System.out.println("Failed to connect: " + connection.cause().getMessage());
@@ -968,7 +993,7 @@ public class Alhena {
 
                 file.write(buffer);
 
-                socket.handler(null);
+                // socket.handler(null);
                 socket.resume();
                 // Use Pump to stream to file
                 Pump pump = Pump.pump(socket, file);
@@ -984,14 +1009,19 @@ public class Alhena {
                             ex.printStackTrace();
                         }
                         p.frame().showGlassPane(false);
-                        Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
+                        if(p.getDataFile() == null){
+                            Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
+                        }else{
+                            // restore downloaded file
+                            Util.importData(p.frame(), outFile, true);
+                        }
                     });
 
                 });
 
             } else {
                 p.textPane.end("# Failed to open file: " + outFile, false, url, true);
-                p.frame().showGlassPane(false);
+                //p.frame().showGlassPane(false);
                 fileRes.cause().printStackTrace();
 
             }
@@ -1009,7 +1039,7 @@ public class Alhena {
             client.close();
         }
         NetClientOptions options = new NetClientOptions()
-                .setConnectTimeout(15000)
+                .setConnectTimeout(60000)
                 .setSsl(true) // Gemini uses TLS   
                 .setTrustAll(true)
                 .setHostnameVerificationAlgorithm("HTTPS");
@@ -1084,7 +1114,7 @@ public class Alhena {
                     addCertToTrustStore(host, cert);
                     client.close().onSuccess(s -> {
                         createNetClientWithCert(host, cnString);
-                        //vertx.eventBus().send("fetch", reqURL);
+
                         processURL(reqURL, p, null, cPage);
 
                     });
@@ -1238,8 +1268,29 @@ public class Alhena {
         return sslContext;
     }
 
-    private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String cn) throws Exception {
+    public static void createKeyPair(String host, String cn) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+        // generate a key pair
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+        KeyPair keyPair = keyGen.generateKeyPair();
+        PrivateKey privateKey = keyPair.getPrivate();
+        // create a self-signed certificate
+        X509Certificate cert = generateSelfSignedCertificate(keyPair, cn);
 
+        String privateKeyPem = "-----BEGIN PRIVATE KEY-----\n"
+                + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(privateKey.getEncoded())
+                + "\n-----END PRIVATE KEY-----";
+
+        String certPem = "-----BEGIN CERTIFICATE-----\n"
+                + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(cert.getEncoded())
+                + "\n-----END CERTIFICATE-----";
+
+        DB.insertClientCert(host, certPem, privateKeyPem, true, null);
+    }
+
+    private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String cn) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
         //X500Name subject = new X500Name("CN=Jeremy,O=UltimatumLabs,L=Elkhorn,C=US");
         X500Name subject = new X500Name("CN=" + cn);
         BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
