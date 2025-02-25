@@ -966,7 +966,7 @@ public final class GeminiFrame extends JFrame {
                             revalidate();
                             refreshNav(histPage);
                         } else {
-                            histPage.runWhenDone(() -> setBusy(false, currentPB));
+                            histPage.runWhenDone(() -> currentPB.setBusy(false));
                         }
                         refreshNav(visiblePage());
 
@@ -1003,7 +1003,7 @@ public final class GeminiFrame extends JFrame {
 
                                 refreshNav(histPage);
                             } else {
-                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                                histPage.runWhenDone(() -> currentPB.setBusy(false));
                             }
 
                         } else { // think and refactor
@@ -1013,7 +1013,7 @@ public final class GeminiFrame extends JFrame {
                                 setBusy(true, histPage);
                                 tabbedPane.setComponentAt(currentTabIdx, histPage);
                             } else {
-                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                                histPage.runWhenDone(() -> currentPB.setBusy(false));
                             }
                         }
 
@@ -1147,7 +1147,7 @@ public final class GeminiFrame extends JFrame {
                             revalidate();
                             refreshNav(histPage);
                         } else {
-                            histPage.runWhenDone(() -> setBusy(false, currentPB));
+                            histPage.runWhenDone(() -> currentPB.setBusy(false));
                         }
                         refreshNav(visiblePage());
                     }
@@ -1189,7 +1189,7 @@ public final class GeminiFrame extends JFrame {
                                 tabbedPane.setComponentAt(idx, histPage);
                                 refreshNav(histPage);
                             } else {
-                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                                histPage.runWhenDone(() -> currentPB.setBusy(false));
                             }
                         } else { // added in to replicated what is the main tab handling. custom pages load too fast to test???
                             if (currentPB == visiblePage()) {
@@ -1198,7 +1198,7 @@ public final class GeminiFrame extends JFrame {
                                 setBusy(true, histPage);
                                 tabbedPane.setComponentAt(currentTabIdx, histPage);
                             } else {
-                                histPage.runWhenDone(() -> setBusy(false, currentPB));
+                                histPage.runWhenDone(() -> currentPB.setBusy(false));
                             }
 
                         }
@@ -1829,6 +1829,7 @@ public final class GeminiFrame extends JFrame {
         return menuItem;
     }
 
+    // this can probably go in it's current form
     public void setBusy(boolean busy, Component c) {
 
         Runnable r = () -> {
