@@ -1,4 +1,3 @@
-
 package brad.grier.alhena;
 
 import java.awt.BorderLayout;
@@ -20,14 +19,23 @@ import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.Security;
+import java.security.Signature;
+import java.security.cert.X509Certificate;
+import java.util.Base64;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -44,17 +52,26 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.JTextComponent;
 
+import org.bouncycastle.cms.CMSAlgorithm;
+import org.bouncycastle.cms.CMSEnvelopedDataParser;
+import org.bouncycastle.cms.CMSEnvelopedDataStreamGenerator;
+import org.bouncycastle.cms.RecipientInformation;
+import org.bouncycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
+import org.bouncycastle.cms.jcajce.JceKeyTransEnvelopedRecipient;
+import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.drjekyll.fontchooser.FontChooser;
 
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
+
+import brad.grier.alhena.DB.ClientCertInfo;
 
 /**
  * Static utility methods
  *
  * @author Brad Grier
  */
-
 public class Util {
 
     public static void setupTheme(String themeClassName) {
@@ -99,7 +116,7 @@ public class Util {
                 options != null ? JOptionPane.DEFAULT_OPTION : JOptionPane.OK_CANCEL_OPTION,
                 null, // Icon (null for default)
                 options, // Options (null for default buttons)
-                options != null ? options[0] : null  // Initial value
+                options != null ? options[0] : null // Initial value
         );
         JDialog dialog = optionPane.createDialog(parent, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -577,7 +594,6 @@ public class Util {
     //                 bmJ.put(bookmark.label(), bookmark.url());
     //                 ja.add(bmJ);
     //             });
-
     //         });
     //         return jo.encodePrettily();
     //     } catch (SQLException ex) {
@@ -585,7 +601,6 @@ public class Util {
     //     }
     //     return null;
     // }
-
     // public static byte[] encryptFile(byte[] fileData, X509Certificate certificate) throws Exception {
     //     // Add Bouncy Castle as a security provider
     //     Security.addProvider(new BouncyCastleProvider());
@@ -634,89 +649,84 @@ public class Util {
     //     return recipient.getContent(jceKey);
     // }
 
-    // public static void encryptFile(String inputFile, String outputFile, X509Certificate certificate) throws Exception {
+    public static void encryptFile(String inputFile, String outputFile, X509Certificate certificate) throws Exception {
 
-    //     Security.addProvider(new BouncyCastleProvider());
-    //     // Create the generator for encrypted data
-    //     CMSEnvelopedDataStreamGenerator edGen = new CMSEnvelopedDataStreamGenerator();
+        Security.addProvider(new BouncyCastleProvider());
+        // Create the generator for encrypted data
+        CMSEnvelopedDataStreamGenerator edGen = new CMSEnvelopedDataStreamGenerator();
 
-    //     // Add the recipient's certificate
-    //     edGen.addRecipientInfoGenerator(
-    //         new JceKeyTransRecipientInfoGenerator(certificate)
-    //             .setProvider("BC")
-    //     );
+        // Add the recipient's certificate
+        edGen.addRecipientInfoGenerator(
+                new JceKeyTransRecipientInfoGenerator(certificate)
+                        .setProvider("BC")
+        );
 
-    //     // Open input and output streams
-    //     try (InputStream in = Files.newInputStream(new File(inputFile).toPath());
-    //          OutputStream out = Files.newOutputStream(new File(outputFile).toPath());
-    //          // Create the encrypted output stream
-    //          OutputStream encryptedOut = edGen.open(
-    //              out,
-    //              new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
-    //                  .setProvider("BC")
-    //                  .build()
-    //          )) {
-            
-    //         // Stream the data
-    //         byte[] buffer = new byte[8192];
-    //         int bytesRead;
-    //         while ((bytesRead = in.read(buffer)) != -1) {
-    //             encryptedOut.write(buffer, 0, bytesRead);
-    //         }
-    //     }
-    // }
+        // Open input and output streams
+        try (InputStream in = Files.newInputStream(new File(inputFile).toPath()); OutputStream out = Files.newOutputStream(new File(outputFile).toPath()); // Create the encrypted output stream
+                 OutputStream encryptedOut = edGen.open(
+                        out,
+                        new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
+                                .setProvider("BC")
+                                .build()
+                )) {
 
-    // public static void decryptFile(String inputFile, String outputFile, PrivateKey privateKey) throws Exception {
-    //     Security.addProvider(new BouncyCastleProvider());
-    //     // Set up the recipient
-    //     JceKeyTransEnvelopedRecipient recipient = (JceKeyTransEnvelopedRecipient) new JceKeyTransEnvelopedRecipient(privateKey)
-    //         .setProvider("BC");
+            // Stream the data
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                encryptedOut.write(buffer, 0, bytesRead);
+            }
+        }
+    }
 
-    //     // Open streams
-    //     try (InputStream in = Files.newInputStream(new File(inputFile).toPath());
-    //          OutputStream out = Files.newOutputStream(new File(outputFile).toPath())) {
-            
-    //         // Create the parser
-    //         CMSEnvelopedDataParser parser = new CMSEnvelopedDataParser(in);
-            
-    //         // Get the recipient info
-    //         RecipientInformation recipientInfo = parser.getRecipientInfos()
-    //             .getRecipients()
-    //             .iterator()
-    //             .next();
-            
-    //         // Get the decrypted content stream
-    //         try (InputStream decryptedStream = recipientInfo.getContentStream(recipient).getContentStream()) {
-    //             // Stream the data
-    //             byte[] buffer = new byte[8192];
-    //             int bytesRead;
-    //             while ((bytesRead = decryptedStream.read(buffer)) != -1) {
-    //                 out.write(buffer, 0, bytesRead);
-    //             }
-    //         }
-    //     }
-    // }
+    public static void decryptFile(String inputFile, String outputFile, PrivateKey privateKey) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+        // Set up the recipient
+        JceKeyTransEnvelopedRecipient recipient = (JceKeyTransEnvelopedRecipient) new JceKeyTransEnvelopedRecipient(privateKey)
+                .setProvider("BC");
 
-    // public static String hashAndSign(File file, PrivateKey privateKey) throws Exception {
-    //     MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        // Open streams
+        try (InputStream in = Files.newInputStream(new File(inputFile).toPath()); OutputStream out = Files.newOutputStream(new File(outputFile).toPath())) {
 
-    //     try (InputStream fis = new FileInputStream(file);
-    //          DigestInputStream dis = new DigestInputStream(fis, digest)) {
-    //         byte[] buffer = new byte[8192]; // Read in 8 KB chunks
-    //         while (dis.read(buffer) != -1) {
-    //             // Just reading updates the digest
-    //         }
-    //     }
+            // Create the parser
+            CMSEnvelopedDataParser parser = new CMSEnvelopedDataParser(in);
 
-    //     byte[] hash = digest.digest(); // Get the final hash
+            // Get the recipient info
+            RecipientInformation recipientInfo = parser.getRecipientInfos()
+                    .getRecipients()
+                    .iterator()
+                    .next();
 
-    //     Signature signer = Signature.getInstance("SHA256withRSA");
-    //     signer.initSign(privateKey);
-    //     signer.update(hash);
-    //     return Base64.getEncoder().encodeToString(signer.sign());
-    //     //return bytesToHex(signer.sign());
-    
-    // }
+            // Get the decrypted content stream
+            try (InputStream decryptedStream = recipientInfo.getContentStream(recipient).getContentStream()) {
+                // Stream the data
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = decryptedStream.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+        }
+    }
+
+    public static String hashAndSign(File file, PrivateKey privateKey) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+        try (InputStream fis = new FileInputStream(file); DigestInputStream dis = new DigestInputStream(fis, digest)) {
+            byte[] buffer = new byte[8192]; 
+            while (dis.read(buffer) != -1) {
+                // just reading updates the digest
+            }
+        }
+
+        byte[] hash = digest.digest(); // get the hash
+
+        Signature signer = Signature.getInstance("SHA256withRSA");
+        signer.initSign(privateKey);
+        signer.update(hash);
+        return Base64.getEncoder().encodeToString(signer.sign());
+
+    }
 
     // private static String bytesToHex(byte[] bytes) {
     //     StringBuilder sb = new StringBuilder();
@@ -725,5 +735,59 @@ public class Util {
     //     }
     //     return sb.toString();
     // }
+
+    public static void importData(GeminiFrame frame, File f, boolean decrypt) {
+        if (decrypt) {
+
+            try {
+                File file = File.createTempFile("alhenadb", ".zip");
+                ClientCertInfo certInfo = DB.getClientCertInfo(GeminiFrame.SYNC_SERVER);
+                PrivateKey pk = Alhena.loadPrivateKey(certInfo.privateKey());
+                //X509Certificate cert = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
+                decryptFile(f.getAbsolutePath(), file.getAbsolutePath(), pk);
+                File origFile = f;
+                f = file;
+                origFile.delete();
+                f.deleteOnExit();
+            } catch (Exception ex) {
+                Util.infoDialog(frame, "Error", "Error decrypting file.", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+                return;
+            }
+        
+        }
+        Object[] options = {"Merge", "Replace", "Cancel"};
+        Object res = confirmDialog(frame, "Confirm", "'Replace' will completely overwrite your existing configuration.\n'Merge' will safely combine the data.", JOptionPane.YES_NO_OPTION, options);
+        if (res instanceof String result) {
+
+            if (result.equals("Replace")) {
+                try {
+
+                    if (DB.restoreDB(f) != 0) {
+                        infoDialog(frame, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
+                    } else {
+                        infoDialog(frame, "Complete", "Data successfully imported.");
+                        Alhena.updateFrames(true);
+                    }
+                } catch (Exception ex) {
+                    infoDialog(frame, "Error", "Unable to replace data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+            } else if (result.equals("Merge")) {
+                try {
+                    DBBackup.init();
+                    if (DBBackup.mergeDB(f) != 0) {
+                        infoDialog(frame, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
+                    } else {
+                        infoDialog(frame, "Complete", "Data successfully merged.");
+                        Alhena.updateFrames(true);
+                    }
+                } catch (Exception ex) {
+                    infoDialog(frame, "Error", "Unable to merge data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
 
 }
