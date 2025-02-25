@@ -1,4 +1,4 @@
-# Alhena 2.8 🌟
+# Alhena 2.9 🌟
 
 **Alhena** is a full-featured, multi-platform Gemini browser with a modern UI, asynchronous networking, and certificate management.
 
@@ -19,6 +19,7 @@
 - Multiple windows and tabs
 - Touch autoscrolling
 - Backup data with merging
+- Remote sync
 
 ## 🚀 Getting Started
 
@@ -45,12 +46,12 @@ Prebuilt binaries are available for various platforms. Java is NOT required. Eac
 
 | Platform            | Type  | Download Link |
 |---------------------|------|--------------|
-| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.8/alhena-2.8_windows_x64.zip) |
-| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.8/alhena-2.8_x64.dmg) |
-| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.8/alhena-2.8_aarch64.dmg) |
-| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.8/alhena-2.8_linux_x64.tgz) |
-| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.8/alhena-2.8_linux_aarch64.tgz) |
-| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.8/alhena-2.8_freebsd_x64.tgz) |
+| **Windows x64**     | MSI  | [Download](https://github.com/mochaman/alhena/releases/download/v2.9/alhena-2.9_windows_x64.zip) |
+| **Mac x64 (Intel)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.9/alhena-2.9_x64.dmg) |
+| **Mac AArch64 (M1/M2)** | DMG  | [Download](https://github.com/mochaman/alhena/releases/download/v2.9/alhena-2.9_aarch64.dmg) |
+| **Linux x64**       | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.9/alhena-2.9_linux_x64.tgz) |
+| **Linux AArch64 (Pi, etc)** | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.9/alhena-2.9_linux_aarch64.tgz) |
+| **FreeBSD x64**     | TGZ  | [Download](https://github.com/mochaman/alhena/releases/download/v2.9/alhena-2.9_freebsd_x64.tgz) |
 
 
 ## 🐳 Docker
