@@ -1,6 +1,7 @@
 package brad.grier.alhena;
 
 import java.awt.BorderLayout;
+import java.awt.EventQueue;
 import java.io.File;
 import java.security.cert.X509Certificate;
 
@@ -117,11 +118,14 @@ public class Page extends JPanel {
     public void addNotify() {
         super.addNotify();
         //System.out.println("addNotify: " + this + " " + busy);
-        if (!busy && frame.getGlassPane().isShowing()) {
-            frame.showGlassPane(false);
-        } else if (busy && !frame.getGlassPane().isShowing()) {
-            frame.showGlassPane(true);
-        }
+        EventQueue.invokeLater(() -> {
+            if (!busy && frame.getGlassPane().isShowing()) {
+                frame.showGlassPane(false);
+            } else if (busy && !frame.getGlassPane().isShowing()) {
+                frame.showGlassPane(true);
+            }
+        });
+
     }
 
     public void runWhenDone(Runnable r) {
