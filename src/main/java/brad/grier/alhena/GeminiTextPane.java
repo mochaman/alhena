@@ -718,7 +718,8 @@ public class GeminiTextPane extends JTextPane {
         bStyle = null;
         defPP = null;
         page.doneLoading();
-        f.setBusy(false, page);
+        //f.setBusy(false, page);
+        page.setBusy(false);
     }
 
     private void scanForAnsi() {
