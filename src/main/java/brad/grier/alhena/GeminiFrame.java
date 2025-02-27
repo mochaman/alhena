@@ -40,9 +40,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -55,6 +58,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -79,7 +83,7 @@ public final class GeminiFrame extends JFrame {
     private final JButton backButton;
     private final JButton forwardButton;
     private final JButton favButton;
-    private final JButton refreshButton;
+    public final JButton refreshButton;
     public static int currentThemeId;
     private final HashMap<Page, ArrayList<Page>> pageHistoryMap = new HashMap<>();
     private final List<String> clickedLinks = new ArrayList<>();
@@ -96,6 +100,7 @@ public final class GeminiFrame extends JFrame {
     public static int fontSize = 15;
     private static Font saveFont;
     public final static String SYNC_SERVER = "ultimatumlabs.com";
+    private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", true)),
@@ -345,12 +350,9 @@ public final class GeminiFrame extends JFrame {
 
         initComboBox();
         Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
-        backButton = new JButton("⬅"); //emoji_u303d.png
-        //backButton = new JButton("◀️");
-        //backButton = new JButton(Util.loadPNGIcon("/png/emoji_u2b05.png", 18, 18)); //emoji_u303d.png
+        backButton = new JButton("◀");
         backButton.setToolTipText("Click to go back");
-        forwardButton = new JButton("➡");
-        //forwardButton = new JButton("▶️");
+        forwardButton = new JButton("▶");
         forwardButton.setToolTipText("Click to go forward");
         backButton.setFont(buttonFont);
 
@@ -429,21 +431,26 @@ public final class GeminiFrame extends JFrame {
                 forwardButton.setEnabled(hasNext(groupPane));
             }
 
-            //showGlassPane(false);
             validate();
             repaint();
 
         });
 
-        refreshButton = new JButton("🔄");
+        ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", UIManager.getColor("Button.foreground"), 21, 21);
+        refreshButton = new JButton(refreshIcon);
         refreshButton.setToolTipText("Reload this page");
         refreshButton.setEnabled(false);
         refreshButton.setFont(buttonFont);
-        refreshButton.addActionListener(al -> {
-
-            refresh();
-
-        });
+        Action refreshAction = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                refresh();
+            }
+        };
+        refreshButton.addActionListener(refreshAction);
+        refreshButton.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_R, mod), "refresh");
+        refreshButton.getActionMap().put("refresh", refreshAction);
 
         JButton homeButton = new JButton("🏠");
         homeButton.setToolTipText("Go to home page");
@@ -502,16 +509,15 @@ public final class GeminiFrame extends JFrame {
             add(navPanel, BorderLayout.NORTH);
         }
 
-        //add(pb.scrollPane, BorderLayout.CENTER);
         add(pb, BorderLayout.CENTER);
         statusField = new JLabel(Alhena.WELCOME_MESSAGE);
 
         statusField.setBorder(new EmptyBorder(5, 5, 5, 5)); // Add padding
 
         menuBar = new JMenuBar();
-        int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+
         JMenu fileMenu = new JMenu("File");
-        //fileMenu.setBorder(new EmptyBorder(0, 0, 0, 10));
+
         fileMenu.add(createMenuItem("Open File", KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
             openFile(null);
         }));
@@ -715,11 +721,8 @@ public final class GeminiFrame extends JFrame {
                 // System.out.println(font.getFontName() + " " + font.getFamily());
                 proportionalFamily = font.getFamily();
                 fontSize = font.getSize();
-                //currentThemeId++;
                 Alhena.updateFrames(false);
-                // refreshFromCache(visiblePage());
 
-                // visiblePage().setThemeId(currentThemeId);
                 DB.insertPref("font", font.getName());
                 DB.insertPref("fontfamily", proportionalFamily);
                 DB.insertPref("fontsize", String.valueOf(fontSize));
@@ -750,6 +753,10 @@ public final class GeminiFrame extends JFrame {
 
         aboutMenu.add(createMenuItem("Changes", null, () -> {
             fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi");
+        }));
+
+        aboutMenu.add(createMenuItem("FAQ", null, () -> {
+            fetchURL("gemini://ultimatumlabs.com/alhenafaq.gmi");
         }));
 
         aboutMenu.add(createMenuItem("Details", null, () -> {
@@ -890,7 +897,7 @@ public final class GeminiFrame extends JFrame {
                 menuBar.add(bookmarkMenu);
             }
 
-            bookmarkMenu.add(createMenuItem("Bookmark Page", null, () -> {
+            bookmarkMenu.add(createMenuItem("Bookmark Page", KeyStroke.getKeyStroke(KeyEvent.VK_D, mod), () -> {
                 bookmarkPage();
             }));
             if (!bookmarks.isEmpty()) {
@@ -1485,9 +1492,25 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    public void deleteFromHistory(String url) {
+    public void deleteFromHistory(String url, boolean prompt) {
+        String match = null;
+        if (prompt) {
+            match = Util.inputDialog(this, "Delete History", "Enter a string. All links containing the string will be removed from history.", false);
+            if (match == null || match.isBlank()) {
+                return;
+
+            } else {
+                Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history containing:\n\"" + match + "\"", JOptionPane.YES_NO_OPTION, null);
+                if(res instanceof Integer result){
+                    if(result == JOptionPane.NO_OPTION){
+                        return;
+                    }
+                }
+            }
+
+        }
         try {
-            int rowCount = DB.deleteHistory(url);
+            int rowCount = DB.deleteHistory(url, match);
             refresh();
             String verbiage = rowCount == 1 ? "1 link " : rowCount + " links ";
             Util.infoDialog(this, "Update", verbiage + "removed from history");
@@ -1502,7 +1525,7 @@ public final class GeminiFrame extends JFrame {
         try {
             Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history?", JOptionPane.YES_NO_OPTION, null);
             if (res instanceof Integer result) {
-                if (result == JOptionPane.OK_OPTION) {
+                if (result == JOptionPane.YES_OPTION) {
                     int rowCount = DB.deleteHistory();
                     refresh();
                     String verbiage = rowCount == 0 ? "No links " : rowCount == 1 ? "1 link " : rowCount + " links ";
