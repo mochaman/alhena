@@ -12,18 +12,22 @@ Alhena is a Gemini browser written in Java. It's also a star in Gemini.
 * Modern UI with multiple themes
 * Full color emojis on all platforms
 * Inline image viewer
-* ANSI color on preformatted text
+* ANSI colors on preformatted text
 * Font chooser for proportional text
 * Asynchronous networking and file I/O
 * Host-based certificate management
 * Bookmarks and history
 * Multiple windows and tabs
 * Drag and drop text, image and PEM files
+* Import and Export user data with merge
+* Remote sync with merge
+
+=> gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
 
 ### 🥽 Ultimatum Labs
 => gemini://ultimatumlabs.com/alhena.gmi Alhena's home in Geminispace
 => gemini://ultimatumlabs.com A Gemini server written in vert.x
-=> https://ultimatumlabs.com Demands, Wishes and Ultimatums
+=> https://ultimatumlabs.com Ultimatum Labs Website
 
 ### 🔗 Cool Links
 => gemini://gemi.dev/ gemi.dev
