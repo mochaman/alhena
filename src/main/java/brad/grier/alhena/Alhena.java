@@ -60,6 +60,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -112,7 +113,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "3.1";
+    public final static String VERSION = "3.2";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -132,6 +133,7 @@ public class Alhena {
                     interrupted = true;
                     // closing and recreating the client doesn't work for ending connection handshake
                     // close vertx and recreate
+                    httpClient = null;
                     vertx.close();
                     VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
                     vertx = Vertx.vertx(options);
@@ -322,7 +324,8 @@ public class Alhena {
             if (updateBookmarks) {
                 jf.updateBookmarks();
             }
-
+            ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", UIManager.getColor("Button.foreground"),21, 21);
+            jf.refreshButton.setIcon(refreshIcon);
             jf.refreshFromCache(jf.visiblePage());
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
             SwingUtilities.updateComponentTreeUI(jf);
@@ -352,7 +355,7 @@ public class Alhena {
         // this method needs to be refactored
         url = url.trim();
 
-        if (url.startsWith("alhena:")) {
+        if (url.startsWith("alhena")) {
             processCommand(url, p);
             return;
         }
@@ -487,6 +490,7 @@ public class Alhena {
                                 resp.body().onSuccess(buffer -> {
                                     bg(() -> {
                                         p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
+                                        cPage.setBusy(false);
                                         //p.frame().showGlassPane(false);
                                     });
                                     req.end();
