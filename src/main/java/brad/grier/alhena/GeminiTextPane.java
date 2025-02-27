@@ -28,7 +28,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
@@ -86,7 +85,7 @@ public class GeminiTextPane extends JTextPane {
     private Color hoverColor, linkColor;
     private SimpleAttributeSet hoverStyle, normalStyle, visitedStyle;
     // doubtful there will actually be multi-threaded access but better safe than sorry
-    private static final ConcurrentHashMap<Integer, Integer> sizeMap = new ConcurrentHashMap<>();
+    //private static final ConcurrentHashMap<FontInfo, Integer> sizeMap = new ConcurrentHashMap<>();
     public final static int DEFAULT_MODE = 0;
     public final static int BOOKMARK_MODE = 1;
     public final static int HISTORY_MODE = 2;
@@ -128,13 +127,13 @@ public class GeminiTextPane extends JTextPane {
         this.f = f;
         this.page = page;
         docURL = url;
-        // setFocusable(false);
+
+        // Monospaced doesn't align on Windows, Source Code Pro doesn't align on Mac/Linux!
         monospacedFamily = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
 
         Insets insets = getMargin();
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
-        //docURL = "  ";
-        //setFocusable(false);
+
         setEditable(false);
         setCaret(new DefaultCaret() {
             @Override
@@ -326,7 +325,9 @@ public class GeminiTextPane extends JTextPane {
                                 popupMenu.add(menuItem2);
 
                                 if (Alhena.browsingSupported && range.url.startsWith("http")) {
-                                    boolean useBrowser = DB.getPref("browser", "false").equals("true");
+                                    String useB = DB.getPref("browser", null);
+                                    boolean useBrowser = useB == null ? true : useB.equals("true");
+                                    //boolean useBrowser = DB.getPref("browser", "false").equals("true");
                                     // show the opposite of the setting - this then becomes the default
                                     String label = useBrowser ? "Alhena" : "Browser";
                                     JMenuItem httpMenuItem = new JMenuItem("Open In " + label);
@@ -376,8 +377,9 @@ public class GeminiTextPane extends JTextPane {
                                         popupMenu.add(new JSeparator());
                                         JMenuItem forgetItem = new JMenuItem("Forget Link");
                                         forgetItem.addActionListener(al -> {
-                                            f.deleteFromHistory(range.url);
+                                            f.deleteFromHistory(range.url, false);
                                         });
+
                                         popupMenu.add(forgetItem);
                                         JMenuItem clearItem = new JMenuItem("Delete History");
 
@@ -486,6 +488,12 @@ public class GeminiTextPane extends JTextPane {
 
                     if (currentMode == HISTORY_MODE) {
                         popupMenu.add(new JSeparator());
+                        JMenuItem whereItem = new JMenuItem("Forget Links Containing");
+                        whereItem.addActionListener(al -> {
+                            f.deleteFromHistory(null, true);
+                        });
+
+                        popupMenu.add(whereItem);
                         JMenuItem clearItem = new JMenuItem("Delete History");
 
                         clearItem.addActionListener(al -> {
@@ -772,7 +780,7 @@ public class GeminiTextPane extends JTextPane {
 
             // probably not needed anymore
             bStyle.addAttribute(StyleConstants.FontFamily, monospacedFamily);
-            bStyle.addAttribute(StyleConstants.FontSize, 14);
+            bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.fontSize);
 
         }
 
@@ -1027,10 +1035,12 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private boolean pngEmoji = true;
-    private String emojiFont;
+    private String emojiProportional;
+    private float pfAdjust = 0.0f;
+
     private void buildStyles() {
         pngEmoji = DB.getPref("pngemoji", "true").equals("true");
-        emojiFont = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
+        emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
         boolean isDark = UIManager.getBoolean("laf.dark");
 
         linkColor = UIManager.getColor("Component.linkColor");
@@ -1038,10 +1048,21 @@ public class GeminiTextPane extends JTextPane {
 
         Style pfStyle = doc.addStyle("```", null);
         StyleConstants.setFontFamily(pfStyle, monospacedFamily);
-        StyleConstants.setFontSize(pfStyle, 14);
+        StyleConstants.setFontSize(pfStyle, GeminiFrame.fontSize);
         StyleConstants.setBold(pfStyle, false);
         StyleConstants.setItalic(pfStyle, false);
         StyleConstants.setUnderline(pfStyle, false);
+
+        // linespacing on non-windows platforms for pre-formatted text creates
+        // horizontal lines in ascii block text (for example)
+        if (!SystemInfo.isWindows) {
+            Font pfFont = new Font(monospacedFamily, Font.PLAIN, GeminiFrame.fontSize);
+            FontMetrics fm = getFontMetrics(pfFont);
+            int ascent = fm.getAscent();
+            int descent = fm.getDescent();
+            int leading = fm.getLeading();
+            pfAdjust = -((float) (descent + leading - (float) (descent / 1.95f)) / (float) ascent);
+        }
 
         Color foreground = UIManager.getColor("TextField.foreground");
 
@@ -1094,24 +1115,6 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    private int getFontHeight(AttributeSet attrSet) {
-        String fontFamily = StyleConstants.getFontFamily(attrSet);
-        int fontSize = StyleConstants.getFontSize(attrSet);
-        Integer fs = sizeMap.get(fontSize);
-
-        if (fs != null) {
-            return fs;
-        }
-
-        Font font = new Font(fontFamily, Font.PLAIN, fontSize);
-
-        FontMetrics metrics = getFontMetrics(font);
-        int fontHeight = metrics.getHeight() - metrics.getDescent();
-        sizeMap.put(fontSize, fontHeight);
-        //System.out.println("fontHeight: " + fontHeight + " " +metrics.charWidth('2'));
-        return fontHeight;
-    }
-
     // Segoe UI is nice on Windows
     private void processLine(String line, boolean lastLine) {
 
@@ -1127,22 +1130,20 @@ public class GeminiTextPane extends JTextPane {
                 }
 
             } else {
-
+                // executed at end block
                 SimpleAttributeSet indentAttributes = new SimpleAttributeSet();
+
                 StyleConstants.setLeftIndent(indentAttributes, 50); // Set left indentation in points
                 StyleConstants.setRightIndent(indentAttributes, 50); // Optional: Adjust the right margin
-                StyleConstants.setLineSpacing(indentAttributes, 0.0f); // Optional: Set line spacing if needed
+                StyleConstants.setLineSpacing(indentAttributes, pfAdjust); // Optional: Set line spacing if needed
                 Color pfColor = UIManager.getBoolean("laf.dark") ? AnsiColor.blend(linkColor, Color.WHITE, .1f) : AnsiColor.blend(linkColor, Color.BLACK, .1f);
                 StyleConstants.setForeground(indentAttributes, pfColor);
-
-                //doc.setParagraphAttributes(pfModeStart, pfModeStart == 0 ? doc.getLength() : pfModeEnd, indentAttributes, true);
                 doc.setParagraphAttributes(pfModeStart, doc.getLength(), indentAttributes, true);
 
                 doc.setParagraphAttributes(doc.getLength(), doc.getLength(), pAttributes, true);
             }
             addStyledText(lastLine, "\n", "```", null);
         } else if (preformattedMode) {
-
             if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) && line.startsWith("=>")) {
                 line = "=> " + line.substring(line.indexOf(":") + 1);
             }
@@ -1180,7 +1181,9 @@ public class GeminiTextPane extends JTextPane {
 
             ClickableRange cr = addStyledText(lastLine, label.isEmpty() ? url : label, linkStyle,
                     () -> {
-                        if (finalUrl.startsWith("https") && Alhena.browsingSupported && DB.getPref("browser", "false").equals("true")) {
+                        String useB = DB.getPref("browser", null);
+                        boolean useBrowser = useB == null ? true : useB.equals("true");
+                        if (finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
                             try {
                                 Desktop.getDesktop().browse(new URI(finalUrl));
                             } catch (Exception ex) {
@@ -1256,38 +1259,40 @@ public class GeminiTextPane extends JTextPane {
         ClickableRange cr = null;
 
         int start = doc.getLength();
-        
+        boolean monospace = styleName.equals("```");
+        int heightOffset = monospace ? 4 : 0;
         if (containsEmoji(text)) {
 
             String fontFamily = StyleConstants.getFontFamily(style);
-            //String emojiFont = SystemInfo.isMacOS ? fontFamily : "Noto Emoji";
-            int fontHeight = getFontHeight(style) + 2;
+            int fontSize = StyleConstants.getFontSize(style);
+
             int[] cpCount = new int[1];
             SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
             List<Integer> codePoints = new ArrayList<>();
             for (int i = 0; i < text.length(); i++) {
                 char c = text.charAt(i);
-
+                //int codePoint = text.codePointAt(i);
                 if (isEmoji(c)) {
+                    int codePoint = text.codePointAt(i);
                     if (pngEmoji) {
-                        // if (styleName.equals("```")) {
-                        //     StyleConstants.setFontFamily(style, "Noto Emoji"); // if not found in pngs
-                        // }
+
                         String fileName = getEmojiFilename(text, i, cpCount, codePoints);
-                        ImageIcon icon = Util.loadPNGIcon(fileName, fontHeight, fontHeight);
+                        int imgSize = fontSize + 4;
+                        ImageIcon icon = Util.loadPNGIcon(fileName, imgSize, imgSize - heightOffset);
 
                         if (icon == null) {
 
-                            char[] chars = Character.toChars(text.codePointAt(i));
+                            char[] chars = Character.toChars(codePoint);
 
-                            i++;
-                            //i += 2;
+                            i += Character.charCount(codePoint) - 1;
+                            //i++;
 
                             insertString(doc.getLength(), new String(chars), style);
 
                         } else {
-                            i += cpCount[0] * 2;
-                            i--;
+                            i += (cpCount[0] * 2) - 1;
+                            // i--;
+                            //i += charCount - 1;
                             StyleConstants.setIcon(emojiStyle, icon);
 
                             try {
@@ -1297,11 +1302,12 @@ public class GeminiTextPane extends JTextPane {
 
                         }
                     } else {
-                        char[] chars = Character.toChars(text.codePointAt(i));
+
+                        char[] chars = Character.toChars(codePoint);
 
                         i++;
-                        //i += 2;
-                        StyleConstants.setFontFamily(style, emojiFont);
+
+                        StyleConstants.setFontFamily(style, monospace ? monospacedFamily : emojiProportional);
 
                         insertString(doc.getLength(), new String(chars), style);
                     }
@@ -1359,7 +1365,6 @@ public class GeminiTextPane extends JTextPane {
 
         // build the emoji filename
         sb.setLength(0);
-        //StringBuilder sb = new StringBuilder("/png/emoji_u");
         sb.append("/png/emoji_u");
         for (int j = 0; j < codePoints.size(); j++) {
             if (j > 0) {
