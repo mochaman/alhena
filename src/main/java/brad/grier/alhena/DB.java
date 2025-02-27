@@ -186,11 +186,12 @@ public class DB {
         }
     }
 
-    public static int deleteHistory(String url) throws SQLException {
+    public static int deleteHistory(String url, String clause) throws SQLException {
 
         try (Connection con = cp.getConnection()) {
-            try (var ps = con.prepareStatement("DELETE FROM HISTORY WHERE URL = ?")) {
-                ps.setString(1, url);
+            String c = clause == null ? "URL = ?" : "URL LIKE ?";
+            try (var ps = con.prepareStatement("DELETE FROM HISTORY WHERE " + c)) {
+                ps.setString(1, clause == null ? url : "%" + clause + "%");
                 ps.execute();
                 return ps.getUpdateCount();
 
