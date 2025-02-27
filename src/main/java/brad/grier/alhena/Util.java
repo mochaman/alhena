@@ -1,6 +1,7 @@
 package brad.grier.alhena;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.EventQueue;
@@ -113,7 +114,7 @@ public class Util {
         JOptionPane optionPane = new JOptionPane(
                 question, // Message
                 JOptionPane.QUESTION_MESSAGE, // Message type
-                options != null ? JOptionPane.DEFAULT_OPTION : JOptionPane.OK_CANCEL_OPTION,
+                options != null ? JOptionPane.DEFAULT_OPTION : msgType,
                 null, // Icon (null for default)
                 options, // Options (null for default buttons)
                 options != null ? options[0] : null // Initial value
@@ -604,19 +605,15 @@ public class Util {
     // public static byte[] encryptFile(byte[] fileData, X509Certificate certificate) throws Exception {
     //     // Add Bouncy Castle as a security provider
     //     Security.addProvider(new BouncyCastleProvider());
-
     //     // Create the generator for encrypted data
     //     CMSEnvelopedDataGenerator edGen = new CMSEnvelopedDataGenerator();
-
     //     // Add the recipient's certificate
     //     edGen.addRecipientInfoGenerator(
     //             new JceKeyTransRecipientInfoGenerator(certificate)
     //                     .setProvider("BC")
     //     );
-
     //     // Create the encrypted content
     //     CMSTypedData msg = new CMSProcessableByteArray(fileData);
-
     //     // Generate the encrypted data using AES-256
     //     CMSEnvelopedData ed = edGen.generate(
     //             msg,
@@ -624,31 +621,24 @@ public class Util {
     //                     .setProvider("BC")
     //                     .build()
     //     );
-
     //     return ed.getEncoded();
     // }
-
     // public static byte[] decryptFile(byte[] encryptedData, PrivateKey privateKey) throws Exception {
     //     // Add Bouncy Castle as a security provider
     //     Security.addProvider(new BouncyCastleProvider());
-
     //     // Create the envelope to read the encrypted data
     //     CMSEnvelopedData envelopedData = new CMSEnvelopedData(encryptedData);
-
     //     // Set up the recipient information for decryption
     //     RecipientInformation recipient = envelopedData.getRecipientInfos()
     //             .getRecipients()
     //             .iterator()
     //             .next();
-
     //     // Create the recipient to process the encryption
     //     JceKeyTransEnvelopedRecipient jceKey = (JceKeyTransEnvelopedRecipient) new JceKeyTransEnvelopedRecipient(privateKey)
     //             .setProvider("BC");
-
     //     // Return the decrypted content
     //     return recipient.getContent(jceKey);
     // }
-
     public static void encryptFile(String inputFile, String outputFile, X509Certificate certificate) throws Exception {
 
         Security.addProvider(new BouncyCastleProvider());
@@ -713,7 +703,7 @@ public class Util {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
         try (InputStream fis = new FileInputStream(file); DigestInputStream dis = new DigestInputStream(fis, digest)) {
-            byte[] buffer = new byte[8192]; 
+            byte[] buffer = new byte[8192];
             while (dis.read(buffer) != -1) {
                 // just reading updates the digest
             }
@@ -727,14 +717,6 @@ public class Util {
         return Base64.getEncoder().encodeToString(signer.sign());
 
     }
-
-    // private static String bytesToHex(byte[] bytes) {
-    //     StringBuilder sb = new StringBuilder();
-    //     for (byte b : bytes) {
-    //         sb.append(String.format("%02x", b));
-    //     }
-    //     return sb.toString();
-    // }
 
     public static void importData(GeminiFrame frame, File f, boolean decrypt) {
         if (decrypt) {
@@ -754,7 +736,7 @@ public class Util {
                 ex.printStackTrace();
                 return;
             }
-        
+
         }
         Object[] options = {"Merge", "Replace", "Cancel"};
         Object res = confirmDialog(frame, "Confirm", "'Replace' will completely overwrite your existing configuration.\n'Merge' will safely combine the data.", JOptionPane.YES_NO_OPTION, options);
@@ -788,6 +770,37 @@ public class Util {
                 }
             }
         }
+    }
+
+    public static ImageIcon recolorIcon(String imagePath, Color themeColor, int width, int height) {
+
+        try (InputStream is = GeminiFrame.class.getResourceAsStream(imagePath)) {
+            if (is == null) {
+                return null;
+            }
+
+            BufferedImage image = ImageIO.read(is);
+
+            for (int y = 0; y < image.getHeight(); y++) {
+                for (int x = 0; x < image.getWidth(); x++) {
+                    int pixel = image.getRGB(x, y);
+                    Color color = new Color(pixel, true); // Preserve alpha
+
+                    // If the pixel is black (or close to black), replace it with the theme color
+                    if (color.getRed() == 0 && color.getGreen() == 0 && color.getBlue() == 0) {
+                        int newColor = (color.getAlpha() << 24) | (themeColor.getRGB() & 0x00FFFFFF); // Preserve alpha
+                        image.setRGB(x, y, newColor);
+                    }
+                }
+            }
+            Image scaledImage = image.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            return new ImageIcon(scaledImage);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
     }
 
 }
