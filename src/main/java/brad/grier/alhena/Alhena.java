@@ -581,6 +581,12 @@ public class Alhena {
                 }
 
             }
+
+            if(!url.contains("://")){
+                p.textPane.end("Invalid address: " + url + "\n", true, url, true);
+                return;
+            }
+
             URI origURI = new URI(url).normalize();
             String origURL = origURI.toString();
             if (origURI.getPath().isEmpty()) {
