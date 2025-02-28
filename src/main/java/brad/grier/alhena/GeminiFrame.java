@@ -83,7 +83,7 @@ public final class GeminiFrame extends JFrame {
     private final JButton backButton;
     private final JButton forwardButton;
     private final JButton favButton;
-    public final JButton refreshButton;
+    private final JButton refreshButton;
     public static int currentThemeId;
     private final HashMap<Page, ArrayList<Page>> pageHistoryMap = new HashMap<>();
     private final List<String> clickedLinks = new ArrayList<>();
@@ -349,12 +349,13 @@ public final class GeminiFrame extends JFrame {
         });
 
         initComboBox();
+        ImageIcon leftIcon = Util.recolorIcon("/left.png", UIManager.getColor("Button.foreground"), 21, 21);
         Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
-        backButton = new JButton("◀");
+        backButton = new JButton(leftIcon);
         backButton.setToolTipText("Click to go back");
-        forwardButton = new JButton("▶");
+        ImageIcon rightIcon = Util.recolorIcon("/right.png", UIManager.getColor("Button.foreground"), 21, 21);
+        forwardButton = new JButton(rightIcon);
         forwardButton.setToolTipText("Click to go forward");
-        backButton.setFont(buttonFont);
 
         backButton.setEnabled(false);
         backButton.addActionListener(al -> {
@@ -391,13 +392,12 @@ public final class GeminiFrame extends JFrame {
 
             }
 
-            //showGlassPane(false);
             validate();
             repaint();
 
         });
 
-        forwardButton.setFont(buttonFont);
+        //forwardButton.setFont(buttonFont);
         forwardButton.setEnabled(false);
         forwardButton.addActionListener(al -> {
             //showGlassPane(true);
@@ -440,7 +440,7 @@ public final class GeminiFrame extends JFrame {
         refreshButton = new JButton(refreshIcon);
         refreshButton.setToolTipText("Reload this page");
         refreshButton.setEnabled(false);
-        refreshButton.setFont(buttonFont);
+        
         Action refreshAction = new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -793,6 +793,15 @@ public final class GeminiFrame extends JFrame {
     }
 
     private MenuItem mi;
+
+    public void recolorIcons() {
+        ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", UIManager.getColor("Button.foreground"), 21, 21);
+        refreshButton.setIcon(refreshIcon);
+        ImageIcon leftIcon = Util.recolorIcon("/left.png", UIManager.getColor("Button.foreground"), 21, 21);
+        backButton.setIcon(leftIcon);
+        ImageIcon rightIcon = Util.recolorIcon("/right.png", UIManager.getColor("Button.foreground"), 21, 21);
+        forwardButton.setIcon(rightIcon);
+    }
 
     public void setMenuItem(MenuItem mi) {
         this.mi = mi;
@@ -1334,7 +1343,7 @@ public final class GeminiFrame extends JFrame {
             }
             List<DBClientCertInfo> certs = DB.loadCerts();
             if (!certs.isEmpty()) {
-                textPane.updatePage("#Client Certificates 🔑\nClicke to toggle active state. Right click to activate, inactivate or delete a cert.\n", false, CERT_LABEL, true);
+                textPane.updatePage("#Client Certificates 🔑\nClick to toggle active state. Right click to activate, inactivate or delete a cert.\n", false, CERT_LABEL, true);
 
                 LinkedHashMap<Boolean, ArrayList<DBClientCertInfo>> types = new LinkedHashMap<>();
                 certs.forEach(c -> {
@@ -1501,8 +1510,8 @@ public final class GeminiFrame extends JFrame {
 
             } else {
                 Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history containing:\n\"" + match + "\"", JOptionPane.YES_NO_OPTION, null);
-                if(res instanceof Integer result){
-                    if(result == JOptionPane.NO_OPTION){
+                if (res instanceof Integer result) {
+                    if (result == JOptionPane.NO_OPTION) {
                         return;
                     }
                 }

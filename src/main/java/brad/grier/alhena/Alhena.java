@@ -60,7 +60,6 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -324,8 +323,8 @@ public class Alhena {
             if (updateBookmarks) {
                 jf.updateBookmarks();
             }
-            ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", UIManager.getColor("Button.foreground"),21, 21);
-            jf.refreshButton.setIcon(refreshIcon);
+            jf.recolorIcons();
+
             jf.refreshFromCache(jf.visiblePage());
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
             SwingUtilities.updateComponentTreeUI(jf);
