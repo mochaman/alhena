@@ -1067,6 +1067,8 @@ public final class GeminiFrame extends JFrame {
                     loadBookmarks(visiblePage().textPane, visiblePage());
                 case GeminiTextPane.CERT_MODE ->
                     loadCerts(visiblePage().textPane, visiblePage());
+                case GeminiTextPane.SERVER_MODE ->
+                    loadServers(visiblePage().textPane, visiblePage());
                 case GeminiTextPane.INFO_MODE -> {
                 }
                 case GeminiTextPane.DEFAULT_MODE -> {
