@@ -58,6 +58,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
@@ -95,7 +96,8 @@ public final class GeminiFrame extends JFrame {
     public static final String BOOKMARK_LABEL = "Bookmarks";
     public static final String CERT_LABEL = "Certs";
     public static final String INFO_LABEL = "Info";
-    public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL); // make immutable
+    public static final String SERVERS_LABEL = "Servers";
+    public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL); // make immutable
     public static String proportionalFamily = "SansSerif";
     public static int fontSize = 15;
     private static Font saveFont;
@@ -103,6 +105,10 @@ public final class GeminiFrame extends JFrame {
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
+            Map.entry("FlatDarculaLaf", new ThemeInfo("com.formdev.flatlaf.FlatDarculaLaf", true)),
+            Map.entry("FlatIntelliJLaf", new ThemeInfo("com.formdev.flatlaf.FlatIntelliJLaf", false)),
+            Map.entry("FlatMacDarkLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacDarkLaf", true)),
+            Map.entry("FlatMacLightLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacLightLaf", false)),
             Map.entry("FlatMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", true)),
             Map.entry("FlatDarkPurpleIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDarkPurpleIJTheme", true)),
             Map.entry("FlatMonokaiProIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatMonokaiProIJTheme", true)),
@@ -262,8 +268,6 @@ public final class GeminiFrame extends JFrame {
     }
 
     public boolean hasPrev(Page rootPage) {
-
-        //return rootPage == null ? false : pageHistIndexMap.get(rootPage).get() > 0;
         return rootPage == null ? false : rootPage.getArrayIndex() > 0;
 
     }
@@ -288,12 +292,9 @@ public final class GeminiFrame extends JFrame {
         }
 
         proportionalFamily = DB.getPref("fontfamily", "SansSerif");
-        //proportionalFamily = proportionalFamily == null ? "SansSerif" : proportionalFamily;
         String fs = DB.getPref("fontsize", "15");
-        //fontSize = fs == null ? 15 : Integer.parseInt(fs);
         fontSize = Integer.parseInt(fs);
         String dbFont = DB.getPref("font", "SansSerif");
-        //dbFont = dbFont == null ? "SansSerif" : dbFont;
         saveFont = new Font(dbFont, Font.PLAIN, fontSize);
 
         // test to see if db font exists - maybe deleted from system or db moved to another os
@@ -440,7 +441,7 @@ public final class GeminiFrame extends JFrame {
         refreshButton = new JButton(refreshIcon);
         refreshButton.setToolTipText("Reload this page");
         refreshButton.setEnabled(false);
-        
+
         Action refreshAction = new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -510,8 +511,8 @@ public final class GeminiFrame extends JFrame {
         }
 
         add(pb, BorderLayout.CENTER);
-        statusField = new JLabel(Alhena.WELCOME_MESSAGE);
-
+        statusField = new JLabel(" ");
+        setTmpStatus(Alhena.WELCOME_MESSAGE);
         statusField.setBorder(new EmptyBorder(5, 5, 5, 5)); // Add padding
 
         menuBar = new JMenuBar();
@@ -651,6 +652,8 @@ public final class GeminiFrame extends JFrame {
                         ks = KeyStroke.getKeyStroke(KeyEvent.VK_B, mod);
                     case CERT_LABEL ->
                         ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, (mod | KeyEvent.SHIFT_DOWN_MASK));
+                    case SERVERS_LABEL ->
+                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, (mod | KeyEvent.SHIFT_DOWN_MASK));
                     default -> {
                     }
                 }
@@ -670,7 +673,9 @@ public final class GeminiFrame extends JFrame {
             String input = Util.inputDialog(this, "Find In Page", "Enter search term", false, lastSearch);
             if (input != null) {
                 lastSearch = input;
-                visiblePage().textPane.find(input);
+                if (!visiblePage().textPane.find(input)) {
+                    lastSearch = null;
+                }
             }
         }));
 
@@ -1179,6 +1184,8 @@ public final class GeminiFrame extends JFrame {
                         loadCerts(pb.textPane, pb);
                     case INFO_LABEL ->
                         loadInfo(pb.textPane, pb, info);
+                    case SERVERS_LABEL ->
+                        loadServers(pb.textPane, pb);
                     default -> {
                     }
                 }
@@ -1231,6 +1238,8 @@ public final class GeminiFrame extends JFrame {
                         loadCerts(pb.textPane, pb);
                     case INFO_LABEL ->
                         loadInfo(pb.textPane, pb, info);
+                    case SERVERS_LABEL ->
+                        loadServers(pb.textPane, pb);
                     default -> {
                     }
                 }
@@ -1250,6 +1259,8 @@ public final class GeminiFrame extends JFrame {
                     loadCerts(nPage.textPane, null);
                 case INFO_LABEL ->
                     loadInfo(nPage.textPane, null, info);
+                case SERVERS_LABEL ->
+                    loadServers(nPage.textPane, null);
                 default -> {
                 }
             }
@@ -1393,7 +1404,7 @@ public final class GeminiFrame extends JFrame {
         textPane.end(info.content, true, INFO_LABEL, false);
         textPane.setDocURL(info.title);
 
-        // problem: end already sets comboBoxk
+        // problem: end already sets comboBox
         updateComboBox(new ComboItem(info.title, () -> {
             return info;
         }));
@@ -1408,8 +1419,8 @@ public final class GeminiFrame extends JFrame {
             ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
             ct.setTitle(HISTORY_LABEL);
         }
-        //setTitle("History");
-        textPane.updatePage("# History 📜\n", false, HISTORY_LABEL, true);
+
+        textPane.updatePage("# History 🏛\n", false, HISTORY_LABEL, true);
         new Thread(() -> {
             int[] count = {0};
             try {
@@ -1418,18 +1429,63 @@ public final class GeminiFrame extends JFrame {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-            //textPane.end();
+
             EventQueue.invokeLater(() -> {
                 if (count[0] == 0) {
                     textPane.addPage("\n### Nothing to see\n");
                 } else {
-                    //vertx.eventBus().send("status", count[0] + " links");
-                    setStatus(count[0] + " links");
+                    setTmpStatus(count[0] + " links");
                 }
 
-                //updateComboBox(HISTORY_LABEL);
                 if (p != null) {
-                    //r.run();
+
+                    p.loading();
+                }
+
+                setBusy(false, p);
+            });
+
+        }).start();
+    }
+
+    private void setTmpStatus(String msg) {
+        setStatus(msg);
+        Timer timer = new Timer(5000, event -> {
+            if (statusField.getText().equals(msg)) {
+                setStatus(" ");
+            }
+        });
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+    private void loadServers(GeminiTextPane textPane, Page p) {
+        setBusy(true, p);
+
+        if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
+            ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
+            ct.setTitle(SERVERS_LABEL);
+        }
+
+        textPane.updatePage("# Servers 📃\n", false, SERVERS_LABEL, true);
+        new Thread(() -> {
+            int[] count = {0};
+            try {
+                count[0] = DB.loadServers(textPane);
+
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+
+            EventQueue.invokeLater(() -> {
+                if (count[0] == 0) {
+                    textPane.addPage("\n### Nothing to see\n");
+                } else {
+                    setTmpStatus(count[0] + " servers");
+                }
+
+                if (p != null) {
+
                     p.loading();
                 }
 
@@ -1590,9 +1646,7 @@ public final class GeminiFrame extends JFrame {
                 }
                 refresh();
             }
-            // bookmarkMenu.invalidate();
-            // addBookmarks();
-            // bookmarkMenu.validate();
+
             Alhena.updateFrames(true);
             EventQueue.invokeLater(() -> refresh());
         } catch (SQLException ex) {
