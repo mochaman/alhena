@@ -580,65 +580,6 @@ public class Util {
         }
     }
 
-    // KEEP FOR LATER - PUSH BUG FIX RELEASE FIRST
-    // public static String getBookmarkJson() {
-    //     JsonObject jo = new JsonObject();
-    //     try {
-    //         List<Bookmark> bookmarks = DB.loadBookmarks();
-    //         Map<String, List<Bookmark>> grouped = bookmarks.stream()
-    //                 .collect(Collectors.groupingBy(Bookmark::folder, LinkedHashMap::new, Collectors.toList()));
-    //         grouped.forEach((folder, items) -> {
-    //             JsonArray ja = new JsonArray();
-    //             jo.put(folder, ja);
-    //             items.forEach(bookmark -> {
-    //                 JsonObject bmJ = new JsonObject();
-    //                 bmJ.put(bookmark.label(), bookmark.url());
-    //                 ja.add(bmJ);
-    //             });
-    //         });
-    //         return jo.encodePrettily();
-    //     } catch (SQLException ex) {
-    //         ex.printStackTrace();
-    //     }
-    //     return null;
-    // }
-    // public static byte[] encryptFile(byte[] fileData, X509Certificate certificate) throws Exception {
-    //     // Add Bouncy Castle as a security provider
-    //     Security.addProvider(new BouncyCastleProvider());
-    //     // Create the generator for encrypted data
-    //     CMSEnvelopedDataGenerator edGen = new CMSEnvelopedDataGenerator();
-    //     // Add the recipient's certificate
-    //     edGen.addRecipientInfoGenerator(
-    //             new JceKeyTransRecipientInfoGenerator(certificate)
-    //                     .setProvider("BC")
-    //     );
-    //     // Create the encrypted content
-    //     CMSTypedData msg = new CMSProcessableByteArray(fileData);
-    //     // Generate the encrypted data using AES-256
-    //     CMSEnvelopedData ed = edGen.generate(
-    //             msg,
-    //             new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
-    //                     .setProvider("BC")
-    //                     .build()
-    //     );
-    //     return ed.getEncoded();
-    // }
-    // public static byte[] decryptFile(byte[] encryptedData, PrivateKey privateKey) throws Exception {
-    //     // Add Bouncy Castle as a security provider
-    //     Security.addProvider(new BouncyCastleProvider());
-    //     // Create the envelope to read the encrypted data
-    //     CMSEnvelopedData envelopedData = new CMSEnvelopedData(encryptedData);
-    //     // Set up the recipient information for decryption
-    //     RecipientInformation recipient = envelopedData.getRecipientInfos()
-    //             .getRecipients()
-    //             .iterator()
-    //             .next();
-    //     // Create the recipient to process the encryption
-    //     JceKeyTransEnvelopedRecipient jceKey = (JceKeyTransEnvelopedRecipient) new JceKeyTransEnvelopedRecipient(privateKey)
-    //             .setProvider("BC");
-    //     // Return the decrypted content
-    //     return recipient.getContent(jceKey);
-    // }
     public static void encryptFile(String inputFile, String outputFile, X509Certificate certificate) throws Exception {
 
         Security.addProvider(new BouncyCastleProvider());
