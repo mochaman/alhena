@@ -91,6 +91,7 @@ public class GeminiTextPane extends JTextPane {
     public final static int HISTORY_MODE = 2;
     public final static int CERT_MODE = 3;
     public final static int INFO_MODE = 4;
+    public final static int SERVER_MODE = 5;
     public int currentMode = DEFAULT_MODE;
 
     private String firstHeading;
@@ -427,6 +428,9 @@ public class GeminiTextPane extends JTextPane {
             }
             if (!linkClicked) {
                 if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
+                    if (currentMode == SERVER_MODE) {
+                        return;
+                    }
                     JPopupMenu popupMenu = new JPopupMenu();
 
                     String selectedText = getSelectedText();
@@ -658,7 +662,8 @@ public class GeminiTextPane extends JTextPane {
         return null;
     }
 
-    public void find(String word) {
+    public boolean find(String word) {
+        boolean found = false;
         try {
             requestFocus();
             int startIdx = word.equals(lastSearch) ? lastSearchIdx : 0;
@@ -675,13 +680,17 @@ public class GeminiTextPane extends JTextPane {
                 // scroll to the position
                 Rectangle viewRect = modelToView2D(pos).getBounds();
                 scrollRectToVisible(viewRect);
+                found = true;
             } else {
-                //select(0, 0);
+
                 f.setStatus("'" + word + "' Not Found");
+
             }
         } catch (Exception e) {
             e.printStackTrace();
+
         }
+        return found;
     }
 
     public void end() {
@@ -726,7 +735,7 @@ public class GeminiTextPane extends JTextPane {
         bStyle = null;
         defPP = null;
         page.doneLoading();
-        //f.setBusy(false, page);
+
         page.setBusy(false);
     }
 
@@ -964,6 +973,8 @@ public class GeminiTextPane extends JTextPane {
                 currentMode = CERT_MODE;
             case GeminiFrame.INFO_LABEL ->
                 currentMode = INFO_MODE;
+            case GeminiFrame.SERVERS_LABEL ->
+                currentMode = SERVER_MODE;
             default -> {
             }
         }
@@ -975,7 +986,7 @@ public class GeminiTextPane extends JTextPane {
 
         bufferedLine = null; // probably not necessary here
 
-        f.setStatus(" ");
+        //f.setStatus(" ");
         preformattedMode = pfMode;
         plainTextMode = pfMode;
         // map to track clickable regions and their actions
