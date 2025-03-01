@@ -34,8 +34,8 @@ public class DBBackup {
         if (prevDB.exists()) {
             prevDB.delete();
         }
-        char[] pswd = {'i', 'a', 'm', 't', 'h', 'e', 'w', 'a', 'l', 'n', 'u', 't', '!'};
-        cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena_restore;CIPHER=AES", "sa", "sa " + new String(pswd));
+
+        cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena_restore", "sa", "sa");
 
     }
 
