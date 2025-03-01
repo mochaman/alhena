@@ -17,12 +17,12 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.h2.jdbcx.JdbcConnectionPool;
@@ -378,15 +378,13 @@ public class DB {
             try (ResultSet rs = st.executeQuery("SELECT URL, TIME_STAMP FROM HISTORY ORDER BY TIME_STAMP DESC")) {
                 String saveDate = null;
 
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy");
+                Locale systemLocale = Locale.getDefault(); // Get system locale
+                DateFormat groupFormat = DateFormat.getDateInstance(DateFormat.FULL, systemLocale);
                 while (rs.next()) {
                     count++;
                     Timestamp ts = rs.getTimestamp(2);
-                    // convert to LocalDateTime
-                    LocalDateTime localDateTime = ts.toLocalDateTime();
 
-                    // format the LocalDateTime
-                    String formattedDate = localDateTime.format(formatter);
+                    String formattedDate = groupFormat.format(ts);
                     if (saveDate == null || !saveDate.equals(formattedDate)) {
                         EventQueue.invokeLater(() -> {
                             textPane.addPage("\n### " + formattedDate + "\n\n");
@@ -397,6 +395,43 @@ public class DB {
                     String l1 = rs.getString(1);
                     EventQueue.invokeLater(() -> {
                         textPane.addPage("=> " + l1 + "\n");
+                    });
+
+                }
+            }
+        }
+        return count;
+    }
+
+    public static int loadServers(GeminiTextPane textPane) throws SQLException {
+        int count = 0;
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+
+            try (ResultSet rs = st.executeQuery("SELECT DOMAIN, EXPIRES, TIME_STAMP FROM SERVERCERTS ORDER BY TIME_STAMP ASC")) {
+                String saveDate = null;
+
+                Locale systemLocale = Locale.getDefault(); // Get system locale
+                DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM, systemLocale);
+                DateFormat groupFormat = DateFormat.getDateInstance(DateFormat.FULL, systemLocale);
+                while (rs.next()) {
+                    count++;
+                    String domain = rs.getString(1);
+                    Timestamp expireTs = rs.getTimestamp(2);
+                    Timestamp ts = rs.getTimestamp(3);
+
+                
+                    String saved = groupFormat.format(ts);
+                    String expires = dateFormat.format(expireTs);
+                    if (saveDate == null || !saveDate.equals(saved)) {
+                        EventQueue.invokeLater(() -> {
+                            textPane.addPage("\n### " + saved + "\n\n");
+                        });
+
+                        saveDate = saved;
+                    }
+
+                    EventQueue.invokeLater(() -> {
+                        textPane.addPage("* " + domain + " expires " + expires + "\n");
                     });
 
                 }
@@ -568,12 +603,12 @@ public class DB {
             st.execute("RUNSCRIPT FROM '" + inputFile + "' COMPRESSION ZIP");
         }
 
-        if(tableExists(cp.getConnection(), "CACERTS")){ // for some backward compatibility
+        if (tableExists(cp.getConnection(), "CACERTS")) { // for some backward compatibility
             HashMap<String, X509Certificate> certMap = getSavedCerts(cp);
             Alhena.setServerCerts(certMap);
             runStatement("DROP TABLE CACERTS");
         }
-       
+
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes
         return 0;
@@ -614,7 +649,7 @@ public class DB {
             ResultSet rs = st.executeQuery("SELECT DOMAIN, CERT FROM CACERTS");
 
             while (rs.next()) {
-                certMap.put(rs.getString(1), (X509Certificate)Alhena.loadCertificate(rs.getString(2)));
+                certMap.put(rs.getString(1), (X509Certificate) Alhena.loadCertificate(rs.getString(2)));
 
             }
 
