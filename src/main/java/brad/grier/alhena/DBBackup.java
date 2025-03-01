@@ -115,7 +115,7 @@ public class DBBackup {
                     String domain = rs.getString(1);
 
                     // only insert if domain not present in current db
-                    if (DB.getServerCert(domain) == null) {
+                    if (DB.getServerCert(domain).fingerPrint() == null) {
                         String fingerPrint = rs.getString(2);
                         Timestamp expires = rs.getTimestamp(3);
                         Timestamp ts = rs.getTimestamp(4);
