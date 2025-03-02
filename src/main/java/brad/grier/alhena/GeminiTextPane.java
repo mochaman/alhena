@@ -1260,7 +1260,21 @@ public class GeminiTextPane extends JTextPane {
                 || block == Character.UnicodeBlock.TRANSPORT_AND_MAP_SYMBOLS
                 || block == Character.UnicodeBlock.EMOTICONS
                 || block == Character.UnicodeBlock.SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS
-                || block == Character.UnicodeBlock.DINGBATS;
+                || block == Character.UnicodeBlock.DINGBATS
+                || block == Character.UnicodeBlock.VARIATION_SELECTORS
+                || block == Character.UnicodeBlock.VARIATION_SELECTORS_SUPPLEMENT;
+    }
+
+    public static boolean isVariationSelector(int codePoint) {
+        return Character.UnicodeBlock.of(codePoint) == Character.UnicodeBlock.VARIATION_SELECTORS
+                || Character.UnicodeBlock.of(codePoint) == Character.UnicodeBlock.VARIATION_SELECTORS_SUPPLEMENT;
+    }
+
+    // // detect emoji modifiers
+    private static boolean isEmojiModifier(int codePoint) {
+        return (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) // Skin tone modifiers
+                || (codePoint == 0x200D) // Zero-width joiner (ZWJ)
+                || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF); // Regional indicators
     }
 
     private ClickableRange addStyledText(boolean lastLine, String text, String styleName, Runnable action) {
@@ -1280,13 +1294,13 @@ public class GeminiTextPane extends JTextPane {
             int[] cpCount = new int[1];
             SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
             List<Integer> codePoints = new ArrayList<>();
+            
+            // can't iterate by code point without preprocessing first to get png name
             for (int i = 0; i < text.length(); i++) {
                 char c = text.charAt(i);
-                //int codePoint = text.codePointAt(i);
                 if (isEmoji(c)) {
                     int codePoint = text.codePointAt(i);
                     if (pngEmoji) {
-
                         String fileName = getEmojiFilename(text, i, cpCount, codePoints);
                         int imgSize = fontSize + 4;
                         ImageIcon icon = Util.loadPNGIcon(fileName, imgSize, imgSize - heightOffset);
@@ -1296,14 +1310,13 @@ public class GeminiTextPane extends JTextPane {
                             char[] chars = Character.toChars(codePoint);
 
                             i += Character.charCount(codePoint) - 1;
-                            //i++;
 
-                            insertString(doc.getLength(), new String(chars), style);
+                            if (!isVariationSelector(codePoint)) {
+                                insertString(doc.getLength(), new String(chars), style);
+                            }
 
                         } else {
                             i += (cpCount[0] * 2) - 1;
-                            // i--;
-                            //i += charCount - 1;
                             StyleConstants.setIcon(emojiStyle, icon);
 
                             try {
@@ -1387,13 +1400,6 @@ public class GeminiTextPane extends JTextPane {
         cpCount[0] = codePoints.size();
         codePoints.clear();
         return sb.toString();
-    }
-
-    // detect emoji modifiers
-    private static boolean isEmojiModifier(int codePoint) {
-        return (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) // Skin tone modifiers
-                || (codePoint == 0x200D) // Zero-width joiner (ZWJ)
-                || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF); // Regional indicators
     }
 
     private void insertString(int length, String txt, Style style) {
