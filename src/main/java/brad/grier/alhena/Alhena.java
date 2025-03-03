@@ -112,7 +112,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "3.3";
+    public final static String VERSION = "3.4";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -581,7 +581,7 @@ public class Alhena {
 
             }
 
-            if(!url.contains("://")){
+            if (!url.contains("://")) {
                 p.textPane.end("Invalid address: " + url + "\n", true, url, true);
                 return;
             }
@@ -695,8 +695,7 @@ public class Alhena {
                 // Handle the response
                 connection.result().handler(buffer -> {
 
-                    // since we're asynchronous, we have to make sure we have the entire header before
-                    // we proceed
+                    // we have to make sure we have the entire header before we proceed
                     if (firstBuffer[0]) {
 
                         saveBuffer.appendBuffer(buffer);
@@ -800,7 +799,6 @@ public class Alhena {
                                         file[0] = p.getDataFile();
                                     }
 
-
                                     streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL);
                                     return;
                                 }
@@ -892,11 +890,9 @@ public class Alhena {
                                 p.textPane.end(" ", false, origURL, true);
                                 p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
                             }
-                            //p.frame().showGlassPane(false);
                         });
                     } else {
                         bg(() -> {
-                            //p.frame().showGlassPane(false);
                             p.textPane.end();
 
                         });
@@ -911,7 +907,6 @@ public class Alhena {
                 } else {
                     bg(() -> {
                         p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
-                        //p.frame().showGlassPane(false);
                     });
                     connection.cause().printStackTrace();
                     System.out.println("Failed to connect: " + connection.cause().getMessage());
@@ -923,7 +918,6 @@ public class Alhena {
     private static String verifyFingerPrint(String host, X509Certificate cert) {
 
         try {
-            //Object[] certInfo = DB.getCert(host);
             CertInfo certInfo = DB.getServerCert(host);
             try {
                 cert.checkValidity();
@@ -1018,9 +1012,9 @@ public class Alhena {
                             ex.printStackTrace();
                         }
                         p.frame().showGlassPane(false);
-                        if(p.getDataFile() == null){
+                        if (p.getDataFile() == null) {
                             Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
-                        }else{
+                        } else {
                             // restore downloaded file
                             Util.importData(p.frame(), outFile, true);
                         }
@@ -1421,7 +1415,7 @@ public class Alhena {
         String message = "## Unknown command\n";
         if (cmd.length == 1) {
             if (cmd[0].equals("pngemoji")) {
-                message = "# pngemoji\n###Set emoji rendering type: pngemoji=true\ntrue required for color emojis on non-Mac platforms.";
+                message = "# pngemoji\n###Set emoji rendering type: pngemoji=true\n'true' required for color emojis on non-Mac platforms.\nStyle options: 'google', 'apple', 'facebook' and 'twitter'.";
             } else if (cmd[0].equals("scrollspeed")) {
                 message = "# scrollspeed\n###Set the mouse wheel speed: scrollspeed=10\nscrollspeed=default resets. Negative numbers reverse scroll direction.";
 
@@ -1450,16 +1444,27 @@ public class Alhena {
                 }
 
             } else if (cmd[0].equals("pngemoji")) {
-                if (!cmd[1].toLowerCase().equals("true") && !cmd[1].toLowerCase().equals("false")) {
-                    message = "## must be true or false\n";
-                } else {
+                List<String> valids = List.of("true", "false", "facebook", "twitter", "google", "apple");
+                if(!valids.contains(cmd[1].toLowerCase())){
+                    message = "## must be true, false, facebook, twitter, google or apple\n";    
+                }else{
                     DB.insertPref("pngemoji", cmd[1].toLowerCase());
                     EventQueue.invokeLater(() -> {
                         updateFrames(false);
-                    });
-
-                    message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";
+                    }); 
+                    message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";   
                 }
+
+                // if (!cmd[1].toLowerCase().equals("true") && !cmd[1].toLowerCase().equals("false")) {
+                //     message = "## must be true or false\n";
+                // } else {
+                //     DB.insertPref("pngemoji", cmd[1].toLowerCase());
+                //     EventQueue.invokeLater(() -> {
+                //         updateFrames(false);
+                //     });
+
+                //     message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";
+                // }
             }
         }
         p.textPane.end(message, plainText, url, true);
