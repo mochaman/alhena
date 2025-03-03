@@ -28,13 +28,15 @@ public class Page extends JPanel {
     private JScrollPane scrollPane;
     private Runnable onDone;
     private File dataFile; // shoehorn in titan upload data for sync
+    private long start;
+    private long elapsed;
 
     private Page() {
 
     }
 
     public Page(Page rootPage, GeminiFrame frame, String url, int themeId) {
-
+        start = System.currentTimeMillis();
         // sometimes we know enough to make a page root at construction, sometimes not
         this.rootPage = rootPage;
         this.frame = frame;
@@ -54,6 +56,10 @@ public class Page extends JPanel {
         }
         add(scrollPane, BorderLayout.CENTER);
 
+    }
+
+    public void setStart() {
+        start = System.currentTimeMillis();
     }
 
     private boolean busy = true;
@@ -117,7 +123,7 @@ public class Page extends JPanel {
     @Override
     public void addNotify() {
         super.addNotify();
-        //System.out.println("addNotify: " + this + " " + busy);
+
         EventQueue.invokeLater(() -> {
             if (!busy && frame.getGlassPane().isShowing()) {
                 frame.showGlassPane(false);
@@ -133,6 +139,11 @@ public class Page extends JPanel {
     }
 
     public void doneLoading() {
+        if (start != 0) {
+            elapsed = System.currentTimeMillis() - start;
+            frame.setTmpStatus(elapsed + " ms");
+        }
+
         if (onDone != null) {
             onDone.run();
             onDone = null;
