@@ -1058,22 +1058,25 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void refresh() {
-        visiblePage().textPane.getDocURL().ifPresent(cURL -> {
+        Page visiblePage = visiblePage();
+        
+        visiblePage.textPane.getDocURL().ifPresent(cURL -> {
 
-            switch (visiblePage().textPane.getDocMode()) {
+            switch (visiblePage.textPane.getDocMode()) {
                 case GeminiTextPane.HISTORY_MODE ->
-                    loadHistory(visiblePage().textPane, visiblePage());
+                    loadHistory(visiblePage.textPane, visiblePage);
                 case GeminiTextPane.BOOKMARK_MODE ->
-                    loadBookmarks(visiblePage().textPane, visiblePage());
+                    loadBookmarks(visiblePage.textPane, visiblePage);
                 case GeminiTextPane.CERT_MODE ->
-                    loadCerts(visiblePage().textPane, visiblePage());
+                    loadCerts(visiblePage.textPane, visiblePage);
                 case GeminiTextPane.SERVER_MODE ->
-                    loadServers(visiblePage().textPane, visiblePage());
+                    loadServers(visiblePage.textPane, visiblePage);
                 case GeminiTextPane.INFO_MODE -> {
                 }
                 case GeminiTextPane.DEFAULT_MODE -> {
                     if (!cURL.isEmpty()) {
-                        Alhena.processURL(cURL, visiblePage(), null, visiblePage());
+                        visiblePage.setStart();
+                        Alhena.processURL(cURL, visiblePage, null, visiblePage);
                     }
                 }
                 default -> {
@@ -1450,7 +1453,7 @@ public final class GeminiFrame extends JFrame {
         }).start();
     }
 
-    private void setTmpStatus(String msg) {
+    public void setTmpStatus(String msg) {
         setStatus(msg);
         Timer timer = new Timer(5000, event -> {
             if (statusField.getText().equals(msg)) {
