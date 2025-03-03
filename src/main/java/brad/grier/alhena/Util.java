@@ -580,6 +580,21 @@ public class Util {
         }
     }
 
+    public static BufferedImage loadImage(String filePath) {
+
+        try (InputStream is = GeminiTextPane.class.getResourceAsStream(filePath)) {
+            if (is == null) {
+                return null;
+            }
+            return ImageIO.read(is);
+            // Image scaledImg = ImageIO.read(is).getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            // return new ImageIcon(scaledImg);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public static void encryptFile(String inputFile, String outputFile, X509Certificate certificate) throws Exception {
 
         Security.addProvider(new BouncyCastleProvider());
