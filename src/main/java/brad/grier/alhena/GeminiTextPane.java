@@ -7,6 +7,7 @@ import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -22,12 +23,15 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
@@ -63,6 +67,8 @@ import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
 import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
 import brad.grier.alhena.GeminiFrame.ClosableTabPanel;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  *
@@ -116,11 +122,46 @@ public class GeminiTextPane extends JTextPane {
     private final Page page;
     private int pfModeStart;
     private AttributeSet pAttributes;
+    private static final ConcurrentHashMap<String, Point> emojiSheetMap = new ConcurrentHashMap<>();
+    private static BufferedImage sheetImage = null;
 
     static {
         dropExtensions = new ArrayList<>(Alhena.fileExtensions);
         dropExtensions.add(".png");
         dropExtensions.add(".jpg");
+
+        try (InputStream is = GeminiTextPane.class.getResourceAsStream("/emoji.json")) {
+            if (is == null) {
+                throw new RuntimeException("Resource not found: /emoji.json");
+            }
+
+            // Read the InputStream into a String
+            String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+
+            // Convert to JsonObject
+            JsonArray emojiArray = new JsonArray(content);
+            for (int i = 0; i < emojiArray.size(); i++) {
+                JsonObject jo = emojiArray.getJsonObject(i);
+
+                emojiSheetMap.put(jo.getString("unified"), new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
+                String nonQualified = jo.getString("non_qualified");
+                if (nonQualified != null) {
+                    emojiSheetMap.put(nonQualified, new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
+                }
+                JsonObject skinVariations = jo.getJsonObject("skin_variations");
+                if (skinVariations != null) {
+                    skinVariations.forEach(entry -> {
+                        JsonObject variation = (JsonObject) entry.getValue();
+                        emojiSheetMap.put(variation.getString("unified"), new Point(variation.getInteger("sheet_x"), variation.getInteger("sheet_y")));
+                    });
+
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     // IBM Plex Mono works for proper alignment too
@@ -277,6 +318,23 @@ public class GeminiTextPane extends JTextPane {
             }
         });
 
+    }
+
+    public static void loadEmojiPNG(String name) {
+        String file = switch (name) {
+            case "facebook" ->
+                "/sheet_facebook_64.png";
+            case "twitter" ->
+                "/sheet_twitter_64.png";
+            case "google" ->
+                "/sheet_google_64.png";
+            case "apple" ->
+                "/sheet_apple_64.png";
+            default ->
+                "unknown";
+        };
+        System.out.println("loading: " + file);
+        sheetImage = Util.loadImage(file);
     }
 
     private void showPopup(MouseEvent e) {
@@ -1048,9 +1106,27 @@ public class GeminiTextPane extends JTextPane {
     private boolean pngEmoji = true;
     private String emojiProportional;
     private float pfAdjust = 0.0f;
+    private static String saveEmojiPref;
 
     private void buildStyles() {
-        pngEmoji = DB.getPref("pngemoji", "true").equals("true");
+        String emojiPref = DB.getPref("pngemoji", "true");
+        if (!emojiPref.equals(saveEmojiPref)) {
+            saveEmojiPref = emojiPref;
+            switch (emojiPref) {
+                case "true" -> {
+                    pngEmoji = true;
+                    loadEmojiPNG("google");
+                }
+                case "false" ->
+                    pngEmoji = false;
+                default -> {
+                    pngEmoji = true;
+                    loadEmojiPNG(emojiPref);
+                }
+            }
+        }
+
+        //pngEmoji = DB.getPref("pngemoji", "true").equals("true");
         emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
         boolean isDark = UIManager.getBoolean("laf.dark");
 
@@ -1235,19 +1311,14 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public boolean containsEmoji(String text) {
-        // check if any code point in the string falls within emoji ranges
         return text.codePoints().anyMatch(codePoint
-                -> (codePoint >= 0x1F600 && codePoint <= 0x1F64F)
-                || // emoticons
-                (codePoint >= 0x1F300 && codePoint <= 0x1F5FF)
-                || // misc Symbols and Pictographs
-                (codePoint >= 0x1F680 && codePoint <= 0x1F6FF)
-                || // transport and Map Symbols
-                (codePoint >= 0x2600 && codePoint <= 0x26FF)
-                || // misc Symbols
-                (codePoint >= 0x2700 && codePoint <= 0x27BF)
-                || // dingbats
-                (codePoint >= 0x1F900 && codePoint <= 0x1F9FF) // supplemental Symbols and Pictographs
+                -> (codePoint >= 0x1F600 && codePoint <= 0x1F64F) // emoticons
+                || (codePoint >= 0x1F300 && codePoint <= 0x1F5FF) // misc Symbols and Pictographs
+                || (codePoint >= 0x1F680 && codePoint <= 0x1F6FF) // transport and Map Symbols
+                || (codePoint >= 0x2600 && codePoint <= 0x26FF) // misc Symbols
+                || (codePoint >= 0x2700 && codePoint <= 0x27BF) // dingbats
+                || (codePoint >= 0x1F900 && codePoint <= 0x1F9FF) // supplemental Symbols and Pictographs
+                || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF) // regional indicator symbols (for country flags)
         );
     }
 
@@ -1263,18 +1334,6 @@ public class GeminiTextPane extends JTextPane {
                 || block == Character.UnicodeBlock.DINGBATS
                 || block == Character.UnicodeBlock.VARIATION_SELECTORS
                 || block == Character.UnicodeBlock.VARIATION_SELECTORS_SUPPLEMENT;
-    }
-
-    public static boolean isVariationSelector(int codePoint) {
-        return Character.UnicodeBlock.of(codePoint) == Character.UnicodeBlock.VARIATION_SELECTORS
-                || Character.UnicodeBlock.of(codePoint) == Character.UnicodeBlock.VARIATION_SELECTORS_SUPPLEMENT;
-    }
-
-    // // detect emoji modifiers
-    private static boolean isEmojiModifier(int codePoint) {
-        return (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) // Skin tone modifiers
-                || (codePoint == 0x200D) // Zero-width joiner (ZWJ)
-                || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF); // Regional indicators
     }
 
     private ClickableRange addStyledText(boolean lastLine, String text, String styleName, Runnable action) {
@@ -1294,16 +1353,31 @@ public class GeminiTextPane extends JTextPane {
             int[] cpCount = new int[1];
             SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
             List<Integer> codePoints = new ArrayList<>();
-            
+
             // can't iterate by code point without preprocessing first to get png name
             for (int i = 0; i < text.length(); i++) {
                 char c = text.charAt(i);
                 if (isEmoji(c)) {
                     int codePoint = text.codePointAt(i);
                     if (pngEmoji) {
-                        String fileName = getEmojiFilename(text, i, cpCount, codePoints);
+
+                        int[] index = {i};
+                        String key = getEmojiPngKey(text, index);
+                        Point p = emojiSheetMap.get(key);
+                        ImageIcon icon = null;
                         int imgSize = fontSize + 4;
-                        ImageIcon icon = Util.loadPNGIcon(fileName, imgSize, imgSize - heightOffset);
+                        if (p != null) {
+                            icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset);
+                        } else {
+                            int dashIdx = key.indexOf('-');
+                            if (dashIdx != -1) {
+                                p = emojiSheetMap.get(key.substring(0, dashIdx));
+                                if (p != null) {
+
+                                    icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset);
+                                }
+                            }
+                        }
 
                         if (icon == null) {
 
@@ -1311,12 +1385,13 @@ public class GeminiTextPane extends JTextPane {
 
                             i += Character.charCount(codePoint) - 1;
 
-                            if (!isVariationSelector(codePoint)) {
-                                insertString(doc.getLength(), new String(chars), style);
-                            }
+
+                            insertString(doc.getLength(), new String(chars), style);
+
 
                         } else {
-                            i += (cpCount[0] * 2) - 1;
+                            //i += (cpCount[0] * 2) - 1;
+                            i = index[0] - 1;
                             StyleConstants.setIcon(emojiStyle, icon);
 
                             try {
@@ -1366,40 +1441,132 @@ public class GeminiTextPane extends JTextPane {
         return cr;
     }
 
+
     private static final StringBuilder sb = new StringBuilder();
 
-    private static String getEmojiFilename(String text, int index, int[] cpCount, List<Integer> codePoints) {
-
+    public static String getEmojiPngKey(String text, int[] index) {    
+        List<Integer> codePoints = new ArrayList<>();
+        int currentIndex = index[0];
         int length = text.length();
 
-        // extract all code points belonging to the emoji sequence
-        int codePoint = text.codePointAt(index);
-        while (index < length) {
+        // get first code point
+        int codePoint = text.codePointAt(currentIndex);
+        codePoints.add(codePoint);
 
-            codePoints.add(codePoint);
+        // move to next code point
+        currentIndex = text.offsetByCodePoints(currentIndex, 1);
 
-            // move to the next code point
-            index = text.offsetByCodePoints(index, 1);
+        // keep collecting code points as long as they're part of the emoji sequence
+        while (currentIndex < length) {
+            codePoint = text.codePointAt(currentIndex);
 
-            // stop if we reach a non-emoji character
-            if (index >= length || !isEmojiModifier(codePoint = text.codePointAt(index))) {
+            // stop if not an emoji component
+            if (!isEmojiComponent(codePoint)) {
                 break;
             }
+
+            codePoints.add(codePoint);
+            currentIndex = text.offsetByCodePoints(currentIndex, 1);
         }
 
-        // build the emoji filename
-        sb.setLength(0);
-        sb.append("/png/emoji_u");
-        for (int j = 0; j < codePoints.size(); j++) {
-            if (j > 0) {
-                sb.append("_");
+        // handle special case for gender signs
+        if (codePoints.size() > 1) {
+            int lastCodePoint = codePoints.get(codePoints.size() - 1);
+            if ((lastCodePoint == 0x2642 || lastCodePoint == 0x2640)
+                    && (codePoints.size() < 2 || codePoints.get(codePoints.size() - 2) != 0xFE0F)) {
+                // add the variation selector if needed before gender sign
+                codePoints.add(codePoints.size() - 1, 0xFE0F);
             }
-            sb.append(Integer.toHexString(codePoints.get(j)));
         }
-        sb.append(".png");
-        cpCount[0] = codePoints.size();
-        codePoints.clear();
+
+        sb.setLength(0);
+
+        for (int i = 0; i < codePoints.size(); i++) {
+            if (i > 0) {
+                sb.append("-");
+            }
+            sb.append(String.format("%X", codePoints.get(i)));
+        }
+
+        // update the index to point to the first character after the emoji
+        index[0] = currentIndex;
+
         return sb.toString();
+    }
+
+    private static boolean isEmojiComponent(int codePoint) {
+        return isEmojiModifier2(codePoint)
+                || // Skin tones, etc.
+                isEmojiPresentation(codePoint)
+                || // Characters that can be presented as emoji
+                codePoint == 0x200D
+                || // Zero-width joiner
+                codePoint == 0xFE0F
+                || // Variation selector (emoji style)
+                codePoint == 0xFE0E
+                || // Variation selector (text style)
+                codePoint == 0x2640
+                || // Female sign
+                codePoint == 0x2642;             // Male sign
+    }
+
+    /**
+     * Checks if a code point is an emoji modifier.
+     */
+    private static boolean isEmojiModifier2(int codePoint) {
+        // Emoji skin tone modifiers
+        if (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) {
+            return true;
+        }
+
+        // Regional indicator symbols for flags
+        if (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF) {
+            return true;
+        }
+
+        // Tag characters for flag variants
+        if (codePoint >= 0xE0000 && codePoint <= 0xE007F) {
+            return true;
+        }
+
+        // Keycap sequence
+        if (codePoint == 0x20E3) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if a code point can be presented as emoji.
+     */
+    private static boolean isEmojiPresentation(int codePoint) {
+        // Main emoji blocks
+        if ((codePoint >= 0x1F300 && codePoint <= 0x1F9FF)
+                || // Common emoji blocks
+                (codePoint >= 0x1FA00 && codePoint <= 0x1FAFF)) // Emoji Extended-A
+        {
+            return true;
+        }
+
+        // Miscellaneous symbols that can be emoji
+        if ((codePoint >= 0x2600 && codePoint <= 0x27BF)
+                || // Misc Symbols & Dingbats
+                (codePoint >= 0x2300 && codePoint <= 0x23FF)
+                || // Misc Technical
+                (codePoint >= 0x2460 && codePoint <= 0x24FF)
+                || // Enclosed Alphanumerics
+                (codePoint >= 0x25A0 && codePoint <= 0x25FF)) // Geometric Shapes
+        {
+            return true;
+        }
+
+        // Speech balloons and thought bubbles
+        if (codePoint == 0x1F5E8 || codePoint == 0x1F5EF) {
+            return true;
+        }
+
+        return false;
     }
 
     private void insertString(int length, String txt, Style style) {
@@ -1530,6 +1697,17 @@ public class GeminiTextPane extends JTextPane {
         }
         scrollDirection = 0;
         holdTime = 0; // Reset hold time
+    }
+
+    private static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height) {
+
+        int x = (sheetX * (sheetSize + 2)) + 1;
+        int y = (sheetY * (sheetSize + 2)) + 1;
+
+        BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
+        Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+
+        return new ImageIcon(scaledImg);
     }
 
 }
