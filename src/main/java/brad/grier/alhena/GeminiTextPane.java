@@ -1125,6 +1125,7 @@ public class GeminiTextPane extends JTextPane {
                 }
             }
         }
+        pngEmoji = !saveEmojiPref.equals("false");
 
         //pngEmoji = DB.getPref("pngemoji", "true").equals("true");
         emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
