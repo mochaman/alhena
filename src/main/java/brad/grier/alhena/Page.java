@@ -62,6 +62,10 @@ public class Page extends JPanel {
         start = System.currentTimeMillis();
     }
 
+    public void ignoreStart(){
+        start = 0;
+    }
+
     private boolean busy = true;
 
     public boolean busy() {
@@ -75,6 +79,7 @@ public class Page extends JPanel {
                 frame.showGlassPane(false);
             } else if (b && !frame.getGlassPane().isShowing()) {
                 frame.showGlassPane(true);
+            
             }
         }
         this.busy = b;
