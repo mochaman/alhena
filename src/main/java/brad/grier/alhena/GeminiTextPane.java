@@ -23,6 +23,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -130,6 +132,31 @@ public class GeminiTextPane extends JTextPane {
         dropExtensions.add(".png");
         dropExtensions.add(".jpg");
 
+        String emojiPref = DB.getPref("emoji", null);
+        if (emojiPref == null || emojiPref.equals("google")) { // first time or the default set from jar
+            setSheetImage(Util.loadImage(GeminiFrame.emojiNameMap.get("google")));
+            DB.insertPref("emoji", "google");  // only really need to this for null
+        } else if (!emojiPref.equals("font")) {
+            String url = GeminiFrame.emojiNameMap.get(emojiPref);
+            String fn = url.substring(url.lastIndexOf('/') + 1);
+            File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
+            if (emojiFile.exists()) {
+                try {
+                    setSheetImage(ImageIO.read(emojiFile));
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                    // reset to google
+                    setSheetImage(Util.loadImage(GeminiFrame.emojiNameMap.get("google")));
+                    DB.insertPref("emoji", "google");
+                }
+
+            } else {
+                // reset to google
+                setSheetImage(Util.loadImage(GeminiFrame.emojiNameMap.get("google")));
+                DB.insertPref("emoji", "google");
+            }
+
+        }
         try (InputStream is = GeminiTextPane.class.getResourceAsStream("/emoji.json")) {
             if (is == null) {
                 throw new RuntimeException("Resource not found: /emoji.json");
@@ -320,23 +347,26 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    public static void loadEmojiPNG(String name) {
-        String file = switch (name) {
-            case "facebook" ->
-                "/sheet_facebook_64.png";
-            case "twitter" ->
-                "/sheet_twitter_64.png";
-            case "google" ->
-                "/sheet_google_64.png";
-            case "apple" ->
-                "/sheet_apple_64.png";
-            default ->
-                "unknown";
-        };
-        System.out.println("loading: " + file);
-        sheetImage = Util.loadImage(file);
+    public static void setSheetImage(BufferedImage sheet) {
+        sheetImage = sheet;
     }
 
+    // public static void loadEmojiPNG(String name) {
+    //     String file = switch (name) {
+    //         case "facebook" ->
+    //             "/sheet_facebook_64.png";
+    //         case "twitter" ->
+    //             "/sheet_twitter_64.png";
+    //         case "google" ->
+    //             "/sheet_google_64.png";
+    //         case "apple" ->
+    //             "/sheet_apple_64.png";
+    //         default ->
+    //             "unknown";
+    //     };
+    //     System.out.println("loading: " + file);
+    //     sheetImage = Util.loadImage(file);
+    // }
     private void showPopup(MouseEvent e) {
         if (doc != null) {
             int pos = viewToModel2D(e.getPoint());
@@ -1103,31 +1133,11 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    private boolean pngEmoji = true;
     private String emojiProportional;
     private float pfAdjust = 0.0f;
-    private static String saveEmojiPref;
+
 
     private void buildStyles() {
-        String emojiPref = DB.getPref("pngemoji", "true");
-        if (!emojiPref.equals(saveEmojiPref)) {
-            saveEmojiPref = emojiPref;
-            switch (emojiPref) {
-                case "true" -> {
-                    pngEmoji = true;
-                    loadEmojiPNG("google");
-                }
-                case "false" ->
-                    pngEmoji = false;
-                default -> {
-                    pngEmoji = true;
-                    loadEmojiPNG(emojiPref);
-                }
-            }
-        }
-        pngEmoji = !saveEmojiPref.equals("false");
-
-        //pngEmoji = DB.getPref("pngemoji", "true").equals("true");
         emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
         boolean isDark = UIManager.getBoolean("laf.dark");
 
@@ -1360,7 +1370,7 @@ public class GeminiTextPane extends JTextPane {
                 char c = text.charAt(i);
                 if (isEmoji(c)) {
                     int codePoint = text.codePointAt(i);
-                    if (pngEmoji) {
+                    if (sheetImage != null) {
 
                         int[] index = {i};
                         String key = getEmojiPngKey(text, index);
@@ -1386,9 +1396,7 @@ public class GeminiTextPane extends JTextPane {
 
                             i += Character.charCount(codePoint) - 1;
 
-
                             insertString(doc.getLength(), new String(chars), style);
-
 
                         } else {
                             //i += (cpCount[0] * 2) - 1;
@@ -1442,10 +1450,9 @@ public class GeminiTextPane extends JTextPane {
         return cr;
     }
 
-
     private static final StringBuilder sb = new StringBuilder();
 
-    public static String getEmojiPngKey(String text, int[] index) {    
+    public static String getEmojiPngKey(String text, int[] index) {
         List<Integer> codePoints = new ArrayList<>();
         int currentIndex = index[0];
         int length = text.length();
