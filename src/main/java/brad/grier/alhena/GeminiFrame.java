@@ -1,6 +1,7 @@
 package brad.grier.alhena;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
@@ -18,6 +19,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -39,9 +41,11 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.imageio.ImageIO;
 import javax.security.auth.x500.X500Principal;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -53,6 +57,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
@@ -103,6 +108,8 @@ public final class GeminiFrame extends JFrame {
     private static Font saveFont;
     public final static String SYNC_SERVER = "ultimatumlabs.com";
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+    private MenuItem mi;
+    private Color saveButtonFG = null;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatDarculaLaf", new ThemeInfo("com.formdev.flatlaf.FlatDarculaLaf", true)),
@@ -143,6 +150,15 @@ public final class GeminiFrame extends JFrame {
         pageHistoryMap.entrySet().stream().forEach(entry -> {
             entry.getValue().forEach(page -> {
                 page.setScrollIncrement(inc);
+            });
+
+        });
+    }
+
+    public void ignoreStartTimes() {
+        pageHistoryMap.entrySet().stream().forEach(entry -> {
+            entry.getValue().forEach(page -> {
+                page.ignoreStart();
             });
 
         });
@@ -688,7 +704,10 @@ public final class GeminiFrame extends JFrame {
         JMenu darkThemeMenu = new JMenu("Dark Themes");
 
         JMenu lightThemeMenu = new JMenu("Light Themes");
-
+        ButtonGroup themeGroup = new ButtonGroup();
+        String theme = UIManager.getLookAndFeel().getClass().toString();
+        theme = theme.substring(theme.lastIndexOf('.') + 1);
+        String finalTheme = theme;
         themes.entrySet().stream().sorted(Map.Entry.comparingByKey())
                 .forEach(entry -> {
                     String key = entry.getKey();
@@ -696,23 +715,21 @@ public final class GeminiFrame extends JFrame {
 
                     JMenu jm = value.isDark() ? darkThemeMenu : lightThemeMenu;
 
-                    jm.add(createMenuItem(key, null, () -> {
+                    JRadioButtonMenuItem themeItem = new JRadioButtonMenuItem(key, key.equals(finalTheme));
+                    themeGroup.add(themeItem);
+                    jm.add(themeItem);
+                    themeItem.addActionListener(al -> {
                         if (!key.equals(currentThemeId))
                         try {
-                            // Class<?> themeClass = Class.forName(value.className());
-                            // FlatLaf theme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
-                            // FlatLaf.setup(theme);
+
                             DB.insertPref("theme", value.className());
-                            //currentThemeId++;
+
                             Alhena.updateFrames(false);
 
-                            // refreshFromCache(visiblePage());
-                            // visiblePage().setThemeId(currentThemeId);
-                            // DB.insertPref("theme", value.className());
                         } catch (Exception ex) {
                             ex.printStackTrace();
                         }
-                    }));
+                    });
 
                 });
         windowsMenu.add(lightThemeMenu);
@@ -734,6 +751,49 @@ public final class GeminiFrame extends JFrame {
             }
 
         }));
+        String emojiPref = DB.getPref("emoji", null);
+        emojiPref = emojiPref == null ? "google" : emojiPref;
+
+        JMenu emojiMenu = new JMenu("Emoji");
+        JRadioButtonMenuItem appleItem = new JRadioButtonMenuItem("Apple", emojiPref.equals("apple"));
+        if (appleItem.isSelected()) {
+            lastSelectedItem = appleItem;
+        }
+        appleItem.addActionListener(al -> setEmoji("apple", al));
+        emojiMenu.add(appleItem);
+        JRadioButtonMenuItem fbItem = new JRadioButtonMenuItem("Facebook", emojiPref.equals("facebook"));
+        if (fbItem.isSelected()) {
+            lastSelectedItem = fbItem;
+        }
+        fbItem.addActionListener(al -> setEmoji("facebook", al));
+        emojiMenu.add(fbItem);
+        JRadioButtonMenuItem googleItem = new JRadioButtonMenuItem("Google", emojiPref.equals("google"));
+        if (googleItem.isSelected()) {
+            lastSelectedItem = googleItem;
+        }
+        googleItem.addActionListener(al -> setEmoji("google", al));
+        emojiMenu.add(googleItem);
+        JRadioButtonMenuItem twitterItem = new JRadioButtonMenuItem("Twitter", emojiPref.equals("twitter"));
+        if (twitterItem.isSelected()) {
+            lastSelectedItem = twitterItem;
+        }
+        twitterItem.addActionListener(al -> setEmoji("twitter", al));
+        emojiMenu.add(twitterItem);
+        JRadioButtonMenuItem fontItem = new JRadioButtonMenuItem("Font", emojiPref.equals("font"));
+        if (fontItem.isSelected()) {
+            lastSelectedItem = fontItem;
+        }
+        fontItem.addActionListener(al -> setEmoji("font", al));
+        emojiMenu.add(fontItem);
+
+        ButtonGroup group = new ButtonGroup();
+        group.add(appleItem);
+        group.add(fbItem);
+        group.add(googleItem);
+        group.add(twitterItem);
+        group.add(fontItem);
+
+        windowsMenu.add(emojiMenu);
 
         menuBar.add(windowsMenu);
 
@@ -779,11 +839,93 @@ public final class GeminiFrame extends JFrame {
         }
 
     }
+    private static JRadioButtonMenuItem lastSelectedItem;
 
     public void updateBookmarks() {
         bookmarkMenu.invalidate();
         addBookmarks();
         bookmarkMenu.validate();
+    }
+
+    public static Map<String, String> emojiNameMap = Map.of("apple", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_apple_64.png",
+            "facebook", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_facebook_64.png",
+            "twitter", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_twitter_64.png",
+            "google", "/sheet_google_64.png");
+
+    private void setEmoji(String setName, ActionEvent ae) {
+        JRadioButtonMenuItem selected = (JRadioButtonMenuItem) ae.getSource();
+        String savedSet = DB.getPref("emoji", null);
+        if (!setName.equals(savedSet)) {
+            if (setName.equals("font")) {
+                // use font
+                GeminiTextPane.setSheetImage(null);
+                DB.insertPref("emoji", "font");
+                Alhena.updateFrames(false);
+                lastSelectedItem = selected; 
+            } else {
+                String url = emojiNameMap.get(setName);
+
+                if (setName.equals("google")) {
+                    GeminiTextPane.setSheetImage(Util.loadImage(url));
+                    DB.insertPref("emoji", "google");
+                    Alhena.updateFrames(false);
+                    lastSelectedItem = selected; 
+                } else {
+                    String fn = url.substring(url.lastIndexOf('/'));
+                    File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
+                    if (!emojiFile.exists()) {
+
+                        downloadSpriteSheet(url, emojiFile, setName, selected);
+                    } else {
+                        try {
+                            GeminiTextPane.setSheetImage(ImageIO.read(emojiFile));
+                            DB.insertPref("emoji", setName);
+                            Alhena.updateFrames(false);
+                            lastSelectedItem = selected; 
+                        } catch (IOException ex) {
+                            lastSelectedItem.setSelected(true); 
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    public void downloadSpriteSheet(String u, File outFile, String setName, JRadioButtonMenuItem selected) {
+        visiblePage().setBusy(true);
+
+        new Thread(() -> {
+
+            boolean success = Util.downloadFile(u, outFile);
+            if (success) {
+                try {
+                    BufferedImage setImage = ImageIO.read(outFile);
+                    EventQueue.invokeLater(() -> {
+                        visiblePage().setBusy(false);
+
+                        DB.insertPref("emoji", setName);
+
+                        GeminiTextPane.setSheetImage(setImage);
+                        Alhena.updateFrames(false);
+                        lastSelectedItem = selected; 
+
+                    });
+                } catch (IOException ex) {
+                    lastSelectedItem.setSelected(true); 
+                    ex.printStackTrace();
+                }
+            } else {
+                lastSelectedItem.setSelected(true); 
+                EventQueue.invokeLater(() -> {
+                    visiblePage().setBusy(false);
+                    Util.infoDialog(GeminiFrame.this, "Error", "Error downloading emoji file.", JOptionPane.ERROR_MESSAGE);
+                });
+
+            }
+
+        }).start();
     }
 
     public void initComboBox() {
@@ -797,15 +939,17 @@ public final class GeminiFrame extends JFrame {
         textField.addMouseListener(new ContextMenuMouseListener());
     }
 
-    private MenuItem mi;
-
     public void recolorIcons() {
-        ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", UIManager.getColor("Button.foreground"), 21, 21);
-        refreshButton.setIcon(refreshIcon);
-        ImageIcon leftIcon = Util.recolorIcon("/left.png", UIManager.getColor("Button.foreground"), 21, 21);
-        backButton.setIcon(leftIcon);
-        ImageIcon rightIcon = Util.recolorIcon("/right.png", UIManager.getColor("Button.foreground"), 21, 21);
-        forwardButton.setIcon(rightIcon);
+        Color buttonForeground = UIManager.getColor("Button.foreground");
+        if (buttonForeground != saveButtonFG) {
+            saveButtonFG = buttonForeground;
+            ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", buttonForeground, 21, 21);
+            refreshButton.setIcon(refreshIcon);
+            ImageIcon leftIcon = Util.recolorIcon("/left.png", buttonForeground, 21, 21);
+            backButton.setIcon(leftIcon);
+            ImageIcon rightIcon = Util.recolorIcon("/right.png", buttonForeground, 21, 21);
+            forwardButton.setIcon(rightIcon);
+        }
     }
 
     public void setMenuItem(MenuItem mi) {
@@ -1059,7 +1203,7 @@ public final class GeminiFrame extends JFrame {
 
     private void refresh() {
         Page visiblePage = visiblePage();
-        
+
         visiblePage.textPane.getDocURL().ifPresent(cURL -> {
 
             switch (visiblePage.textPane.getDocMode()) {
@@ -1318,7 +1462,7 @@ public final class GeminiFrame extends JFrame {
             }
             List<Bookmark> bookmarks = DB.loadBookmarks();
             if (!bookmarks.isEmpty()) {
-                textPane.updatePage("#Bookmarks🔖\nRight click to edit or delete a bookmark.\n\n", false, BOOKMARK_LABEL, true);
+                textPane.updatePage("#Bookmarks 🔖\nRight click to edit or delete a bookmark.\n\n", false, BOOKMARK_LABEL, true);
 
                 LinkedHashMap<String, ArrayList<Bookmark>> folders = new LinkedHashMap<>();
                 bookmarks.forEach(bm -> {
