@@ -112,7 +112,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "3.4";
+    public final static String VERSION = "3.6";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -324,6 +324,7 @@ public class Alhena {
                 jf.updateBookmarks();
             }
             jf.recolorIcons();
+            jf.ignoreStartTimes();
 
             jf.refreshFromCache(jf.visiblePage());
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
@@ -728,6 +729,7 @@ public class Alhena {
                                         if (input != null) {
 
                                             String questionMark = uri.toString().endsWith("?") ? "" : "?";
+                                            p.setStart();
                                             processURL(uri + questionMark + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
 
                                         }
@@ -738,6 +740,7 @@ public class Alhena {
                                         if (input != null) {
 
                                             String questionMark = uri.toString().endsWith("?") ? "" : "?";
+                                            p.setStart();
                                             processURL(uri + questionMark + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
 
                                         }
@@ -1414,9 +1417,8 @@ public class Alhena {
         String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
         String message = "## Unknown command\n";
         if (cmd.length == 1) {
-            if (cmd[0].equals("pngemoji")) {
-                message = "# pngemoji\n###Set emoji rendering type: pngemoji=true\n'true' required for color emojis on non-Mac platforms.\nStyle options: 'google', 'apple', 'facebook' and 'twitter'.";
-            } else if (cmd[0].equals("scrollspeed")) {
+
+            if (cmd[0].equals("scrollspeed")) {
                 message = "# scrollspeed\n###Set the mouse wheel speed: scrollspeed=10\nscrollspeed=default resets. Negative numbers reverse scroll direction.";
 
             } else if (cmd[0].equals("info")) {
@@ -1443,29 +1445,20 @@ public class Alhena {
                     message = "## Value must be a number\n";
                 }
 
-            } else if (cmd[0].equals("pngemoji")) {
-                List<String> valids = List.of("true", "false", "facebook", "twitter", "google", "apple");
-                if(!valids.contains(cmd[1].toLowerCase())){
-                    message = "## must be true, false, facebook, twitter, google or apple\n";    
-                }else{
-                    DB.insertPref("pngemoji", cmd[1].toLowerCase());
-                    EventQueue.invokeLater(() -> {
-                        updateFrames(false);
-                    }); 
-                    message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";   
-                }
+            } 
+            // else if (cmd[0].equals("pngemoji")) {
+            //     List<String> valids = List.of("true", "false", "facebook", "twitter", "google", "apple");
+            //     if(!valids.contains(cmd[1].toLowerCase())){
+            //         message = "## must be true, false, facebook, twitter, google or apple\n";    
+            //     }else{
+            //         DB.insertPref("pngemoji", cmd[1].toLowerCase());
+            //         EventQueue.invokeLater(() -> {
+            //             updateFrames(false);
+            //         }); 
+            //         message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";   
+            //     }
 
-                // if (!cmd[1].toLowerCase().equals("true") && !cmd[1].toLowerCase().equals("false")) {
-                //     message = "## must be true or false\n";
-                // } else {
-                //     DB.insertPref("pngemoji", cmd[1].toLowerCase());
-                //     EventQueue.invokeLater(() -> {
-                //         updateFrames(false);
-                //     });
-
-                //     message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";
-                // }
-            }
+            // }
         }
         p.textPane.end(message, plainText, url, true);
 
