@@ -14,13 +14,15 @@ Alhena is a Gemini browser written in Java. It's also a star in Gemini.
 * Inline image viewer
 * ANSI colors on preformatted text
 * Font chooser for proportional text
+* Smooth Adaptive Scrolling
 * Asynchronous networking and file I/O
-* Host-based certificate management
+* Certificate creation and TOFU management
 * Bookmarks and history
 * Multiple windows and tabs
 * Drag and drop text, image and PEM files
 * Import and Export user data with merge
 * Remote sync with merge
+* Titan Protocol Upload Support
 
 => gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
 
