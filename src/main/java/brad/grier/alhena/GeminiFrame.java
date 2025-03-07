@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -48,6 +49,7 @@ import javax.swing.Action;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -146,32 +148,10 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", false))
     );
 
-    public void setScrollIncrement(int inc) {
+    public void forEachPage(Consumer<Page> c) {
         pageHistoryMap.entrySet().stream().forEach(entry -> {
             entry.getValue().forEach(page -> {
-                page.setScrollIncrement(inc);
-            });
-
-        });
-    }
-
-    public void ignoreStartTimes() {
-        pageHistoryMap.entrySet().stream().forEach(entry -> {
-            entry.getValue().forEach(page -> {
-                page.ignoreStart();
-            });
-
-        });
-    }
-
-    public void getInfo(StringBuilder sb) {
-        pageHistoryMap.entrySet().stream().forEach(entry -> {
-            entry.getValue().forEach(page -> {
-                StringBuilder sbdoc = page.textPane.current().currentPage();
-                if (sbdoc != null) {
-
-                    sb.append(page.textPane.getDocURLString() + ": " + sbdoc.length() + " bytes").append("\n");
-                }
+                c.accept(page);
             });
 
         });
@@ -481,7 +461,7 @@ public final class GeminiFrame extends JFrame {
             }
         });
         homeButton.setFont(buttonFont);
-        //eastPanel.add(homeButton);
+
         favButton = new JButton("🔖");
         favButton.setToolTipText("Bookmark this page");
         favButton.addActionListener(al -> {
@@ -502,7 +482,7 @@ public final class GeminiFrame extends JFrame {
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(0, 5, 5, 0);
-        //add(jComboBox1, gridBagConstraints);
+
         navPanel.add(comboBox, gridBagConstraints);
 
         navPanel.add(homeButton, c);
@@ -795,6 +775,25 @@ public final class GeminiFrame extends JFrame {
 
         windowsMenu.add(emojiMenu);
 
+        JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem("Adaptive Scrolling", DB.getPref("smoothscrolling", "true").equals("true"));
+        smoothItem.addItemListener(ae -> {
+
+            boolean smoothScrolling = !DB.getPref("smoothscrolling", "true").equals("true"); // toggle
+            forEachPage(page -> {
+                if (smoothScrolling) {
+                    page.textPane.setupAdaptiveScrolling();
+                } else {
+                    page.textPane.removeAdaptiveScrolling();
+                }
+
+            });
+            DB.insertPref("smoothscrolling", String.valueOf(smoothScrolling));
+            String txt = smoothScrolling ? "on.\nSome trackpads and mouse implementations may not behave correctly." : "off.";
+            Util.infoDialog(GeminiFrame.this, "Update", "Mouse wheel adaptive scrolling turned " + txt);
+
+        });
+        windowsMenu.add(smoothItem);
+
         menuBar.add(windowsMenu);
 
         JMenu aboutMenu = new JMenu("Help");
@@ -861,7 +860,7 @@ public final class GeminiFrame extends JFrame {
                 GeminiTextPane.setSheetImage(null);
                 DB.insertPref("emoji", "font");
                 Alhena.updateFrames(false);
-                lastSelectedItem = selected; 
+                lastSelectedItem = selected;
             } else {
                 String url = emojiNameMap.get(setName);
 
@@ -869,7 +868,7 @@ public final class GeminiFrame extends JFrame {
                     GeminiTextPane.setSheetImage(Util.loadImage(url));
                     DB.insertPref("emoji", "google");
                     Alhena.updateFrames(false);
-                    lastSelectedItem = selected; 
+                    lastSelectedItem = selected;
                 } else {
                     String fn = url.substring(url.lastIndexOf('/'));
                     File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
@@ -881,9 +880,9 @@ public final class GeminiFrame extends JFrame {
                             GeminiTextPane.setSheetImage(ImageIO.read(emojiFile));
                             DB.insertPref("emoji", setName);
                             Alhena.updateFrames(false);
-                            lastSelectedItem = selected; 
+                            lastSelectedItem = selected;
                         } catch (IOException ex) {
-                            lastSelectedItem.setSelected(true); 
+                            lastSelectedItem.setSelected(true);
                             ex.printStackTrace();
                         }
                     }
@@ -909,15 +908,15 @@ public final class GeminiFrame extends JFrame {
 
                         GeminiTextPane.setSheetImage(setImage);
                         Alhena.updateFrames(false);
-                        lastSelectedItem = selected; 
+                        lastSelectedItem = selected;
 
                     });
                 } catch (IOException ex) {
-                    lastSelectedItem.setSelected(true); 
+                    lastSelectedItem.setSelected(true);
                     ex.printStackTrace();
                 }
             } else {
-                lastSelectedItem.setSelected(true); 
+                lastSelectedItem.setSelected(true);
                 EventQueue.invokeLater(() -> {
                     visiblePage().setBusy(false);
                     Util.infoDialog(GeminiFrame.this, "Error", "Error downloading emoji file.", JOptionPane.ERROR_MESSAGE);
