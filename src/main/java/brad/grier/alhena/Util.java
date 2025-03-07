@@ -26,9 +26,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.FileNameMap;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
@@ -782,6 +784,18 @@ public class Util {
 
         return true;
 
+    }
+
+    public static String getMimeType(String path) {
+        FileNameMap fileNameMap = URLConnection.getFileNameMap();
+        String lcPath = path.toLowerCase();
+        //logger.info("getting mime type for {}:", path);
+        if (lcPath.endsWith(".gmi") || lcPath.endsWith(".gemini")) {
+            return "text/gemini";
+        }
+
+        String ct = fileNameMap.getContentTypeFor(path);
+        return ct == null ? "text/plain" : ct;
     }
 
 }
