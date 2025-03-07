@@ -112,7 +112,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "3.6";
+    public final static String VERSION = "3.7";
     private static volatile boolean interrupted;
     private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
@@ -324,7 +324,10 @@ public class Alhena {
                 jf.updateBookmarks();
             }
             jf.recolorIcons();
-            jf.ignoreStartTimes();
+            //jf.ignoreStartTimes();
+            jf.forEachPage(page ->{
+                page.ignoreStart();
+            });
 
             jf.refreshFromCache(jf.visiblePage());
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
@@ -575,7 +578,7 @@ public class Alhena {
                         url = "gemini://" + prevURI.getHost() + port + prevURI.getPath() + "?" + url.substring(1);
 
                     } else {
-                        url = prevURI.resolve(url).toString();
+                        url = prevURI.resolve(url).toString();    
                     }
 
                 }
@@ -605,7 +608,30 @@ public class Alhena {
             }
 
             URI punyURI = new URI(url).normalize();
+            if (punyURI.getScheme().equals("titan") && p.getDataFile() == null) {
+                File titanFile = Util.getFile(p.frame(), "", true, "Upload", null);
+                if (titanFile != null) {
+                    String token = Util.inputDialog(p.frame(), "Token", "Enter token (if required) or leave blank.", false);
+                    if(token != null && !token.isBlank()){
+                        token = ";token=" + URLEncoder.encode(token).replace("+", "%20");
+                    }else{
+                        token = "";
+                    }
+                    String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
+                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
 
+                    p.setDataFile(titanFile);
+                    punyURI = new URI(titanUrl);
+                    System.out.println(punyURI.toString());
+                    //return;
+                } else {
+
+                    p.textPane.end("## Nothing to send", false, origURL, true);
+                    return;
+                }
+            }
             // switching domains - stop using domain cert
             if (netClientDomainCert != null && !netClientDomainCert.equals(punyURI.getHost())) {
                 createNetClient(punyURI, p, origURL, cPage);
@@ -676,19 +702,18 @@ public class Alhena {
                 connection.result().write(urlText + "\r\n");
                 if (uri.getScheme().equals("titan")) {
                     if (p.getDataFile() != null) {
+                        //connection.result().write(urlText + "\r\n");
                         try {
                             connection.result().write(Buffer.buffer(Files.readAllBytes(p.getDataFile().toPath())));
                         } catch (IOException ex) {
                             connection.result().close();
                             p.textPane.end("## Error sending file", false, origURL, true);
-                            return;
                         }
                     } else {
                         connection.result().close();
                         p.textPane.end("## Nothing to send", false, origURL, true);
                         return;
                     }
-
                 }
                 Buffer saveBuffer = Buffer.buffer();
 
@@ -1436,7 +1461,10 @@ public class Alhena {
                         int val = Integer.parseInt(cmd[1]);
                         DB.insertPref("scrollspeed", cmd[1]);
                         for (GeminiFrame gf : frameList) {
-                            gf.setScrollIncrement(val);
+                            gf.forEachPage(page ->{
+                                page.setScrollIncrement(val);    
+                            });
+                            //gf.setScrollIncrement(val);
                         }
                         message = "## " + cmd[0] + " set to " + cmd[1] + "\n";
                     }
@@ -1445,20 +1473,7 @@ public class Alhena {
                     message = "## Value must be a number\n";
                 }
 
-            } 
-            // else if (cmd[0].equals("pngemoji")) {
-            //     List<String> valids = List.of("true", "false", "facebook", "twitter", "google", "apple");
-            //     if(!valids.contains(cmd[1].toLowerCase())){
-            //         message = "## must be true, false, facebook, twitter, google or apple\n";    
-            //     }else{
-            //         DB.insertPref("pngemoji", cmd[1].toLowerCase());
-            //         EventQueue.invokeLater(() -> {
-            //             updateFrames(false);
-            //         }); 
-            //         message = "## " + cmd[0] + " set to " + cmd[1].toLowerCase() + "\n";   
-            //     }
-
-            // }
+            }
         }
         p.textPane.end(message, plainText, url, true);
 
@@ -1487,7 +1502,14 @@ public class Alhena {
 
         sb.append("Documents: \n");
         for (GeminiFrame gf : frameList) {
-            gf.getInfo(sb);
+
+            gf.forEachPage(page ->{
+                StringBuilder sbdoc = page.textPane.current().currentPage();
+                if (sbdoc != null) {
+
+                    sb.append(page.textPane.getDocURLString()).append(": ").append(sbdoc.length()).append(" bytes").append("\n");
+                }
+            });
         }
 
         return sb;
