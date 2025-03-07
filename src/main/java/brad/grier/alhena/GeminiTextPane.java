@@ -21,6 +21,8 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -118,7 +120,7 @@ public class GeminiTextPane extends JTextPane {
     private static final int MIN_DELAY = 30;
     private static final int EDGE_MARGIN = 50;
 
-    private Timer scrollTimer;
+    private Timer pressTimer;
     private int scrollDirection = 0;
     private int holdTime = 0;
     private final Page page;
@@ -210,7 +212,10 @@ public class GeminiTextPane extends JTextPane {
                 // do nothing to prevent caret from being painted
             }
         });
-
+        boolean smoothPref = DB.getPref("smoothscrolling", "true").equals("true");
+        if (smoothPref) {
+            setupAdaptiveScrolling();
+        }
         addMouseMotionListener(new MouseAdapter() {
 
             @Override
@@ -1136,7 +1141,6 @@ public class GeminiTextPane extends JTextPane {
     private String emojiProportional;
     private float pfAdjust = 0.0f;
 
-
     private void buildStyles() {
         emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
         boolean isDark = UIManager.getBoolean("laf.dark");
@@ -1672,7 +1676,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private void startScrolling(JScrollPane scrollPane, int direction) {
-        if (scrollTimer != null && scrollTimer.isRunning() && scrollDirection == direction) {
+        if (pressTimer != null && pressTimer.isRunning() && scrollDirection == direction) {
             return;
         }
         stopScrolling(); // Ensure only one timer is running
@@ -1680,7 +1684,7 @@ public class GeminiTextPane extends JTextPane {
         scrollDirection = direction;
         holdTime = 0; // Reset hold time
 
-        scrollTimer = new Timer(INITIAL_DELAY, e -> {
+        pressTimer = new Timer(INITIAL_DELAY, e -> {
             holdTime++; // Increment hold time
 
             // Dynamically adjust speed based on hold time
@@ -1693,15 +1697,15 @@ public class GeminiTextPane extends JTextPane {
             verticalBar.setValue(newValue);
             // Reset caret position to avoid selection
             setCaretPosition(getCaretPosition());
-            scrollTimer.setDelay(newDelay); // Update timer delay
+            pressTimer.setDelay(newDelay); // Update timer delay
         });
-        scrollTimer.start();
+        pressTimer.start();
     }
 
     private void stopScrolling() {
-        if (scrollTimer != null) {
-            scrollTimer.stop();
-            scrollTimer = null;
+        if (pressTimer != null) {
+            pressTimer.stop();
+            pressTimer = null;
         }
         scrollDirection = 0;
         holdTime = 0; // Reset hold time
@@ -1716,6 +1720,115 @@ public class GeminiTextPane extends JTextPane {
         Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
 
         return new ImageIcon(scaledImg);
+    }
+
+    private static final double FRICTION = 0.93; // friction coefficient (lower = more friction) .90
+    private static final int SCROLL_INTERVAL = 15; // update interval in milliseconds
+    private static final double SCROLL_MULTIPLIER = 0.4; // adjust scrolling sensitivity
+    //private static final int SCROLL_AMOUNT = 1; // Get rid of this when uniform behavior
+
+    // scrolling state variables
+    private double momentumY = 0;
+    private boolean isScrolling = false;
+    private Timer scrollTimer2;
+    private long lastScrollTime;
+    private double lastScrollAmount = 0;
+    private int scrollAdjust = 1;
+
+    public void removeAdaptiveScrolling() {
+        MouseWheelListener[] listeners = getMouseWheelListeners();
+        for (MouseWheelListener mwl : listeners) {
+            removeMouseWheelListener(mwl);
+        }
+
+    }
+
+    public void setupAdaptiveScrolling() {
+        double osScrollFactor = SystemInfo.isMacOS ? 1.0 : Double.parseDouble(System.getProperty("scrollfactor", "0.5"));
+        // create a timer for smooth animation
+        scrollTimer2 = new Timer(SCROLL_INTERVAL, e -> updateScrollPosition());
+
+        // add mouse wheel listener with smooth scrolling
+        addMouseWheelListener(new MouseWheelListener() {
+            boolean first = true;
+            long time = 0;
+            long elapsed;
+
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e) {
+                if (first) {
+                    first = false;
+                    time = System.currentTimeMillis();
+                } else {
+                    if (!SystemInfo.isMacOS) {
+                        int cmp = SystemInfo.isMacOS ? 10 : 20;
+                        if (scrollAdjust < cmp || !isScrolling) {
+                            elapsed = System.currentTimeMillis() - time;
+                            if (elapsed < 200) {
+                                scrollAdjust++;
+                            } else {
+                                scrollAdjust = 1;
+                            }
+                            if (scrollAdjust > 6) {
+                                scrollAdjust = (int) (scrollAdjust * 1.5);
+                            }
+                            time = System.currentTimeMillis();
+                        }
+                    }
+                    //System.out.println(scrollAdjust);
+                }
+
+                // get scroll amount with multiplier for sensitivity
+                double scrollAmount = e.getPreciseWheelRotation() * SCROLL_MULTIPLIER * osScrollFactor;
+                // update momentum based on current scroll
+                momentumY = scrollAmount * 8; // Initial velocity
+                // record time for velocity calculations
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastScrollTime < 200) {
+                    // if scrolling quickly, add some of the previous momentum
+                    momentumY = momentumY * 0.7 + lastScrollAmount * 0.3;
+                }
+                lastScrollTime = currentTime;
+                lastScrollAmount = momentumY;
+                // handle immediate scroll
+                smoothScroll(scrollAmount);
+                // start momentum if not already scrolling
+                if (!isScrolling) {
+                    isScrolling = true;
+                    scrollTimer2.start();
+                }
+            }
+        });
+    }
+
+    private void smoothScroll(double amount) {
+        if (scrollPane == null) {
+            scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
+        }
+
+        JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
+        int currentValue = verticalScrollBar.getValue();
+        int newValue = amount > 0 ? (int) Math.ceil(currentValue + amount * scrollAdjust) : (int) (currentValue + amount * scrollAdjust);
+
+        if (amount < 0) {
+            newValue = Math.max(0, Math.min(newValue, verticalScrollBar.getMaximum() - verticalScrollBar.getVisibleAmount()));
+        }
+
+        verticalScrollBar.setValue(newValue);
+
+    }
+
+    private void updateScrollPosition() {
+        // apply friction to slow down momentum
+        momentumY *= FRICTION;
+        // apply the momentum
+        smoothScroll(momentumY);
+        // stop when momentum becomes very small
+        if (Math.abs(momentumY) < 0.1) {
+            momentumY = 0;
+            isScrolling = false;
+            scrollTimer2.stop();
+        }
     }
 
 }
