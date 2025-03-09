@@ -1,8 +1,8 @@
 # Alhena 🌟
 
-**Alhena** is a full-featured, multi-platform Gemini browser with a modern UI, asynchronous networking, and certificate management.
+**Alhena** is a full-featured, multi-platform Gemini browser with a modern UI, asynchronous networking, and certificate management. Browse the small web in style!
 
-[![Alhena Screenshot](https://metaloupe.com/alhena/windowslight.png)](https://metaloupe.com/alhena/alhena.html)
+[![Alhena Screenshot](https://metaloupe.com/alhena/images/alhena_main.png)](https://metaloupe.com/alhena/alhena.html)
 
 🔗 **[Official Website & More Info](https://metaloupe.com/alhena/alhena.html)**
 
@@ -10,16 +10,18 @@
 
 - Modern UI with multiple themes
 - Color emojis on all platforms
-- ANSI color on all platforms
+- ANSI colors for formatted text
 - Font chooser for proportional fonts
 - Inline image viewer
+- Smooth adaptive scrolling
 - Asynchronous networking and file access
-- Client certificate management
+- Client certificate creation and management
 - Bookmarks and history
 - Multiple windows and tabs
 - Touch autoscrolling
-- Backup data with merging
+- Backup data with merge
 - Remote sync with Replace/Merge options
+- Titan upload protocol
 
 ## 🚀 Getting Started
 
@@ -60,13 +62,13 @@ The password is `alhena`
 ## 📷 Screenshots
 
 Dark Theme:  
-![Dark Theme](https://metaloupe.com/alhena/macdark.png)
+![Dark Theme](https://metaloupe.com/alhena/images/alhena_dark.png)
 
 Light Theme:  
-![Light Theme](https://metaloupe.com/alhena/maclight.png)
+![Light Theme](https://metaloupe.com/alhena/images/alhena_light.png)
 
-Inline Images (with Papyrus):  
-![Inline Images](https://metaloupe.com/alhena/macinline.png)
+Inline Images:  
+![Inline Images](https://metaloupe.com/alhena/images/alhena_inline.png)
 
 ## 🛠 License
 Alhena is licensed under the **BSD 2-Clause License**. See [LICENSE](LICENSE) for details.
@@ -74,5 +76,3 @@ Alhena is licensed under the **BSD 2-Clause License**. See [LICENSE](LICENSE) fo
 ---
 
 Have suggestions or found a bug? Open an issue or contribute via pull requests! 🚀
-
-
