@@ -388,7 +388,7 @@ public class Util {
 
         if (fileName != null) {
 
-            fileChooser.setSelectedFile(new File(System.getProperty("user.home") + "/downloads", fileName));
+            fileChooser.setSelectedFile(new File(System.getProperty("user.home"), fileName));
         } else {
             fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
         }
