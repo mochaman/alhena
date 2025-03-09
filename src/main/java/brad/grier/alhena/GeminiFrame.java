@@ -1893,8 +1893,8 @@ public final class GeminiFrame extends JFrame {
                 suggestedName = "geminipage.gmi";
             }
         }
-
-        File saveFile = Util.getFile(this, suggestedName, false, "Save File", null);
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("gemini files (*.gmi)", "gmi");
+        File saveFile = Util.getFile(this, suggestedName, false, "Save File", filter);
         if (saveFile != null) {
             setBusy(true, textPane);
 
@@ -2021,8 +2021,9 @@ public final class GeminiFrame extends JFrame {
             addClosableTab(tabbedPane, "  ", pb);
 
             tabbedPane.setSelectedComponent(pb);
-            // GeminiClient.processURL(url, this, pb.textPane, null, null);
+
             Alhena.processURL(url, pb, null, currentPage);
+            currentPage.setBusy(false);
         }
 
     }
