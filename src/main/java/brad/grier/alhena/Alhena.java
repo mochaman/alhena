@@ -308,7 +308,7 @@ public class Alhena {
         }
     }
 
-    public static void updateFrames(boolean updateBookmarks) {
+    public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu) {
 
         try {
             Class<?> themeClass = Class.forName(DB.getPref("theme", null));
@@ -323,14 +323,27 @@ public class Alhena {
             if (updateBookmarks) {
                 jf.updateBookmarks();
             }
+            if (updateWindowsMenu) {
+                jf.updateWindowsMenu();
+
+                boolean smoothScroll = DB.getPref("smoothscrolling", "true").equals("true");
+                jf.forEachPage(page -> {
+                    if (smoothScroll) {
+                        page.textPane.setupAdaptiveScrolling();
+                    } else {
+                        page.textPane.removeAdaptiveScrolling();
+                    }
+                });
+
+            }
             jf.recolorIcons();
-            //jf.ignoreStartTimes();
-            jf.forEachPage(page ->{
+            
+            jf.forEachPage(page -> {
                 page.ignoreStart();
             });
-
-            jf.refreshFromCache(jf.visiblePage());
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
+            jf.refreshFromCache(jf.visiblePage());
+            
             SwingUtilities.updateComponentTreeUI(jf);
             jf.initComboBox(); // combo box loses key listener & mouse listener when theme changes
         }
@@ -578,7 +591,7 @@ public class Alhena {
                         url = "gemini://" + prevURI.getHost() + port + prevURI.getPath() + "?" + url.substring(1);
 
                     } else {
-                        url = prevURI.resolve(url).toString();    
+                        url = prevURI.resolve(url).toString();
                     }
 
                 }
@@ -612,9 +625,9 @@ public class Alhena {
                 File titanFile = Util.getFile(p.frame(), "", true, "Upload", null);
                 if (titanFile != null) {
                     String token = Util.inputDialog(p.frame(), "Token", "Enter token (if required) or leave blank.", false);
-                    if(token != null && !token.isBlank()){
+                    if (token != null && !token.isBlank()) {
                         token = ";token=" + URLEncoder.encode(token).replace("+", "%20");
-                    }else{
+                    } else {
                         token = "";
                     }
                     String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
@@ -1461,8 +1474,8 @@ public class Alhena {
                         int val = Integer.parseInt(cmd[1]);
                         DB.insertPref("scrollspeed", cmd[1]);
                         for (GeminiFrame gf : frameList) {
-                            gf.forEachPage(page ->{
-                                page.setScrollIncrement(val);    
+                            gf.forEachPage(page -> {
+                                page.setScrollIncrement(val);
                             });
                             //gf.setScrollIncrement(val);
                         }
@@ -1503,7 +1516,7 @@ public class Alhena {
         sb.append("Documents: \n");
         for (GeminiFrame gf : frameList) {
 
-            gf.forEachPage(page ->{
+            gf.forEachPage(page -> {
                 StringBuilder sbdoc = page.textPane.current().currentPage();
                 if (sbdoc != null) {
 
