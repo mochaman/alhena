@@ -356,22 +356,6 @@ public class GeminiTextPane extends JTextPane {
         sheetImage = sheet;
     }
 
-    // public static void loadEmojiPNG(String name) {
-    //     String file = switch (name) {
-    //         case "facebook" ->
-    //             "/sheet_facebook_64.png";
-    //         case "twitter" ->
-    //             "/sheet_twitter_64.png";
-    //         case "google" ->
-    //             "/sheet_google_64.png";
-    //         case "apple" ->
-    //             "/sheet_apple_64.png";
-    //         default ->
-    //             "unknown";
-    //     };
-    //     System.out.println("loading: " + file);
-    //     sheetImage = Util.loadImage(file);
-    // }
     private void showPopup(MouseEvent e) {
         if (doc != null) {
             int pos = viewToModel2D(e.getPoint());
@@ -1743,7 +1727,7 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    public void setupAdaptiveScrolling() {
+    public final void setupAdaptiveScrolling() {
         double osScrollFactor = SystemInfo.isMacOS ? 1.0 : Double.parseDouble(System.getProperty("scrollfactor", "0.5"));
         // create a timer for smooth animation
         scrollTimer2 = new Timer(SCROLL_INTERVAL, e -> updateScrollPosition());
