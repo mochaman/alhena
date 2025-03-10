@@ -96,7 +96,7 @@ public final class GeminiFrame extends JFrame {
     private final HashMap<Page, ArrayList<Page>> pageHistoryMap = new HashMap<>();
     private final List<String> clickedLinks = new ArrayList<>();
     private final JMenuBar menuBar;
-    private JMenu bookmarkMenu;
+    private JMenu bookmarkMenu, windowsMenu;
     private String lastSearch;
     private JLabel titleLabel;
     public static final String HISTORY_LABEL = "History";
@@ -679,7 +679,61 @@ public final class GeminiFrame extends JFrame {
 
         addBookmarks();
 
-        JMenu windowsMenu = new JMenu("Windows");
+        //windowsMenu = new JMenu("Windows");
+        addWindowsMenu();
+        //menuBar.add(windowsMenu);
+
+        JMenu aboutMenu = new JMenu("Help");
+        aboutMenu.setMnemonic('H');
+        if (!SystemInfo.isMacOS) {
+            aboutMenu.add(createMenuItem("About", null, () -> {
+                JOptionPane.showMessageDialog(this, Alhena.PROG_NAME + " " + Alhena.VERSION + "\nWritten by Brad Grier");
+
+            }));
+        }
+        aboutMenu.add(createMenuItem("Home", null, () -> {
+
+            String homeDir = System.getProperty("alhena.home");
+            File file = Util.copyFromJar(homeDir);
+            URI fileUri = file.toURI();
+
+            //GeminiClient.processURL(fileUri.toString(), visiblePage(), null, visiblePage());
+            fetchURL(fileUri.toString());
+
+        }));
+
+        aboutMenu.add(createMenuItem("Changes", null, () -> {
+            fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi");
+        }));
+
+        aboutMenu.add(createMenuItem("FAQ", null, () -> {
+            fetchURL("gemini://ultimatumlabs.com/alhenafaq.gmi");
+        }));
+
+        aboutMenu.add(createMenuItem("Details", null, () -> {
+            fetchURL("alhena:info");
+        }));
+
+        menuBar.add(aboutMenu);
+        setJMenuBar(menuBar);
+        add(statusField, BorderLayout.SOUTH);
+        setSize(1024, 600);
+        setLocationRelativeTo(null);
+        setVisible(true);
+        if (url != null) {
+            init(url, pb);
+        }
+
+    }
+
+    private void addWindowsMenu() {
+
+        if (windowsMenu != null) {
+            windowsMenu.removeAll();
+        } else {
+            windowsMenu = new JMenu("Windows");
+            menuBar.add(windowsMenu);
+        }
 
         JMenu darkThemeMenu = new JMenu("Dark Themes");
 
@@ -704,7 +758,7 @@ public final class GeminiFrame extends JFrame {
 
                             DB.insertPref("theme", value.className());
 
-                            Alhena.updateFrames(false);
+                            Alhena.updateFrames(false, false);
 
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -723,7 +777,7 @@ public final class GeminiFrame extends JFrame {
                 // System.out.println(font.getFontName() + " " + font.getFamily());
                 proportionalFamily = font.getFamily();
                 fontSize = font.getSize();
-                Alhena.updateFrames(false);
+                Alhena.updateFrames(false, false);
 
                 DB.insertPref("font", font.getName());
                 DB.insertPref("fontfamily", proportionalFamily);
@@ -788,56 +842,14 @@ public final class GeminiFrame extends JFrame {
 
             });
             DB.insertPref("smoothscrolling", String.valueOf(smoothScrolling));
-            String txt = smoothScrolling ? "on.\nSome trackpads and mouse implementations may not behave correctly." : "off.";
+            String txt = smoothScrolling ? "on." : "off.";
             Util.infoDialog(GeminiFrame.this, "Update", "Mouse wheel adaptive scrolling turned " + txt);
 
         });
         windowsMenu.add(smoothItem);
 
-        menuBar.add(windowsMenu);
-
-        JMenu aboutMenu = new JMenu("Help");
-        aboutMenu.setMnemonic('H');
-        if (!SystemInfo.isMacOS) {
-            aboutMenu.add(createMenuItem("About", null, () -> {
-                JOptionPane.showMessageDialog(this, Alhena.PROG_NAME + " " + Alhena.VERSION + "\nWritten by Brad Grier");
-
-            }));
-        }
-        aboutMenu.add(createMenuItem("Home", null, () -> {
-
-            String homeDir = System.getProperty("alhena.home");
-            File file = Util.copyFromJar(homeDir);
-            URI fileUri = file.toURI();
-
-            //GeminiClient.processURL(fileUri.toString(), visiblePage(), null, visiblePage());
-            fetchURL(fileUri.toString());
-
-        }));
-
-        aboutMenu.add(createMenuItem("Changes", null, () -> {
-            fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi");
-        }));
-
-        aboutMenu.add(createMenuItem("FAQ", null, () -> {
-            fetchURL("gemini://ultimatumlabs.com/alhenafaq.gmi");
-        }));
-
-        aboutMenu.add(createMenuItem("Details", null, () -> {
-            fetchURL("alhena:info");
-        }));
-
-        menuBar.add(aboutMenu);
-        setJMenuBar(menuBar);
-        add(statusField, BorderLayout.SOUTH);
-        setSize(1024, 600);
-        setLocationRelativeTo(null);
-        setVisible(true);
-        if (url != null) {
-            init(url, pb);
-        }
-
     }
+
     private static JRadioButtonMenuItem lastSelectedItem;
 
     public void updateBookmarks() {
@@ -846,10 +858,30 @@ public final class GeminiFrame extends JFrame {
         bookmarkMenu.validate();
     }
 
+    public void updateWindowsMenu() {
+        windowsMenu.invalidate();
+        addWindowsMenu();
+        windowsMenu.validate();
+    }
+
     public static Map<String, String> emojiNameMap = Map.of("apple", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_apple_64.png",
             "facebook", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_facebook_64.png",
             "twitter", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_twitter_64.png",
             "google", "/sheet_google_64.png");
+
+    // called on DB replace - will not be called for 'google' or 'font'
+    // never called for sheets not installed
+    public void setEmoji(String setName) {
+        try {
+            String url = emojiNameMap.get(setName);
+            String fn = url.substring(url.lastIndexOf('/'));
+            File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
+            BufferedImage sheetImage = ImageIO.read(emojiFile);
+            GeminiTextPane.setSheetImage(sheetImage);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
 
     private void setEmoji(String setName, ActionEvent ae) {
         JRadioButtonMenuItem selected = (JRadioButtonMenuItem) ae.getSource();
@@ -859,7 +891,7 @@ public final class GeminiFrame extends JFrame {
                 // use font
                 GeminiTextPane.setSheetImage(null);
                 DB.insertPref("emoji", "font");
-                Alhena.updateFrames(false);
+                Alhena.updateFrames(false, false);
                 lastSelectedItem = selected;
             } else {
                 String url = emojiNameMap.get(setName);
@@ -867,7 +899,7 @@ public final class GeminiFrame extends JFrame {
                 if (setName.equals("google")) {
                     GeminiTextPane.setSheetImage(Util.loadImage(url));
                     DB.insertPref("emoji", "google");
-                    Alhena.updateFrames(false);
+                    Alhena.updateFrames(false, false);
                     lastSelectedItem = selected;
                 } else {
                     String fn = url.substring(url.lastIndexOf('/'));
@@ -879,7 +911,7 @@ public final class GeminiFrame extends JFrame {
                         try {
                             GeminiTextPane.setSheetImage(ImageIO.read(emojiFile));
                             DB.insertPref("emoji", setName);
-                            Alhena.updateFrames(false);
+                            Alhena.updateFrames(false, false);
                             lastSelectedItem = selected;
                         } catch (IOException ex) {
                             lastSelectedItem.setSelected(true);
@@ -907,7 +939,7 @@ public final class GeminiFrame extends JFrame {
                         DB.insertPref("emoji", setName);
 
                         GeminiTextPane.setSheetImage(setImage);
-                        Alhena.updateFrames(false);
+                        Alhena.updateFrames(false, false);
                         lastSelectedItem = selected;
 
                     });
@@ -1046,7 +1078,7 @@ public final class GeminiFrame extends JFrame {
     private void addBookmarks() {
         try {
             List<Bookmark> bookmarks = DB.loadBookmarks();
-            //if (!bookmarks.isEmpty()) {
+
             if (bookmarkMenu != null) {
                 bookmarkMenu.removeAll();
             } else {
@@ -1651,7 +1683,7 @@ public final class GeminiFrame extends JFrame {
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     DB.deleteBookmark(bmId);
-                    Alhena.updateFrames(true);
+                    Alhena.updateFrames(true, false);
                     EventQueue.invokeLater(() -> refresh());
 
                 }
@@ -1795,7 +1827,7 @@ public final class GeminiFrame extends JFrame {
                 refresh();
             }
 
-            Alhena.updateFrames(true);
+            Alhena.updateFrames(true, false);
             EventQueue.invokeLater(() -> refresh());
         } catch (SQLException ex) {
             ex.printStackTrace();
