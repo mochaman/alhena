@@ -707,12 +707,25 @@ public class Util {
 
             if (result.equals("Replace")) {
                 try {
+                    String prevEmo = DB.getPref("emoji", null);
 
                     if (DB.restoreDB(f) != 0) {
                         infoDialog(frame, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
                     } else {
+                        String postEmo = DB.getPref("emoji", null);
+                        if ("facebook".equals(postEmo) || "apple".equals(postEmo) || "twitter".equals(postEmo)) {
+                            File sheetFile = new File(System.getProperty("alhena.home") + File.separatorChar + "sheet_" + postEmo + "_64.png");
+                            if(!sheetFile.exists()){
+                                // trying to change to an emoji set not installed
+                                DB.insertPref("emoji", prevEmo);
+                            }else{
+                                frame.setEmoji(postEmo);
+                            }
+
+                        }
+
                         infoDialog(frame, "Complete", "Data successfully imported.");
-                        Alhena.updateFrames(true);
+                        Alhena.updateFrames(true, true);
                     }
                 } catch (Exception ex) {
                     infoDialog(frame, "Error", "Unable to replace data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
@@ -725,7 +738,7 @@ public class Util {
                         infoDialog(frame, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
                     } else {
                         infoDialog(frame, "Complete", "Data successfully merged.");
-                        Alhena.updateFrames(true);
+                        Alhena.updateFrames(true, false);
                     }
                 } catch (Exception ex) {
                     infoDialog(frame, "Error", "Unable to merge data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
