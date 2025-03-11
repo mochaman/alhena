@@ -30,6 +30,8 @@ public class Page extends JPanel {
     private File dataFile; // shoehorn in titan upload data for sync
     private long start;
     private long elapsed;
+    public int redirectCount;
+    private boolean busy = true;
 
     private Page() {
 
@@ -62,11 +64,9 @@ public class Page extends JPanel {
         start = System.currentTimeMillis();
     }
 
-    public void ignoreStart(){
+    public void ignoreStart() {
         start = 0;
     }
-
-    private boolean busy = true;
 
     public boolean busy() {
         return busy;
@@ -79,7 +79,7 @@ public class Page extends JPanel {
                 frame.showGlassPane(false);
             } else if (b && !frame.getGlassPane().isShowing()) {
                 frame.showGlassPane(true);
-            
+
             }
         }
         this.busy = b;
