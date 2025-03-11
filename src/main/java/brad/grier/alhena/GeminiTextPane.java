@@ -648,6 +648,9 @@ public class GeminiTextPane extends JTextPane {
                     if (start) {
                         range.start = range.start - 3;
                         range.end = range.end - 3;
+                        if (range.imageIndex != -1) {
+                            range.imageIndex = range.imageIndex - 3;
+                        }
                     }
                 }
             }
@@ -674,8 +677,7 @@ public class GeminiTextPane extends JTextPane {
 
     public void insertImage(byte[] imageBytes) {
 
-        int width = 0;
-        width = (int) (f.getWidth() * .85);
+        int width = (int) (f.getWidth() * .85);
         BufferedImage image = Util.getImage(imageBytes, width, width * 2);
 
         ImageIcon icon = new ImageIcon(image);
@@ -701,6 +703,9 @@ public class GeminiTextPane extends JTextPane {
                     if (start) {
                         range.start = range.start + 3;
                         range.end = range.end + 3;
+                        if (range.imageIndex != -1) {
+                            range.imageIndex = range.imageIndex + 3;
+                        }
                     }
                 }
                 lastClicked = null;
