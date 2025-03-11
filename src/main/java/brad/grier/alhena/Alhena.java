@@ -114,7 +114,6 @@ public class Alhena {
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
     public final static String VERSION = "3.8";
     private static volatile boolean interrupted;
-    private static int redirectCount;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
     public static boolean browsingSupported, mailSupported;
@@ -337,13 +336,13 @@ public class Alhena {
 
             }
             jf.recolorIcons();
-            
+
             jf.forEachPage(page -> {
                 page.ignoreStart();
             });
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
             jf.refreshFromCache(jf.visiblePage());
-            
+
             SwingUtilities.updateComponentTreeUI(jf);
             jf.initComboBox(); // combo box loses key listener & mouse listener when theme changes
         }
@@ -637,8 +636,7 @@ public class Alhena {
 
                     p.setDataFile(titanFile);
                     punyURI = new URI(titanUrl);
-                    System.out.println(punyURI.toString());
-                    //return;
+
                 } else {
 
                     p.textPane.end("## Nothing to send", false, origURL, true);
@@ -658,7 +656,9 @@ public class Alhena {
     }
 
     private static void fetch(NetClient client, URI uri, Page p, String origURL, Page cPage) {
-        p.frame().setBusy(true, cPage);
+        if (p.redirectCount == 0) {
+            p.frame().setBusy(true, cPage);
+        }
 
         String host = uri.getHost();
 
@@ -756,7 +756,9 @@ public class Alhena {
 
                         switch (respCode) {
                             case '1' -> {
-                                redirectCount = 0;
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
                                 p.frame().setBusy(false, cPage);
                                 String reqMsg = saveBuffer.getString(3, i - 1);
                                 char respType = (char) saveBuffer.getByte(1);
@@ -787,7 +789,9 @@ public class Alhena {
                                 });
                             }
                             case '2' -> {
-                                redirectCount = 0;
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
                                 // have to assume there's at least one byte
                                 String mime = saveBuffer.getString(3, i - 1);
                                 if (mime.isBlank()) {
@@ -846,22 +850,24 @@ public class Alhena {
                             }
 
                             case '3' -> {
-                                if (redirectCount++ == 6) {
-                                    redirectCount = 0;
+                                if (p.redirectCount++ == 6) {
+                                    p.redirectCount = 0;
                                     connection.result().close();
                                     bg(() -> {
                                         p.textPane.end("## Too many redirects", false, origURL, true);
-                                        //p.frame().showGlassPane(false);
+
                                     });
                                     return;
                                 }
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
-                                redirectCount++;
+                                p.redirectCount++;
 
                                 processURL(redirectURI, p, origURL, cPage);
                             }
                             case '4', '5' -> {
-                                redirectCount = 0;
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
                                 String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
                                 bg(() -> {
@@ -869,7 +875,9 @@ public class Alhena {
                                 });
                             }
                             case '6' -> {
-                                redirectCount = 0;
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
                                 char respType = (char) saveBuffer.getByte(1);
                                 if (respType == '0') { // 60 cert required
                                     p.frame().setBusy(false, cPage);
@@ -884,11 +892,13 @@ public class Alhena {
                                 }
                             }
                             default -> {
-                                redirectCount = 0;
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
                                 connection.result().close();
                                 bg(() -> {
                                     p.textPane.end("## Invalid response", false, origURL, true);
-                                    //p.frame().showGlassPane(false);
+                                    
                                 });
                                 return;
 
@@ -896,7 +906,7 @@ public class Alhena {
                         }
 
                     } else {
-                        redirectCount = 0;
+                        //p.redirectCount = 0;
                         if (!error[0]) {
                             if (imageStartIdx[0] != -1) {
                                 saveBuffer.appendBuffer(buffer);
@@ -914,7 +924,9 @@ public class Alhena {
                 });
 
                 connection.result().closeHandler(v -> {
-                    redirectCount = 0;
+                    if (p.redirectCount > 0) {
+                        p.redirectCount--;
+                    }
                     System.out.println("connection closed");
                     if (imageStartIdx[0] != -1) {
 
@@ -933,15 +945,17 @@ public class Alhena {
                             }
                         });
                     } else {
-                        bg(() -> {
-                            p.textPane.end();
+                        if (p.redirectCount == 0) {
+                            bg(() -> {
+                                p.textPane.end();
 
-                        });
+                            });
+                        }
                     }
 
                 });
             } else {
-                redirectCount = 0;
+                p.redirectCount = 0;
                 if (interrupted) {
                     interrupted = false;
                     p.frame().setBusy(false, cPage);
