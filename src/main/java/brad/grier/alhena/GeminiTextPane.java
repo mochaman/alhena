@@ -671,7 +671,7 @@ public class GeminiTextPane extends JTextPane {
         return lastClicked != null;
     }
 
-    public void resetLastClicked(){
+    public void resetLastClicked() {
         lastClicked = null;
     }
 
@@ -920,6 +920,7 @@ public class GeminiTextPane extends JTextPane {
                             ansiFG(c);
 
                         } else if (tokens.length == 3) {
+
                             Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2].substring(0, tokens[2].indexOf('m'))));
                             ansiFG(c);
 
@@ -1010,7 +1011,7 @@ public class GeminiTextPane extends JTextPane {
                 case "[0m" -> {
                     bStyle = new SimpleAttributeSet();
                     bStyle.addAttribute(StyleConstants.FontFamily, monospacedFamily);
-                    bStyle.addAttribute(StyleConstants.FontSize, 14);
+                    bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.fontSize);
 
                 }
                 case "[1m" -> {
@@ -1329,7 +1330,7 @@ public class GeminiTextPane extends JTextPane {
         int start = doc.getLength();
         boolean monospace = styleName.equals("```");
         int heightOffset = monospace ? 4 : 0;
-        if (EmojiManager.containsAnyEmoji(text)) {
+        if (!(hasAnsi && monospace) && EmojiManager.containsAnyEmoji(text)) {
 
             String fontFamily = StyleConstants.getFontFamily(style);
             int fontSize = StyleConstants.getFontSize(style);
@@ -1341,7 +1342,7 @@ public class GeminiTextPane extends JTextPane {
             IndexedEmoji emoji;
             // can't iterate by code point without preprocessing first to get png name
             for (int i = 0; i < text.length(); i++) {
-                char c = text.charAt(i);
+                //char c = text.charAt(i);
 
                 if ((emoji = isEmoji(emojis, i)) != null) {
                     int codePoint = text.codePointAt(i);
@@ -1383,7 +1384,6 @@ public class GeminiTextPane extends JTextPane {
                             }
 
                             StyleConstants.setIcon(emojiStyle, icon);
-
                             try {
                                 doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
                             } catch (BadLocationException ex) {
@@ -1403,7 +1403,8 @@ public class GeminiTextPane extends JTextPane {
                 } else {
 
                     StyleConstants.setFontFamily(style, fontFamily);
-                    insertString(doc.getLength(), String.valueOf(c), style);
+
+                    insertString(doc.getLength(), String.valueOf(text.charAt(i)), style);
 
                 }
             }
