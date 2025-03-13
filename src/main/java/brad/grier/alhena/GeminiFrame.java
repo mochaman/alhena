@@ -864,6 +864,15 @@ public final class GeminiFrame extends JFrame {
         windowsMenu.validate();
     }
 
+    // change font after restore
+    public void resetFont() {
+        proportionalFamily = DB.getPref("fontfamily", "SansSerif");
+        String fs = DB.getPref("fontsize", "15");
+        fontSize = Integer.parseInt(fs);
+        String dbFont = DB.getPref("font", "SansSerif");
+        saveFont = new Font(dbFont, Font.PLAIN, fontSize);
+    }
+
     public static Map<String, String> emojiNameMap = Map.of("apple", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_apple_64.png",
             "facebook", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_facebook_64.png",
             "twitter", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_twitter_64.png",
