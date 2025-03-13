@@ -671,6 +671,10 @@ public class GeminiTextPane extends JTextPane {
         return lastClicked != null;
     }
 
+    public void resetLastClicked(){
+        lastClicked = null;
+    }
+
     public boolean imageOnly() {
         return imageOnly;
     }
