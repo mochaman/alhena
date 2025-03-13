@@ -723,7 +723,7 @@ public class Util {
                             }
 
                         }
-
+                        frame.resetFont();
                         infoDialog(frame, "Complete", "Data successfully imported.");
                         Alhena.updateFrames(true, true);
                     }
