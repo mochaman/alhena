@@ -128,7 +128,7 @@ public class Page extends JPanel {
     @Override
     public void addNotify() {
         super.addNotify();
-
+        textPane.resetLastClicked();
         EventQueue.invokeLater(() -> {
             if (!busy && frame.getGlassPane().isShowing()) {
                 frame.showGlassPane(false);
