@@ -645,6 +645,7 @@ public class Alhena {
             }
             // switching domains - stop using domain cert
             if (netClientDomainCert != null && !netClientDomainCert.equals(punyURI.getHost())) {
+                netClientDomainCert = null;
                 createNetClient(punyURI, p, origURL, cPage);
             } else {
                 fetch(client, punyURI, p, origURL, cPage);
