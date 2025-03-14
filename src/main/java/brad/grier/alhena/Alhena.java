@@ -47,9 +47,11 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -105,18 +107,17 @@ import io.vertx.core.streams.Pump;
 public class Alhena {
 
     private static Vertx vertx;
-    private static NetClient client;
     private static HttpClient httpClient;
-    private static String netClientDomainCert;
 
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.0";
+    public final static String VERSION = "4.1";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
     public static boolean browsingSupported, mailSupported;
+    private static final Map<String, NetClient> ncMap = Collections.synchronizedMap(new HashMap<>());
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -135,8 +136,15 @@ public class Alhena {
                     vertx.close();
                     VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
                     vertx = Vertx.vertx(options);
-                    client = null;
-                    createNetClient();
+
+                    // reset all connections in ncmap
+                    synchronized (ncMap) {
+                        ncMap.entrySet().forEach(es -> {
+                            es.getValue().close();
+
+                        });
+                        ncMap.clear();
+                    }
 
                     return true; // consume
                 }
@@ -257,6 +265,7 @@ public class Alhena {
             }
 
             String u = Util.getHome();
+
             newWindow(u, u);
 
         });
@@ -298,6 +307,7 @@ public class Alhena {
     public static void newWindow(String url, String baseUrl) {
         String theme = DB.getPref("theme", null);
         frameList.add(new GeminiFrame(url, baseUrl, theme));
+        GeminiFrame.ansiAlert = DB.getPref("ansialert", "false").equals("true");
         if (Taskbar.isTaskbarSupported()) {
             Taskbar taskbar = Taskbar.getTaskbar();
             if (taskbar.isSupported(Feature.MENU)) {
@@ -643,13 +653,10 @@ public class Alhena {
                     return;
                 }
             }
-            // switching domains - stop using domain cert
-            if (netClientDomainCert != null && !netClientDomainCert.equals(punyURI.getHost())) {
-                netClientDomainCert = null;
-                createNetClient(punyURI, p, origURL, cPage);
-            } else {
-                fetch(client, punyURI, p, origURL, cPage);
-            }
+            createNetClient(punyURI.getHost()); // basically a no op if connection for host exists
+
+            fetch(ncMap.get(punyURI.getHost()), punyURI, p, origURL, cPage);
+
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -899,7 +906,7 @@ public class Alhena {
                                 connection.result().close();
                                 bg(() -> {
                                     p.textPane.end("## Invalid response", false, origURL, true);
-                                    
+
                                 });
                                 return;
 
@@ -1080,7 +1087,6 @@ public class Alhena {
 
             } else {
                 p.textPane.end("# Failed to open file: " + outFile, false, url, true);
-                //p.frame().showGlassPane(false);
                 fileRes.cause().printStackTrace();
 
             }
@@ -1093,57 +1099,76 @@ public class Alhena {
         });
     }
 
-    public static void createNetClient() {
-        if (client != null) {
-            client.close();
+    public static void removeNetClient(String host) {
+        NetClient nc = ncMap.get(host);
+        if (nc == null) {
+            return;
         }
-        NetClientOptions options = new NetClientOptions()
-                .setConnectTimeout(60000)
-                .setSsl(true) // Gemini uses TLS   
-                .setTrustAll(true)
-                .setHostnameVerificationAlgorithm("HTTPS");
-        client = vertx.createNetClient(options);
+        if (nc != ncMap.get(null)) { // not the default netclient, close
+
+            ncMap.get(host).close();
+        }
+        ncMap.remove(host);
+    }
+
+    public static void createNetClient(String host) {
+
+        if (!ncMap.containsKey(null)) { // default connection
+
+            NetClientOptions options = new NetClientOptions()
+                    .setConnectTimeout(60000)
+                    .setSsl(true) // Gemini uses TLS   
+                    .setTrustAll(true)
+                    .setHostnameVerificationAlgorithm("HTTPS");
+            ncMap.put(null, vertx.createNetClient(options));
+        }
+        if (!ncMap.containsKey(host)) {
+            ncMap.put(host, ncMap.get(null)); // connections without client certs used single NetClient
+        }
+
     }
 
     private static void createNetClient(URI uri, Page p, String origURL, Page cPage) {
-        createNetClient();
+        createNetClient(uri == null ? null : uri.getHost());
         if (uri != null) {
-            fetch(client, uri, p, origURL, cPage);
+
+            fetch(ncMap.get(uri.getHost()), uri, p, origURL, cPage);
         }
 
     }
 
     private static void createNetClientWithCert(String host, String cn) {
+        if (!ncMap.containsKey(host)) {
 
-        NetClientOptions options = new NetClientOptions()
-                .setSsl(true) // Gemini uses TLS
-                .setTrustAll(true) // For testing, bypass certificate checks
-                .setHostnameVerificationAlgorithm("HTTPS")
-                .setSslEngineOptions(new JdkSSLEngineOptions() {
-                    @Override
-                    public SslContextFactory sslContextFactory() {
-                        return () -> {
-                            try {
-                                return new JdkSslContext(
-                                        createSSLContext(host, cn),
-                                        true,
-                                        null,
-                                        IdentityCipherSuiteFilter.INSTANCE,
-                                        ApplicationProtocolConfig.DISABLED,
-                                        io.netty.handler.ssl.ClientAuth.NONE,
-                                        null,
-                                        false);
-                            } catch (Exception ex) {
+            NetClientOptions options = new NetClientOptions()
+                    .setSsl(true) // gemini uses TLS
+                    .setTrustAll(true) // gemini self-signed certs
+                    .setHostnameVerificationAlgorithm("HTTPS")
+                    .setSslEngineOptions(new JdkSSLEngineOptions() {
+                        @Override
+                        public SslContextFactory sslContextFactory() {
+                            return () -> {
+                                try {
+                                    return new JdkSslContext(
+                                            createSSLContext(host, cn),
+                                            true,
+                                            null,
+                                            IdentityCipherSuiteFilter.INSTANCE,
+                                            ApplicationProtocolConfig.DISABLED,
+                                            io.netty.handler.ssl.ClientAuth.NONE,
+                                            null,
+                                            false);
+                                } catch (Exception ex) {
 
-                                ex.printStackTrace();
-                                return null;
-                            }
-                        };
-                    }
-                });
-        client = vertx.createNetClient(options);
+                                    ex.printStackTrace();
+                                    return null;
+                                }
+                            };
+                        }
+                    });
+            ncMap.put(host, vertx.createNetClient(options));
 
-        netClientDomainCert = host;
+        }
 
     }
 
@@ -1156,7 +1181,10 @@ public class Alhena {
             ex.printStackTrace();
         }
         if (certInfo != null) {
-            createNetClientWithCert(host, null);
+            if (ncMap.get(host) == ncMap.get(null)) { // already using the default netclient
+                ncMap.remove(host);
+                createNetClientWithCert(host, null);
+            }
 
             processURL(reqURL, p, null, cPage);
         } else {
@@ -1171,12 +1199,12 @@ public class Alhena {
                 if (cn != null) {
                     String cnString = cn.isEmpty() ? PROG_NAME : cn;
                     addCertToTrustStore(host, cert);
-                    client.close().onSuccess(s -> {
-                        createNetClientWithCert(host, cnString);
 
-                        processURL(reqURL, p, null, cPage);
+                    ncMap.remove(host); // previously using the default netclient
+                    createNetClientWithCert(host, cnString);
 
-                    });
+                    processURL(reqURL, p, null, cPage);
+
                 }
             });
         }
@@ -1468,10 +1496,12 @@ public class Alhena {
     private static void processCommand(String url, Page p) {
         boolean plainText = false;
         String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
-        String message = "## Unknown command\n";
+        String message = "# Valid commands:\n\n* ansialert\n* scrollspeed\n* info\n\nType 'alhena:[command]' for details.\n";
         if (cmd.length == 1) {
 
-            if (cmd[0].equals("scrollspeed")) {
+            if (cmd[0].equals("ansialert")) {
+                message = "# ansialert\n###Toggle alert when ANSI color codes detected\nValid values: 'true' or 'false'";
+            } else if (cmd[0].equals("scrollspeed")) {
                 message = "# scrollspeed\n###Set the mouse wheel speed: scrollspeed=10\nscrollspeed=default resets. Negative numbers reverse scroll direction.";
 
             } else if (cmd[0].equals("info")) {
@@ -1480,6 +1510,7 @@ public class Alhena {
             }
 
         } else if (cmd.length == 2) {
+
             if (cmd[0].equals("scrollspeed")) {
                 try {
                     if (cmd[1].equals("default")) {
@@ -1499,6 +1530,16 @@ public class Alhena {
 
                 } catch (NumberFormatException ex) {
                     message = "## Value must be a number\n";
+                }
+
+            } else if (cmd[0].equals("ansialert")) {
+
+                if (cmd[1].equals("true") || cmd[1].equals("false")) {
+                    DB.insertPref("ansialert", cmd[1]);
+                    GeminiFrame.ansiAlert = cmd[1].equals("true");
+                    message = "## ansialert set to " + cmd[1] + "\n";
+                } else {
+                    message = "## Value must be 'true' or 'false'\n";
                 }
 
             }
