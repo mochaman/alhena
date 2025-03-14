@@ -336,8 +336,20 @@ public class DB {
 
     }
 
-    public static void deleteClientCert(int id) throws SQLException {
+    public static String getClientCert(int id) throws SQLException{
+        String host = null;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT DOMAIN FROM CLIENTCERTS WHERE ID = ?")) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    host = rs.getString(1);
+                }
+            }
+        }
+        return host;
+    }
 
+    public static void deleteClientCert(int id) throws SQLException { 
         try (Connection con = cp.getConnection(); var ps = con.prepareStatement("DELETE FROM CLIENTCERTS WHERE ID = ?")) {
             ps.setInt(1, id);
             ps.execute();
