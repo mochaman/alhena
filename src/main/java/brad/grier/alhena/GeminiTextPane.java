@@ -837,13 +837,19 @@ public class GeminiTextPane extends JTextPane {
                     if (localBuilder.charAt(i) == 27) {
                         EventQueue.invokeLater(() -> {
                             if (GeminiTextPane.this.isShowing()) {
-
-                                Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page?", JOptionPane.YES_NO_OPTION, null);
-                                if (res instanceof Integer result) {
-                                    if (result == JOptionPane.YES_OPTION) {
-                                        hasAnsi = true;
-                                        f.refreshFromCache(page);
+                                Runnable r = () -> {
+                                    hasAnsi = true;
+                                    f.refreshFromCache(page);
+                                };
+                                if (GeminiFrame.ansiAlert) {
+                                    Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page?", JOptionPane.YES_NO_OPTION, null);
+                                    if (res instanceof Integer result) {
+                                        if (result == JOptionPane.YES_OPTION) {
+                                            r.run();
+                                        }
                                     }
+                                }else{
+                                    r.run();
                                 }
                             }
                         });
