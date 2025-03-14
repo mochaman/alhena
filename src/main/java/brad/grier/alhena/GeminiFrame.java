@@ -107,6 +107,7 @@ public final class GeminiFrame extends JFrame {
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL); // make immutable
     public static String proportionalFamily = "SansSerif";
     public static int fontSize = 15;
+    public static boolean ansiAlert;
     private static Font saveFont;
     public final static String SYNC_SERVER = "ultimatumlabs.com";
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
@@ -1245,7 +1246,7 @@ public final class GeminiFrame extends JFrame {
         Page visiblePage = visiblePage();
 
         visiblePage.textPane.getDocURL().ifPresent(cURL -> {
-
+            visiblePage.textPane.resetLastClicked();
             switch (visiblePage.textPane.getDocMode()) {
                 case GeminiTextPane.HISTORY_MODE ->
                     loadHistory(visiblePage.textPane, visiblePage);
@@ -1724,8 +1725,10 @@ public final class GeminiFrame extends JFrame {
         if (res instanceof Integer result) {
             if (result == JOptionPane.YES_OPTION) {
                 try {
+                    String host = DB.getClientCert(id);
                     DB.deleteClientCert(id);
-                    Alhena.createNetClient();
+                    Alhena.removeNetClient(host);
+                    //Alhena.createNetClient();
                     refresh();
                     Util.infoDialog(this, "Delete", "Certificate deleted");
                 } catch (SQLException ex) {
@@ -1739,7 +1742,9 @@ public final class GeminiFrame extends JFrame {
     public void toggleCert(int id, boolean active, String url) {
         try {
             DB.toggleCert(id, active, url, false);
-            Alhena.createNetClient();
+            String host = DB.getClientCert(id);
+            Alhena.removeNetClient(host);
+            //Alhena.createNetClient();
             refresh();
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -1877,7 +1882,8 @@ public final class GeminiFrame extends JFrame {
 
                         DB.insertClientCert(host, cert, key, true, null);
                         Alhena.addCertToTrustStore(host, visiblePage().getCert());
-                        Alhena.createNetClient();
+                        //Alhena.createNetClient();
+                        Alhena.removeNetClient(host);
                         Util.infoDialog(this, "Added", "PEM added for : " + host);
                     }
 
