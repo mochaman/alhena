@@ -37,7 +37,7 @@ import brad.grier.alhena.PipedEncryption.Encryptor;
 public class DB {
 
     private static JdbcConnectionPool cp;
-    public static String VERSION = "1";
+    public static String VERSION = "2";
 
     public static record CertInfo(String fingerPrint, Timestamp expires, Timestamp lastModified) {
 
@@ -53,6 +53,7 @@ public class DB {
             cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena;CIPHER=AES", "sa", "sa " + new String(pswd));
         }
         initV1();
+        initV2(cp);
 
     }
 
@@ -132,6 +133,19 @@ public class DB {
                  """;
                 runStatement(connection, sql);
                 runStatement(connection, "CREATE INDEX idx_prefs ON PREFS (PREFKEY);");
+            }
+        }
+    }
+
+    public static void initV2(JdbcConnectionPool conPool) throws Exception {
+        try (Connection con = conPool.getConnection()) {
+            String checkSql = "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CLIENTCERTS' AND COLUMN_NAME = 'DOMAIN'";
+            try (var stmt = con.createStatement(); ResultSet rs = stmt.executeQuery(checkSql)) {
+                if (rs.next() && rs.getInt(1) == 256) {
+                    stmt.executeUpdate("ALTER TABLE CLIENTCERTS ALTER COLUMN DOMAIN VARCHAR(1024)");
+                    stmt.executeUpdate("UPDATE CLIENTCERTS SET DOMAIN = DOMAIN || ':1965/'");
+                    stmt.executeUpdate("CREATE INDEX idx_url ON CLIENTCERTS(DOMAIN)");
+                }
             }
         }
     }
@@ -217,6 +231,44 @@ public class DB {
 
     }
 
+    public record DBClientCertInfo(int id, String domain, String cert, boolean active) {
+
+    }
+
+    public static ClientCertInfo getClientCert(URI uri) throws SQLException {
+        int port = uri.getPort();
+        port = port == -1 ? 1965 : port;
+        String baseDomain = uri.getHost() + ":" + port;
+        String prunedUrl = baseDomain + uri.getPath();
+
+        List<ClientCertInfo> certList = new ArrayList<>();
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT ID, DOMAIN, CERT, PRIVATEKEY FROM CLIENTCERTS WHERE DOMAIN LIKE ? AND ACTIVE = TRUE")) {
+            ps.setString(1, baseDomain + "%");
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    certList.add(new ClientCertInfo(rs.getInt(1), rs.getString(3), rs.getString(4), rs.getString(2)));
+
+                }
+            }
+        }
+
+        ClientCertInfo bestCCI = null;
+        for (ClientCertInfo cci : certList) {
+            if (prunedUrl.startsWith(cci.domain)) {
+                if (bestCCI == null) {
+                    bestCCI = cci;
+                } else {
+                    if (cci.domain.length() > bestCCI.domain.length()) {
+                        bestCCI = cci;
+                    }
+                }
+            }
+        }
+        return bestCCI;
+    }
+
     public static ClientCertInfo getClientCertInfo(String domain) throws SQLException {
 
         ClientCertInfo certInfo = null;
@@ -277,10 +329,6 @@ public class DB {
         return bookmarkList;
     }
 
-    public record DBClientCertInfo(int id, String domain, String cert, boolean active) {
-
-    }
-
     public static List<DBClientCertInfo> loadCerts() throws SQLException {
         ArrayList<DBClientCertInfo> certList = new ArrayList<>();
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
@@ -288,7 +336,6 @@ public class DB {
             try (ResultSet rs = st.executeQuery("select id, domain, cert, active from clientcerts order by time_stamp, active asc")) {
                 while (rs.next()) {
                     certList.add(new DBClientCertInfo(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)));
-                    //bookmarkList.add(new Bookmark(rs.getString(1), rs.getString(2), rs.getString(3), rs.getInt(4)));
                 }
             }
         }
@@ -336,7 +383,7 @@ public class DB {
 
     }
 
-    public static String getClientCert(int id) throws SQLException{
+    public static String getClientCert(int id) throws SQLException {
         String host = null;
         try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT DOMAIN FROM CLIENTCERTS WHERE ID = ?")) {
             ps.setInt(1, id);
@@ -349,7 +396,7 @@ public class DB {
         return host;
     }
 
-    public static void deleteClientCert(int id) throws SQLException { 
+    public static void deleteClientCert(int id) throws SQLException {
         try (Connection con = cp.getConnection(); var ps = con.prepareStatement("DELETE FROM CLIENTCERTS WHERE ID = ?")) {
             ps.setInt(1, id);
             ps.execute();
@@ -431,7 +478,6 @@ public class DB {
                     Timestamp expireTs = rs.getTimestamp(2);
                     Timestamp ts = rs.getTimestamp(3);
 
-                
                     String saved = groupFormat.format(ts);
                     String expires = dateFormat.format(expireTs);
                     if (saveDate == null || !saveDate.equals(saved)) {
@@ -623,6 +669,9 @@ public class DB {
 
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes
+        if (version == 1) {
+            initV2(cp);
+        }
         return 0;
 
     }
