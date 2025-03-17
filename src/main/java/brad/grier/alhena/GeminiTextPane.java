@@ -440,15 +440,12 @@ public class GeminiTextPane extends JTextPane {
                                         String command = active ? "Deactivate" : "Activate";
                                         JMenuItem actionItem = new JMenuItem(command);
                                         actionItem.addActionListener(al -> {
-                                            try {
-                                                f.toggleCert(id, !active, new URI(range.url).getHost());
-                                            } catch (URISyntaxException ex) {
-                                                ex.printStackTrace();
-                                            }
+
+                                            f.toggleCert(id, !active, range.url);
                                         });
                                         popupMenu.add(actionItem);
                                         JMenuItem delItem = new JMenuItem("Delete");
-                                        delItem.addActionListener(al -> {
+                                        delItem.addActionListener(al -> {                                            
                                             f.deleteCert(id);
                                         });
                                         popupMenu.add(delItem);
@@ -567,6 +564,14 @@ public class GeminiTextPane extends JTextPane {
                             f.importPem(getURI(), null);
                         });
                         popupMenu.add(pemItem);
+
+                        JMenuItem certItem = new JMenuItem("New Client Certificate");
+                        certItem.setEnabled(!imageOnly);
+                        certItem.addActionListener(al -> {
+                            f.createCert(getURI());
+                            //f.importPem(getURI(), null);
+                        });
+                        popupMenu.add(certItem);
                     }
 
                     if (currentMode == HISTORY_MODE) {
@@ -848,7 +853,7 @@ public class GeminiTextPane extends JTextPane {
                                             r.run();
                                         }
                                     }
-                                }else{
+                                } else {
                                     r.run();
                                 }
                             }
@@ -1301,13 +1306,11 @@ public class GeminiTextPane extends JTextPane {
                             }
 
                         } else if (currentMode == CERT_MODE) {
-                            try {
+
                                 int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
                                 boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
-                                f.toggleCert(id, !active, new URI(finalUrl).getHost());
-                            } catch (URISyntaxException ex) {
-                                ex.printStackTrace();
-                            }
+                                f.toggleCert(id, !active, finalUrl);
+
                         } else {
                             f.addClickedLink(finalUrl);
                             f.fetchURL(finalUrl);
