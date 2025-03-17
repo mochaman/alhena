@@ -52,14 +52,19 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
@@ -112,12 +117,13 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.1";
+    public final static String VERSION = "4.2";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
     public static boolean browsingSupported, mailSupported;
-    private static final Map<String, NetClient> ncMap = Collections.synchronizedMap(new HashMap<>());
+    private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
+    private static String theme;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -137,13 +143,13 @@ public class Alhena {
                     VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
                     vertx = Vertx.vertx(options);
 
-                    // reset all connections in ncmap
-                    synchronized (ncMap) {
-                        ncMap.entrySet().forEach(es -> {
+                    // reset all connections in map
+                    synchronized (certMap) {
+                        certMap.entrySet().forEach(es -> {
                             es.getValue().close();
 
                         });
-                        ncMap.clear();
+                        certMap.clear();
                     }
 
                     return true; // consume
@@ -255,7 +261,7 @@ public class Alhena {
 
         EventQueue.invokeLater(() -> {
 
-            String theme = DB.getPref("theme", null);
+            theme = DB.getPref("theme", null);
             if (theme != null) {
                 Util.setupTheme(theme);
             } else {
@@ -273,9 +279,6 @@ public class Alhena {
         // turn off blocked thread warnings - this is not a server
         VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
         vertx = Vertx.vertx(options);
-
-        createNetClient(null, null, null, null);
-
     }
 
     private static PopupMenu createPopupMenu() {
@@ -284,7 +287,7 @@ public class Alhena {
         MenuItem frameItem = new MenuItem("New Window");
         frameItem.addActionListener(al -> {
             String home = Util.getHome();
-            Alhena.newWindow(home, home);
+            newWindow(home, home);
         });
         int idx = 1;
         for (GeminiFrame gf : frameList) {
@@ -305,8 +308,7 @@ public class Alhena {
     }
 
     public static void newWindow(String url, String baseUrl) {
-        String theme = DB.getPref("theme", null);
-        frameList.add(new GeminiFrame(url, baseUrl, theme));
+        frameList.add(new GeminiFrame(url, baseUrl));
         GeminiFrame.ansiAlert = DB.getPref("ansialert", "false").equals("true");
         if (Taskbar.isTaskbarSupported()) {
             Taskbar taskbar = Taskbar.getTaskbar();
@@ -318,16 +320,19 @@ public class Alhena {
     }
 
     public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu) {
-
-        try {
-            Class<?> themeClass = Class.forName(DB.getPref("theme", null));
-            FlatLaf theme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
-            FlatLaf.setup(theme);
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        String dbTheme = DB.getPref("theme", null);
+        if (!theme.equals(dbTheme)) {
+            theme = dbTheme;
+            try {
+                Class<?> themeClass = Class.forName(dbTheme);
+                FlatLaf lafTheme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
+                FlatLaf.setup(lafTheme);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
 
-        GeminiFrame.currentThemeId++;
+        GeminiFrame.currentThemeId++; // rename - encompasses more than theme...font, etc
         for (GeminiFrame jf : frameList) {
             if (updateBookmarks) {
                 jf.updateBookmarks();
@@ -653,9 +658,9 @@ public class Alhena {
                     return;
                 }
             }
-            createNetClient(punyURI.getHost()); // basically a no op if connection for host exists
 
-            fetch(ncMap.get(punyURI.getHost()), punyURI, p, origURL, cPage);
+
+            fetch(getNetClient(punyURI), punyURI, p, origURL, cPage);
 
         } catch (URISyntaxException e) {
             e.printStackTrace();
@@ -890,7 +895,7 @@ public class Alhena {
                                 if (respType == '0') { // 60 cert required
                                     p.frame().setBusy(false, cPage);
                                     String msg = saveBuffer.getString(3, i - 1).trim();
-                                    certRequired(msg, uri.toString(), host, p, cert[0], cPage);
+                                    certRequired(msg, uri, p, cert[0], cPage);
                                 } else if (respType == 1 || respType == 2) {
                                     String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
@@ -1099,115 +1104,158 @@ public class Alhena {
         });
     }
 
-    public static void removeNetClient(String host) {
-        NetClient nc = ncMap.get(host);
-        if (nc == null) {
-            return;
+    public static void closeNetClient(ClientCertInfo cci) {
+        NetClient nc = certMap.get(cci);
+        if (nc != null) {
+            nc.close();
+            certMap.remove(cci);
         }
-        if (nc != ncMap.get(null)) { // not the default netclient, close
-
-            ncMap.get(host).close();
-        }
-        ncMap.remove(host);
     }
 
-    public static void createNetClient(String host) {
-
-        if (!ncMap.containsKey(null)) { // default connection
-
-            NetClientOptions options = new NetClientOptions()
-                    .setConnectTimeout(60000)
-                    .setSsl(true) // Gemini uses TLS   
-                    .setTrustAll(true)
-                    .setHostnameVerificationAlgorithm("HTTPS");
-            ncMap.put(null, vertx.createNetClient(options));
-        }
-        if (!ncMap.containsKey(host)) {
-            ncMap.put(host, ncMap.get(null)); // connections without client certs used single NetClient
-        }
-
-    }
-
-    private static void createNetClient(URI uri, Page p, String origURL, Page cPage) {
-        createNetClient(uri == null ? null : uri.getHost());
-        if (uri != null) {
-
-            fetch(ncMap.get(uri.getHost()), uri, p, origURL, cPage);
-        }
-
-    }
-
-    private static void createNetClientWithCert(String host, String cn) {
-        if (!ncMap.containsKey(host)) {
-
-            NetClientOptions options = new NetClientOptions()
-                    .setSsl(true) // gemini uses TLS
-                    .setTrustAll(true) // gemini self-signed certs
-                    .setHostnameVerificationAlgorithm("HTTPS")
-                    .setSslEngineOptions(new JdkSSLEngineOptions() {
-                        @Override
-                        public SslContextFactory sslContextFactory() {
-                            return () -> {
-                                try {
-                                    return new JdkSslContext(
-                                            createSSLContext(host, cn),
-                                            true,
-                                            null,
-                                            IdentityCipherSuiteFilter.INSTANCE,
-                                            ApplicationProtocolConfig.DISABLED,
-                                            io.netty.handler.ssl.ClientAuth.NONE,
-                                            null,
-                                            false);
-                                } catch (Exception ex) {
-
-                                    ex.printStackTrace();
-                                    return null;
-                                }
-                            };
-                        }
-                    });
-            ncMap.put(host, vertx.createNetClient(options));
-
-        }
-
-    }
-
-    private static void certRequired(String msg, String reqURL, String host, Page p, X509Certificate cert, Page cPage) {
-
-        ClientCertInfo certInfo = null;
+    public static NetClient getNetClient(URI uri) {
+        NetClient res = null;
         try {
-            certInfo = DB.getClientCertInfo(host);
+            ClientCertInfo cci = DB.getClientCert(uri);
+            if (cci == null) {
+                if (!certMap.containsKey(null)) { // default connection
+
+                    NetClientOptions options = new NetClientOptions()
+                            .setConnectTimeout(60000)
+                            .setSsl(true) // Gemini uses TLS   
+                            .setTrustAll(true)
+                            .setHostnameVerificationAlgorithm("HTTPS");
+                    certMap.put(null, vertx.createNetClient(options));
+                }
+                res = certMap.get(null); // default shared NetClient for connections without client certs
+            } else {
+                if (!certMap.containsKey(cci)) {
+                    
+                    NetClientOptions options = new NetClientOptions()
+                            .setSsl(true) // gemini uses TLS
+                            .setTrustAll(true) // gemini self-signed certs
+                            .setHostnameVerificationAlgorithm("HTTPS")
+                            .setSslEngineOptions(new JdkSSLEngineOptions() {
+                                @Override
+                                public SslContextFactory sslContextFactory() {
+                                    return () -> {
+                                        try {
+                                            return new JdkSslContext(
+                                                    createSSLContext(cci, uri),
+                                                    true,
+                                                    null,
+                                                    IdentityCipherSuiteFilter.INSTANCE,
+                                                    ApplicationProtocolConfig.DISABLED,
+                                                    io.netty.handler.ssl.ClientAuth.NONE,
+                                                    null,
+                                                    false);
+                                        } catch (Exception ex) {
+
+                                            ex.printStackTrace();
+                                            return null;
+                                        }
+                                    };
+                                }
+                            });
+                    certMap.put(cci, vertx.createNetClient(options));
+                    //NetClient ccNetClient = vertx.createNetClient(options);
+                }
+                res = certMap.get(cci); // NetClient with cert
+            }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        if (certInfo != null) {
-            if (ncMap.get(host) == ncMap.get(null)) { // already using the default netclient
-                ncMap.remove(host);
-                createNetClientWithCert(host, null);
+        return res;
+    }
+
+    private static void createClientCert(URI uri, String cn) {
+        try {
+            Security.addProvider(new BouncyCastleProvider());
+            X509Certificate cert;
+            PrivateKey privateKey;
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+            keyGen.initialize(2048);
+            KeyPair keyPair = keyGen.generateKeyPair();
+            privateKey = keyPair.getPrivate();
+            // create a self-signed certificate
+            cert = generateSelfSignedCertificate(keyPair, cn);
+
+            String privateKeyPem = "-----BEGIN PRIVATE KEY-----\n"
+                    + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(privateKey.getEncoded())
+                    + "\n-----END PRIVATE KEY-----";
+
+            String certPem = "-----BEGIN CERTIFICATE-----\n"
+                    + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(cert.getEncoded())
+                    + "\n-----END CERTIFICATE-----";
+            int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+            String url = uri.getHost() + ":" + port + uri.getPath();
+            ClientCertInfo existingCert = DB.getClientCertInfo(url);
+            if(existingCert != null){
+                DB.toggleCert(existingCert.id(), false, url, false);     
             }
+            //DB.toggleCert(ci.id(), false, prunedUrl, false);
+            DB.insertClientCert(url, certPem, privateKeyPem, true, null);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
 
-            processURL(reqURL, p, null, cPage);
-        } else {
+    }
 
-            bg(() -> {
+    public static boolean certRequired(String msg, URI uri, Page p, X509Certificate cert, Page cPage) {
 
-                String cn = Util.inputDialog(
-                        p.frame(),
-                        "Certificate", "Server: '" + msg + "'\nDo you want to create a new client certificate for " + host + "?\n\nCertificate Name:",
-                        false,
-                        PROG_NAME);
-                if (cn != null) {
-                    String cnString = cn.isEmpty() ? PROG_NAME : cn;
-                    addCertToTrustStore(host, cert);
+        String reqURL = uri.toString();
+        String serverMsg = msg == null ? "" : "Server: '" + msg + "'\n";
 
-                    ncMap.remove(host); // previously using the default netclient
-                    createNetClientWithCert(host, cnString);
+        BooleanSupplier bs = ()->{
+            JTextField cnField = new JTextField(PROG_NAME);
 
-                    processURL(reqURL, p, null, cPage);
+            JRadioButton dcButton = new JRadioButton("Domain Certificate");
+            dcButton.setSelected(true);
+            JRadioButton pcButton = new JRadioButton("Page Certificate");
+            ButtonGroup bg = new ButtonGroup();
+            bg.add(dcButton);
+            bg.add(pcButton);
+
+            Object[] comps = new Object[5];
+            comps[0] = serverMsg + "Do you want to create a new client certificate for " + uri + "?\n\nCertificate Name:";
+            comps[1] = cnField;
+            comps[2] = new JLabel(" ");
+            comps[3] = dcButton;
+            comps[4] = pcButton;
+            String cn = Util.inputDialog2(p.frame(), "New Client Certificate", comps);
+
+            if (cn != null) {
+                String cnString = cnField.getText();
+                cnString = cnString.isEmpty() ? PROG_NAME : cnString;
+                addCertToTrustStore(uri.getHost(), cert);
+
+                if (dcButton.isSelected()) {
+                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + "/");
+
+                    createClientCert(newURI, cnString);
+
+                } else {
+                    createClientCert(uri, cnString);
 
                 }
+                if (msg != null) { // from type 60
+                    processURL(reqURL, p, null, cPage);
+                }
+                return true;
+
+            }
+            return false;
+
+        };
+
+        if (EventQueue.isDispatchThread()) {
+            return bs.getAsBoolean();
+
+        } else {
+            bg(() -> {
+                bs.getAsBoolean();
             });
         }
+        return false; // value doesn't matter when called from type 60 (sent to bg())
     }
 
     public static void addCertToTrustStore(String host, X509Certificate cert) {
@@ -1306,37 +1354,11 @@ public class Alhena {
         }
     }
 
-    private static SSLContext createSSLContext(String host, String cn) throws Exception {
+    private static SSLContext createSSLContext(ClientCertInfo certInfo, URI uri) throws Exception {
         // register Bouncy Castle as a security provider
         Security.addProvider(new BouncyCastleProvider());
-        X509Certificate cert;
-        PrivateKey privateKey;
-
-        ClientCertInfo certInfo = DB.getClientCertInfo(host);
-        if (certInfo != null) {
-            cert = (X509Certificate) loadCertificate(certInfo.cert());
-
-            privateKey = loadPrivateKey(certInfo.privateKey());
-        } else {
-            // generate a key pair
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            keyGen.initialize(2048);
-            KeyPair keyPair = keyGen.generateKeyPair();
-            privateKey = keyPair.getPrivate();
-            // create a self-signed certificate
-            cert = generateSelfSignedCertificate(keyPair, cn);
-
-            String privateKeyPem = "-----BEGIN PRIVATE KEY-----\n"
-                    + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(privateKey.getEncoded())
-                    + "\n-----END PRIVATE KEY-----";
-
-            String certPem = "-----BEGIN CERTIFICATE-----\n"
-                    + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(cert.getEncoded())
-                    + "\n-----END CERTIFICATE-----";
-
-            DB.insertClientCert(host, certPem, privateKeyPem, true, null);
-
-        }
+        X509Certificate cert = (X509Certificate) loadCertificate(certInfo.cert());
+        PrivateKey privateKey = loadPrivateKey(certInfo.privateKey());
 
         // create a KeyStore and load the certificate and private key
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -1355,6 +1377,7 @@ public class Alhena {
         return sslContext;
     }
 
+    // only used by sync server upload - consolidate at some point
     public static void createKeyPair(String host, String cn) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
         // generate a key pair
@@ -1382,7 +1405,7 @@ public class Alhena {
         X500Name subject = new X500Name("CN=" + cn);
         BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
         Date notBefore = new Date();
-        Date notAfter = new Date(notBefore.getTime() + ((365L * 24 * 60 * 60 * 1000) * 5)); // 5 year validity
+        Date notAfter = new Date(notBefore.getTime() + ((365L * 24 * 60 * 60 * 1000) * 10)); // 10 year validity
 
         // build the certificate
         JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
