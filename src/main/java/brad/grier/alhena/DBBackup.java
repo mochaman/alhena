@@ -50,6 +50,10 @@ public class DBBackup {
             st.execute("RUNSCRIPT FROM '" + inputFile + "' COMPRESSION ZIP");
         }
 
+        if(version == 1){
+            DB.initV2(cp); // update older verstion
+        }
+
         if (version <= Integer.parseInt(DB.VERSION)) {
             mergeHistory();
             mergeBookmarks();
