@@ -96,7 +96,7 @@ public final class GeminiFrame extends JFrame {
     private final HashMap<Page, ArrayList<Page>> pageHistoryMap = new HashMap<>();
     private final List<String> clickedLinks = new ArrayList<>();
     private final JMenuBar menuBar;
-    private JMenu bookmarkMenu, windowsMenu;
+    private JMenu bookmarkMenu, settingsMenu;
     private String lastSearch;
     private JLabel titleLabel;
     public static final String HISTORY_LABEL = "History";
@@ -109,7 +109,7 @@ public final class GeminiFrame extends JFrame {
     public static int fontSize = 15;
     public static boolean ansiAlert;
     private static Font saveFont;
-    public final static String SYNC_SERVER = "ultimatumlabs.com";
+    public final static String SYNC_SERVER = "ultimatumlabs.com:1965/";
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private MenuItem mi;
     private Color saveButtonFG = null;
@@ -274,7 +274,7 @@ public final class GeminiFrame extends JFrame {
         return pb.getRootPage() == Page.ROOT_PAGE ? pb : pb.getRootPage(); // returning null means this page has no history (new window/tab)
     }
 
-    public GeminiFrame(String url, String baseUrl, String themeName) {
+    public GeminiFrame(String url, String baseUrl) {
         // Ubuntu seems to use the frame icon for the dock icon, using the 64x64 image improves the
         // resolution of the dock image at some cost to the frame image (bad downscaling)
         String pngName = SystemInfo.isWindows ? "alhena_32x32.png" : "alhena_64x64.png";
@@ -729,11 +729,11 @@ public final class GeminiFrame extends JFrame {
 
     private void addWindowsMenu() {
 
-        if (windowsMenu != null) {
-            windowsMenu.removeAll();
+        if (settingsMenu != null) {
+            settingsMenu.removeAll();
         } else {
-            windowsMenu = new JMenu("Windows");
-            menuBar.add(windowsMenu);
+            settingsMenu = new JMenu("Settings");
+            menuBar.add(settingsMenu);
         }
 
         JMenu darkThemeMenu = new JMenu("Dark Themes");
@@ -767,10 +767,10 @@ public final class GeminiFrame extends JFrame {
                     });
 
                 });
-        windowsMenu.add(lightThemeMenu);
-        windowsMenu.add(darkThemeMenu);
+        settingsMenu.add(lightThemeMenu);
+        settingsMenu.add(darkThemeMenu);
 
-        windowsMenu.add(createMenuItem("Font", KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
+        settingsMenu.add(createMenuItem("Font", KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
             Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, 15);
             Font font = Util.getFont(GeminiFrame.this, defFont);
             if (font != null) {
@@ -828,7 +828,7 @@ public final class GeminiFrame extends JFrame {
         group.add(twitterItem);
         group.add(fontItem);
 
-        windowsMenu.add(emojiMenu);
+        settingsMenu.add(emojiMenu);
 
         JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem("Adaptive Scrolling", DB.getPref("smoothscrolling", "true").equals("true"));
         smoothItem.addItemListener(ae -> {
@@ -847,7 +847,7 @@ public final class GeminiFrame extends JFrame {
             Util.infoDialog(GeminiFrame.this, "Update", "Mouse wheel adaptive scrolling turned " + txt);
 
         });
-        windowsMenu.add(smoothItem);
+        settingsMenu.add(smoothItem);
 
     }
 
@@ -860,9 +860,9 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void updateWindowsMenu() {
-        windowsMenu.invalidate();
+        settingsMenu.invalidate();
         addWindowsMenu();
-        windowsMenu.validate();
+        settingsMenu.validate();
     }
 
     // change font after restore
@@ -1714,36 +1714,45 @@ public final class GeminiFrame extends JFrame {
             ClientCertInfo certInfo = DB.getClientCertInfo(id);
             String lf = certInfo.cert().endsWith("\n") ? "" : "\n";
             String pem = certInfo.cert() + lf + certInfo.privateKey();
-            showCustomPage(INFO_LABEL, new InfoPageInfo(certInfo.domain() + "." + certInfo.id() + ".pem", pem));
+
+            showCustomPage(INFO_LABEL, new InfoPageInfo(certInfo.domain().substring(0, certInfo.domain().indexOf("/")).replace(':', '-') + "." + certInfo.id() + ".pem", pem));
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
     }
 
     public void deleteCert(int id) {
-        Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete this certificate?", JOptionPane.YES_NO_OPTION, null);
-        if (res instanceof Integer result) {
-            if (result == JOptionPane.YES_OPTION) {
-                try {
-                    String host = DB.getClientCert(id);
+        try {
+            ClientCertInfo certInfo = DB.getClientCertInfo(id);
+            X509Certificate xc = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
+            X500Principal principal = xc.getSubjectX500Principal();
+            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete this certificate?\n" + certInfo.domain() + " [" + principal.getName() + "]", JOptionPane.YES_NO_OPTION, null);
+            if (res instanceof Integer result) {
+                if (result == JOptionPane.YES_OPTION) {
+
                     DB.deleteClientCert(id);
-                    Alhena.removeNetClient(host);
-                    //Alhena.createNetClient();
+                    Alhena.closeNetClient(certInfo);
+
                     refresh();
                     Util.infoDialog(this, "Delete", "Certificate deleted");
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
+
                 }
             }
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
 
     }
 
     public void toggleCert(int id, boolean active, String url) {
         try {
-            DB.toggleCert(id, active, url, false);
-            String host = DB.getClientCert(id);
-            Alhena.removeNetClient(host);
+            URI uri = URI.create(url);
+            int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+            String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
+            DB.toggleCert(id, active, prunedUrl, false);
+            ClientCertInfo certInfo = DB.getClientCertInfo(id);
+            Alhena.closeNetClient(certInfo);
+            //Alhena.removeNetClient(host);
             //Alhena.createNetClient();
             refresh();
         } catch (SQLException ex) {
@@ -1849,6 +1858,27 @@ public final class GeminiFrame extends JFrame {
 
     }
 
+    public void createCert(URI uri) {
+        int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+        String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
+        Page page = visiblePage();
+        boolean success = Alhena.certRequired(null, uri, page, page.getCert(), null);
+        if (success) {
+            try {
+                ClientCertInfo ci = DB.getClientCertInfo(prunedUrl);
+                // if (ci != null) {
+                //     DB.toggleCert(ci.id(), false, prunedUrl, false); // set existing for host to inactive
+
+                // }
+                Alhena.closeNetClient(DB.getClientCertInfo(prunedUrl)); //lazy
+                Util.infoDialog(this, "Added", "New client certificate added for : " + uri + ".");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            refresh();
+        }
+    }
+
     public void importPem(URI uri, File f) {
         String host = uri.getHost();
         if (host == null || !uri.getScheme().equals("gemini")) {
@@ -1869,22 +1899,25 @@ public final class GeminiFrame extends JFrame {
                     Util.infoDialog(this, "Format", "Not a recognized PEM format");
                 } else {
                     String cert = pem.substring(0, idx);
-                    boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(cert) && c.domain().equals(host));
+                    int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+                    String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
+
+                    boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(cert) && c.domain().equals(prunedUrl));
                     if (exists) {
-                        Util.infoDialog(this, "Not Allowed", "This cert already exists for: " + host, JOptionPane.WARNING_MESSAGE);
+                        Util.infoDialog(this, "Not Allowed", "This cert already exists for: " + uri, JOptionPane.WARNING_MESSAGE);
                     } else {
                         String key = pem.substring(idx);
-                        ClientCertInfo ci = DB.getClientCertInfo(host);
+                        ClientCertInfo ci = DB.getClientCertInfo(prunedUrl);
                         if (ci != null) {
-                            DB.toggleCert(ci.id(), false, host, false); // set existing for host to inactive
+                            DB.toggleCert(ci.id(), false, prunedUrl, false); // set existing for host to inactive
 
                         }
 
-                        DB.insertClientCert(host, cert, key, true, null);
+                        DB.insertClientCert(prunedUrl, cert, key, true, null);
                         Alhena.addCertToTrustStore(host, visiblePage().getCert());
-                        //Alhena.createNetClient();
-                        Alhena.removeNetClient(host);
-                        Util.infoDialog(this, "Added", "PEM added for : " + host);
+
+                        Alhena.closeNetClient(DB.getClientCertInfo(prunedUrl)); //lazy
+                        Util.infoDialog(this, "Added", "PEM added for : " + uri);
                     }
 
                 }
