@@ -775,7 +775,7 @@ public final class GeminiFrame extends JFrame {
             Font font = Util.getFont(GeminiFrame.this, defFont);
             if (font != null) {
                 saveFont = font;
-                // System.out.println(font.getFontName() + " " + font.getFamily());
+
                 proportionalFamily = font.getFamily();
                 fontSize = font.getSize();
                 Alhena.updateFrames(false, false);
@@ -848,6 +848,38 @@ public final class GeminiFrame extends JFrame {
 
         });
         settingsMenu.add(smoothItem);
+
+        JMenuItem proxyItem = new JMenuItem("HTTP Proxy");
+        proxyItem.addActionListener(ae -> {
+
+            String proxy = Util.inputDialog(GeminiFrame.this, "HTTP Proxy", "Enter \"host:port\" for HTTP proxy.\nClear to use default HTTP link handling.",
+                    false, Alhena.httpProxy == null ? "" : Alhena.httpProxy);
+            if (proxy != null) {
+                if (proxy.isBlank()) {
+                    Alhena.httpProxy = null;
+                } else {
+                    Alhena.httpProxy = proxy;
+                }
+                DB.insertPref("httpproxy", Alhena.httpProxy);
+            }
+        });
+        settingsMenu.add(proxyItem);
+
+        JMenuItem gopherItem = new JMenuItem("Gopher Proxy");
+        gopherItem.addActionListener(ae -> {
+
+            String proxy = Util.inputDialog(GeminiFrame.this, "Gopher Proxy", "Enter \"host:port\" for Gopher proxy.\nClear to use default Gopher link handling.",
+                    false, Alhena.gopherProxy == null ? "" : Alhena.gopherProxy);
+            if (proxy != null) {
+                if (proxy.isBlank()) {
+                    Alhena.gopherProxy = null;
+                } else {
+                    Alhena.gopherProxy = proxy;
+                }
+                DB.insertPref("gopherproxy", Alhena.gopherProxy);
+            }
+        });        
+        settingsMenu.add(gopherItem);
 
     }
 
@@ -1892,7 +1924,7 @@ public final class GeminiFrame extends JFrame {
 
         if (f != null) {
             try {
-
+    
                 String pem = Files.readString(Path.of(f.getAbsolutePath()));
                 int idx = pem.indexOf("-----BEGIN PRIVATE KEY");
                 if (idx == -1) {
@@ -1914,7 +1946,7 @@ public final class GeminiFrame extends JFrame {
                         }
 
                         DB.insertClientCert(prunedUrl, cert, key, true, null);
-                        Alhena.addCertToTrustStore(host, visiblePage().getCert());
+                        Alhena.addCertToTrustStore(uri, visiblePage().getCert());
 
                         Alhena.closeNetClient(DB.getClientCertInfo(prunedUrl)); //lazy
                         Util.infoDialog(this, "Added", "PEM added for : " + uri);
@@ -1973,7 +2005,7 @@ public final class GeminiFrame extends JFrame {
                 suggestedName = "geminipage.gmi";
             }
         }
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("gemini files (*.gmi)", "gmi");
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("gemini files (*.gmi, *.pem)", "gmi", "pem");
         File saveFile = Util.getFile(this, suggestedName, false, "Save File", filter);
         if (saveFile != null) {
             setBusy(true, textPane);
