@@ -395,7 +395,7 @@ public class Alhena {
         if (url.contains("://")) {
             if (!url.startsWith("gemini://") && !url.startsWith("file://")
                     && !url.startsWith("https://") && !url.startsWith("http://")
-                    && !url.startsWith("titan://") && (gopherProxy == null && url.startsWith("gopher://"))) {
+                    && !url.startsWith("titan://") && !(gopherProxy != null && url.startsWith("gopher://"))) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
                 return;
 
