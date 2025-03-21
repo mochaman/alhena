@@ -667,6 +667,9 @@ public class DB {
             runStatement("DROP TABLE CACERTS");
         }
 
+        Alhena.httpProxy = DB.getPref("httpproxy", null);
+        Alhena.gopherProxy = DB.getPref("gopherproxy", null);
+
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes
         if (version == 1) {
