@@ -20,7 +20,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.net.IDN;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.file.Files;
@@ -38,6 +37,7 @@ import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
@@ -117,13 +117,15 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.2";
+    public final static String VERSION = "4.3";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
     private static String theme;
+    public static String httpProxy;
+    public static String gopherProxy;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -258,7 +260,8 @@ public class Alhena {
 
         // initialize the database
         DB.init();
-
+        httpProxy = DB.getPref("httpproxy", null);
+        gopherProxy = DB.getPref("gopherproxy", null);
         EventQueue.invokeLater(() -> {
 
             theme = DB.getPref("theme", null);
@@ -365,7 +368,7 @@ public class Alhena {
 
     public static void exit(GeminiFrame gf) {
         if (frameList.size() == 1) {
-
+            gf.setVisible(false); // closes faster for the naysayers
             System.exit(0);
         } else {
             gf.shutDown();
@@ -391,7 +394,8 @@ public class Alhena {
         }
         if (url.contains("://")) {
             if (!url.startsWith("gemini://") && !url.startsWith("file://")
-                    && !url.startsWith("https://") && !url.startsWith("titan://")) {
+                    && !url.startsWith("https://") && !url.startsWith("http://")
+                    && !url.startsWith("titan://") && (gopherProxy == null && url.startsWith("gopher://"))) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
                 return;
 
@@ -400,275 +404,268 @@ public class Alhena {
                 return;
             }
         }
-        try {
-            if (url.startsWith("file:/")) {
 
-                URL fileUrl;
-                try {
+        if (url.startsWith("file:/")) {
 
-                    fileUrl = new URL(url);
-                    File file = new File(fileUrl.toURI());
-                    if (file.exists()) {
+            URL fileUrl;
+            try {
 
-                        boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-                        if (matches) {
-                            //boolean[] first = {true};
-                            String fUrl = url;
-                            p.frame().setBusy(true, cPage);
-                            boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
-                            p.textPane.updatePage("", pformatted, fUrl, true);
-                            boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                fileUrl = new URL(url);
 
-                            Buffer imageBuffer = Buffer.buffer();
+                File file = new File(fileUrl.toURI());
+                if (file.exists()) {
 
-                            vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
-                                if (result.succeeded()) {
-                                    AsyncFile asyncFile = result.result();
+                    boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                    if (matches) {
 
-                                    // read the file in chunks
-                                    asyncFile.handler(buffer -> {
-                                        if (isImage) {
-                                            imageBuffer.appendBuffer(buffer);
-                                        } else {
-                                            bg(() -> {
-                                                p.textPane.addPage(buffer.toString());
-                                            });
-                                        }
+                        String fUrl = url;
+                        p.frame().setBusy(true, cPage);
+                        boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
+                        p.textPane.updatePage("", pformatted, fUrl, true);
+                        boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
 
-                                    });
+                        Buffer imageBuffer = Buffer.buffer();
 
-                                    // process the content when reading is done
-                                    asyncFile.endHandler(v -> {
-                                        if (isImage) {
-                                            bg(() -> {
-                                                p.textPane.end(" ", false, fUrl, true);
-                                                p.textPane.insertImage(imageBuffer.getBytes());
-                                                //p.frame().showGlassPane(false);
-                                            });
+                        vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
+                            if (result.succeeded()) {
+                                AsyncFile asyncFile = result.result();
 
-                                        } else {
-                                            bg(() -> {
-                                                p.textPane.end();
-                                                //p.frame().showGlassPane(false);
-                                            });
-                                        }
-
-                                        asyncFile.close();
-
-                                    });
-
-                                    asyncFile.exceptionHandler(throwable -> {
-
-                                        bg(() -> {
-                                            p.textPane.end("## Error reading file\n", false, fUrl, true);
-                                            //p.frame().showGlassPane(false);
-                                        });
-                                    });
-                                } else {
-
-                                    bg(() -> {
-                                        p.textPane.end("## Error opening file\n", false, fUrl, true);
-                                        //p.frame().showGlassPane(false);
-                                    });
-                                }
-                            });
-
-                        } else {
-                            p.textPane.end("## Invalid file type\n", false, url, true);
-                            //p.frame().showGlassPane(false);
-                        }
-                    } else {
-                        p.textPane.end("## File not found\n", false, url, true);
-                        //p.frame().showGlassPane(false);
-                    }
-                } catch (Exception ex) {
-                    p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
-                    ex.printStackTrace();
-                    //p.frame().showGlassPane(false);
-                }
-
-                return;
-            }
-
-            URI prevURI = redirectUrl == null ? p.textPane.getURI() : new URI(redirectUrl);
-
-            if (url.startsWith("https://") || (!url.startsWith("gemini://") && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https")))) {
-
-                if (!url.startsWith("https")) {
-                    url = prevURI.resolve(url).toString();
-                }
-
-                if (httpClient == null) {
-                    HttpClientOptions options = new HttpClientOptions().
-                            setSsl(true).
-                            setTrustAll(true)
-                            .setLogActivity(true);
-                    httpClient = vertx.createHttpClient(options);
-                }
-                p.frame().setBusy(true, cPage);
-                String finalURL = url;
-                URI finalURI = new URI(finalURL);
-
-                httpClient.request(HttpMethod.GET, 443, finalURI.getHost(), finalURI.getPath()).onComplete(ar -> {
-                    HttpClientRequest req = ar.result();
-                    req.send().onComplete(ar2 -> {
-                        if (ar2.succeeded()) {
-                            HttpClientResponse resp = ar2.result();
-
-                            String contentType = resp.getHeader("Content-Type");
-                            if (contentType != null && contentType.startsWith("text/html")) {
-                                resp.body().onSuccess(buffer -> {
-                                    bg(() -> {
-                                        p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
-                                        cPage.setBusy(false);
-                                        //p.frame().showGlassPane(false);
-                                    });
-                                    req.end();
-                                }).onFailure(ex -> {
-                                    ex.printStackTrace();
-                                    bg(() -> {
-                                        p.textPane.end("error getting web page\n", true, finalURL, true);
-                                        //p.frame().showGlassPane(false);
-                                    });
-                                    req.end();
-                                });
-
-                            } else {
-                                try {
-                                    // download!
-                                    File[] file = new File[1];
-                                    resp.pause();
-                                    EventQueue.invokeAndWait(() -> {
-                                        String fileName = finalURL.substring(finalURL.lastIndexOf("/") + 1);
-                                        file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
-
-                                    });
-                                    if (file[0] != null) {
-                                        vertx.fileSystem().open(file[0].getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
-                                            if (fileResult.succeeded()) {
-                                                AsyncFile af = fileResult.result();
-                                                resp.resume();
-
-                                                Pump pump = Pump.pump(resp, af);
-                                                pump.start();
-
-                                                resp.endHandler(eh -> {
-                                                    af.close();
-
-                                                    req.end();
-                                                    bg(() -> {
-                                                        Util.infoDialog(p.frame(), "Complete", file[0].getName() + " downloaded");
-                                                        p.frame().showGlassPane(false);
-                                                    });
-                                                });
-
-                                            }
-                                        });
+                                // read the file in chunks
+                                asyncFile.handler(buffer -> {
+                                    if (isImage) {
+                                        imageBuffer.appendBuffer(buffer);
                                     } else {
-                                        req.end();
                                         bg(() -> {
-
-                                            p.frame().showGlassPane(false);
+                                            p.textPane.addPage(buffer.toString());
                                         });
                                     }
 
-                                } catch (InterruptedException ex) {
-                                } catch (InvocationTargetException ex) {
-                                }
+                                });
+
+                                // process the content when reading is done
+                                asyncFile.endHandler(v -> {
+                                    if (isImage) {
+                                        bg(() -> {
+                                            p.textPane.end(" ", false, fUrl, true);
+                                            p.textPane.insertImage(imageBuffer.getBytes());
+                                            //p.frame().showGlassPane(false);
+                                        });
+
+                                    } else {
+                                        bg(() -> {
+                                            p.textPane.end();
+                                            //p.frame().showGlassPane(false);
+                                        });
+                                    }
+
+                                    asyncFile.close();
+
+                                });
+
+                                asyncFile.exceptionHandler(throwable -> {
+
+                                    bg(() -> {
+                                        p.textPane.end("## Error reading file\n", false, fUrl, true);
+                                        //p.frame().showGlassPane(false);
+                                    });
+                                });
+                            } else {
+
+                                bg(() -> {
+                                    p.textPane.end("## Error opening file\n", false, fUrl, true);
+                                    //p.frame().showGlassPane(false);
+                                });
                             }
-
-                        } else {
-                            ar2.cause().printStackTrace();
-                            bg(() -> {
-                                p.textPane.end("broke\n", true, finalURL, true);
-                                //p.frame().showGlassPane(false);
-                            });
-
-                        }
-                    });
-
-                });
-
-                return;
-
-            }
-
-            if (!url.startsWith("gemini://") && !url.startsWith("titan://")) {
-                if (url.startsWith("//")) {
-                    url = "gemini:" + url;
-                } else if (url.startsWith("/")) {
-                    String port = prevURI.getPort() != -1 ? ":" + prevURI.getPort() : "";
-                    url = "gemini://" + prevURI.getHost() + port + url;
-                } else {
-                    if (url.startsWith("?")) {
-                        String port = prevURI.getPort() != -1 ? ":" + prevURI.getPort() : "";
-                        url = "gemini://" + prevURI.getHost() + port + prevURI.getPath() + "?" + url.substring(1);
+                        });
 
                     } else {
-                        url = prevURI.resolve(url).toString();
+                        p.textPane.end("## Invalid file type\n", false, url, true);
+                        //p.frame().showGlassPane(false);
                     }
-
-                }
-
-            }
-
-            if (!url.contains("://")) {
-                p.textPane.end("Invalid address: " + url + "\n", true, url, true);
-                return;
-            }
-
-            URI origURI = new URI(url).normalize();
-            String origURL = origURI.toString();
-            if (origURI.getPath().isEmpty()) {
-
-                origURL = origURL + "/";
-            }
-
-            String hostPart = url.split("://")[1].split("/")[0];
-
-            for (char c : hostPart.toCharArray()) { // handle emoji
-                if (c > 127) {
-                    String punycodeHost = IDN.toASCII(hostPart, IDN.ALLOW_UNASSIGNED);
-                    url = url.replace(hostPart, punycodeHost);
-                    break;
-                }
-            }
-
-            URI punyURI = new URI(url).normalize();
-            if (punyURI.getScheme().equals("titan") && p.getDataFile() == null) {
-                File titanFile = Util.getFile(p.frame(), "", true, "Upload", null);
-                if (titanFile != null) {
-                    String token = Util.inputDialog(p.frame(), "Token", "Enter token (if required) or leave blank.", false);
-                    if (token != null && !token.isBlank()) {
-                        token = ";token=" + URLEncoder.encode(token).replace("+", "%20");
-                    } else {
-                        token = "";
-                    }
-                    String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
-                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
-                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
-                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
-
-                    p.setDataFile(titanFile);
-                    punyURI = new URI(titanUrl);
-
                 } else {
-
-                    p.textPane.end("## Nothing to send", false, origURL, true);
-                    return;
+                    p.textPane.end("## File not found\n", false, url, true);
+                    //p.frame().showGlassPane(false);
                 }
+            } catch (Exception ex) {
+                p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
+                ex.printStackTrace();
+
             }
 
-
-            fetch(getNetClient(punyURI), punyURI, p, origURL, cPage);
-
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
+            return;
         }
+
+        // URI prevURI = redirectUrl == null ? p.textPane.getURI() : new URI(redirectUrl);
+        URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
+
+        if (httpProxy == null && (url.startsWith("https://") || (!url.startsWith("gemini://") && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
+            if (!url.startsWith("https")) {
+                url = prevURI.resolve(url).toString();
+            }
+            if (httpClient == null) {
+                HttpClientOptions options = new HttpClientOptions().
+                        setSsl(true).
+                        setTrustAll(true)
+                        .setLogActivity(true);
+                httpClient = vertx.createHttpClient(options);
+            }
+            p.frame().setBusy(true, cPage);
+            String finalURL = url;
+
+            URI finalURI = URI.create(finalURL);
+            httpClient.request(HttpMethod.GET, 443, finalURI.getHost(), finalURI.getPath()).onComplete(ar -> {
+                HttpClientRequest req = ar.result();
+                req.send().onComplete(ar2 -> {
+                    if (ar2.succeeded()) {
+                        HttpClientResponse resp = ar2.result();
+                        String contentType = resp.getHeader("Content-Type");
+                        if (contentType != null && contentType.startsWith("text/html")) {
+                            resp.body().onSuccess(buffer -> {
+                                bg(() -> {
+                                    p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
+                                    cPage.setBusy(false);
+                                    //p.frame().showGlassPane(false);
+                                });
+                                req.end();
+                            }).onFailure(ex -> {
+                                ex.printStackTrace();
+                                bg(() -> {
+                                    p.textPane.end("error getting web page\n", true, finalURL, true);
+                                    //p.frame().showGlassPane(false);
+                                });
+                                req.end();
+                            });
+                        } else {
+                            try {
+                                // download!
+                                File[] file = new File[1];
+                                resp.pause();
+                                EventQueue.invokeAndWait(() -> {
+                                    String fileName = finalURL.substring(finalURL.lastIndexOf("/") + 1);
+                                    file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+                                });
+                                if (file[0] != null) {
+                                    vertx.fileSystem().open(file[0].getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
+                                        if (fileResult.succeeded()) {
+                                            AsyncFile af = fileResult.result();
+                                            resp.resume();
+                                            Pump pump = Pump.pump(resp, af);
+                                            pump.start();
+                                            resp.endHandler(eh -> {
+                                                af.close();
+                                                req.end();
+                                                bg(() -> {
+                                                    Util.infoDialog(p.frame(), "Complete", file[0].getName() + " downloaded");
+                                                    p.frame().showGlassPane(false);
+                                                });
+                                            });
+                                        }
+                                    });
+                                } else {
+                                    req.end();
+                                    bg(() -> {
+                                        p.frame().showGlassPane(false);
+                                    });
+                                }
+                            } catch (InterruptedException ex) {
+                            } catch (InvocationTargetException ex) {
+                            }
+                        }
+                    } else {
+                        ar2.cause().printStackTrace();
+                        bg(() -> {
+                            p.textPane.end("broke\n", true, finalURL, true);
+                            //p.frame().showGlassPane(false);
+                        });
+                    }
+                });
+            });
+            return;
+        }
+        if (!url.startsWith("gemini://") && !url.startsWith("titan://") && !url.startsWith("http") && !url.startsWith("gopher://")) {
+
+            if (url.startsWith("//")) {
+
+                url = prevURI.getScheme() + ":" + url;
+            } else if (url.startsWith("/")) {
+                String port = prevURI.getPort() != -1 ? ":" + prevURI.getPort() : "";
+                url = prevURI.getScheme() + "://" + prevURI.getHost() + port + url;
+            } else {
+                if (url.startsWith("?")) {
+                    String port = prevURI.getPort() != -1 ? ":" + prevURI.getPort() : "";
+                    url = prevURI.getScheme() + "://" + prevURI.getHost() + port + prevURI.getPath() + "?" + url.substring(1);
+                } else {
+                    url = prevURI.resolve(url).toString();
+                }
+
+            }
+
+        }
+
+        if (!url.contains("://")) {
+            p.textPane.end("Invalid address: " + url + "\n", true, url, true);
+            return;
+        }
+
+        //URI origURI = new URI(url).normalize();
+        URI origURI = URI.create(url).normalize();
+        String origURL = origURI.toString();
+        if (origURI.getPath().isEmpty()) {
+
+            origURL = origURL + "/";
+        }
+
+        String hostPart = url.split("://")[1].split("/")[0];
+
+        for (char c : hostPart.toCharArray()) { // handle emoji
+            if (c > 127) {
+                String punycodeHost = IDN.toASCII(hostPart, IDN.ALLOW_UNASSIGNED);
+                url = url.replace(hostPart, punycodeHost);
+                break;
+            }
+        }
+
+        URI punyURI = URI.create(url).normalize();
+        if (punyURI.getScheme().equals("titan") && p.getDataFile() == null) {
+            File titanFile = Util.getFile(p.frame(), "", true, "Upload", null);
+            if (titanFile != null) {
+                String token = Util.inputDialog(p.frame(), "Token", "Enter token (if required) or leave blank.", false);
+                if (token != null && !token.isBlank()) {
+                    token = ";token=" + URLEncoder.encode(token).replace("+", "%20");
+                } else {
+                    token = "";
+                }
+                String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
+                String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+                String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+                String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
+
+                p.setDataFile(titanFile);
+
+                punyURI = URI.create(titanUrl);
+
+            } else {
+
+                p.textPane.end("## Nothing to send", false, origURL, true);
+                return;
+            }
+        }
+        String proxyURL = null;
+        if ((httpProxy != null && punyURI.getScheme().startsWith("http"))) {
+
+            proxyURL = punyURI.toString();
+            punyURI = URI.create("gemini://" + httpProxy);
+
+        } else if (gopherProxy != null && punyURI.getScheme().equals("gopher")) {
+            proxyURL = punyURI.toString();
+            punyURI = URI.create("gemini://" + gopherProxy);
+        }
+
+        fetch(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
 
     }
 
-    private static void fetch(NetClient client, URI uri, Page p, String origURL, Page cPage) {
+    private static void fetch(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
         if (p.redirectCount == 0) {
             p.frame().setBusy(true, cPage);
         }
@@ -723,12 +720,12 @@ public class Alhena {
                 // if it turns out this is an image request we need to track where it starts
                 int[] imageStartIdx = {-1};
 
-                String urlText = uri.toString();
+                String urlText = proxyURL == null ? uri.toString() : proxyURL;
 
                 connection.result().write(urlText + "\r\n");
                 if (uri.getScheme().equals("titan")) {
                     if (p.getDataFile() != null) {
-                        //connection.result().write(urlText + "\r\n");
+
                         try {
                             connection.result().write(Buffer.buffer(Files.readAllBytes(p.getDataFile().toPath())));
                         } catch (IOException ex) {
@@ -1129,7 +1126,6 @@ public class Alhena {
                 res = certMap.get(null); // default shared NetClient for connections without client certs
             } else {
                 if (!certMap.containsKey(cci)) {
-                    
                     NetClientOptions options = new NetClientOptions()
                             .setSsl(true) // gemini uses TLS
                             .setTrustAll(true) // gemini self-signed certs
@@ -1189,8 +1185,8 @@ public class Alhena {
             int port = uri.getPort() == -1 ? 1965 : uri.getPort();
             String url = uri.getHost() + ":" + port + uri.getPath();
             ClientCertInfo existingCert = DB.getClientCertInfo(url);
-            if(existingCert != null){
-                DB.toggleCert(existingCert.id(), false, url, false);     
+            if (existingCert != null) {
+                DB.toggleCert(existingCert.id(), false, url, false);
             }
             //DB.toggleCert(ci.id(), false, prunedUrl, false);
             DB.insertClientCert(url, certPem, privateKeyPem, true, null);
@@ -1205,7 +1201,7 @@ public class Alhena {
         String reqURL = uri.toString();
         String serverMsg = msg == null ? "" : "Server: '" + msg + "'\n";
 
-        BooleanSupplier bs = ()->{
+        BooleanSupplier bs = () -> {
             JTextField cnField = new JTextField(PROG_NAME);
 
             JRadioButton dcButton = new JRadioButton("Domain Certificate");
@@ -1226,7 +1222,7 @@ public class Alhena {
             if (cn != null) {
                 String cnString = cnField.getText();
                 cnString = cnString.isEmpty() ? PROG_NAME : cnString;
-                addCertToTrustStore(uri.getHost(), cert);
+                addCertToTrustStore(uri, cert);
 
                 if (dcButton.isSelected()) {
                     URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + "/");
@@ -1258,7 +1254,7 @@ public class Alhena {
         return false; // value doesn't matter when called from type 60 (sent to bg())
     }
 
-    public static void addCertToTrustStore(String host, X509Certificate cert) {
+    public static void addCertToTrustStore(URI uri, X509Certificate cert) {
         // add server certs for sites that require a client certificate
 
         String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
@@ -1273,25 +1269,40 @@ public class Alhena {
                     keyStore.load(is, cacertsPassword.toCharArray());
                 }
 
-                if (keyStore.containsAlias(host)) {
-                    keyStore.deleteEntry(host);
+                if (certExists(keyStore, calculateFingerprint(cert)) != null) {
+                    return;
                 }
 
+                int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+                String newAlias = uri.getHost() + "." + port;
+
                 // add the certificate to the keystore
-                keyStore.setCertificateEntry(host, cert);
+                keyStore.setCertificateEntry(newAlias, cert);
 
                 try (FileOutputStream os = new FileOutputStream(cacertsPath)) {
                     keyStore.store(os, cacertsPassword.toCharArray());
                 }
-            } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
+    private static String calculateFingerprint(X509Certificate cert) throws NoSuchAlgorithmException, CertificateEncodingException {
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] digest = md.digest(cert.getEncoded());
+        StringBuilder sb = new StringBuilder();
+        for (byte b : digest) {
+            sb.append(String.format("%02X:", b));
+        }
+        return sb.substring(0, sb.length()); // Remove trailing colon
+        //return sb.toString();
+
+    }
+
     public static HashMap<String, X509Certificate> getServerCerts(List<String> hostList) {
         // add server certs for sites that require a client certificate
-        HashMap<String, X509Certificate> certMap = new HashMap<>();
+        HashMap<String, X509Certificate> cMap = new HashMap<>();
         String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
         String cacertsPassword = "changeit"; // Default cacerts password
         File f = new File(cacertsPath);
@@ -1305,17 +1316,28 @@ public class Alhena {
                 }
 
                 for (String host : hostList) {
-                    if (keyStore.containsAlias(host)) {
-                        certMap.put(host, (X509Certificate) keyStore.getCertificate(host));
+                    URI uri = URI.create("gemini://" + host);
+                    host = uri.getHost();
+                    int port = uri.getPort();
+                    port = port == -1 ? 1965 : port;
+
+                    X509Certificate cert = (X509Certificate) keyStore.getCertificate(host);
+                    if (cert == null) {
+                        // try with port 
+                        cert = (X509Certificate) keyStore.getCertificate(host + "." + port);
+                    }
+                    if (cert != null /* && certExists(keyStore, calculateFingerprint(cert)) != null*/) {
+                        // TODO: make sure host in correct format BELIEVE OKAY
+                        cMap.put(host + ":" + port, cert);
                     }
                 }
 
-            } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
 
-        return certMap;
+        return cMap;
     }
 
     // used when restoring database
@@ -1335,9 +1357,11 @@ public class Alhena {
 
                 certMap.entrySet().stream().forEach(es -> {
                     try {
-                        if (!keyStore.containsAlias(es.getKey())) {
+
+                        if (certExists(keyStore, calculateFingerprint(es.getValue())) == null) {
                             // add the certificate to the keystore
-                            keyStore.setCertificateEntry(es.getKey(), es.getValue());
+                            String alias = es.getKey().replace(':', '.');
+                            keyStore.setCertificateEntry(alias, es.getValue());
                         }
                     } catch (Exception ex) {
                         ex.printStackTrace();
@@ -1352,6 +1376,22 @@ public class Alhena {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static String certExists(KeyStore keystore, String certFingerprint) throws Exception {
+        for (String alias : java.util.Collections.list(keystore.aliases())) {
+            if (keystore.isCertificateEntry(alias)) {
+                Certificate cert = keystore.getCertificate(alias);
+                if (cert instanceof X509Certificate x509Cert) {
+                    String fingerprint = calculateFingerprint(x509Cert);
+                    if (fingerprint.equalsIgnoreCase(certFingerprint)) {
+                        ;
+                        return alias;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private static SSLContext createSSLContext(ClientCertInfo certInfo, URI uri) throws Exception {
