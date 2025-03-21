@@ -404,7 +404,7 @@ public class GeminiTextPane extends JTextPane {
                                 });
                                 popupMenu.add(menuItem2);
 
-                                if (Alhena.browsingSupported && range.url.startsWith("http")) {
+                                if (Alhena.httpProxy == null && Alhena.browsingSupported && range.url.startsWith("http")) {
                                     String useB = DB.getPref("browser", null);
                                     boolean useBrowser = useB == null ? true : useB.equals("true");
                                     //boolean useBrowser = DB.getPref("browser", "false").equals("true");
@@ -1292,7 +1292,7 @@ public class GeminiTextPane extends JTextPane {
                     () -> {
                         String useB = DB.getPref("browser", null);
                         boolean useBrowser = useB == null ? true : useB.equals("true");
-                        if (finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
+                        if (Alhena.httpProxy == null && finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
                             try {
                                 Desktop.getDesktop().browse(new URI(finalUrl));
                             } catch (Exception ex) {
@@ -1323,7 +1323,7 @@ public class GeminiTextPane extends JTextPane {
         } else if (line.startsWith(">")) {
             addStyledText(lastLine, line.substring(1).trim(), ">", null);
         } else if (line.startsWith("* ")) {
-            addStyledText(lastLine, "🔹 " + line.substring(1).trim(), "*", null);
+            addStyledText(lastLine, "• " + line.substring(1).trim(), "*", null);
 
         } else {
             addStyledText(lastLine, line, "text", null);
@@ -1351,7 +1351,6 @@ public class GeminiTextPane extends JTextPane {
             IndexedEmoji emoji;
             // can't iterate by code point without preprocessing first to get png name
             for (int i = 0; i < text.length(); i++) {
-                //char c = text.charAt(i);
 
                 if ((emoji = isEmoji(emojis, i)) != null) {
                     int codePoint = text.codePointAt(i);
@@ -1453,8 +1452,6 @@ public class GeminiTextPane extends JTextPane {
     private static String getEmojiHex(IndexedEmoji emo) {
 
         String code = emo.getEmoji().getHtmlHexadecimalCode().replace("&#x", "").replace(";", "-");
-        //String code = emo.getEmoji().getUnicodeText().substring(2).replace("\\u", "-");
-        //System.out.println(emo.getEmoji().getHtmlHexadecimalCode() + " " + emo.getEmoji().getUnicodeText());
         return code.substring(0, code.length() - 1);
 
     }
