@@ -13,7 +13,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -388,7 +387,7 @@ public class Alhena {
         // this method needs to be refactored
         url = url.trim();
 
-        if (url.startsWith("alhena")) {
+        if (url.startsWith("alhena:")) {
             processCommand(url, p);
             return;
         }
@@ -582,7 +581,7 @@ public class Alhena {
             });
             return;
         }
-        if (!url.startsWith("gemini://") && !url.startsWith("titan://") && !url.startsWith("http") && !url.startsWith("gopher://")) {
+        if (prevURI != null && (!url.startsWith("gemini://") && !url.startsWith("titan://") && !url.startsWith("http") && !url.startsWith("gopher://"))) {
 
             if (url.startsWith("//")) {
 
@@ -923,7 +922,6 @@ public class Alhena {
                             } else {
 
                                 bg(() -> {
-                                    //System.out.println("buffer: " + buffer.length());
                                     p.textPane.addPage(buffer.toString());
                                 });
                             }
@@ -1459,26 +1457,6 @@ public class Alhena {
         return new JcaX509CertificateConverter().setProvider("BC").getCertificate(certHolder);
     }
 
-    public static void savePrivateKey(PrivateKey privateKey, String filePath) throws Exception {
-        String privateKeyPem = "-----BEGIN PRIVATE KEY-----\n"
-                + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(privateKey.getEncoded())
-                + "\n-----END PRIVATE KEY-----";
-        try (FileWriter writer = new FileWriter(filePath)) {
-            writer.write(privateKeyPem);
-        }
-        System.out.println("Private key saved to " + filePath);
-    }
-
-    public static void saveCertificate(Certificate certificate, String filePath) throws Exception {
-        String certPem = "-----BEGIN CERTIFICATE-----\n"
-                + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(certificate.getEncoded())
-                + "\n-----END CERTIFICATE-----";
-        try (FileWriter writer = new FileWriter(filePath)) {
-            writer.write(certPem);
-        }
-        System.out.println("Certificate saved to " + filePath);
-    }
-
     public static PrivateKey loadPrivateKey(String keyString) throws Exception {
 
         String key = keyString
@@ -1506,34 +1484,74 @@ public class Alhena {
         Document doc = Jsoup.parse(html);
 
         for (Element element : doc.body().children()) {
+
             gemtext.append(processElement(element, host)).append("\n");
+
         }
 
         return gemtext.toString();
     }
 
     private static String processElement(Element element, String host) {
+        if (element.hasAttr("hidden")) {
+            return "";
+        }
+
         String tagName = element.tagName();
+
         return switch (tagName) {
 
             case "div" -> {
                 StringBuilder gt = new StringBuilder();
                 element.children().stream().forEach(child -> {
-                    gt.append(processElement(child, host)).append("\n");
+                    String line = processElement(child, host).trim();
+                    if (!line.isBlank()) {
+
+                        gt.append(line).append("\n");
+                    }
                 });
                 yield gt.toString();
             }
-            case "h1", "h2", "h3" ->
-                "#".repeat(tagName.charAt(1) - '0') + " " + element.text();
-            case "p" ->
-                element.text();
+            case "h1", "h2", "h3" -> {
+
+                yield "#".repeat(tagName.charAt(1) - '0') + " " + element.text();
+            }
+            case "img" -> {
+                String src = element.attr("src");
+                String alt = element.attr("alt");
+                yield "=> " + src + " " + alt;
+
+            }
+            case "p" -> {
+                StringBuilder sb = new StringBuilder();
+
+                boolean match = processBlock(sb, element, host, element.text());
+                if (!match) {
+                    sb.insert(0, element.text() + "\n");
+                }
+                yield sb.toString();
+
+            }
+            case "pre" -> {
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("```\n");
+                sb.append(element.text() + "\n");
+                sb.append("```\n");
+                yield sb.toString();
+
+            }
             case "a" -> {
                 String href = element.attr("href");
                 String origHref = href;
-                if (href.startsWith("/")) {
+                if (href.startsWith("#")) {
+                    yield "";
+                }
+                if (href.startsWith("/") && host != null) {
                     href = host + href;
                 }
                 String elemText = element.text();
+
                 if (elemText == null || elemText.isEmpty()) {
                     elemText = origHref;
                 }
@@ -1541,11 +1559,59 @@ public class Alhena {
             }
             case "ul", "ol" ->
                 processList(element);
-            case "li" ->
-                "* " + element.text();
-            default ->
-                element.text();
+            case "li" -> {
+                if (element.ownText().isBlank()) {
+                    StringBuilder sb = new StringBuilder();
+
+                    element.children().stream().forEach(child -> {
+                        sb.append(processElement(child, host)).append("\n");
+                    });
+                    yield sb.toString();
+                } else {
+                    yield "* " + element.text();
+                }
+
+            }
+
+            default -> {
+                if (element.ownText().isBlank()) {
+
+                    StringBuilder sb = new StringBuilder();
+                    if (tagName.equals("tr")) {
+                        sb.append("-".repeat(100) + "\n");
+                    }
+
+                    element.children().stream().forEach(child -> {
+                        String line = processElement(child, host);
+
+                        if (!line.isBlank() && !child.hasAttr("hidden")) {
+                            sb.append(line.trim()).append("\n");
+                        }
+                    });
+                    yield sb.toString();
+                } else {
+
+                    yield element.text();
+
+                }
+
+            }
+
         };
+    }
+
+    private static boolean processBlock(StringBuilder sb, Element element, String host, String text) {
+        boolean[] ret = {false};
+        element.children().stream().forEach(child -> {
+            String line = processElement(child, host);
+            if (!line.isBlank()) { // weak sauce. avoid double-output of text if this element's contents match the parent's text (single <a> in <p>)
+                if (line.endsWith(text)) {
+                    ret[0] = true;
+                }
+                sb.append(line).append("\n");
+            }
+        });
+        return ret[0];
     }
 
     private static String processList(Element element) {
