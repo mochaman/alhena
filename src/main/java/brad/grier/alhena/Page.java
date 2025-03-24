@@ -32,6 +32,7 @@ public class Page extends JPanel {
     private long elapsed;
     public int redirectCount;
     private boolean busy = true;
+    private boolean isSpartan;
 
     private Page() {
 
@@ -58,6 +59,14 @@ public class Page extends JPanel {
         }
         add(scrollPane, BorderLayout.CENTER);
 
+    }
+
+    public void setSpartan(boolean isSpartan){
+        this.isSpartan = isSpartan;
+    }
+
+    public boolean isSpartan(){
+        return isSpartan;
     }
 
     public void setStart() {
