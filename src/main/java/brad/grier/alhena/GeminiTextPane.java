@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+import javax.swing.JCheckBox;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -445,7 +447,7 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         popupMenu.add(actionItem);
                                         JMenuItem delItem = new JMenuItem("Delete");
-                                        delItem.addActionListener(al -> {                                            
+                                        delItem.addActionListener(al -> {
                                             f.deleteCert(id);
                                         });
                                         popupMenu.add(delItem);
@@ -1149,7 +1151,15 @@ public class GeminiTextPane extends JTextPane {
     private float pfAdjust = 0.0f;
 
     private void buildStyles() {
-        emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
+        //emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
+        emojiProportional = "Noto Emoji";
+        if (SystemInfo.isMacOS) {
+            boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
+            if (!macUseNoto) {
+                emojiProportional = "SansSerif";
+            }
+        }
+
         boolean isDark = UIManager.getBoolean("laf.dark");
 
         linkColor = UIManager.getColor("Component.linkColor");
@@ -1263,9 +1273,9 @@ public class GeminiTextPane extends JTextPane {
             addStyledText(lastLine, line.substring(2).trim(), "##", null);
         } else if (line.startsWith("#")) {
             addStyledText(lastLine, line.substring(1).trim(), "#", null);
-        } else if (line.startsWith("=>")) {
+        } else if (line.startsWith("=>") || (line.startsWith("=: ") && page.isSpartan())) {
             String ll = line.substring(2).trim();
-
+            boolean spartanLink = line.startsWith("=: ");
             int i;
             for (i = 0; i < ll.length(); i++) {
                 if (Character.isWhitespace(ll.charAt(i))) {
@@ -1292,7 +1302,20 @@ public class GeminiTextPane extends JTextPane {
                     () -> {
                         String useB = DB.getPref("browser", null);
                         boolean useBrowser = useB == null ? true : useB.equals("true");
-                        if (Alhena.httpProxy == null && finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
+                        if (spartanLink) {
+                            JCheckBox cb = new JCheckBox("Upload File");
+                            String text = Util.inputDialog(f, "Enter Text", "Enter Text", false, null, cb);
+                            if (cb.isSelected()) {
+                                File uploadFile = Util.getFile(f, null, true, "Select", null);
+                                if(uploadFile != null){
+                                    f.addClickedLink(finalUrl);
+                                    f.fetchURL(finalUrl, uploadFile);
+                                }
+                            } else if (text != null && !text.isBlank()) {
+                                f.addClickedLink(finalUrl);
+                                f.fetchURL(finalUrl + "?" + URLEncoder.encode(text).replace("+", "%20"));
+                            }
+                        } else if (Alhena.httpProxy == null && finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
                             try {
                                 Desktop.getDesktop().browse(new URI(finalUrl));
                             } catch (Exception ex) {
@@ -1307,9 +1330,9 @@ public class GeminiTextPane extends JTextPane {
 
                         } else if (currentMode == CERT_MODE) {
 
-                                int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
-                                boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
-                                f.toggleCert(id, !active, finalUrl);
+                            int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
+                            boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
+                            f.toggleCert(id, !active, finalUrl);
 
                         } else {
                             f.addClickedLink(finalUrl);
@@ -1404,7 +1427,7 @@ public class GeminiTextPane extends JTextPane {
 
                         i++;
 
-                        StyleConstants.setFontFamily(style, monospace ? monospacedFamily : emojiProportional);
+                        StyleConstants.setFontFamily(style, emojiProportional);
 
                         insertString(doc.getLength(), new String(chars), style);
                     }
