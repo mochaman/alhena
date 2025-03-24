@@ -116,7 +116,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.3";
+    public final static String VERSION = "4.4";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
@@ -140,16 +140,14 @@ public class Alhena {
                     // closing and recreating the client doesn't work for ending connection handshake
                     // close vertx and recreate
                     httpClient = null;
+                    spartanClient = null;
                     vertx.close();
                     VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
                     vertx = Vertx.vertx(options);
 
                     // reset all connections in map
                     synchronized (certMap) {
-                        certMap.entrySet().forEach(es -> {
-                            es.getValue().close();
 
-                        });
                         certMap.clear();
                     }
 
@@ -392,7 +390,8 @@ public class Alhena {
             return;
         }
         if (url.contains("://")) {
-            if (!url.startsWith("gemini://") && !url.startsWith("file://")
+            // optimize this
+            if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("spartan://")
                     && !url.startsWith("https://") && !url.startsWith("http://")
                     && !url.startsWith("titan://") && !(gopherProxy != null && url.startsWith("gopher://"))) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
@@ -497,7 +496,7 @@ public class Alhena {
         // URI prevURI = redirectUrl == null ? p.textPane.getURI() : new URI(redirectUrl);
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
 
-        if (httpProxy == null && (url.startsWith("https://") || (!url.startsWith("gemini://") && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
+        if (httpProxy == null && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
             if (!url.startsWith("https")) {
                 url = prevURI.resolve(url).toString();
             }
@@ -581,32 +580,37 @@ public class Alhena {
             });
             return;
         }
-        if (prevURI != null && (!url.startsWith("gemini://") && !url.startsWith("titan://") && !url.startsWith("http") && !url.startsWith("gopher://"))) {
 
+        URI checkURI = URI.create(url);
+
+        // because getHost() can return null for hosts with emoji
+        String authority = checkURI.getAuthority();
+        String host = authority != null ? authority.split(":")[0] : null;
+
+        if (prevURI != null) {
             if (url.startsWith("//")) {
-
                 url = prevURI.getScheme() + ":" + url;
-            } else if (url.startsWith("/")) {
-                String port = prevURI.getPort() != -1 ? ":" + prevURI.getPort() : "";
-                url = prevURI.getScheme() + "://" + prevURI.getHost() + port + url;
             } else {
-                if (url.startsWith("?")) {
-                    String port = prevURI.getPort() != -1 ? ":" + prevURI.getPort() : "";
-                    url = prevURI.getScheme() + "://" + prevURI.getHost() + port + prevURI.getPath() + "?" + url.substring(1);
-                } else {
-                    url = prevURI.resolve(url).toString();
+
+                if (host == null) {
+
+                    if (checkURI.getScheme() == null) {
+                        url = prevURI.resolve(checkURI).toString();
+                    } else {
+                        //  corner case - no host but there's a scheme - is this legal?
+                        // spartan://greatfractal.com/
+                        url = prevURI.resolve(URI.create(checkURI.getPath())).toString();
+                    }
+
                 }
-
             }
-
         }
 
-        if (!url.contains("://")) {
+        if (!url.contains(":/")) {
             p.textPane.end("Invalid address: " + url + "\n", true, url, true);
             return;
         }
 
-        //URI origURI = new URI(url).normalize();
         URI origURI = URI.create(url).normalize();
         String origURL = origURI.toString();
         if (origURI.getPath().isEmpty()) {
@@ -614,8 +618,8 @@ public class Alhena {
             origURL = origURL + "/";
         }
 
+        // handle those hosts with emoji (shrimp and whatnot)
         String hostPart = url.split("://")[1].split("/")[0];
-
         for (char c : hostPart.toCharArray()) { // handle emoji
             if (c > 127) {
                 String punycodeHost = IDN.toASCII(hostPart, IDN.ALLOW_UNASSIGNED);
@@ -623,7 +627,6 @@ public class Alhena {
                 break;
             }
         }
-
         URI punyURI = URI.create(url).normalize();
         if (punyURI.getScheme().equals("titan") && p.getDataFile() == null) {
             File titanFile = Util.getFile(p.frame(), "", true, "Upload", null);
@@ -660,15 +663,315 @@ public class Alhena {
             punyURI = URI.create("gemini://" + gopherProxy);
         }
 
-        fetch(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
+        if (punyURI.getScheme().equals("gemini") || punyURI.getScheme().equals("titan")) {
+            gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
+        } else {
+            spartan(punyURI, p, origURL, cPage);
+        }
 
     }
 
-    private static void fetch(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
+    private static boolean isUTF8(Buffer buffer) {
+        if (buffer.length() == 0) {
+            System.out.println("0 length");
+            return false;
+        }
+        try {
+            buffer.toString("UTF-8");
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void spartan(URI uri, Page p, String origURL, Page cPage) {
         if (p.redirectCount == 0) {
             p.frame().setBusy(true, cPage);
         }
+        p.setSpartan(true);
+        if (spartanClient == null) {
+            NetClientOptions options = new NetClientOptions()
+                    .setConnectTimeout(60000)
+                    .setSsl(false).setHostnameVerificationAlgorithm("HTTPS");
 
+            spartanClient = vertx.createNetClient(options);
+
+        }
+        String host = uri.getHost();
+
+        int[] port = {uri.getPort()};
+
+        if (port[0] == -1) {
+            port[0] = 300;
+        }
+        spartanClient.connect(port[0], host, connection -> {
+            if (connection.succeeded()) {
+
+                System.out.println("connected: " + host);
+                // wrap for the lambda
+                boolean[] firstBuffer = {true};
+                // if it turns out this is an image request we need to track where it starts
+                int[] imageStartIdx = {-1};
+
+                // if (isSpartan) {
+                File uploadFile = p.getDataFile();
+                String path = uri.getPath();
+                if (uploadFile == null) {
+                    String query = uri.getQuery();
+                    int length = query == null ? 0 : query.length();
+
+                    String urlText = uri.getHost() + " " + (path.isEmpty() ? "/" : path) + " " + length + "\r\n";
+                    if (query != null) {
+                        urlText += query;
+                    }
+                    connection.result().write(urlText);
+                } else {
+                    String urlText = uri.getHost() + " " + (path.isEmpty() ? "/" : path) + " " + uploadFile.length() + "\r\n";
+                    connection.result().write(urlText);
+
+                    String fp = p.getDataFile().getAbsolutePath();
+                    p.setDataFile(null);
+                    streamToSocket(fp, connection.result(), p, origURL);
+
+                }
+
+                Buffer saveBuffer = Buffer.buffer();
+
+                boolean[] error = {false};
+                // Handle the response
+                connection.result().handler(buffer -> {
+
+                    // we have to make sure we have the entire header before we proceed
+                    if (firstBuffer[0]) {
+
+                        saveBuffer.appendBuffer(buffer);
+                        char respCode = (char) saveBuffer.getByte(0);
+
+                        boolean firstLine = false;
+                        int i;
+                        for (i = 0; i < saveBuffer.length(); i++) {
+                            if (((char) saveBuffer.getByte(i)) == '\n') {
+                                //end of first line
+                                firstLine = true;
+                                break;
+                            }
+                        }
+                        if (!firstLine) {
+                            return;
+                        }
+                        firstBuffer[0] = false;
+
+                        switch (respCode) {
+
+                            case '2' -> {
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
+
+                                // have to assume there's at least one byte
+                                String mime = saveBuffer.getString(2, i - 1);
+                                if (mime.isBlank()) {
+                                    mime = "text/gemini"; // apparently mime type is optional in type 20 -  NOT ANYMORE
+                                }
+                                System.out.println("mime type: " + mime);
+
+                                if (mime.startsWith("text/gemini")) {
+                                    final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
+                                    bg(() -> {
+                                        p.textPane.updatePage(chunk, false, origURL, true);
+                                    });
+                                } else if (mime.startsWith("text/") || isUTF8(saveBuffer.slice(i + 1, saveBuffer.length()))) {
+                                    final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
+                                    bg(() -> {
+                                        p.textPane.updatePage(chunk, true, origURL, true);
+                                    });
+                                } else if (mime.startsWith("image/")) {
+                                    imageStartIdx[0] = i + 1;
+                                    try {
+                                        DB.insertHistory(origURL, null);
+                                    } catch (SQLException ex) {
+                                        ex.printStackTrace();
+                                    }
+
+                                } else {
+                                    File[] file = new File[1];
+                                    connection.result().pause();
+                                    connection.result().handler(null);
+
+                                    if (p.getDataFile() == null) {
+
+                                        try {
+
+                                            EventQueue.invokeAndWait(() -> {
+                                                String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
+                                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+
+                                            });
+                                        } catch (Exception ex) {
+                                            ex.printStackTrace();
+                                        }
+
+                                        if (file[0] == null) {
+                                            // canceled
+                                            //textPane.end("# Download canceled", false, origURL, true, r);
+                                            connection.result().close();
+                                            p.frame().showGlassPane(false);
+                                            return;
+                                        }
+                                    } else {
+                                        file[0] = p.getDataFile();
+                                    }
+
+                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL);
+                                    return;
+                                }
+                            }
+
+                            case '3' -> {
+                                if (p.redirectCount++ == 6) {
+                                    p.redirectCount = 0;
+                                    connection.result().close();
+                                    bg(() -> {
+                                        p.textPane.end("## Too many redirects", false, origURL, true);
+
+                                    });
+                                    return;
+                                }
+                                String redirectPath = saveBuffer.getString(2, i - 1).trim();
+                                p.redirectCount++;
+                                String prt = port[0] == 300 ? "" : (":" + port[0]);
+                                // can redirect return full path?
+                                String redirect = "spartan://" + uri.getHost() + prt + redirectPath;
+                                processURL(redirect, p, origURL, cPage);
+                            }
+                            case '4', '5' -> {
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
+                                String errorMsg = saveBuffer.getString(0, i - 1).trim();
+
+                                bg(() -> {
+                                    p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
+                                });
+                            }
+
+                            default -> {
+                                if (p.redirectCount > 0) {
+                                    p.redirectCount--;
+                                }
+                                connection.result().close();
+                                bg(() -> {
+                                    p.textPane.end("## Invalid response", false, origURL, true);
+
+                                });
+                                return;
+
+                            }
+                        }
+
+                    } else {
+                        //p.redirectCount = 0;
+                        if (!error[0]) {
+                            if (imageStartIdx[0] != -1) {
+                                saveBuffer.appendBuffer(buffer);
+                            } else {
+
+                                bg(() -> {
+                                    p.textPane.addPage(buffer.toString());
+                                });
+                            }
+
+                        }
+                    }
+
+                });
+
+                connection.result().closeHandler(v -> {
+                    if (p.redirectCount > 0) {
+                        p.redirectCount--;
+                    }
+                    System.out.println("connection closed");
+                    if (imageStartIdx[0] != -1) {
+
+                        bg(() -> {
+                            // insert into existing page and not new page created for the call to processUrl
+                            // get rid of this - maybe put spawning page in page ref
+
+                            GeminiTextPane tPane = cPage.textPane;
+
+                            if (tPane.awatingImage()) {
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+
+                            } else {
+                                p.textPane.end(" ", false, origURL, true);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                            }
+                        });
+                    } else {
+                        if (p.redirectCount == 0) {
+                            bg(() -> {
+                                p.textPane.end();
+
+                            });
+                        }
+                    }
+
+                });
+            } else {
+                p.redirectCount = 0;
+                if (interrupted) {
+                    interrupted = false;
+                    p.frame().setBusy(false, cPage);
+                } else {
+                    bg(() -> {
+                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                    });
+                    //connection.cause().printStackTrace();
+                    System.out.println("Failed to connect: " + connection.cause().getMessage());
+                }
+            }
+        });
+
+    }
+
+    private static void streamToSocket(String path, NetSocket socket, Page p, String origURL) {
+        vertx.fileSystem().open(path, new OpenOptions().setRead(true), fileResult -> {
+            if (fileResult.succeeded()) {
+                AsyncFile asyncFile = fileResult.result();
+                Pump pump = Pump.pump(asyncFile, socket);
+                pump.start();
+
+                // Once the file is fully read, wait for the server response
+                asyncFile.endHandler(v -> {
+                    //System.out.println("File sent. Waiting for server response...");
+                    asyncFile.close();
+                });
+
+                asyncFile.exceptionHandler(err -> {
+                    //System.err.println("File read error: " + err.getMessage());
+                    err.printStackTrace();
+                    asyncFile.close();
+                    socket.close();
+                    bg(() -> {
+                        p.textPane.end("## Error sending file", false, origURL, true);
+                    });
+
+                });
+            } else {
+                fileResult.cause().printStackTrace();
+                bg(() -> {
+                    p.textPane.end("## Error opening file", false, origURL, true);
+                });
+                //System.err.println("Failed to open file: " + fileResult.cause().getMessage());
+            }
+        });
+    }
+
+    private static void gemini(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
+        if (p.redirectCount == 0) {
+            p.frame().setBusy(true, cPage);
+        }
+        // boolean isSpartan = uri.getScheme().equals("spartan");
         String host = uri.getHost();
 
         // TODO: make sure there's no fragment - I think
@@ -720,20 +1023,18 @@ public class Alhena {
                 int[] imageStartIdx = {-1};
 
                 String urlText = proxyURL == null ? uri.toString() : proxyURL;
-
                 connection.result().write(urlText + "\r\n");
+
                 if (uri.getScheme().equals("titan")) {
                     if (p.getDataFile() != null) {
+                        streamToSocket(p.getDataFile().getAbsolutePath(), connection.result(), p, origURL);
 
-                        try {
-                            connection.result().write(Buffer.buffer(Files.readAllBytes(p.getDataFile().toPath())));
-                        } catch (IOException ex) {
-                            connection.result().close();
-                            p.textPane.end("## Error sending file", false, origURL, true);
-                        }
                     } else {
                         connection.result().close();
-                        p.textPane.end("## Nothing to send", false, origURL, true);
+                        bg(() -> {
+                            p.textPane.end("## Nothing to send", false, origURL, true);
+                        });
+
                         return;
                     }
                 }
@@ -1053,37 +1354,47 @@ public class Alhena {
     }
 
     private static void streamToFile(NetSocket socket, File outFile, Buffer buffer, Page p, String url) {
-        vertx.fileSystem().open(outFile.getAbsolutePath(), new OpenOptions().setWrite(true).setCreate(true), fileRes -> {
+        vertx.fileSystem().open(outFile.getAbsolutePath(), new OpenOptions().setWrite(true).setCreate(true).setTruncateExisting(true), fileRes -> {
             if (fileRes.succeeded()) {
                 AsyncFile file = fileRes.result();
 
                 file.write(buffer);
 
+                boolean[] done = {false};
+                Runnable r = () -> {
+                    if (!done[0]) {
+                        done[0] = true;
+                        file.close();
+                        bg(() -> {
+                            try {
+                                DB.insertHistory(url, null);
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                            p.frame().showGlassPane(false);
+                            if (p.getDataFile() == null) {
+                                Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
+                            } else {
+                                // restore downloaded file
+                                Util.importData(p.frame(), outFile, true);
+                            }
+                        });
+                    }
+                };
+
+                socket.endHandler(v -> {
+                    r.run();
+                });
+                // Close file when socket closes
+                socket.closeHandler(v -> {
+                    r.run();
+
+                });
                 // socket.handler(null);
                 socket.resume();
                 // Use Pump to stream to file
                 Pump pump = Pump.pump(socket, file);
                 pump.start();
-
-                // Close file when socket closes
-                socket.closeHandler(v -> {
-                    file.close();
-                    bg(() -> {
-                        try {
-                            DB.insertHistory(url, null);
-                        } catch (SQLException ex) {
-                            ex.printStackTrace();
-                        }
-                        p.frame().showGlassPane(false);
-                        if (p.getDataFile() == null) {
-                            Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
-                        } else {
-                            // restore downloaded file
-                            Util.importData(p.frame(), outFile, true);
-                        }
-                    });
-
-                });
 
             } else {
                 p.textPane.end("# Failed to open file: " + outFile, false, url, true);
@@ -1106,6 +1417,7 @@ public class Alhena {
             certMap.remove(cci);
         }
     }
+    private static NetClient spartanClient = null;
 
     public static NetClient getNetClient(URI uri) {
         NetClient res = null;
