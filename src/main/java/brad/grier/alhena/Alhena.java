@@ -615,7 +615,8 @@ public class Alhena {
         String origURL = origURI.toString();
         if (origURI.getPath().isEmpty()) {
 
-            origURL = origURL + "/";
+            origURL += "/"; // origURL keeps the emoji
+            url += "/";
         }
 
         // handle those hosts with emoji (shrimp and whatnot)
@@ -673,7 +674,7 @@ public class Alhena {
 
     private static boolean isUTF8(Buffer buffer) {
         if (buffer.length() == 0) {
-            System.out.println("0 length");
+
             return false;
         }
         try {
