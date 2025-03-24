@@ -48,6 +48,7 @@ import java.util.Base64;
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -142,7 +143,7 @@ public class Util {
     }
 
     public static String inputDialog(Frame c, String title, String msg, boolean pswd) {
-        return inputDialog(c, title, msg, pswd, null);
+        return inputDialog(c, title, msg, pswd, null, null);
     }
 
     public static String inputDialog2(Component c, String title, Object[] components) {
@@ -196,7 +197,7 @@ public class Util {
 
     }
 
-    public static String inputDialog(Frame c, String title, String msg, boolean pswd, String inputFieldText) {
+    public static String inputDialog(Frame c, String title, String msg, boolean pswd, String inputFieldText, JComponent addComp) {
         JTextArea textArea = new JTextArea(1, 35);
 
         textArea.setLineWrap(true);
@@ -210,9 +211,9 @@ public class Util {
         if (inputFieldText != null) {
             textField.setText(inputFieldText);
         }
-
+        
         Object[] message = {
-            msg, textField
+            msg, textField, addComp
         };
         JOptionPane optionPane = new JOptionPane(
                 message, // Message
