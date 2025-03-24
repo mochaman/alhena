@@ -667,7 +667,7 @@ public final class GeminiFrame extends JFrame {
         viewMenu.add(new JSeparator());
 
         viewMenu.add(createMenuItem("Find", KeyStroke.getKeyStroke(KeyEvent.VK_F, mod), () -> {
-            String input = Util.inputDialog(this, "Find In Page", "Enter search term", false, lastSearch);
+            String input = Util.inputDialog(this, "Find In Page", "Enter search term", false, lastSearch, null);
             if (input != null) {
                 lastSearch = input;
                 if (!visiblePage().textPane.find(input)) {
@@ -788,38 +788,52 @@ public final class GeminiFrame extends JFrame {
         }));
         String emojiPref = DB.getPref("emoji", null);
         emojiPref = emojiPref == null ? "google" : emojiPref;
+        boolean macUseNoto = false;
+        if(SystemInfo.isMacOS && emojiPref.equals("font")){
+            macUseNoto = DB.getPref("macusenoto", "false").equals("true");
+        }
 
         JMenu emojiMenu = new JMenu("Emoji");
         JRadioButtonMenuItem appleItem = new JRadioButtonMenuItem("Apple", emojiPref.equals("apple"));
         if (appleItem.isSelected()) {
             lastSelectedItem = appleItem;
         }
-        appleItem.addActionListener(al -> setEmoji("apple", al));
+        appleItem.addActionListener(al -> setEmoji("apple", al, false));
         emojiMenu.add(appleItem);
         JRadioButtonMenuItem fbItem = new JRadioButtonMenuItem("Facebook", emojiPref.equals("facebook"));
         if (fbItem.isSelected()) {
             lastSelectedItem = fbItem;
         }
-        fbItem.addActionListener(al -> setEmoji("facebook", al));
+        fbItem.addActionListener(al -> setEmoji("facebook", al, false));
         emojiMenu.add(fbItem);
         JRadioButtonMenuItem googleItem = new JRadioButtonMenuItem("Google", emojiPref.equals("google"));
         if (googleItem.isSelected()) {
             lastSelectedItem = googleItem;
         }
-        googleItem.addActionListener(al -> setEmoji("google", al));
+        googleItem.addActionListener(al -> setEmoji("google", al, false));
         emojiMenu.add(googleItem);
         JRadioButtonMenuItem twitterItem = new JRadioButtonMenuItem("Twitter", emojiPref.equals("twitter"));
         if (twitterItem.isSelected()) {
             lastSelectedItem = twitterItem;
         }
-        twitterItem.addActionListener(al -> setEmoji("twitter", al));
+        twitterItem.addActionListener(al -> setEmoji("twitter", al, false));
         emojiMenu.add(twitterItem);
-        JRadioButtonMenuItem fontItem = new JRadioButtonMenuItem("Font", emojiPref.equals("font"));
+        JRadioButtonMenuItem fontItem = new JRadioButtonMenuItem("Font", emojiPref.equals("font") && !macUseNoto);
         if (fontItem.isSelected()) {
             lastSelectedItem = fontItem;
         }
-        fontItem.addActionListener(al -> setEmoji("font", al));
+        fontItem.addActionListener(al -> setEmoji("font", al, false));
         emojiMenu.add(fontItem);
+
+        JRadioButtonMenuItem notoItem = null;
+        if (SystemInfo.isMacOS) {
+            notoItem = new JRadioButtonMenuItem("Noto", emojiPref.equals("font") && macUseNoto);
+            if (notoItem.isSelected()) {
+                lastSelectedItem = notoItem;
+            }
+            notoItem.addActionListener(al -> setEmoji("font", al, true));
+            emojiMenu.add(notoItem);
+        }
 
         ButtonGroup group = new ButtonGroup();
         group.add(appleItem);
@@ -827,6 +841,9 @@ public final class GeminiFrame extends JFrame {
         group.add(googleItem);
         group.add(twitterItem);
         group.add(fontItem);
+        if (notoItem != null) {
+            group.add(notoItem);
+        }
 
         settingsMenu.add(emojiMenu);
 
@@ -853,7 +870,7 @@ public final class GeminiFrame extends JFrame {
         proxyItem.addActionListener(ae -> {
 
             String proxy = Util.inputDialog(GeminiFrame.this, "HTTP Proxy", "Enter \"host:port\" for HTTP proxy.\nClear to use default HTTP link handling.",
-                    false, Alhena.httpProxy == null ? "" : Alhena.httpProxy);
+                    false, Alhena.httpProxy == null ? "" : Alhena.httpProxy, null);
             if (proxy != null) {
                 if (proxy.isBlank()) {
                     Alhena.httpProxy = null;
@@ -869,7 +886,7 @@ public final class GeminiFrame extends JFrame {
         gopherItem.addActionListener(ae -> {
 
             String proxy = Util.inputDialog(GeminiFrame.this, "Gopher Proxy", "Enter \"host:port\" for Gopher proxy.\nClear to use default Gopher link handling.",
-                    false, Alhena.gopherProxy == null ? "" : Alhena.gopherProxy);
+                    false, Alhena.gopherProxy == null ? "" : Alhena.gopherProxy, null);
             if (proxy != null) {
                 if (proxy.isBlank()) {
                     Alhena.gopherProxy = null;
@@ -878,7 +895,7 @@ public final class GeminiFrame extends JFrame {
                 }
                 DB.insertPref("gopherproxy", Alhena.gopherProxy);
             }
-        });        
+        });
         settingsMenu.add(gopherItem);
 
     }
@@ -925,14 +942,19 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void setEmoji(String setName, ActionEvent ae) {
+    private void setEmoji(String setName, ActionEvent ae, boolean macUseNoto) {
         JRadioButtonMenuItem selected = (JRadioButtonMenuItem) ae.getSource();
         String savedSet = DB.getPref("emoji", null);
-        if (!setName.equals(savedSet)) {
+        // why not a "noto" value for "emoji" pref? Backwards compatibility with previous versions (also other operating systems on restore)
+        boolean savedMacNotoPref = DB.getPref("macusenoto", "false").equals("true");
+        if (!setName.equals(savedSet) || macUseNoto != savedMacNotoPref) {
             if (setName.equals("font")) {
+
                 // use font
                 GeminiTextPane.setSheetImage(null);
-                DB.insertPref("emoji", "font");
+                DB.insertPref("emoji", setName);
+                DB.insertPref("macusenoto", String.valueOf(macUseNoto));
+                
                 Alhena.updateFrames(false, false);
                 lastSelectedItem = selected;
             } else {
@@ -1924,7 +1946,7 @@ public final class GeminiFrame extends JFrame {
 
         if (f != null) {
             try {
-    
+
                 String pem = Files.readString(Path.of(f.getAbsolutePath()));
                 int idx = pem.indexOf("-----BEGIN PRIVATE KEY");
                 if (idx == -1) {
