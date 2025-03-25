@@ -125,6 +125,7 @@ public class Alhena {
     private static String theme;
     public static String httpProxy;
     public static String gopherProxy;
+    private static NetClient spartanClient = null;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -672,17 +673,17 @@ public class Alhena {
 
     }
 
-    private static boolean isUTF8(Buffer buffer) {
-        if (buffer.length() == 0) {
+    public static boolean isAscii(Buffer buffer) {
 
+        if (buffer.length() == 0) {
             return false;
         }
-        try {
-            buffer.toString("UTF-8");
-            return true;
-        } catch (Exception e) {
-            return false;
+        for (int i = 0; i < buffer.length(); i++) {
+            if ((buffer.getByte(i) & 0xFF) > 127) {
+                return false;
+            }
         }
+        return true;
     }
 
     private static void spartan(URI uri, Page p, String origURL, Page cPage) {
@@ -694,7 +695,6 @@ public class Alhena {
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
                     .setSsl(false).setHostnameVerificationAlgorithm("HTTPS");
-
             spartanClient = vertx.createNetClient(options);
 
         }
@@ -714,7 +714,6 @@ public class Alhena {
                 // if it turns out this is an image request we need to track where it starts
                 int[] imageStartIdx = {-1};
 
-                // if (isSpartan) {
                 File uploadFile = p.getDataFile();
                 String path = uri.getPath();
                 if (uploadFile == null) {
@@ -739,6 +738,7 @@ public class Alhena {
                 Buffer saveBuffer = Buffer.buffer();
 
                 boolean[] error = {false};
+                int[] lineEnd = {0};
                 // Handle the response
                 connection.result().handler(buffer -> {
 
@@ -748,18 +748,25 @@ public class Alhena {
                         saveBuffer.appendBuffer(buffer);
                         char respCode = (char) saveBuffer.getByte(0);
 
-                        boolean firstLine = false;
-                        int i;
-                        for (i = 0; i < saveBuffer.length(); i++) {
-                            if (((char) saveBuffer.getByte(i)) == '\n') {
-                                //end of first line
-                                firstLine = true;
-                                break;
+                        if (lineEnd[0] == 0) {
+                            int i;
+                            for (i = 0; i < saveBuffer.length(); i++) {
+                                if (((char) saveBuffer.getByte(i)) == '\n') {
+                                    //end of first line
+                                    break;
+                                }
                             }
+                            lineEnd[0] = i;
                         }
-                        if (!firstLine) {
+                        // get enough of the response to tell if the payload is text
+                        // this is for a popular spartan server that sends the wrong mime type for text files
+                        // (probably based on their extension rather than content)
+                        // Since it often only sends the first response line in the first buffer, we need to wait for more
+                        if(lineEnd[0] == saveBuffer.length() - 1){
                             return;
                         }
+                        int i = lineEnd[0];
+
                         firstBuffer[0] = false;
 
                         switch (respCode) {
@@ -774,14 +781,13 @@ public class Alhena {
                                 if (mime.isBlank()) {
                                     mime = "text/gemini"; // apparently mime type is optional in type 20 -  NOT ANYMORE
                                 }
-                                System.out.println("mime type: " + mime);
 
                                 if (mime.startsWith("text/gemini")) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     bg(() -> {
                                         p.textPane.updatePage(chunk, false, origURL, true);
                                     });
-                                } else if (mime.startsWith("text/") || isUTF8(saveBuffer.slice(i + 1, saveBuffer.length()))) {
+                                } else if (mime.startsWith("text/") || isAscii(saveBuffer.slice(i + 1, saveBuffer.length()))) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     bg(() -> {
                                         p.textPane.updatePage(chunk, true, origURL, true);
@@ -1418,7 +1424,6 @@ public class Alhena {
             certMap.remove(cci);
         }
     }
-    private static NetClient spartanClient = null;
 
     public static NetClient getNetClient(URI uri) {
         NetClient res = null;
