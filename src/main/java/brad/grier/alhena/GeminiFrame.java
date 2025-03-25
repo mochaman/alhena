@@ -2061,6 +2061,7 @@ public final class GeminiFrame extends JFrame {
         // showGlassPane(true, textPane);
         String url = textPane.getDocURLString();
         CurrentPage res = textPane.current();
+        visiblePage().ignoreStart();
         streamChunks(res.currentPage(), 100, url, isPlainText);
     }
 
