@@ -31,6 +31,8 @@ import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -115,38 +117,43 @@ public final class GeminiFrame extends JFrame {
     private Color saveButtonFG = null;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
-            Map.entry("FlatDarculaLaf", new ThemeInfo("com.formdev.flatlaf.FlatDarculaLaf", true)),
-            Map.entry("FlatIntelliJLaf", new ThemeInfo("com.formdev.flatlaf.FlatIntelliJLaf", false)),
-            Map.entry("FlatMacDarkLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacDarkLaf", true)),
-            Map.entry("FlatMacLightLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacLightLaf", false)),
-            Map.entry("FlatMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", true)),
-            Map.entry("FlatDarkPurpleIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDarkPurpleIJTheme", true)),
-            Map.entry("FlatMonokaiProIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatMonokaiProIJTheme", true)),
-            Map.entry("FlatGradiantoMidnightBlueIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoMidnightBlueIJTheme", true)),
-            Map.entry("FlatMoonlightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMoonlightIJTheme", true)),
-            Map.entry("FlatMaterialLighterIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialLighterIJTheme", false)),
-            Map.entry("FlatGitHubIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatGitHubIJTheme", false)),
-            Map.entry("FlatLightOwlIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatLightOwlIJTheme", false)),
-            Map.entry("FlatVuesionIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatVuesionIJTheme", true)),
-            Map.entry("FlatNordIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatNordIJTheme", true)),
-            Map.entry("FlatHiberbeeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHiberbeeDarkIJTheme", true)),
-            Map.entry("FlatCyanLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCyanLightIJTheme", false)),
-            Map.entry("FlatLightFlatIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatLightFlatIJTheme", false)),
-            Map.entry("FlatHighContrastIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHighContrastIJTheme", true)),
-            Map.entry("FlatCarbonIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCarbonIJTheme", true)),
-            Map.entry("FlatCobalt2IJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCobalt2IJTheme", true)),
-            Map.entry("FlatGradiantoDarkFuchsiaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoDarkFuchsiaIJTheme", true)),
-            Map.entry("FlatGradiantoDeepOceanIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoDeepOceanIJTheme", true)),
-            Map.entry("FlatArcOrangeIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcOrangeIJTheme", false)),
-            Map.entry("FlatArcDarkOrangeIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcDarkOrangeIJTheme", true)),
-            Map.entry("FlatLightLaf", new ThemeInfo("com.formdev.flatlaf.FlatLightLaf", false)),
-            Map.entry("FlatDarkLaf", new ThemeInfo("com.formdev.flatlaf.FlatDarkLaf", true)),
-            Map.entry("FlatSolarizedDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedDarkIJTheme", true)),
-            Map.entry("FlatDraculaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDraculaIJTheme", true)),
-            Map.entry("FlatXcodeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatXcodeDarkIJTheme", true)),
-            Map.entry("FlatAtomOneLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatAtomOneLightIJTheme", false)),
-            Map.entry("FlatSpacegrayIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSpacegrayIJTheme", true)),
-            Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", false))
+            Map.entry("FlatArcIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme", "Arc", false)),
+            Map.entry("FlatGruvboxDarkHardIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme", "Gruvbox Dark Hard", true)),
+            Map.entry("FlatGradiantoNatureGreenIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoNatureGreenIJTheme", "Gradianto Nature Green", true)),
+            Map.entry("FlatDarkFlatIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDarkFlatIJTheme", "Dark Flat", true)),
+            Map.entry("FlatMaterialOceanicIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialOceanicIJTheme", "Material Oceanic", true)),
+            Map.entry("FlatLightOwlIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatLightOwlIJTheme", "Light Owl", false)),
+            Map.entry("FlatDarculaLaf", new ThemeInfo("com.formdev.flatlaf.FlatDarculaLaf", "Darcula", true)),
+            Map.entry("FlatIntelliJLaf", new ThemeInfo("com.formdev.flatlaf.FlatIntelliJLaf", "IntelliJ", false)),
+            Map.entry("FlatMacDarkLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacDarkLaf", "MacOS Dark", true)),
+            Map.entry("FlatMacLightLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacLightLaf", "MacOS Light", false)),
+            Map.entry("FlatMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", "Material Palenight", true)),
+            Map.entry("FlatDarkPurpleIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDarkPurpleIJTheme", "Dark Purple", true)),
+            Map.entry("FlatMonokaiProIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatMonokaiProIJTheme", "Monokai Pro", true)),
+            Map.entry("FlatGradiantoMidnightBlueIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoMidnightBlueIJTheme", "Gradianto Midnight Blue", true)),
+            Map.entry("FlatMoonlightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMoonlightIJTheme", "Moonlight", true)),
+            Map.entry("FlatMaterialLighterIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialLighterIJTheme", "Material Lighter", false)),
+            Map.entry("FlatGitHubIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatGitHubIJTheme", "GitHub", false)),
+            Map.entry("FlatVuesionIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatVuesionIJTheme", "Vuesion", true)),
+            Map.entry("FlatNordIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatNordIJTheme", "Nord", true)),
+            Map.entry("FlatHiberbeeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHiberbeeDarkIJTheme", "Hiberbee Dark", true)),
+            Map.entry("FlatCyanLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCyanLightIJTheme", "Cyan Light", false)),
+            Map.entry("FlatLightFlatIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatLightFlatIJTheme", "Light Flat", false)),
+            Map.entry("FlatLightLaf", new ThemeInfo("com.formdev.flatlaf.FlatLightLaf", "Light", false)),
+            Map.entry("FlatHighContrastIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHighContrastIJTheme", "High Contrast", true)),
+            Map.entry("FlatCarbonIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCarbonIJTheme", "Carbon", true)),
+            Map.entry("FlatCobalt2IJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatCobalt2IJTheme", "Cobalt 2", true)),
+            Map.entry("FlatGradiantoDarkFuchsiaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoDarkFuchsiaIJTheme", "Gradianto Dark Fuchsia", true)),
+            Map.entry("FlatGradiantoDeepOceanIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoDeepOceanIJTheme", "Gradianto Deep Ocean", true)),
+            Map.entry("FlatArcOrangeIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcOrangeIJTheme", "Arc Orange", false)),
+            Map.entry("FlatArcDarkOrangeIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcDarkOrangeIJTheme", "Arc Dark Orange", true)),
+            Map.entry("FlatDarkLaf", new ThemeInfo("com.formdev.flatlaf.FlatDarkLaf", "Dark", true)),
+            Map.entry("FlatSolarizedDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedDarkIJTheme", "Solarized Dark", true)),
+            Map.entry("FlatDraculaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDraculaIJTheme", "Dracula", true)),
+            Map.entry("FlatXcodeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatXcodeDarkIJTheme", "Xcode Dark", true)),
+            Map.entry("FlatAtomOneLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatAtomOneLightIJTheme", "Atom One Light", false)),
+            Map.entry("FlatSpacegrayIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSpacegrayIJTheme", "Spacegray", true)),
+            Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", "Solarized Light", false))
     );
 
     public void forEachPage(Consumer<Page> c) {
@@ -538,7 +545,10 @@ public final class GeminiFrame extends JFrame {
         userMenu.add(createMenuItem("Export Data", null, () -> {
 
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
-            File f = Util.getFile(GeminiFrame.this, "alhenadb.zip", false, "Save", filter);
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
+            String formattedDate = now.format(formatter);
+            File f = Util.getFile(GeminiFrame.this, "alhenadb_" + formattedDate + ".zip", false, "Save", filter);
             if (f != null) {
 
                 try {
@@ -750,11 +760,11 @@ public final class GeminiFrame extends JFrame {
 
                     JMenu jm = value.isDark() ? darkThemeMenu : lightThemeMenu;
 
-                    JRadioButtonMenuItem themeItem = new JRadioButtonMenuItem(key, key.equals(finalTheme));
+                    JRadioButtonMenuItem themeItem = new JRadioButtonMenuItem(value.label, key.equals(finalTheme));
                     themeGroup.add(themeItem);
                     jm.add(themeItem);
                     themeItem.addActionListener(al -> {
-                        if (!key.equals(currentThemeId))
+                        //if (!key.equals(currentThemeId))
                         try {
 
                             DB.insertPref("theme", value.className());
@@ -789,7 +799,7 @@ public final class GeminiFrame extends JFrame {
         String emojiPref = DB.getPref("emoji", null);
         emojiPref = emojiPref == null ? "google" : emojiPref;
         boolean macUseNoto = false;
-        if(SystemInfo.isMacOS && emojiPref.equals("font")){
+        if (SystemInfo.isMacOS && emojiPref.equals("font")) {
             macUseNoto = DB.getPref("macusenoto", "false").equals("true");
         }
 
@@ -846,7 +856,7 @@ public final class GeminiFrame extends JFrame {
         }
 
         settingsMenu.add(emojiMenu);
-
+        settingsMenu.add(new JSeparator());
         JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem("Adaptive Scrolling", DB.getPref("smoothscrolling", "true").equals("true"));
         smoothItem.addItemListener(ae -> {
 
@@ -865,7 +875,7 @@ public final class GeminiFrame extends JFrame {
 
         });
         settingsMenu.add(smoothItem);
-
+        settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem("HTTP Proxy");
         proxyItem.addActionListener(ae -> {
 
@@ -954,7 +964,7 @@ public final class GeminiFrame extends JFrame {
                 GeminiTextPane.setSheetImage(null);
                 DB.insertPref("emoji", setName);
                 DB.insertPref("macusenoto", String.valueOf(macUseNoto));
-                
+
                 Alhena.updateFrames(false, false);
                 lastSelectedItem = selected;
             } else {
@@ -1075,6 +1085,9 @@ public final class GeminiFrame extends JFrame {
         } else if (text.equalsIgnoreCase("a")) {
             textField.setText("alhena:");
             textField.setCaretPosition(7);
+        } else if (text.equalsIgnoreCase("s")) {
+            textField.setText("spartan://");
+            textField.setCaretPosition(10);
         }
     }
 
@@ -1292,7 +1305,7 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    public record ThemeInfo(String className, boolean isDark) {
+    public record ThemeInfo(String className, String label, boolean isDark) {
 
     }
 
@@ -1711,7 +1724,7 @@ public final class GeminiFrame extends JFrame {
             ct.setTitle(SERVERS_LABEL);
         }
 
-        textPane.updatePage("# Servers 📃\n", false, SERVERS_LABEL, true);
+        textPane.updatePage("# Servers 🖥\n", false, SERVERS_LABEL, true);
         new Thread(() -> {
             int[] count = {0};
             try {
