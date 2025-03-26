@@ -116,7 +116,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.4";
+    public final static String VERSION = "4.5";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
@@ -147,10 +147,7 @@ public class Alhena {
                     vertx = Vertx.vertx(options);
 
                     // reset all connections in map
-                    synchronized (certMap) {
-
-                        certMap.clear();
-                    }
+                    certMap.clear();
 
                     return true; // consume
                 }
@@ -405,92 +402,7 @@ public class Alhena {
         }
 
         if (url.startsWith("file:/")) {
-
-            URL fileUrl;
-            try {
-
-                fileUrl = new URL(url);
-
-                File file = new File(fileUrl.toURI());
-                if (file.exists()) {
-
-                    boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-                    if (matches) {
-
-                        String fUrl = url;
-                        p.frame().setBusy(true, cPage);
-                        boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
-                        p.textPane.updatePage("", pformatted, fUrl, true);
-                        boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-
-                        Buffer imageBuffer = Buffer.buffer();
-
-                        vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
-                            if (result.succeeded()) {
-                                AsyncFile asyncFile = result.result();
-
-                                // read the file in chunks
-                                asyncFile.handler(buffer -> {
-                                    if (isImage) {
-                                        imageBuffer.appendBuffer(buffer);
-                                    } else {
-                                        bg(() -> {
-                                            p.textPane.addPage(buffer.toString());
-                                        });
-                                    }
-
-                                });
-
-                                // process the content when reading is done
-                                asyncFile.endHandler(v -> {
-                                    if (isImage) {
-                                        bg(() -> {
-                                            p.textPane.end(" ", false, fUrl, true);
-                                            p.textPane.insertImage(imageBuffer.getBytes());
-                                            //p.frame().showGlassPane(false);
-                                        });
-
-                                    } else {
-                                        bg(() -> {
-                                            p.textPane.end();
-                                            //p.frame().showGlassPane(false);
-                                        });
-                                    }
-
-                                    asyncFile.close();
-
-                                });
-
-                                asyncFile.exceptionHandler(throwable -> {
-
-                                    bg(() -> {
-                                        p.textPane.end("## Error reading file\n", false, fUrl, true);
-                                        //p.frame().showGlassPane(false);
-                                    });
-                                });
-                            } else {
-
-                                bg(() -> {
-                                    p.textPane.end("## Error opening file\n", false, fUrl, true);
-                                    //p.frame().showGlassPane(false);
-                                });
-                            }
-                        });
-
-                    } else {
-                        p.textPane.end("## Invalid file type\n", false, url, true);
-                        //p.frame().showGlassPane(false);
-                    }
-                } else {
-                    p.textPane.end("## File not found\n", false, url, true);
-                    //p.frame().showGlassPane(false);
-                }
-            } catch (Exception ex) {
-                p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
-                ex.printStackTrace();
-
-            }
-
+            handleFile(url, p, cPage);
             return;
         }
 
@@ -498,87 +410,7 @@ public class Alhena {
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
 
         if (httpProxy == null && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
-            if (!url.startsWith("https")) {
-                url = prevURI.resolve(url).toString();
-            }
-            if (httpClient == null) {
-                HttpClientOptions options = new HttpClientOptions().
-                        setSsl(true).
-                        setTrustAll(true)
-                        .setLogActivity(true);
-                httpClient = vertx.createHttpClient(options);
-            }
-            p.frame().setBusy(true, cPage);
-            String finalURL = url;
-
-            URI finalURI = URI.create(finalURL);
-            httpClient.request(HttpMethod.GET, 443, finalURI.getHost(), finalURI.getPath()).onComplete(ar -> {
-                HttpClientRequest req = ar.result();
-                req.send().onComplete(ar2 -> {
-                    if (ar2.succeeded()) {
-                        HttpClientResponse resp = ar2.result();
-                        String contentType = resp.getHeader("Content-Type");
-                        if (contentType != null && contentType.startsWith("text/html")) {
-                            resp.body().onSuccess(buffer -> {
-                                bg(() -> {
-                                    p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
-                                    cPage.setBusy(false);
-                                    //p.frame().showGlassPane(false);
-                                });
-                                req.end();
-                            }).onFailure(ex -> {
-                                ex.printStackTrace();
-                                bg(() -> {
-                                    p.textPane.end("error getting web page\n", true, finalURL, true);
-                                    //p.frame().showGlassPane(false);
-                                });
-                                req.end();
-                            });
-                        } else {
-                            try {
-                                // download!
-                                File[] file = new File[1];
-                                resp.pause();
-                                EventQueue.invokeAndWait(() -> {
-                                    String fileName = finalURL.substring(finalURL.lastIndexOf("/") + 1);
-                                    file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
-                                });
-                                if (file[0] != null) {
-                                    vertx.fileSystem().open(file[0].getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
-                                        if (fileResult.succeeded()) {
-                                            AsyncFile af = fileResult.result();
-                                            resp.resume();
-                                            Pump pump = Pump.pump(resp, af);
-                                            pump.start();
-                                            resp.endHandler(eh -> {
-                                                af.close();
-                                                req.end();
-                                                bg(() -> {
-                                                    Util.infoDialog(p.frame(), "Complete", file[0].getName() + " downloaded");
-                                                    p.frame().showGlassPane(false);
-                                                });
-                                            });
-                                        }
-                                    });
-                                } else {
-                                    req.end();
-                                    bg(() -> {
-                                        p.frame().showGlassPane(false);
-                                    });
-                                }
-                            } catch (InterruptedException ex) {
-                            } catch (InvocationTargetException ex) {
-                            }
-                        }
-                    } else {
-                        ar2.cause().printStackTrace();
-                        bg(() -> {
-                            p.textPane.end("broke\n", true, finalURL, true);
-                            //p.frame().showGlassPane(false);
-                        });
-                    }
-                });
-            });
+            handleHttp(url, prevURI, p, cPage);
             return;
         }
 
@@ -762,7 +594,7 @@ public class Alhena {
                         // this is for a popular spartan server that sends the wrong mime type for text files
                         // (probably based on their extension rather than content)
                         // Since it often only sends the first response line in the first buffer, we need to wait for more
-                        if(lineEnd[0] == saveBuffer.length() - 1){
+                        if (lineEnd[0] == saveBuffer.length() - 1) {
                             return;
                         }
                         int i = lineEnd[0];
@@ -2029,6 +1861,177 @@ public class Alhena {
         }
 
         return sb;
+    }
+
+    private static void handleFile(String url, Page p, Page cPage) {
+        URL fileUrl;
+        try {
+
+            fileUrl = new URL(url);
+
+            File file = new File(fileUrl.toURI());
+            if (file.exists()) {
+
+                boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                if (matches) {
+
+                    String fUrl = url;
+                    p.frame().setBusy(true, cPage);
+                    boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
+                    p.textPane.updatePage("", pformatted, fUrl, true);
+                    boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+
+                    Buffer imageBuffer = Buffer.buffer();
+
+                    vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
+                        if (result.succeeded()) {
+                            AsyncFile asyncFile = result.result();
+
+                            // read the file in chunks
+                            asyncFile.handler(buffer -> {
+                                if (isImage) {
+                                    imageBuffer.appendBuffer(buffer);
+                                } else {
+                                    bg(() -> {
+                                        p.textPane.addPage(buffer.toString());
+                                    });
+                                }
+
+                            });
+
+                            // process the content when reading is done
+                            asyncFile.endHandler(v -> {
+                                if (isImage) {
+                                    bg(() -> {
+                                        p.textPane.end(" ", false, fUrl, true);
+                                        p.textPane.insertImage(imageBuffer.getBytes());
+                                        //p.frame().showGlassPane(false);
+                                    });
+
+                                } else {
+                                    bg(() -> {
+                                        p.textPane.end();
+                                        //p.frame().showGlassPane(false);
+                                    });
+                                }
+
+                                asyncFile.close();
+
+                            });
+
+                            asyncFile.exceptionHandler(throwable -> {
+
+                                bg(() -> {
+                                    p.textPane.end("## Error reading file\n", false, fUrl, true);
+                                    //p.frame().showGlassPane(false);
+                                });
+                            });
+                        } else {
+
+                            bg(() -> {
+                                p.textPane.end("## Error opening file\n", false, fUrl, true);
+                                //p.frame().showGlassPane(false);
+                            });
+                        }
+                    });
+
+                } else {
+                    p.textPane.end("## Invalid file type\n", false, url, true);
+                    //p.frame().showGlassPane(false);
+                }
+            } else {
+                p.textPane.end("## File not found\n", false, url, true);
+                //p.frame().showGlassPane(false);
+            }
+        } catch (Exception ex) {
+            p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
+            ex.printStackTrace();
+
+        }
+    }
+
+    private static void handleHttp(String url, URI prevURI, Page p, Page cPage) {
+        if (!url.startsWith("https")) {
+            url = prevURI.resolve(url).toString();
+        }
+        if (httpClient == null) {
+            HttpClientOptions options = new HttpClientOptions().
+                    setSsl(true).
+                    setTrustAll(true)
+                    .setLogActivity(true);
+            httpClient = vertx.createHttpClient(options);
+        }
+        p.frame().setBusy(true, cPage);
+        String finalURL = url;
+
+        URI finalURI = URI.create(finalURL);
+        httpClient.request(HttpMethod.GET, 443, finalURI.getHost(), finalURI.getPath()).onComplete(ar -> {
+            HttpClientRequest req = ar.result();
+            req.send().onComplete(ar2 -> {
+                if (ar2.succeeded()) {
+                    HttpClientResponse resp = ar2.result();
+                    String contentType = resp.getHeader("Content-Type");
+                    if (contentType != null && contentType.startsWith("text/html")) {
+                        resp.body().onSuccess(buffer -> {
+                            bg(() -> {
+                                p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
+                                cPage.setBusy(false);
+                                //p.frame().showGlassPane(false);
+                            });
+                            req.end();
+                        }).onFailure(ex -> {
+                            ex.printStackTrace();
+                            bg(() -> {
+                                p.textPane.end("error getting web page\n", true, finalURL, true);
+                                //p.frame().showGlassPane(false);
+                            });
+                            req.end();
+                        });
+                    } else {
+                        try {
+                            // download!
+                            File[] file = new File[1];
+                            resp.pause();
+                            EventQueue.invokeAndWait(() -> {
+                                String fileName = finalURL.substring(finalURL.lastIndexOf("/") + 1);
+                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+                            });
+                            if (file[0] != null) {
+                                vertx.fileSystem().open(file[0].getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
+                                    if (fileResult.succeeded()) {
+                                        AsyncFile af = fileResult.result();
+                                        resp.resume();
+                                        Pump pump = Pump.pump(resp, af);
+                                        pump.start();
+                                        resp.endHandler(eh -> {
+                                            af.close();
+                                            req.end();
+                                            bg(() -> {
+                                                Util.infoDialog(p.frame(), "Complete", file[0].getName() + " downloaded");
+                                                p.frame().showGlassPane(false);
+                                            });
+                                        });
+                                    }
+                                });
+                            } else {
+                                req.end();
+                                bg(() -> {
+                                    p.frame().showGlassPane(false);
+                                });
+                            }
+                        } catch (InterruptedException ex) {
+                        } catch (InvocationTargetException ex) {
+                        }
+                    }
+                } else {
+                    ar2.cause().printStackTrace();
+                    bg(() -> {
+                        p.textPane.end("broke\n", true, finalURL, true);
+                        //p.frame().showGlassPane(false);
+                    });
+                }
+            });
+        });
     }
 
 }
