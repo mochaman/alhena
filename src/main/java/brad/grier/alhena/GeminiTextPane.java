@@ -1124,9 +1124,8 @@ public class GeminiTextPane extends JTextPane {
         }
         if (geminiDoc.endsWith("\n")) {
 
-            geminiDoc.lines().forEach(line -> {
-                processLine(line, false); // no way to know if a line is the last line
-            });
+            geminiDoc.lines().forEach(line -> processLine(line, false)); // no way to know if a line is the last line
+
         } else {
             int lastNl = geminiDoc.lastIndexOf("\n");
             if (lastNl == -1) {
@@ -1376,7 +1375,7 @@ public class GeminiTextPane extends JTextPane {
             for (int i = 0; i < text.length(); i++) {
 
                 if ((emoji = isEmoji(emojis, i)) != null) {
-                    int codePoint = text.codePointAt(i);
+                    
                     if (sheetImage != null) {
 
                         String key = getEmojiHex(emoji);
@@ -1397,9 +1396,8 @@ public class GeminiTextPane extends JTextPane {
                         }
                         if (icon == null) {
 
-                            char[] chars = Character.toChars(codePoint);
+                            char[] chars = Character.toChars(text.codePointAt(i));
 
-                            //i += Character.charCount(codePoint) - 1;
                             i = emoji.getEndCharIndex() + 1;
 
                             insertString(doc.getLength(), new String(chars), style);
@@ -1410,6 +1408,7 @@ public class GeminiTextPane extends JTextPane {
                             if (i == emoji.getEndCharIndex() - 1) {
                                 i++;
                             } else {
+                                
                                 i = emoji.getEndCharIndex() - 1;
 
                             }
@@ -1423,7 +1422,7 @@ public class GeminiTextPane extends JTextPane {
                         }
                     } else {
 
-                        char[] chars = Character.toChars(codePoint);
+                        char[] chars = Character.toChars(text.codePointAt(i));
 
                         i++;
 
