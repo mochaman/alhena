@@ -23,7 +23,7 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 * Drag and drop text, image and PEM files
 * Import and Export user data with merge
 * Remote sync with merge
-* Titan protocol upload support
+* Titan upload with ;edit support
 * HTTP and Gopher proxies
 * Full spartan:// support
 
