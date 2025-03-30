@@ -30,9 +30,7 @@ public class TextEditor extends JPanel {
         textArea = new JTextPane();
         String fontName = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
         Font font = new Font(fontName, Font.PLAIN, 14);
-        //textArea.setFont(new Font("Apple Color Emoji", Font.PLAIN, 14));
         textArea.setFont(font);
-        //textArea.setLineWrap(true);
 
         tabbedPane.addTab("Text", new JScrollPane(textArea));
 
