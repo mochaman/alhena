@@ -33,6 +33,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,6 +45,7 @@ import java.security.Security;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -572,6 +574,19 @@ public class Util {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static String readResourceAsString(String resourcePath) {
+        try (InputStream inputStream = Alhena.class.getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                throw new IllegalArgumentException("Resource not found: " + resourcePath);
+            }
+            try (Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8.name())) {
+                return scanner.useDelimiter("\\A").next();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error reading resource: " + resourcePath, e);
+        }
     }
 
     public static ImageIcon loadPNGIcon(String filePath, int width, int height) {
