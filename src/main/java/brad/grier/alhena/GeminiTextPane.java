@@ -39,7 +39,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
-import javax.swing.JCheckBox;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -72,7 +71,6 @@ import com.techsenger.ansi4j.core.api.spi.ParserFactoryConfig;
 import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
 import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
-import brad.grier.alhena.GeminiFrame.ClosableTabPanel;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import net.fellbaum.jemoji.EmojiManager;
@@ -789,6 +787,11 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void end() {
+
+        if (page.getTitanEdited() && !docURL.endsWith(";edit")) { // docURL test in case user cancels
+            docURL += ";edit";
+        }
+
         if (bufferedLine != null) {
             String lrl = bufferedLine;
             bufferedLine = null;
@@ -808,8 +811,8 @@ public class GeminiTextPane extends JTextPane {
                             f.updateComboBox(docURL);
                             f.setTitle(title);
                         } else {
-                            ClosableTabPanel ctp = (ClosableTabPanel) tabbedPane.getTabComponentAt(i);
-                            ctp.setTitle(title);
+
+                            tabbedPane.setTitleAt(i, title);
                         }
                         break;
                     }
@@ -1302,18 +1305,24 @@ public class GeminiTextPane extends JTextPane {
                         String useB = DB.getPref("browser", null);
                         boolean useBrowser = useB == null ? true : useB.equals("true");
                         if (spartanLink) {
-                            JCheckBox cb = new JCheckBox("Upload File");
-                            String text = Util.inputDialog(f, "Enter Text", "Enter Text", false, null, cb);
-                            if (cb.isSelected()) {
-                                File uploadFile = Util.getFile(f, null, true, "Select", null);
-                                if(uploadFile != null){
+
+                            TextEditor textEditor = new TextEditor("");
+                            Object[] comps = new Object[1];
+                            comps[0] = textEditor;
+                            String res = Util.inputDialog2(f, "Edit", comps);
+                            if (res != null) {
+                                Object result = textEditor.getResult();
+                                if (result instanceof String string) {
+                                    if (!string.isBlank()) {
+                                        f.addClickedLink(finalUrl);
+                                        f.fetchURL(finalUrl + "?" + URLEncoder.encode(string).replace("+", "%20"));
+                                    }
+                                } else {
                                     f.addClickedLink(finalUrl);
-                                    f.fetchURL(finalUrl, uploadFile);
+                                    f.fetchURL(finalUrl, (File)result);
                                 }
-                            } else if (text != null && !text.isBlank()) {
-                                f.addClickedLink(finalUrl);
-                                f.fetchURL(finalUrl + "?" + URLEncoder.encode(text).replace("+", "%20"));
                             }
+
                         } else if (Alhena.httpProxy == null && finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
                             try {
                                 Desktop.getDesktop().browse(new URI(finalUrl));
@@ -1375,7 +1384,7 @@ public class GeminiTextPane extends JTextPane {
             for (int i = 0; i < text.length(); i++) {
 
                 if ((emoji = isEmoji(emojis, i)) != null) {
-                    
+
                     if (sheetImage != null) {
 
                         String key = getEmojiHex(emoji);
@@ -1408,7 +1417,7 @@ public class GeminiTextPane extends JTextPane {
                             if (i == emoji.getEndCharIndex() - 1) {
                                 i++;
                             } else {
-                                
+
                                 i = emoji.getEndCharIndex() - 1;
 
                             }
