@@ -39,8 +39,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -73,6 +77,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.DB.Bookmark;
@@ -529,8 +534,7 @@ public final class GeminiFrame extends JFrame {
         fileMenu.add(new JSeparator());
 
         fileMenu.add(createMenuItem("New Tab", KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
-
-            newTab(null);
+            newTab("alhena:art");
 
         }));
 
@@ -1035,12 +1039,7 @@ public final class GeminiFrame extends JFrame {
 
     public void initComboBox() {
         JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
-        textField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-                SwingUtilities.invokeLater(() -> prefill(textField, e.getKeyChar()));
-            }
-        });
+
         textField.addMouseListener(new ContextMenuMouseListener());
     }
 
@@ -1065,31 +1064,6 @@ public final class GeminiFrame extends JFrame {
         return mi;
     }
 
-    private void prefill(JTextField textField, char typedChar) {
-        String text = textField.getText();
-
-        if (typedChar == KeyEvent.VK_BACK_SPACE) {
-            return;
-        }
-
-        // If user starts typing "g", prefill with "gemini://"
-        if (text.equalsIgnoreCase("g")) {
-            textField.setText("gemini://");
-            textField.setCaretPosition(9);
-        } else if (text.equalsIgnoreCase("h")) {
-            textField.setText("https://");
-            textField.setCaretPosition(8);
-        } else if (text.equalsIgnoreCase("f")) {
-            textField.setText("file://");
-            textField.setCaretPosition(7);
-        } else if (text.equalsIgnoreCase("a")) {
-            textField.setText("alhena:");
-            textField.setCaretPosition(7);
-        } else if (text.equalsIgnoreCase("s")) {
-            textField.setText("spartan://");
-            textField.setCaretPosition(10);
-        }
-    }
 
     // don't leak this from your constructor says IDE
     private void init(String url, Page page) {
@@ -1440,7 +1414,7 @@ public final class GeminiFrame extends JFrame {
                     case CERT_LABEL ->
                         loadCerts(pb.textPane, pb);
                     case INFO_LABEL ->
-                        loadInfo(pb.textPane, pb, info);
+                        loadInfo(pb.textPane, info);
                     case SERVERS_LABEL ->
                         loadServers(pb.textPane, pb);
                     default -> {
@@ -1494,7 +1468,7 @@ public final class GeminiFrame extends JFrame {
                     case CERT_LABEL ->
                         loadCerts(pb.textPane, pb);
                     case INFO_LABEL ->
-                        loadInfo(pb.textPane, pb, info);
+                        loadInfo(pb.textPane, info);
                     case SERVERS_LABEL ->
                         loadServers(pb.textPane, pb);
                     default -> {
@@ -1515,7 +1489,7 @@ public final class GeminiFrame extends JFrame {
                 case CERT_LABEL ->
                     loadCerts(nPage.textPane, null);
                 case INFO_LABEL ->
-                    loadInfo(nPage.textPane, null, info);
+                    loadInfo(nPage.textPane, info);
                 case SERVERS_LABEL ->
                     loadServers(nPage.textPane, null);
                 default -> {
@@ -1556,8 +1530,8 @@ public final class GeminiFrame extends JFrame {
         if (tabbedPane != null) {
             int idx = tabbedPane.getSelectedIndex();
             if (idx != -1) {
-                ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(idx);
-                ct.setTitle(title);
+
+                tabbedPane.setTitleAt(idx, abbrev(title));
             }
         }
     }
@@ -1565,8 +1539,8 @@ public final class GeminiFrame extends JFrame {
     private void loadBookmarks(GeminiTextPane textPane, Page p) {
         try {
             if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
-                ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
-                ct.setTitle(BOOKMARK_LABEL);
+
+                tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), BOOKMARK_LABEL);
             }
             List<Bookmark> bookmarks = DB.loadBookmarks();
             if (!bookmarks.isEmpty()) {
@@ -1606,8 +1580,8 @@ public final class GeminiFrame extends JFrame {
     private void loadCerts(GeminiTextPane textPane, Page p) {
         try {
             if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
-                ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
-                ct.setTitle(CERT_LABEL);
+
+                tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), CERT_LABEL);
             }
             List<DBClientCertInfo> certs = DB.loadCerts();
             if (!certs.isEmpty()) {
@@ -1651,14 +1625,14 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void loadInfo(GeminiTextPane textPane, Page p, InfoPageInfo info) {
+    private void loadInfo(GeminiTextPane textPane, InfoPageInfo info) {
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
-            ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
-            ct.setTitle(info.title);
+
+            tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), info.title);
         }
 
-        textPane.end(info.content, true, INFO_LABEL, false);
+        textPane.end(info.content, false, INFO_LABEL, false);
         textPane.setDocURL(info.title);
 
         // problem: end already sets comboBox
@@ -1673,8 +1647,8 @@ public final class GeminiFrame extends JFrame {
         setBusy(true, p);
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
-            ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
-            ct.setTitle(HISTORY_LABEL);
+
+            tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), HISTORY_LABEL);
         }
 
         textPane.updatePage("# History 🏛\n", false, HISTORY_LABEL, true);
@@ -1720,8 +1694,8 @@ public final class GeminiFrame extends JFrame {
         setBusy(true, p);
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
-            ClosableTabPanel ct = (ClosableTabPanel) tabbedPane.getTabComponentAt(tabbedPane.getSelectedIndex());
-            ct.setTitle(SERVERS_LABEL);
+
+            tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), SERVERS_LABEL);
         }
 
         textPane.updatePage("# Servers 🖥\n", false, SERVERS_LABEL, true);
@@ -2089,20 +2063,56 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void newTab(String url) {
+
         if (tabbedPane == null) {
             invalidate();
             tabbedPane = new JTabbedPane();
 
-            Page pb = visiblePage();
-            pb.textPane.getDocURL().ifPresent(docUrl -> {
+            tabbedPane.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSABLE, true);
 
-                remove(pb);
-                String frameTitle = createTitle(docUrl, pb.textPane.getFirstHeading());
-                addClosableTab(tabbedPane, frameTitle, pb);
-            });
+            tabbedPane.putClientProperty("JTabbedPane.tabCloseCallback",
+                    (IntConsumer) tabIndex -> {
+                        // close tab here
+                        if (tabbedPane.getTabCount() == 2) {
+                            GeminiFrame.this.invalidate();
+                            ChangeListener[] cl = tabbedPane.getChangeListeners();
+                            for (ChangeListener ev : cl) {
+                                tabbedPane.removeChangeListener(ev);
+                                break; // REMOVES tabbedPanes changeListener but not the L&F changeListener - CAN ORDER CHANGE?
+                            }
+
+                            Page page = (Page) tabbedPane.getComponentAt(tabIndex);
+                            pageHistoryMap.remove(getRootPage(page));
+                            tabbedPane.remove(tabIndex);
+                            page = (Page) tabbedPane.getSelectedComponent();
+                            tabbedPane.remove(page);
+                            GeminiFrame.this.remove(tabbedPane);
+                            tabbedPane = null;
+                            GeminiFrame.this.add(page, BorderLayout.CENTER);
+                            String frameTitle = createTitle(page.textPane.getDocURLString(), page.textPane.getFirstHeading());
+                            if (frameTitle != null) {
+                                setTitle(frameTitle);
+                            } else {
+                                setTitle("New Tab");
+                                selectComboBoxItem("");
+                            }
+                            GeminiFrame.this.validate();
+                        } else {
+                            Page page = (Page) tabbedPane.getComponentAt(tabIndex);
+                            pageHistoryMap.remove(getRootPage(page));
+                            tabbedPane.remove(tabIndex);
+                        }
+                    });
+
+            Page pb = visiblePage();
+
+            remove(pb);
+            String ft = createTitle(pb.textPane.getDocURLString(), pb.textPane.getFirstHeading());
+
+            tabbedPane.addTab(abbrev(ft), pb);
 
             selectComboBoxItem("");
-            // boolean[] doBusy = {false};
+
             tabbedPane.addChangeListener(ce -> {
 
                 Page page = (Page) tabbedPane.getSelectedComponent();
@@ -2151,28 +2161,19 @@ public final class GeminiFrame extends JFrame {
 
         }
 
-        if (url == null) {
-            Page pb = newPage(null, null, false);
-            setBusy(false, pb);
-            pb.setThemeId(currentThemeId);
+        Page currentPage = visiblePage();
+        String du = currentPage.textPane.getDocURLString();
 
-            addClosableTab(tabbedPane, "New Tab", pb);
+        Page pb = newPage(du, null, true);
+        pb.setThemeId(currentThemeId);
 
-            tabbedPane.setSelectedComponent(pb);
-        } else {
-            Page currentPage = visiblePage();
-            String du = currentPage.textPane.getDocURLString();
+        tabbedPane.addTab("  ", pb);
 
-            Page pb = newPage(du, null, true);
-            pb.setThemeId(currentThemeId);
+        tabbedPane.setSelectedComponent(pb);
 
-            addClosableTab(tabbedPane, "  ", pb);
+        Alhena.processURL(url, pb, null, currentPage);
+        currentPage.setBusy(false);
 
-            tabbedPane.setSelectedComponent(pb);
-
-            Alhena.processURL(url, pb, null, currentPage);
-            currentPage.setBusy(false);
-        }
 
     }
 
@@ -2330,13 +2331,6 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void addClosableTab(JTabbedPane tabbedPane, String title, Component content) {
-        // Add the content to the tab
-        tabbedPane.add(content);
-        ClosableTabPanel tabPanel = new ClosableTabPanel(title);
-        tabbedPane.setTabComponentAt(tabbedPane.getTabCount() - 1, tabPanel);
-
-    }
 
     public Page visiblePage() {
         Page vPage;
@@ -2354,80 +2348,32 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    public class ClosableTabPanel extends JPanel {
-
-        private final JLabel tabTitle;
-
-        public ClosableTabPanel(String title) {
-            super(new FlowLayout(FlowLayout.LEFT, 5, 0));
-            setOpaque(false);
-            if (title.startsWith("gemini://") || title.startsWith("file:/") || title.startsWith("http")) {
-                title = title.substring(9);
-            }
-            tabTitle = new JLabel(abbrev(title));
-            add(tabTitle);
-            JButton closeButton = new JButton("❎");
-            closeButton.setFont(new Font("Noto Emoji Regular", Font.BOLD, 8));
-
-            closeButton.setMargin(new Insets(0, 2, 0, 2));
-            closeButton.setBorderPainted(false);
-            closeButton.setFocusable(false);
-            closeButton.addActionListener((ActionEvent e) -> {
-
-                if (tabbedPane.getTabCount() == 2) {
-                    GeminiFrame.this.invalidate();
-                    ChangeListener[] cl = tabbedPane.getChangeListeners();
-                    for (ChangeListener ev : cl) {
-                        tabbedPane.removeChangeListener(ev);
-                        break; // REMOVES tabbedPanes changeListener but not the L&F changeListener - CAN ORDER CHANGE?
-                    }
-
-                    int index = tabbedPane.indexOfTabComponent(this);
-                    Page page = (Page) tabbedPane.getComponentAt(index);
-
-                    pageHistoryMap.remove(getRootPage(page));
-
-                    tabbedPane.remove(index);
-
-                    page = (Page) tabbedPane.getSelectedComponent();
-
-                    tabbedPane.remove(page);
-
-                    GeminiFrame.this.remove(tabbedPane);
-                    tabbedPane = null;
-
-                    GeminiFrame.this.add(page, BorderLayout.CENTER);
-                    GeminiFrame.this.validate();
-
-                } else {
-                    int index = tabbedPane.indexOfTabComponent(this);
-                    Page page = (Page) tabbedPane.getComponentAt(index);
-
-                    pageHistoryMap.remove(getRootPage(page));
-
-                    tabbedPane.remove(index);
-
-                }
-
-            });
-            add(closeButton);
+    public final String abbrev(String t) {
+        if (t.contains("://")) {
+            t = t.substring(t.indexOf("://") + 3);
+        } else if (t.contains(":/")) {
+            t = t.substring(t.indexOf(":/") + 2); // file:/
         }
-
-        public final String abbrev(String t) {
-            if (t.startsWith("gemini://") || t.startsWith("file:/") || t.startsWith("http")) {
-                t = t.substring(9);
-            }
-            if (t.length() > 30) {
-                t = t.substring(0, 30) + "...";
-            }
-            return t;
+        if (t.length() > 30) {
+            t = t.substring(0, 30) + "...";
         }
-
-        public void setTitle(String title) {
-
-            tabTitle.setText(abbrev(title));
-        }
+        return t;
     }
-    private boolean tabClosing;
 
+
+    public static String getArt() {
+
+        String doc = Util.readResourceAsString("/art.gmi");
+        List<String> blocks = new ArrayList<>();
+        Pattern pattern = Pattern.compile("```(.*?)```", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(doc);
+
+        while (matcher.find()) {
+            blocks.add(matcher.group(1)); // Trim to remove extra spaces or newlines
+        }
+
+        int randomIdx = new Random().nextInt(blocks.size());
+        return "```" + blocks.get(randomIdx) + "```";
+
+    }
 }
