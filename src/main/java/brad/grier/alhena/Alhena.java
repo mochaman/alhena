@@ -116,7 +116,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.5";
+    public final static String VERSION = "4.6";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
@@ -462,28 +462,82 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
-        if (punyURI.getScheme().equals("titan") && p.getDataFile() == null) {
-            File titanFile = Util.getFile(p.frame(), "", true, "Upload", null);
-            if (titanFile != null) {
-                String token = Util.inputDialog(p.frame(), "Token", "Enter token (if required) or leave blank.", false);
-                if (token != null && !token.isBlank()) {
-                    token = ";token=" + URLEncoder.encode(token).replace("+", "%20");
+        if (punyURI.getScheme().equals("titan") && !punyURI.getPath().endsWith(";edit") /*&& p.getDataFile() == null */) {
+            if (!p.getTitanEdited() && p.getDataFile() == null) {
+                File titanFile = null;
+                String titanText = null;
+                TextEditor textEditor = new TextEditor("");
+                Object[] comps = new Object[1];
+                comps[0] = textEditor;
+                String res = Util.inputDialog2(p.frame(), "Edit", comps);
+                if (res == null) {
+                    //p.textPane.end("## Edit Canceled", false, origURL, true);
+                    return;
                 } else {
-                    token = "";
+                    Object rsp = textEditor.getResult();
+                    p.setTitanEdited(true);
+                    if (rsp instanceof String string) {
+                        titanText = string;
+                    } else {
+                        titanFile = (File) rsp;
+                    }
+
                 }
-                String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
-                String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
-                String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
-                String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
 
-                p.setDataFile(titanFile);
+                if (titanFile != null) {
+                    String token = Util.inputDialog(p.frame(), "Token", "Enter token (if required) or leave blank.", false);
+                    if (token != null && !token.isBlank()) {
+                        token = ";token=" + URLEncoder.encode(token).replace("+", "%20");
+                    } else {
+                        token = "";
+                    }
+                    String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
+                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
 
-                punyURI = URI.create(titanUrl);
+                    p.setDataFile(titanFile);
 
-            } else {
+                    punyURI = URI.create(titanUrl);
 
-                p.textPane.end("## Nothing to send", false, origURL, true);
-                return;
+                } else if (titanText != null && !titanText.isBlank()) {
+                    String mimeType = "text/gemini";
+                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + titanText.getBytes().length + ";mime=" + mimeType + query;
+
+                    //p.setDataFile(titanFile);
+                    p.setEditedText(titanText);
+                    punyURI = URI.create(titanUrl);
+
+                } else {
+                    String mimeType = "text/gemini"; // doesn't matter here? this is a zero length request which should be delete on server
+                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=0;mime=" + mimeType + query;
+                    p.setEditedText("");
+                    punyURI = URI.create(titanUrl);
+
+                }
+            } else if (p.getTitanEdited()) {
+                if (p.getEditedText() != null) {
+                    String text = p.getEditedText();
+                    String mimeType = "text/gemini";
+                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + text.getBytes().length + ";mime=" + mimeType + query;
+
+                    punyURI = URI.create(titanUrl);
+                } else {
+                    // ;edit but sending a file
+                    String mimeType = Util.getMimeType(p.getDataFile().getAbsolutePath());
+                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + p.getDataFile().length() + ";mime=" + mimeType + query;
+
+                    //p.setDataFile(titanFile);
+                    punyURI = URI.create(titanUrl);
+                }
             }
         }
         String proxyURL = null;
@@ -798,6 +852,7 @@ public class Alhena {
                 });
             } else {
                 fileResult.cause().printStackTrace();
+                socket.close();
                 bg(() -> {
                     p.textPane.end("## Error opening file", false, origURL, true);
                 });
@@ -821,6 +876,8 @@ public class Alhena {
         }
         client.connect(port[0], host, connection -> {
             if (connection.succeeded()) {
+                boolean[] titanEdit = {uri.getScheme().equals("titan") && uri.getPath().endsWith(";edit")};
+                StringBuilder titanSB = new StringBuilder();
                 boolean[] proceed = {true};
                 X509Certificate[] cert = new X509Certificate[1];
                 try {
@@ -864,8 +921,21 @@ public class Alhena {
                 String urlText = proxyURL == null ? uri.toString() : proxyURL;
                 connection.result().write(urlText + "\r\n");
 
-                if (uri.getScheme().equals("titan")) {
-                    if (p.getDataFile() != null) {
+                if (uri.getScheme().equals("titan") && !uri.getPath().endsWith(";edit")) {
+                    if (p.getEditedText() != null) {
+                        String txt = p.getEditedText();
+                        p.setEditedText(null);
+                        if (!txt.isEmpty()) {
+
+                            connection.result().write(txt).onFailure(ex -> {
+                                connection.result().close();
+                                bg(() -> {
+                                    p.textPane.end("Error sending text", false, origURL, true);
+                                });
+                                return;
+                            });
+                        }
+                    } else if (p.getDataFile() != null) {
                         streamToSocket(p.getDataFile().getAbsolutePath(), connection.result(), p, origURL);
 
                     } else {
@@ -949,14 +1019,21 @@ public class Alhena {
 
                                 final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                 if (mime.startsWith("text/gemini")) {
-
-                                    bg(() -> {
-                                        p.textPane.updatePage(chunk, false, origURL, true);
-                                    });
+                                    if (titanEdit[0]) {
+                                        titanSB.append(chunk);
+                                    } else {
+                                        bg(() -> {
+                                            p.textPane.updatePage(chunk, false, origURL, true);
+                                        });
+                                    }
                                 } else if (mime.startsWith("text/")) {
-                                    bg(() -> {
-                                        p.textPane.updatePage(chunk, true, origURL, true);
-                                    });
+                                    if (titanEdit[0]) {
+                                        titanSB.append(chunk);
+                                    } else {
+                                        bg(() -> {
+                                            p.textPane.updatePage(chunk, true, origURL, true);
+                                        });
+                                    }
                                 } else if (mime.startsWith("image/")) {
                                     imageStartIdx[0] = i + 1;
                                     try {
@@ -1008,6 +1085,7 @@ public class Alhena {
                                     });
                                     return;
                                 }
+                                p.setTitanEdited(false);
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
                                 p.redirectCount++;
 
@@ -1018,10 +1096,11 @@ public class Alhena {
                                     p.redirectCount--;
                                 }
                                 String errorMsg = saveBuffer.getString(0, i - 1).trim();
-
-                                bg(() -> {
-                                    p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
-                                });
+                                if (!titanEdit[0]) {
+                                    bg(() -> {
+                                        p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
+                                    });
+                                }
                             }
                             case '6' -> {
                                 if (p.redirectCount > 0) {
@@ -1029,6 +1108,7 @@ public class Alhena {
                                 }
                                 char respType = (char) saveBuffer.getByte(1);
                                 if (respType == '0') { // 60 cert required
+                                    titanEdit[0] = false;
                                     p.frame().setBusy(false, cPage);
                                     String msg = saveBuffer.getString(3, i - 1).trim();
                                     certRequired(msg, uri, p, cert[0], cPage);
@@ -1060,10 +1140,15 @@ public class Alhena {
                             if (imageStartIdx[0] != -1) {
                                 saveBuffer.appendBuffer(buffer);
                             } else {
+                                if (titanEdit[0]) {
+                                    p.frame().setBusy(false, cPage);
+                                    titanSB.append(buffer.toString());
 
-                                bg(() -> {
-                                    p.textPane.addPage(buffer.toString());
-                                });
+                                } else {
+                                    bg(() -> {
+                                        p.textPane.addPage(buffer.toString());
+                                    });
+                                }
                             }
 
                         }
@@ -1079,8 +1164,6 @@ public class Alhena {
                     if (imageStartIdx[0] != -1) {
 
                         bg(() -> {
-                            // insert into existing page and not new page created for the call to processUrl
-                            // get rid of this - maybe put spawning page in page ref
 
                             GeminiTextPane tPane = cPage.textPane;
 
@@ -1094,10 +1177,40 @@ public class Alhena {
                         });
                     } else {
                         if (p.redirectCount == 0) {
+
                             bg(() -> {
-                                p.textPane.end();
+                                if (titanEdit[0]) {
+
+                                    TextEditor textEditor = new TextEditor(titanSB.toString());
+                                    Object[] comps = new Object[1];
+                                    comps[0] = textEditor;
+                                    String res = Util.inputDialog2(p.frame(), "Edit", comps);
+
+                                    if (res != null) {
+                                        Object rsp = textEditor.getResult();
+                                        p.setTitanEdited(true);
+                                        String uriString = uri.toString();
+                                        if (rsp instanceof String string) {
+                                            if (!string.isBlank()) {
+                                                p.setEditedText(string);
+                                            } else {
+                                                p.setEditedText("");
+                                            }
+                                        } else {
+                                            p.setDataFile((File) rsp);
+                                        }
+                                        processURL(uriString.substring(0, uriString.indexOf(";edit")), p, origURL, cPage);
+
+                                    } else {
+                                        p.frame().setBusy(false, cPage);
+                                    }
+
+                                } else {
+                                    p.textPane.end();
+                                }
 
                             });
+
                         }
                     }
 
@@ -1786,6 +1899,8 @@ public class Alhena {
             } else if (cmd[0].equals("info")) {
                 plainText = true;
                 message = getAlhenaInfo().toString();
+            } else if (cmd[0].equals("art")) {
+                message = GeminiFrame.getArt();
             }
 
         } else if (cmd.length == 2) {
