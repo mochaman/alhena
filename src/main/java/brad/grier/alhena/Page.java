@@ -60,6 +60,15 @@ public class Page extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
 
     }
+    
+    private String editedText;
+    public void setEditedText(String editedText){
+        this.editedText = editedText;
+    }
+
+    public String getEditedText(){
+        return editedText;
+    }
 
     public void setSpartan(boolean isSpartan){
         this.isSpartan = isSpartan;
@@ -92,6 +101,14 @@ public class Page extends JPanel {
             }
         }
         this.busy = b;
+    }
+
+    private boolean titanEdited;
+    public void setTitanEdited(boolean te){
+        titanEdited = te;
+    }
+    public boolean getTitanEdited(){
+        return titanEdited;
     }
 
     public void setDataFile(File file) {
