@@ -46,6 +46,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -580,7 +581,7 @@ public class Alhena {
         if (spartanClient == null) {
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
-                    .setSsl(false).setHostnameVerificationAlgorithm("HTTPS");
+                    .setSsl(false).setHostnameVerificationAlgorithm("");
             spartanClient = vertx.createNetClient(options);
 
         }
@@ -860,6 +861,7 @@ public class Alhena {
             }
         });
     }
+    private static final ArrayList<String> cnConfirmedList = new ArrayList<>();
 
     private static void gemini(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
         if (p.redirectCount == 0) {
@@ -884,13 +886,15 @@ public class Alhena {
                     List<Certificate> certList = connection.result().peerCertificates();
                     cert[0] = (X509Certificate) certList.get(0);
                     p.setCert(cert[0]);
-                    String res = verifyFingerPrint(host + ":" + port[0], cert[0]);
+                    CertTest res = verifyFingerPrint(host + ":" + port[0], cert[0]);
 
-                    if (res != null) {
+                    if (res.msg != null || res.host != null) {
                         try {
+                            String resMsg = res.msg == null ? "" : res.msg + "\n";
+                            String resHost = res.host == null ? "" : "The server certificate is from the wrong domain: " + res.cn + "\n";
                             // this blocks vertx event loop
                             EventQueue.invokeAndWait(() -> {
-                                Object diagRes = Util.confirmDialog(p.frame(), "Certificate Issue", res + "\nDo you want to continue?", JOptionPane.YES_NO_OPTION, null);
+                                Object diagRes = Util.confirmDialog(p.frame(), "Certificate Issue", resMsg + resHost + "Do you want to continue?", JOptionPane.YES_NO_OPTION, null);
                                 if (diagRes instanceof Integer result) {
                                     proceed[0] = result == JOptionPane.YES_OPTION;
                                 } else {
@@ -906,6 +910,7 @@ public class Alhena {
                             p.frame().showGlassPane(false);
                             return;
                         } else {
+                            cnConfirmedList.add(res.host);
                             saveCert(host + ":" + port[0], (X509Certificate) certList.get(0));
                         }
                     }
@@ -1224,16 +1229,65 @@ public class Alhena {
                     bg(() -> {
                         p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                     });
-                    connection.cause().printStackTrace();
+                    //connection.cause().printStackTrace();
                     System.out.println("Failed to connect: " + connection.cause().getMessage());
                 }
             }
         });
     }
 
-    private static String verifyFingerPrint(String host, X509Certificate cert) {
+    private static record CertTest(String msg, String host, String cn) {
 
+    }
+
+    public static boolean matchesDomain(String host, String domain) {
+        if (domain.startsWith("*.") && host.endsWith(domain.substring(1))) {
+            return true; // Wildcard match
+        }
+        return host.equalsIgnoreCase(domain);
+    }
+
+    private static CertTest verifyFingerPrint(String host, X509Certificate cert) {
+        String badHost = null;
+        String cn = null;
         try {
+
+            if (!cnConfirmedList.contains(host)) {
+                
+                cn = cert.getSubjectX500Principal().getName().replaceAll(".*CN=([^,]+).*", "$1");
+
+                String h = host.substring(0, host.indexOf(':'));
+                if(!matchesDomain(h, cn)){
+
+                    Collection<List<?>> sanList = cert.getSubjectAlternativeNames();
+                    if (sanList != null) {
+
+                        boolean matched = false;
+                        for (List<?> san : sanList) {
+                            if ((int) san.get(0) == 2) { // 2 = DNSName
+                                String sanDomain = (String) san.get(1);
+
+                                if (h.equalsIgnoreCase(sanDomain) || (sanDomain.startsWith("*.") && h.endsWith(sanDomain.substring(1)))) {
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!matched) {
+                            badHost = host;
+                        }
+
+                    } else {
+                        badHost = host;
+                    }
+                }
+                if (badHost == null) {
+                    cnConfirmedList.add(host);
+                }
+
+            }
+
             CertInfo certInfo = DB.getServerCert(host);
             try {
                 cert.checkValidity();
@@ -1242,13 +1296,13 @@ public class Alhena {
                 if (certInfo.lastModified() != null) {
                     java.sql.Timestamp certExpires = new java.sql.Timestamp(cert.getNotAfter().getTime());
                     if (certInfo.lastModified().before(certExpires)) {
-                        return "Server certificate has expired.";
+                        return new CertTest("Server certificate has expired.", badHost, cn);
                     }
                 } else {
-                    return "Server certificate has expired.";
+                    return new CertTest("Server certificate has expired.", badHost, cn);
                 }
             } catch (CertificateNotYetValidException cex) {
-                return "Server certificate is not yet valid.";
+                return new CertTest("Server certificate is not yet valid.", badHost, cn);
             }
 
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -1257,12 +1311,12 @@ public class Alhena {
             byte[] hash = md.digest(certBytes);
 
             // Convert to hex
-            StringBuilder hexString = new StringBuilder();
+            StringBuilder hexSB = new StringBuilder();
             for (byte b : hash) {
-                hexString.append(String.format("%02X", b));
+                hexSB.append(String.format("%02X", b));
             }
 
-            String fp = hexString.substring(0, hexString.length());
+            String fp = hexSB.substring(0, hexSB.length());
 
             String dbFingerprint = certInfo.fingerPrint();
 
@@ -1274,14 +1328,15 @@ public class Alhena {
                 DB.upsertCert(host, fp, ts, null);   // TOFU  
             } else if (!fp.equals(dbFingerprint) && expires.before(new Date())) {
 
-                return "Server certificate has changed without expiring.";
+                return new CertTest("Server certificate has changed without expiring.", badHost, cn);
             }
+
         } catch (Exception ex) {
             ex.printStackTrace();
-            return "Unable to validate certificate.";
+            return new CertTest("Unable to validate certificate.", badHost, cn);
         }
 
-        return null;
+        return new CertTest(null, badHost, cn);
     }
 
     private static void saveCert(String host, X509Certificate cert) {
@@ -1381,7 +1436,7 @@ public class Alhena {
                             .setConnectTimeout(60000)
                             .setSsl(true) // Gemini uses TLS   
                             .setTrustAll(true)
-                            .setHostnameVerificationAlgorithm("HTTPS");
+                            .setHostnameVerificationAlgorithm("");
                     certMap.put(null, vertx.createNetClient(options));
                 }
                 res = certMap.get(null); // default shared NetClient for connections without client certs
@@ -1390,7 +1445,7 @@ public class Alhena {
                     NetClientOptions options = new NetClientOptions()
                             .setSsl(true) // gemini uses TLS
                             .setTrustAll(true) // gemini self-signed certs
-                            .setHostnameVerificationAlgorithm("HTTPS")
+                            .setHostnameVerificationAlgorithm("")
                             .setSslEngineOptions(new JdkSSLEngineOptions() {
                                 @Override
                                 public SslContextFactory sslContextFactory() {
