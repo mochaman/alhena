@@ -57,12 +57,12 @@ java -jar ./lib/alhena.jar
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD in Releases. Java is NOT required. Each archive includes a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v4.6/alhena-4.6_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v4.6/alhena-4.6_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v4.6/alhena-4.6_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v4.6/alhena-4.6_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v4.6/alhena-4.6_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v4.6/alhena-4.6_freebsd_x64.tgz) untar and run script
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_freebsd_x64.tgz) untar and run script
 
 ## 🐳 Docker
 
