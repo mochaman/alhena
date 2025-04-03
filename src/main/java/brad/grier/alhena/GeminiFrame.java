@@ -694,15 +694,14 @@ public final class GeminiFrame extends JFrame {
 
         addBookmarks();
 
-        //windowsMenu = new JMenu("Windows");
         addWindowsMenu();
-        //menuBar.add(windowsMenu);
 
         JMenu aboutMenu = new JMenu("Help");
         aboutMenu.setMnemonic('H');
         if (!SystemInfo.isMacOS) {
             aboutMenu.add(createMenuItem("About", null, () -> {
-                JOptionPane.showMessageDialog(this, Alhena.PROG_NAME + " " + Alhena.VERSION + "\nWritten by Brad Grier");
+                //JOptionPane.showMessageDialog(this, Alhena.PROG_NAME + " " + Alhena.VERSION + "\nWritten by Brad Grier");
+                Util.showAbout(GeminiFrame.this);
 
             }));
         }
@@ -915,6 +914,17 @@ public final class GeminiFrame extends JFrame {
     }
 
     private static JRadioButtonMenuItem lastSelectedItem;
+
+    public void editPage(){
+        Page vp = visiblePage();
+        URI uri = vp.textPane.getURI();
+        if(uri.getScheme() != null && uri.getScheme().equals("gemini")){
+            String port = uri.getPort() != -1 ? ":" + uri.getPort() : "";
+            String query = uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery();
+            String editUrl = "titan://" + uri.getHost() + port + uri.getPath() + ";edit" + query;
+            fetchURL(editUrl);
+        }
+    }
 
     public void updateBookmarks() {
         bookmarkMenu.invalidate();
@@ -2373,7 +2383,7 @@ public final class GeminiFrame extends JFrame {
         }
 
         int randomIdx = new Random().nextInt(blocks.size());
-        return "```" + blocks.get(randomIdx) + "```";
+        return blocks.get(randomIdx);
 
     }
 }
