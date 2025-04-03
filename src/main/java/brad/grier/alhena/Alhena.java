@@ -8,6 +8,9 @@ import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.Taskbar;
 import java.awt.Taskbar.Feature;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -117,7 +120,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.6";
+    public final static String VERSION = "4.7";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
@@ -127,32 +130,52 @@ public class Alhena {
     public static String httpProxy;
     public static String gopherProxy;
     private static NetClient spartanClient = null;
+    private static int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher((KeyEvent e) -> {
-            if (e.getID() == KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            if (e.getID() == KeyEvent.KEY_PRESSED) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 
-                Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
-                if (gf != null && gf.visiblePage().busy()) {
-                    gf.visiblePage().setBusy(false);
-                    gf.showGlassPane(false);
-                    interrupted = true;
-                    // closing and recreating the client doesn't work for ending connection handshake
-                    // close vertx and recreate
-                    httpClient = null;
-                    spartanClient = null;
-                    vertx.close();
-                    VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
-                    vertx = Vertx.vertx(options);
+                    Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+                    if (gf != null && gf.visiblePage().busy()) {
+                        gf.visiblePage().setBusy(false);
+                        gf.showGlassPane(false);
+                        interrupted = true;
+                        // closing and recreating the client doesn't work for ending connection handshake
+                        // close vertx and recreate
+                        httpClient = null;
+                        spartanClient = null;
+                        vertx.close();
+                        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
+                        vertx = Vertx.vertx(options);
 
-                    // reset all connections in map
-                    certMap.clear();
+                        // reset all connections in map
+                        certMap.clear();
 
-                    return true; // consume
+                        return true; // consume
+                    }
+                    return false;
+
+                } else if (KeyStroke.getKeyStrokeForEvent(e).equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (mod | KeyEvent.SHIFT_DOWN_MASK)))) {
+                    Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+                    gf.editPage();
+                    return true;
+
+                } else if (KeyStroke.getKeyStrokeForEvent(e).equals(KeyStroke.getKeyStroke(KeyEvent.VK_C, mod))) {
+                    Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+                    Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                    String select = gf.visiblePage().textPane.getSelectedText();
+                    if (select != null) {
+                        StringSelection selectedText = new StringSelection(select);
+                        clipboard.setContents(selectedText, selectedText);
+                    }
+                    return true;
                 }
-                return false;
             }
 
             Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
@@ -234,7 +257,8 @@ public class Alhena {
             if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
                 desktop.setAboutHandler(e -> {
                     Component c = frameList.size() == 1 ? frameList.get(0) : null;
-                    Util.infoDialog(c, "About", PROG_NAME + " " + VERSION + "\nWritten by Brad Grier");
+                    //Util.infoDialog(c, "About", PROG_NAME + " " + VERSION + "\nWritten by Brad Grier");
+                    Util.showAbout(c);
                 });
             }
             if (desktop.isSupported(Desktop.Action.BROWSE)) {
@@ -463,7 +487,10 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
+
         if (punyURI.getScheme().equals("titan") && !punyURI.getPath().endsWith(";edit") /*&& p.getDataFile() == null */) {
+            String port = punyURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
+            String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
             if (!p.getTitanEdited() && p.getDataFile() == null) {
                 File titanFile = null;
                 String titanText = null;
@@ -472,7 +499,7 @@ public class Alhena {
                 comps[0] = textEditor;
                 String res = Util.inputDialog2(p.frame(), "Edit", comps);
                 if (res == null) {
-                    //p.textPane.end("## Edit Canceled", false, origURL, true);
+
                     return;
                 } else {
                     Object rsp = textEditor.getResult();
@@ -493,28 +520,20 @@ public class Alhena {
                         token = "";
                     }
                     String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
-                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
-                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
                     String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
-
                     p.setDataFile(titanFile);
 
                     punyURI = URI.create(titanUrl);
 
                 } else if (titanText != null && !titanText.isBlank()) {
                     String mimeType = "text/gemini";
-                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
-                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
                     String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + titanText.getBytes().length + ";mime=" + mimeType + query;
 
-                    //p.setDataFile(titanFile);
                     p.setEditedText(titanText);
                     punyURI = URI.create(titanUrl);
 
                 } else {
                     String mimeType = "text/gemini"; // doesn't matter here? this is a zero length request which should be delete on server
-                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
-                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
                     String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=0;mime=" + mimeType + query;
                     p.setEditedText("");
                     punyURI = URI.create(titanUrl);
@@ -524,19 +543,15 @@ public class Alhena {
                 if (p.getEditedText() != null) {
                     String text = p.getEditedText();
                     String mimeType = "text/gemini";
-                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
-                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
+
                     String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + text.getBytes().length + ";mime=" + mimeType + query;
 
                     punyURI = URI.create(titanUrl);
                 } else {
                     // ;edit but sending a file
                     String mimeType = Util.getMimeType(p.getDataFile().getAbsolutePath());
-                    String port = prevURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
-                    String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
-                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + p.getDataFile().length() + ";mime=" + mimeType + query;
 
-                    //p.setDataFile(titanFile);
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + p.getDataFile().length() + ";mime=" + mimeType + query;
                     punyURI = URI.create(titanUrl);
                 }
             }
@@ -987,27 +1002,14 @@ public class Alhena {
                                 String reqMsg = saveBuffer.getString(3, i - 1);
                                 char respType = (char) saveBuffer.getByte(1);
                                 bg(() -> {
-                                    if (respType != '1') {
 
-                                        String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, false);
-                                        if (input != null) {
+                                    String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, respType == '1');
 
-                                            String questionMark = uri.toString().endsWith("?") ? "" : "?";
-                                            p.setStart();
-                                            processURL(uri + questionMark + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
+                                    if (input != null) {
 
-                                        }
-
-                                    } else {
-
-                                        String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, true);
-                                        if (input != null) {
-
-                                            String questionMark = uri.toString().endsWith("?") ? "" : "?";
-                                            p.setStart();
-                                            processURL(uri + questionMark + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
-
-                                        }
+                                        String questionMark = uri.toString().endsWith("?") ? "" : "?";
+                                        p.setStart();
+                                        processURL(uri + questionMark + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
 
                                     }
                                 });
@@ -1101,11 +1103,12 @@ public class Alhena {
                                     p.redirectCount--;
                                 }
                                 String errorMsg = saveBuffer.getString(0, i - 1).trim();
-                                if (!titanEdit[0]) {
-                                    bg(() -> {
-                                        p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
-                                    });
-                                }
+                                titanEdit[0] = false;
+
+                                bg(() -> {
+                                    p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
+                                });
+
                             }
                             case '6' -> {
                                 if (p.redirectCount > 0) {
@@ -1117,7 +1120,7 @@ public class Alhena {
                                     p.frame().setBusy(false, cPage);
                                     String msg = saveBuffer.getString(3, i - 1).trim();
                                     certRequired(msg, uri, p, cert[0], cPage);
-                                } else if (respType == 1 || respType == 2) {
+                                } else if (respType == '1' || respType == '2') {
                                     String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
                                     bg(() -> {
@@ -1253,11 +1256,11 @@ public class Alhena {
         try {
 
             if (!cnConfirmedList.contains(host)) {
-                
+
                 cn = cert.getSubjectX500Principal().getName().replaceAll(".*CN=([^,]+).*", "$1");
 
                 String h = host.substring(0, host.indexOf(':'));
-                if(!matchesDomain(h, cn)){
+                if (!matchesDomain(h, cn)) {
 
                     Collection<List<?>> sanList = cert.getSubjectAlternativeNames();
                     if (sanList != null) {
@@ -1955,7 +1958,7 @@ public class Alhena {
                 plainText = true;
                 message = getAlhenaInfo().toString();
             } else if (cmd[0].equals("art")) {
-                message = GeminiFrame.getArt();
+                message = "```\n" + GeminiFrame.getArt() + "```\n";
             }
 
         } else if (cmd.length == 2) {
