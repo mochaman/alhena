@@ -118,6 +118,41 @@ public class Util {
 
     }
 
+    public static void fancyInfoDialog(Component parent, String title, Object[] components) {
+
+        JOptionPane optionPane = new JOptionPane(
+                components, // Message
+                JOptionPane.INFORMATION_MESSAGE, // Message type
+                JOptionPane.DEFAULT_OPTION, // Option type
+                null, // Icon (null for default)
+                null, // Options (null for default buttons)
+                null // Initial value
+        );
+        JDialog dialog = optionPane.createDialog(parent, title);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        if (SystemInfo.isMacOS) {
+
+            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+        }
+
+        dialog.setVisible(true);
+
+    }
+
+    public static void showAbout(Component c) {
+        JTextArea textArea = new JTextArea();
+        textArea.setEditable(false);
+        String fontName = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
+        Font font = new Font(fontName, Font.PLAIN, 14);
+        textArea.setFont(font);
+        textArea.setText(GeminiFrame.getArt());
+
+        Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "Written by Brad Grier", textArea};
+        Util.fancyInfoDialog(c, "About", comps);
+    }
+
     public static Object confirmDialog(Component parent, String title, String question, int msgType, Object[] options) {
 
         //JOptionPane optionPane = new JOptionPane(question, JOptionPane.QUESTION_MESSAGE, msgType);
@@ -213,7 +248,7 @@ public class Util {
         if (inputFieldText != null) {
             textField.setText(inputFieldText);
         }
-        
+
         Object[] message = {
             msg, textField, addComp
         };
@@ -731,10 +766,10 @@ public class Util {
                         String postEmo = DB.getPref("emoji", null);
                         if ("facebook".equals(postEmo) || "apple".equals(postEmo) || "twitter".equals(postEmo)) {
                             File sheetFile = new File(System.getProperty("alhena.home") + File.separatorChar + "sheet_" + postEmo + "_64.png");
-                            if(!sheetFile.exists()){
+                            if (!sheetFile.exists()) {
                                 // trying to change to an emoji set not installed
                                 DB.insertPref("emoji", prevEmo);
-                            }else{
+                            } else {
                                 frame.setEmoji(postEmo);
                             }
 
