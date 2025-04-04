@@ -862,4 +862,40 @@ public class Util {
         return ct == null ? "text/plain" : ct;
     }
 
+    public static record PemData(String cert, String key) {
+
+    }
+
+    public static PemData extractPemParts(String pemFilePath) throws Exception {
+        String pemContent = new String(Files.readAllBytes(Paths.get(pemFilePath)));
+        String cert = null, key = null;
+
+        // find certificate block
+        if (pemContent.contains("-----BEGIN CERTIFICATE-----")) {
+            cert = pemContent.substring(
+                    pemContent.indexOf("-----BEGIN CERTIFICATE-----"),
+                    pemContent.indexOf("-----END CERTIFICATE-----") + "-----END CERTIFICATE-----".length()
+            ).trim();
+        }
+
+        String[] keyTypes = {
+            "PRIVATE KEY", // PKCS#8
+            "RSA PRIVATE KEY", // PKCS#1 RSA
+            "EC PRIVATE KEY" // EC legacy
+
+        };
+
+        for (String type : keyTypes) {
+            String begin = "-----BEGIN " + type + "-----";
+            String end = "-----END " + type + "-----";
+            int start = pemContent.indexOf(begin);
+            int stop = pemContent.indexOf(end);
+            if (start != -1 && stop != -1) {
+                key = pemContent.substring(start, stop + end.length()).trim();
+            }
+        }
+
+        return new PemData(cert, key);
+    }
+
 }
