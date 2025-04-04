@@ -18,6 +18,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.net.IDN;
@@ -28,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -45,7 +45,6 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -71,11 +70,15 @@ import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.jsoup.Jsoup;
@@ -1778,17 +1781,19 @@ public class Alhena {
         return new JcaX509CertificateConverter().setProvider("BC").getCertificate(certHolder);
     }
 
-    public static PrivateKey loadPrivateKey(String keyString) throws Exception {
+    public static PrivateKey loadPrivateKey(String pemString) throws Exception {
+        try (PEMParser parser = new PEMParser(new StringReader(pemString))) {
+            Object obj = parser.readObject();
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
 
-        String key = keyString
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s+", "");
-        byte[] keyBytes = Base64.getDecoder().decode(key);
-        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePrivate(keySpec);
-
+            if (obj instanceof PEMKeyPair keyPair) {
+                return converter.getPrivateKey(keyPair.getPrivateKeyInfo()); // PKCS#1
+            } else if (obj instanceof PrivateKeyInfo privKeyInfo) {
+                return converter.getPrivateKey(privKeyInfo); // PKCS#8
+            } else {
+                throw new IllegalArgumentException("Unsupported key format: " + (obj != null ? obj.getClass() : "null"));
+            }
+        }
     }
 
     public static Certificate loadCertificate(String cert) throws Exception {
