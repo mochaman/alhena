@@ -84,6 +84,7 @@ import brad.grier.alhena.DB.Bookmark;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.DBClientCertInfo;
 import brad.grier.alhena.GeminiTextPane.CurrentPage;
+import brad.grier.alhena.Util.PemData;
 
 /**
  * Alhena frame
@@ -1785,7 +1786,7 @@ public final class GeminiFrame extends JFrame {
                     Alhena.closeNetClient(certInfo);
 
                     refresh();
-                    Util.infoDialog(this, "Delete", "Certificate deleted");
+                    //Util.infoDialog(this, "Delete", "Certificate deleted");
 
                 }
             }
@@ -1943,34 +1944,30 @@ public final class GeminiFrame extends JFrame {
 
         if (f != null) {
             try {
-
-                String pem = Files.readString(Path.of(f.getAbsolutePath()));
-                int idx = pem.indexOf("-----BEGIN PRIVATE KEY");
-                if (idx == -1) {
-                    Util.infoDialog(this, "Format", "Not a recognized PEM format");
-                } else {
-                    String cert = pem.substring(0, idx);
+                PemData pemData = Util.extractPemParts(f.getAbsolutePath());
+                if(pemData.cert() == null || pemData.key() == null){
+                    Util.infoDialog(this, "Format", "Not a recognized PEM format");    
+                }else{
                     int port = uri.getPort() == -1 ? 1965 : uri.getPort();
                     String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
 
-                    boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(cert) && c.domain().equals(prunedUrl));
-                    if (exists) {
-                        Util.infoDialog(this, "Not Allowed", "This cert already exists for: " + uri, JOptionPane.WARNING_MESSAGE);
-                    } else {
-                        String key = pem.substring(idx);
+                    boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(pemData.cert()) && c.domain().equals(prunedUrl));
+                    if(exists){
+                        Util.infoDialog(this, "Duplicate", "This cert already exists for: " + uri, JOptionPane.WARNING_MESSAGE);    
+                    }else{
                         ClientCertInfo ci = DB.getClientCertInfo(prunedUrl);
                         if (ci != null) {
                             DB.toggleCert(ci.id(), false, prunedUrl, false); // set existing for host to inactive
 
                         }
 
-                        DB.insertClientCert(prunedUrl, cert, key, true, null);
+                        DB.insertClientCert(prunedUrl, pemData.cert(), pemData.key(), true, null);
                         Alhena.addCertToTrustStore(uri, visiblePage().getCert());
 
                         Alhena.closeNetClient(DB.getClientCertInfo(prunedUrl)); //lazy
                         Util.infoDialog(this, "Added", "PEM added for : " + uri);
+                        refresh();
                     }
-
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
