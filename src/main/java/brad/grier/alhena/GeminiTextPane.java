@@ -47,6 +47,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextPane;
+import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
@@ -96,8 +97,7 @@ public class GeminiTextPane extends JTextPane {
     private String bufferedLine = null;
     private Color hoverColor, linkColor;
     private SimpleAttributeSet hoverStyle, normalStyle, visitedStyle;
-    // doubtful there will actually be multi-threaded access but better safe than sorry
-    //private static final ConcurrentHashMap<FontInfo, Integer> sizeMap = new ConcurrentHashMap<>();
+
     public final static int DEFAULT_MODE = 0;
     public final static int BOOKMARK_MODE = 1;
     public final static int HISTORY_MODE = 2;
@@ -569,7 +569,6 @@ public class GeminiTextPane extends JTextPane {
                         certItem.setEnabled(!imageOnly);
                         certItem.addActionListener(al -> {
                             f.createCert(getURI());
-                            //f.importPem(getURI(), null);
                         });
                         popupMenu.add(certItem);
                     }
@@ -1153,7 +1152,7 @@ public class GeminiTextPane extends JTextPane {
     private float pfAdjust = 0.0f;
 
     private void buildStyles() {
-        //emojiProportional = SystemInfo.isMacOS ? "SansSerif" : "Noto Emoji";
+
         emojiProportional = "Noto Emoji";
         if (SystemInfo.isMacOS) {
             boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
@@ -1319,7 +1318,7 @@ public class GeminiTextPane extends JTextPane {
                                     }
                                 } else {
                                     f.addClickedLink(finalUrl);
-                                    f.fetchURL(finalUrl, (File)result);
+                                    f.fetchURL(finalUrl, (File) result);
                                 }
                             }
 
@@ -1466,6 +1465,7 @@ public class GeminiTextPane extends JTextPane {
             } catch (BadLocationException ex) {
             }
         }
+
         setCaretPosition(caretPosition); // prevent scrolling as content added
 
         return cr;
@@ -1499,7 +1499,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static class ClickableRange {
+    public static class ClickableRange {
 
         int start;
         int end;
@@ -1516,7 +1516,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private Rectangle getCharacterBounds(JTextPane textPane, int start, int end) {
+    public Rectangle getCharacterBounds(JTextPane textPane, int start, int end) {
         try {
             Rectangle startRect = textPane.modelToView2D(start).getBounds();
             Rectangle endRect = textPane.modelToView2D(end).getBounds();
@@ -1681,7 +1681,6 @@ public class GeminiTextPane extends JTextPane {
                             time = System.currentTimeMillis();
                         }
                     }
-                    //System.out.println(scrollAdjust);
                 }
 
                 // get scroll amount with multiplier for sensitivity
@@ -1735,6 +1734,70 @@ public class GeminiTextPane extends JTextPane {
             isScrolling = false;
             scrollTimer2.stop();
         }
+    }
+
+    public List<ClickableRange> getVisibleLinks() {
+        List<ClickableRange> visibleList = new ArrayList<>();
+        for (ClickableRange cr : clickableRegions) {
+            //System.out.println(cr.url);
+            if (isClickableRangeVisible(cr)) {
+                visibleList.add(cr);
+            }
+        }
+        return visibleList;
+    }
+
+    public void clickVisibleLink(int linkIdx) {
+        int idx = 0;
+        for (ClickableRange cr : clickableRegions) {
+            if (isClickableRangeVisible(cr)) {
+
+                if (linkIdx == idx) {
+
+                    if (cr.imageIndex != -1) {
+                        setCaretPosition(cr.start);
+                        removeImageAtIndex(cr);
+                        cr.imageIndex = -1;
+
+                    } else {
+                        lastClicked = cr;
+                        cr.action.run();
+                    }
+
+                    break;
+                } else {
+                    idx++;
+                }
+            }
+        }
+    }
+
+    private boolean isClickableRangeVisible(ClickableRange range) {
+       // try {
+            //Rectangle2D startRect = modelToView2D(range.start);
+            //Rectangle2D endRect = modelToView2D(range.end);
+//System.out.println(range.start + " " + range.end);
+            //if (startRect == null || endRect == null) {
+            //return false;
+            //}
+            // Rectangle2D fullRangeRect;
+            // if (startRect.getY() == endRect.getY() ){ // Same line
+            //     fullRangeRect = new Rectangle((int) startRect.getX(), (int) startRect.getY(), (int) (endRect.getX() - startRect.getX()), (int) startRect.getHeight());
+            // } else {
+            //     fullRangeRect = startRect.createUnion(endRect);
+            // }
+            Rectangle cb = getCharacterBounds(this, range.start, range.end);
+            Rectangle newRect = SwingUtilities.convertRectangle(this, cb, this);
+            //System.out.println(fullRangeRect);
+            //Rectangle newRect = SwingUtilities.convertRectangle(this, new Rectangle((int) fullRangeRect.getX(), (int) fullRangeRect.getY() + (fm.getMaxDescent()), (int) fullRangeRect.getWidth(), (int) fullRangeRect.getHeight() - (fm.getMaxDescent() * 3)), this);
+            JViewport viewport = (JViewport) getParent();
+            Rectangle viewRect = viewport.getViewRect();
+            //Rectangle adjViewRect = SwingUtilities.convertRectangle(this, viewRect, this);
+            return viewRect.contains(newRect.getBounds());
+        // } catch (BadLocationException e) {
+        //     e.printStackTrace();
+        //     return false;
+        // }
     }
 
 }
