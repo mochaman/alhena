@@ -10,12 +10,10 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Insets;
 import java.awt.MenuItem;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -26,8 +24,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
@@ -96,10 +92,10 @@ public final class GeminiFrame extends JFrame {
     private JComboBox comboBox;
     private final JLabel statusField;
     public JTabbedPane tabbedPane;
-    private final JButton backButton;
-    private final JButton forwardButton;
+    public final JButton backButton;
+    public final JButton forwardButton;
     private final JButton favButton;
-    private final JButton refreshButton;
+    public final JButton refreshButton;
     public static int currentThemeId;
     private final HashMap<Page, ArrayList<Page>> pageHistoryMap = new HashMap<>();
     private final List<String> clickedLinks = new ArrayList<>();
@@ -653,6 +649,7 @@ public final class GeminiFrame extends JFrame {
         menuBar.add(fileMenu);
 
         JMenu viewMenu = new JMenu("View");
+        viewMenu.setMnemonic('V');
 
         for (String label : CUSTOM_LABELS) {
             KeyStroke ks = null;
@@ -701,7 +698,6 @@ public final class GeminiFrame extends JFrame {
         aboutMenu.setMnemonic('H');
         if (!SystemInfo.isMacOS) {
             aboutMenu.add(createMenuItem("About", null, () -> {
-                //JOptionPane.showMessageDialog(this, Alhena.PROG_NAME + " " + Alhena.VERSION + "\nWritten by Brad Grier");
                 Util.showAbout(GeminiFrame.this);
 
             }));
@@ -712,7 +708,6 @@ public final class GeminiFrame extends JFrame {
             File file = Util.copyFromJar(homeDir);
             URI fileUri = file.toURI();
 
-            //GeminiClient.processURL(fileUri.toString(), visiblePage(), null, visiblePage());
             fetchURL(fileUri.toString());
 
         }));
@@ -747,6 +742,7 @@ public final class GeminiFrame extends JFrame {
             settingsMenu.removeAll();
         } else {
             settingsMenu = new JMenu("Settings");
+            settingsMenu.setMnemonic('S');
             menuBar.add(settingsMenu);
         }
 
@@ -1145,6 +1141,7 @@ public final class GeminiFrame extends JFrame {
                 bookmarkMenu.removeAll();
             } else {
                 bookmarkMenu = new JMenu("Bookmarks");
+                bookmarkMenu.setMnemonic('B');
                 menuBar.add(bookmarkMenu);
             }
 
@@ -2248,7 +2245,7 @@ public final class GeminiFrame extends JFrame {
         if (!(getGlassPane() instanceof GeminiGlassPane)) {
             setGlassPane(new GeminiGlassPane());
         }
-        validate();
+        //validate();
         // get the existing blocking glass pane
         GeminiGlassPane bgp = (GeminiGlassPane) getGlassPane();
         //bgp.setPainter(painter);
