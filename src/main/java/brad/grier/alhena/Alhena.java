@@ -181,7 +181,7 @@ public class Alhena {
                     }
                     return false;
 
-                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.ALT_DOWN_MASK)))) {
 
                     gf.editPage();
                     e.consume();
