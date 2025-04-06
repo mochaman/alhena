@@ -11,6 +11,7 @@ import java.awt.Taskbar.Feature;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -123,7 +124,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.7";
+    public final static String VERSION = "4.8";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
@@ -133,17 +134,35 @@ public class Alhena {
     public static String httpProxy;
     public static String gopherProxy;
     private static NetClient spartanClient = null;
-    private static int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+    private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+    private static final int MODIFIER = (InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
+
+    private static boolean keyDown;
+    private static LinkGlassPane lgp;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher((KeyEvent e) -> {
-            if (e.getID() == KeyEvent.KEY_PRESSED) {
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+            if (gf == null) {
+                return false;
+            }
+            if (e.getID() == KeyEvent.KEY_RELEASED) {
+                lgp = null;
+                keyDown = false;
+                if (gf.getGlassPane() instanceof LinkGlassPane) {
+                    gf.getGlassPane().setVisible(false);
+                }
+                return false;
+            } else if (e.getID() == KeyEvent.KEY_PRESSED) {
 
-                    Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                    GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
-                    if (gf != null && gf.visiblePage().busy()) {
+                KeyStroke ks = KeyStroke.getKeyStrokeForEvent(e);
+
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE && !keyDown) {
+                    keyDown = true;
+
+                    if (gf.visiblePage().busy()) {
                         gf.visiblePage().setBusy(false);
                         gf.showGlassPane(false);
                         interrupted = true;
@@ -157,42 +176,83 @@ public class Alhena {
 
                         // reset all connections in map
                         certMap.clear();
-
+                        e.consume();
                         return true; // consume
                     }
                     return false;
 
-                } else if (KeyStroke.getKeyStrokeForEvent(e).equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (mod | KeyEvent.SHIFT_DOWN_MASK)))) {
-                    Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                    GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
+
                     gf.editPage();
+                    e.consume();
                     return true;
 
-                } else if (KeyStroke.getKeyStrokeForEvent(e).equals(KeyStroke.getKeyStroke(KeyEvent.VK_C, mod))) {
-                    Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                    GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_C, MOD))) {
+
                     Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                     String select = gf.visiblePage().textPane.getSelectedText();
                     if (select != null) {
                         StringSelection selectedText = new StringSelection(select);
                         clipboard.setContents(selectedText, selectedText);
                     }
+                    e.consume();
                     return true;
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, MOD))) {
+                    gf.backButton.doClick();
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET, MOD))) {
+                    gf.forwardButton.doClick();
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_R, MOD))) {
+                    gf.refreshButton.doClick();
+
+                } else {
+
+                    if ((e.getModifiersEx() & MODIFIER) == MODIFIER) {
+
+                        if (!keyDown) {
+                            int keyCode = e.getKeyCode();
+                            int index = -1;
+
+                            if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
+                                index = keyCode - KeyEvent.VK_1;
+                            } // A-Z → indices 9-34
+                            else if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
+                                index = 9 + (keyCode - KeyEvent.VK_A);
+                            }
+
+                            if (index >= 0 && lgp != null) {
+
+                                keyDown = true;
+
+                                lgp.setVisible(false);
+
+                                //lgp = null;
+                                gf.visiblePage().textPane.clickVisibleLink(index);
+                                e.consume();
+                                return true;
+
+                            }
+                        }
+
+                        if (lgp == null) {
+                            lgp = new LinkGlassPane(gf.visiblePage().textPane);
+                            gf.setGlassPane(lgp);
+                            lgp.setVisible(true);
+                            gf.repaint();
+                        }
+
+                    } else if (gf.visiblePage().textPane.hasFocus()) {
+
+                        Runnable r = gf.actionMap.get(ks);
+                        if (r != null) {
+                            r.run();
+                            e.consume();
+                            return true;
+                        }
+                    }
+
                 }
             }
 
-            Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-            GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, source);
-
-            // textpane eats keys
-            if (gf != null && gf.visiblePage().textPane.hasFocus()) {
-                KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
-                Runnable r = gf.actionMap.get(keyStroke);
-                if (r != null) {
-                    r.run();
-                    return true;
-                }
-            }
             return false; // allow event to be processed
         });
 
@@ -260,7 +320,6 @@ public class Alhena {
             if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
                 desktop.setAboutHandler(e -> {
                     Component c = frameList.size() == 1 ? frameList.get(0) : null;
-                    //Util.infoDialog(c, "About", PROG_NAME + " " + VERSION + "\nWritten by Brad Grier");
                     Util.showAbout(c);
                 });
             }
@@ -855,12 +914,11 @@ public class Alhena {
 
                 // Once the file is fully read, wait for the server response
                 asyncFile.endHandler(v -> {
-                    //System.out.println("File sent. Waiting for server response...");
                     asyncFile.close();
                 });
 
                 asyncFile.exceptionHandler(err -> {
-                    //System.err.println("File read error: " + err.getMessage());
+
                     err.printStackTrace();
                     asyncFile.close();
                     socket.close();
