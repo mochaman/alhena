@@ -57,12 +57,12 @@ java -jar ./lib/alhena.jar
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD in Releases. Java is NOT required. Each archive includes a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v4.7/alhena-4.7_freebsd_x64.tgz) untar and run script
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v4.8/alhena-4.8_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v4.8/alhena-4.8_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v4.8/alhena-4.8_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v4.8/alhena-4.8_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v4.8/alhena-4.8_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v4.8/alhena-4.8_freebsd_x64.tgz) untar and run script
 
 ## 🐳 Docker
 
@@ -89,9 +89,9 @@ Light Theme:
 
 ![Light Theme](https://metaloupe.com/alhena/images/windows_light.png)
 
-Inline Images:  
+ANSI Color:  
 
-![Inline Images](https://metaloupe.com/alhena/images/windows_inline.png)
+![Inline Images](https://metaloupe.com/alhena/images/mac_ansi.png)
 
 ## 🛠 License
 Alhena is licensed under the **BSD 2-Clause License**. See [LICENSE](LICENSE) for details.
