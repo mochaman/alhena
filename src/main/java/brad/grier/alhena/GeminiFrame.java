@@ -650,7 +650,7 @@ public final class GeminiFrame extends JFrame {
 
         JMenu viewMenu = new JMenu("View");
         viewMenu.setMnemonic('V');
-
+        
         for (String label : CUSTOM_LABELS) {
             KeyStroke ks = null;
             if (!label.equals(INFO_LABEL)) {
@@ -660,9 +660,9 @@ public final class GeminiFrame extends JFrame {
                     case BOOKMARK_LABEL ->
                         ks = KeyStroke.getKeyStroke(KeyEvent.VK_B, mod);
                     case CERT_LABEL ->
-                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, (mod | KeyEvent.SHIFT_DOWN_MASK));
+                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, (mod | KeyEvent.ALT_DOWN_MASK));
                     case SERVERS_LABEL ->
-                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, (mod | KeyEvent.SHIFT_DOWN_MASK));
+                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, (mod | KeyEvent.ALT_DOWN_MASK));
                     default -> {
                     }
                 }
@@ -780,7 +780,7 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(lightThemeMenu);
         settingsMenu.add(darkThemeMenu);
 
-        settingsMenu.add(createMenuItem("Font", KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
+        settingsMenu.add(createMenuItem("Font", KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
             Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, 15);
             Font font = Util.getFont(GeminiFrame.this, defFont);
             if (font != null) {
