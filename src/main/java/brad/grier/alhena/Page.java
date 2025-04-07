@@ -111,6 +111,15 @@ public class Page extends JPanel {
         return titanEdited;
     }
 
+    private String titanToken;
+    public void setTitanToken(String token){
+        titanToken = token;
+    }
+
+    public String getTitanToken(){
+        return titanToken;
+    }
+
     public void setDataFile(File file) {
         dataFile = file;
     }
