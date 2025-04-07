@@ -424,7 +424,7 @@ public class Util {
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         fileChooser.setApproveButtonText(isOpenMode ? "Open" : "Save");
 
-        if (fileName != null) {
+        if (fileName != null && !fileName.trim().isEmpty()) {
 
             fileChooser.setSelectedFile(new File(System.getProperty("user.home"), fileName));
         } else {
