@@ -412,16 +412,9 @@ public class GeminiTextPane extends JTextPane {
                                     String label = useBrowser ? "Alhena" : "Browser";
                                     JMenuItem httpMenuItem = new JMenuItem("Open In " + label);
                                     httpMenuItem.addActionListener(al -> {
-                                        if (!useBrowser) {
-                                            try {
-                                                Desktop.getDesktop().browse(new URI(range.url));
-                                            } catch (Exception ex) {
-                                                ex.printStackTrace();
-                                            }
-                                        } else {
-                                            f.fetchURL(range.url);
-                                        }
+
                                         DB.insertPref("browser", String.valueOf(!useBrowser));
+                                        f.fetchURL(range.url);
                                     });
 
                                     popupMenu.add(httpMenuItem);
@@ -1305,7 +1298,7 @@ public class GeminiTextPane extends JTextPane {
                         boolean useBrowser = useB == null ? true : useB.equals("true");
                         if (spartanLink) {
 
-                            TextEditor textEditor = new TextEditor("");
+                            TextEditor textEditor = new TextEditor("", false);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
                             String res = Util.inputDialog2(f, "Edit", comps);
