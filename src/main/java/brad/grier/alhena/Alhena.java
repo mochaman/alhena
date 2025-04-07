@@ -556,6 +556,7 @@ public class Alhena {
             if (!p.getTitanEdited() && p.getDataFile() == null) {
                 File titanFile = null;
                 String titanText = null;
+                String token;
                 TextEditor textEditor = new TextEditor("");
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
@@ -571,16 +572,12 @@ public class Alhena {
                     } else {
                         titanFile = (File) rsp;
                     }
+                    token = textEditor.getTokenParam();
 
                 }
 
+
                 if (titanFile != null) {
-                    String token = Util.inputDialog(p.frame(), "Token", "Enter token (if required) or leave blank.", false);
-                    if (token != null && !token.isBlank()) {
-                        token = ";token=" + URLEncoder.encode(token).replace("+", "%20");
-                    } else {
-                        token = "";
-                    }
                     String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
                     String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
                     p.setDataFile(titanFile);
@@ -589,31 +586,32 @@ public class Alhena {
 
                 } else if (titanText != null && !titanText.isBlank()) {
                     String mimeType = "text/gemini";
-                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + titanText.getBytes().length + ";mime=" + mimeType + query;
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanText.getBytes().length + ";mime=" + mimeType + query;
 
                     p.setEditedText(titanText);
                     punyURI = URI.create(titanUrl);
 
                 } else {
                     String mimeType = "text/gemini"; // doesn't matter here? this is a zero length request which should be delete on server
-                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=0;mime=" + mimeType + query;
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=0;mime=" + mimeType + query;
                     p.setEditedText("");
                     punyURI = URI.create(titanUrl);
 
                 }
             } else if (p.getTitanEdited()) {
+                String token = p.getTitanToken();
                 if (p.getEditedText() != null) {
                     String text = p.getEditedText();
                     String mimeType = "text/gemini";
 
-                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + text.getBytes().length + ";mime=" + mimeType + query;
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + text.getBytes().length + ";mime=" + mimeType + query;
 
                     punyURI = URI.create(titanUrl);
                 } else {
                     // ;edit but sending a file
                     String mimeType = Util.getMimeType(p.getDataFile().getAbsolutePath());
 
-                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + ";size=" + p.getDataFile().length() + ";mime=" + mimeType + query;
+                    String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + p.getDataFile().length() + ";mime=" + mimeType + query;
                     punyURI = URI.create(titanUrl);
                 }
             }
@@ -1003,6 +1001,7 @@ public class Alhena {
                 connection.result().write(urlText + "\r\n");
 
                 if (uri.getScheme().equals("titan") && !uri.getPath().endsWith(";edit")) {
+                    p.setTitanToken(null);
                     if (p.getEditedText() != null) {
                         String txt = p.getEditedText();
                         p.setEditedText(null);
@@ -1017,7 +1016,9 @@ public class Alhena {
                             });
                         }
                     } else if (p.getDataFile() != null) {
-                        streamToSocket(p.getDataFile().getAbsolutePath(), connection.result(), p, origURL);
+                        String fp = p.getDataFile().getAbsolutePath();
+                        p.setDataFile(null);
+                        streamToSocket(fp, connection.result(), p, origURL);
 
                     } else {
                         connection.result().close();
@@ -1167,8 +1168,6 @@ public class Alhena {
                                 char respType = (char) saveBuffer.getByte(1);
                                 if (!(titanEdit[0] && respCode == '5' && respType == '1')) {
 
-                                
-
                                     String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
                                     titanEdit[0] = false;
@@ -1276,6 +1275,7 @@ public class Alhena {
                                         } else {
                                             p.setDataFile((File) rsp);
                                         }
+                                        p.setTitanToken(textEditor.getTokenParam());
                                         processURL(uriString.substring(0, uriString.indexOf(";edit")), p, origURL, cPage);
 
                                     } else {
