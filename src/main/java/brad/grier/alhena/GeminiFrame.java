@@ -618,6 +618,7 @@ public final class GeminiFrame extends JFrame {
                         fetchURL(titanUrl, encFile);
 
                     } catch (Exception ex) {
+                        Util.infoDialog(GeminiFrame.this, "Error", "Sync failed.\n" + ex.getMessage());
                         ex.printStackTrace();
                     }
                 }
