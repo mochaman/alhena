@@ -5,11 +5,14 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.io.File;
+import java.net.URLEncoder;
 
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
 import javax.swing.JTextPane;
 
 import com.formdev.flatlaf.util.SystemInfo;
@@ -25,9 +28,10 @@ public class TextEditor extends JPanel {
     private final JTextPane textArea;
     private final JFileChooser fileChooser;
     private final JTabbedPane tabbedPane;
+    private final JTextField tokenField;
 
     public TextEditor(String text) {
-        setLayout(new BorderLayout());
+        setLayout(new BorderLayout(0, 5));
         tabbedPane = new JTabbedPane();
         textArea = new JTextPane();
         String fontName = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
@@ -42,6 +46,13 @@ public class TextEditor extends JPanel {
 
         tabbedPane.addTab("File", fileChooser);
         add(tabbedPane, BorderLayout.CENTER);
+
+        JPanel tokenPanel = new JPanel();
+        tokenPanel.setLayout(new BorderLayout(5, 0));
+        tokenPanel.add(new JLabel("Token:"), BorderLayout.WEST);
+        tokenPanel.add(tokenField = new JTextField(), BorderLayout.CENTER);
+        add(tokenPanel, BorderLayout.SOUTH);
+
         textArea.setText(text);
         setPreferredSize(new Dimension(800, 400));
         EventQueue.invokeLater(() -> scrollPane.getVerticalScrollBar().setValue(0));
@@ -54,6 +65,15 @@ public class TextEditor extends JPanel {
             return textArea.getText();
         } else {
             return fileChooser.getSelectedFile();
+        }
+    }
+
+    public String getTokenParam() {
+        String token = tokenField.getText().isBlank() ? null : tokenField.getText();
+        if (token != null) {
+            return ";token=" + URLEncoder.encode(token).replace("+", "%20");
+        } else {
+            return "";
         }
     }
 
