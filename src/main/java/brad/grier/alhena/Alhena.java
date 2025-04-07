@@ -1163,12 +1163,20 @@ public class Alhena {
                                 if (p.redirectCount > 0) {
                                     p.redirectCount--;
                                 }
-                                String errorMsg = saveBuffer.getString(0, i - 1).trim();
-                                titanEdit[0] = false;
 
-                                bg(() -> {
-                                    p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
-                                });
+                                char respType = (char) saveBuffer.getByte(1);
+                                if (!(titanEdit[0] && respCode == '5' && respType == '1')) {
+
+                                
+
+                                    String errorMsg = saveBuffer.getString(0, i - 1).trim();
+
+                                    titanEdit[0] = false;
+
+                                    bg(() -> {
+                                        p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
+                                    });
+                                }
 
                             }
                             case '6' -> {
