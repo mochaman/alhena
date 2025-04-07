@@ -344,6 +344,7 @@ public class Alhena {
         DB.init();
         httpProxy = DB.getPref("httpproxy", null);
         gopherProxy = DB.getPref("gopherproxy", null);
+
         EventQueue.invokeLater(() -> {
 
             theme = DB.getPref("theme", null);
@@ -557,7 +558,7 @@ public class Alhena {
                 File titanFile = null;
                 String titanText = null;
                 String token;
-                TextEditor textEditor = new TextEditor("");
+                TextEditor textEditor = new TextEditor("", true);
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
                 String res = Util.inputDialog2(p.frame(), "Edit", comps);
@@ -575,7 +576,6 @@ public class Alhena {
                     token = textEditor.getTokenParam();
 
                 }
-
 
                 if (titanFile != null) {
                     String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
@@ -1257,7 +1257,7 @@ public class Alhena {
                             bg(() -> {
                                 if (titanEdit[0]) {
 
-                                    TextEditor textEditor = new TextEditor(titanSB.toString());
+                                    TextEditor textEditor = new TextEditor(titanSB.toString(), true);
                                     Object[] comps = new Object[1];
                                     comps[0] = textEditor;
                                     String res = Util.inputDialog2(p.frame(), "Edit", comps);
@@ -2195,6 +2195,18 @@ public class Alhena {
     }
 
     private static void handleHttp(String url, URI prevURI, Page p, Page cPage) {
+        String useB = DB.getPref("browser", null);
+        boolean useBrowser = useB == null ? true : useB.equals("true");
+        if (browsingSupported && useBrowser) {
+            try {
+                Desktop.getDesktop().browse(new URI(url));
+            } catch (Exception ex) {
+
+                ex.printStackTrace();
+            }
+            p.frame().updateComboBox(prevURI.toString());
+            return;
+        }
         if (!url.startsWith("https")) {
             url = prevURI.resolve(url).toString();
         }
@@ -2227,7 +2239,6 @@ public class Alhena {
                             ex.printStackTrace();
                             bg(() -> {
                                 p.textPane.end("error getting web page\n", true, finalURL, true);
-                                //p.frame().showGlassPane(false);
                             });
                             req.end();
                         });
