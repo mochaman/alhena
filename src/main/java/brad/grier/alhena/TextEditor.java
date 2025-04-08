@@ -15,8 +15,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.UIManager;
 
-import com.formdev.flatlaf.ui.FlatTextBorder;
 import com.formdev.flatlaf.util.SystemInfo;
 
 /**
@@ -45,8 +45,8 @@ public class TextEditor extends JPanel {
 
         fileChooser = new JFileChooser();
         fileChooser.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0),
-                BorderFactory.createCompoundBorder(new FlatTextBorder(), BorderFactory.createEmptyBorder(10, 10, 10, 10))));
-        //fileChooser.setBorder(BorderFactory.createCompoundBorder(new FlatTextBorder(), BorderFactory.createEmptyBorder(5,5,5,5)));
+                BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(UIManager.getColor("ComboBox.buttonSeparatorColor")), BorderFactory.createEmptyBorder(10, 10, 10, 10))));
+        
         fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
         fileChooser.setControlButtonsAreShown(false);
 
