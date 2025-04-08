@@ -84,7 +84,7 @@ The password is `alhena`
 
 Titan Text Editor: 
 
-![Dark Theme](https://metaloupe.com/alhena/images/titantexteditor.png)
+![Dark Theme](https://ultimatumlabs.com/static/titantexteditor.png)
 
 Light Theme:
 
