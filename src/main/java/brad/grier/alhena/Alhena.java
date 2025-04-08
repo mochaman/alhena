@@ -124,7 +124,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "4.9";
+    public final static String VERSION = "5.0";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
@@ -941,7 +941,7 @@ public class Alhena {
         if (p.redirectCount == 0) {
             p.frame().setBusy(true, cPage);
         }
-        // boolean isSpartan = uri.getScheme().equals("spartan");
+
         String host = uri.getHost();
 
         // TODO: make sure there's no fragment - I think
