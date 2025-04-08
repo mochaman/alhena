@@ -57,12 +57,13 @@ java -jar ./lib/alhena.jar
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD in Releases. Java is NOT required. Each archive includes a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v4.9/alhena-4.9_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v4.9/alhena-4.9_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v4.9/alhena-4.9_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v4.9/alhena-4.9_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v4.9/alhena-4.9_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v4.9/alhena-4.9_freebsd_x64.tgz) untar and run script
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.0/alhena-5.0_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.0/alhena-5.0_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.0/alhena-5.0_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.0/alhena-5.0_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.0/alhena-5.0_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.0/alhena-5.0_freebsd_x64.tgz) untar and run script
+- [Standalone (No Java)](https://github.com/mochaman/alhena/releases/download/v5.0/alhena-5.0_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
 
 ## 🐳 Docker
 
@@ -83,7 +84,7 @@ The password is `alhena`
 
 Titan Text Editor: 
 
-![Dark Theme](https://metaloupe.com/alhena/images/titan_text_editor.png)
+![Dark Theme](https://metaloupe.com/alhena/images/titantexteditor.png)
 
 Light Theme:
 
@@ -99,4 +100,5 @@ Alhena is licensed under the **BSD 2-Clause License**. See [LICENSE](LICENSE) fo
 ---
 
 Have suggestions or found a bug? Open an issue or contribute via pull requests! 🚀
+
 
