@@ -39,6 +39,7 @@ public class TextEditor extends JPanel {
         String fontName = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
         Font font = new Font(fontName, Font.PLAIN, 14);
         textArea.setFont(font);
+        textArea.addMouseListener(new ContextMenuMouseListener());
         JScrollPane scrollPane = new JScrollPane(textArea);
         scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         tabbedPane.addTab("Text", scrollPane);
