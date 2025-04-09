@@ -53,8 +53,10 @@ import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
+import javax.swing.JSlider;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
@@ -368,8 +370,16 @@ public class Util {
 
     public static Font getFont(GeminiFrame f, Font font) {
         FontChooser fontChooser = new FontChooser(font);
+        JSlider slider = new JSlider(JSlider.HORIZONTAL, 5, 35, GeminiFrame.monoFontSize);
+        slider.setMajorTickSpacing(5);   
+        slider.setMinorTickSpacing(5);
+        slider.setPaintTicks(true); 
+        slider.setPaintLabels(true);
         Object[] message = {
-            fontChooser
+            fontChooser,
+            new JLabel(" "),
+            new JLabel("Preformatted Text Size"),
+            slider
         };
         Object[] options = {"OK", "Cancel", "Reset"};
         JOptionPane optionPane = new JOptionPane(
@@ -396,15 +406,17 @@ public class Util {
         Object selectedValue = optionPane.getValue();
         if (selectedValue instanceof String val) {
             if (val.equals("OK")) {
+                GeminiFrame.monoFontSize = slider.getValue();
                 return fontChooser.getSelectedFont();
             } else if (val.equals("Reset")) {
+                GeminiFrame.monoFontSize = 15;
                 return new Font("SansSerif", Font.PLAIN, 15);
             } else {
                 return null;
             }
         }
         return null; // never happens
-        //return fontChooser.getSelectedFont();
+
     }
 
     public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter) {
@@ -882,7 +894,6 @@ public class Util {
             "PRIVATE KEY", // PKCS#8
             "RSA PRIVATE KEY", // PKCS#1 RSA
             "EC PRIVATE KEY" // EC legacy
-
         };
 
         for (String type : keyTypes) {
@@ -897,5 +908,58 @@ public class Util {
 
         return new PemData(cert, key);
     }
+
+    public static boolean isFontAvailable(String fontName) {
+        String[] fonts = GraphicsEnvironment
+                .getLocalGraphicsEnvironment()
+                .getAvailableFontFamilyNames();
+
+        for (String font : fonts) {
+            if (font.equalsIgnoreCase(fontName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // public static boolean isMonospaced(Font font) {
+
+    //     BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+    //     Graphics g = img.getGraphics();
+    //     g.setFont(font);
+    //     FontMetrics fm = g.getFontMetrics();
+
+    //     // Try a few different characters
+    //     int[] widths = {
+    //         fm.charWidth('i'),
+    //         fm.charWidth('W'),
+    //         fm.charWidth(' '),
+    //         fm.charWidth('1'),
+    //         fm.charWidth('m')
+    //     };
+
+    //     for (int i = 1; i < widths.length; i++) {
+    //         if (widths[i] != widths[0]) {
+    //             return false;  // not monospaced
+    //         }
+    //     }
+
+    //     return true;  // monospaced
+    // }
+
+    // public static boolean findMonospacedFonts() {
+    //     String[] fonts = GraphicsEnvironment
+    //             .getLocalGraphicsEnvironment()
+    //             .getAvailableFontFamilyNames();
+
+    //     for (String font : fonts) {
+    //         Font f = new Font(font, Font.PLAIN, 12);
+    //         if(isMonospaced(f)){
+    //             System.out.println(font);
+    //         }
+
+    //     }
+    //     return false;
+    // }
 
 }
