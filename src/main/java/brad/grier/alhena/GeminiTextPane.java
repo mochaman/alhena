@@ -4,8 +4,6 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.EventQueue;
-import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Insets;
@@ -88,7 +86,7 @@ public class GeminiTextPane extends JTextPane {
     private int currentCursor = Cursor.DEFAULT_CURSOR;
     private boolean preformattedMode;
     private String currentStatus = Alhena.WELCOME_MESSAGE;
-    private final String monospacedFamily;
+    private static String monospacedFamily;
     private final GeminiFrame f;
     // use StringBuilder instead of StringBuffer as only updated in EventDispatch at creation
     private StringBuilder pageBuffer;
@@ -132,6 +130,28 @@ public class GeminiTextPane extends JTextPane {
     private static BufferedImage sheetImage = null;
 
     static {
+        String userDefined = System.getenv("alhena_monofont");
+        if(SystemInfo.isWindows){
+            
+            monospacedFamily = userDefined == null || userDefined.isBlank() ? "Source Code Pro" : userDefined;
+        }else if(SystemInfo.isMacOS){
+            // PT Mono - some horizontal lines but works
+            // Menlo - taller horizontal lines
+            // Courier New - works!
+            // FreeMono - no horizontal lines but squished a bit
+            // Liberation Mono - works on pi but lines
+            String uff = userDefined == null ? "" : userDefined;
+            List<String> goodFonts = List.of(uff, "Courier New", "Andale Mono", "PT Mono", "Monospaced");
+            for(String ff : goodFonts){
+                if(Util.isFontAvailable(ff)){
+                    monospacedFamily = ff;
+                    break;
+                }
+            }
+
+        }else{ // linux, bsd and whatnot
+            monospacedFamily = userDefined == null || userDefined.isBlank() ? "Monospaced" : userDefined;
+        }
         dropExtensions = new ArrayList<>(Alhena.fileExtensions);
         dropExtensions.add(".png");
         dropExtensions.add(".jpg");
@@ -201,8 +221,6 @@ public class GeminiTextPane extends JTextPane {
         this.page = page;
         docURL = url;
 
-        // Monospaced doesn't align on Windows, Source Code Pro doesn't align on Mac/Linux!
-        monospacedFamily = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
 
         Insets insets = getMargin();
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
@@ -885,7 +903,7 @@ public class GeminiTextPane extends JTextPane {
 
             // probably not needed anymore
             bStyle.addAttribute(StyleConstants.FontFamily, monospacedFamily);
-            bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.fontSize);
+            bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.monoFontSize);
 
         }
 
@@ -1019,7 +1037,7 @@ public class GeminiTextPane extends JTextPane {
                 case "[0m" -> {
                     bStyle = new SimpleAttributeSet();
                     bStyle.addAttribute(StyleConstants.FontFamily, monospacedFamily);
-                    bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.fontSize);
+                    bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.monoFontSize);
 
                 }
                 case "[1m" -> {
@@ -1142,7 +1160,6 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private String emojiProportional;
-    private float pfAdjust = 0.0f;
 
     private void buildStyles() {
 
@@ -1161,21 +1178,10 @@ public class GeminiTextPane extends JTextPane {
 
         Style pfStyle = doc.addStyle("```", null);
         StyleConstants.setFontFamily(pfStyle, monospacedFamily);
-        StyleConstants.setFontSize(pfStyle, GeminiFrame.fontSize);
+        StyleConstants.setFontSize(pfStyle, GeminiFrame.monoFontSize);
         StyleConstants.setBold(pfStyle, false);
         StyleConstants.setItalic(pfStyle, false);
         StyleConstants.setUnderline(pfStyle, false);
-
-        // linespacing on non-windows platforms for pre-formatted text creates
-        // horizontal lines in ascii block text (for example)
-        if (!SystemInfo.isWindows) {
-            Font pfFont = new Font(monospacedFamily, Font.PLAIN, GeminiFrame.fontSize);
-            FontMetrics fm = getFontMetrics(pfFont);
-            int ascent = fm.getAscent();
-            int descent = fm.getDescent();
-            int leading = fm.getLeading();
-            pfAdjust = -((float) (descent + leading - (float) (descent / 1.95f)) / (float) ascent);
-        }
 
         Color foreground = UIManager.getColor("TextField.foreground");
 
@@ -1248,7 +1254,7 @@ public class GeminiTextPane extends JTextPane {
 
                 StyleConstants.setLeftIndent(indentAttributes, 50); // Set left indentation in points
                 StyleConstants.setRightIndent(indentAttributes, 50); // Optional: Adjust the right margin
-                StyleConstants.setLineSpacing(indentAttributes, pfAdjust); // Optional: Set line spacing if needed
+                //StyleConstants.setLineSpacing(indentAttributes, pfAdjust); // Optional: Set line spacing if needed
                 Color pfColor = UIManager.getBoolean("laf.dark") ? AnsiColor.blend(linkColor, Color.WHITE, .1f) : AnsiColor.blend(linkColor, Color.BLACK, .1f);
                 StyleConstants.setForeground(indentAttributes, pfColor);
                 doc.setParagraphAttributes(pfModeStart, doc.getLength(), indentAttributes, true);
