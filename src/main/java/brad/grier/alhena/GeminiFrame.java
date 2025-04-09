@@ -111,6 +111,7 @@ public final class GeminiFrame extends JFrame {
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL); // make immutable
     public static String proportionalFamily = "SansSerif";
     public static int fontSize = 15;
+    public static int monoFontSize = 15;
     public static boolean ansiAlert;
     private static Font saveFont;
     public final static String SYNC_SERVER = "ultimatumlabs.com:1965/";
@@ -300,6 +301,9 @@ public final class GeminiFrame extends JFrame {
         proportionalFamily = DB.getPref("fontfamily", "SansSerif");
         String fs = DB.getPref("fontsize", "15");
         fontSize = Integer.parseInt(fs);
+        String mfs = DB.getPref("monofontsize", "15");
+        monoFontSize = Integer.parseInt(mfs);
+        
         String dbFont = DB.getPref("font", "SansSerif");
         saveFont = new Font(dbFont, Font.PLAIN, fontSize);
 
@@ -309,7 +313,7 @@ public final class GeminiFrame extends JFrame {
 
             saveFont = new Font("SansSerif", Font.PLAIN, 15);
             proportionalFamily = "SansSerif";
-            fontSize = 15;
+            monoFontSize = fontSize = 15;
         }
 
         boolean addToHistory = url != null || baseUrl != null;
@@ -794,6 +798,7 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("font", font.getName());
                 DB.insertPref("fontfamily", proportionalFamily);
                 DB.insertPref("fontsize", String.valueOf(fontSize));
+                DB.insertPref("monofontsize", String.valueOf(monoFontSize));
             }
 
         }));
@@ -941,6 +946,8 @@ public final class GeminiFrame extends JFrame {
         proportionalFamily = DB.getPref("fontfamily", "SansSerif");
         String fs = DB.getPref("fontsize", "15");
         fontSize = Integer.parseInt(fs);
+        String mfs = DB.getPref("monofontsize", "15");
+        monoFontSize = Integer.parseInt(mfs);
         String dbFont = DB.getPref("font", "SansSerif");
         saveFont = new Font(dbFont, Font.PLAIN, fontSize);
     }
