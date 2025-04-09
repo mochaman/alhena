@@ -124,7 +124,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.0";
+    public final static String VERSION = "5.0.1";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
@@ -1032,9 +1032,10 @@ public class Alhena {
                 Buffer saveBuffer = Buffer.buffer();
 
                 boolean[] error = {false};
+                int[] hLength = {0};
                 // Handle the response
                 connection.result().handler(buffer -> {
-
+                    
                     // we have to make sure we have the entire header before we proceed
                     if (firstBuffer[0]) {
 
@@ -1063,6 +1064,7 @@ public class Alhena {
                                 p.frame().setBusy(false, cPage);
                                 String reqMsg = saveBuffer.getString(3, i - 1);
                                 char respType = (char) saveBuffer.getByte(1);
+
                                 bg(() -> {
 
                                     String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, respType == '1');
@@ -1073,6 +1075,8 @@ public class Alhena {
                                         p.setStart();
                                         processURL(uri + questionMark + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
 
+                                    } else {
+                                        cPage.textPane.resetLastClicked();
                                     }
                                 });
                             }
@@ -1105,6 +1109,7 @@ public class Alhena {
                                     }
                                 } else if (mime.startsWith("image/")) {
                                     imageStartIdx[0] = i + 1;
+                                    hLength[0] = i + 1;
                                     try {
                                         DB.insertHistory(origURL, null);
                                     } catch (SQLException ex) {
@@ -1214,7 +1219,9 @@ public class Alhena {
                         //p.redirectCount = 0;
                         if (!error[0]) {
                             if (imageStartIdx[0] != -1) {
+
                                 saveBuffer.appendBuffer(buffer);
+                                cPage.frame().setTmpStatus((saveBuffer.length() - hLength[0]) + " bytes");
                             } else {
                                 if (titanEdit[0]) {
                                     p.frame().setBusy(false, cPage);
@@ -1613,7 +1620,8 @@ public class Alhena {
                 addCertToTrustStore(uri, cert);
 
                 if (dcButton.isSelected()) {
-                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + "/");
+                    String port = uri.getPort() == -1 ? ":1965" : ":" + uri.getPort();
+                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + port + "/");
 
                     createClientCert(newURI, cnString);
 
