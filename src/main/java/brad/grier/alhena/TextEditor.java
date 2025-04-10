@@ -58,6 +58,7 @@ public class TextEditor extends JPanel {
         tokenPanel.setLayout(new BorderLayout(5, 0));
         tokenPanel.add(new JLabel("Token:"), BorderLayout.WEST);
         tokenPanel.add(tokenField = new JTextField(), BorderLayout.CENTER);
+        tokenField.addMouseListener(new ContextMenuMouseListener());
         add(tokenPanel, BorderLayout.SOUTH);
         tokenPanel.setVisible(token);
         textArea.setText(text);
