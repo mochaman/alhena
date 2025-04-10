@@ -582,7 +582,7 @@ public class GeminiTextPane extends JTextPane {
                         });
                         popupMenu.add(certItem);
                         boolean disable = uri.getHost() == null || !uri.getScheme().equals("gemini");
-                        if(disable){
+                        if (disable) {
                             pemItem.setEnabled(false);
                             certItem.setEnabled(false);
                         }
@@ -1192,7 +1192,8 @@ public class GeminiTextPane extends JTextPane {
         Style h1Style = doc.addStyle("###", null);
         StyleConstants.setFontFamily(h1Style, GeminiFrame.proportionalFamily);
         StyleConstants.setFontSize(h1Style, GeminiFrame.fontSize + 3); // 18
-        StyleConstants.setBold(h1Style, true);
+        
+        StyleConstants.setBold(h1Style, false);
         StyleConstants.setItalic(h1Style, false);
         StyleConstants.setUnderline(h1Style, false);
         //Color hColor = UIManager.getColor("TextField.selectionBackground");
@@ -1209,7 +1210,7 @@ public class GeminiTextPane extends JTextPane {
         Style linkStyle = doc.addStyle("=>", h1Style);
         StyleConstants.setFontSize(linkStyle, GeminiFrame.fontSize);
         StyleConstants.setForeground(linkStyle, linkColor);
-        StyleConstants.setBold(linkStyle, true);
+        //StyleConstants.setBold(linkStyle, true);
 
         Style clickedStyle = doc.addStyle("visited", linkStyle);
         StyleConstants.setForeground(clickedStyle, isDark ? linkColor.darker() : linkColor.brighter());
@@ -1217,12 +1218,12 @@ public class GeminiTextPane extends JTextPane {
         Style quoteStyle = doc.addStyle(">", h1Style);
         StyleConstants.setFontSize(quoteStyle, GeminiFrame.fontSize);
         StyleConstants.setItalic(quoteStyle, true);
-        StyleConstants.setBold(quoteStyle, false);
+        //StyleConstants.setBold(quoteStyle, false);
         StyleConstants.setForeground(quoteStyle, foreground);
 
         Style textStyle = doc.addStyle("text", h1Style);
         StyleConstants.setFontSize(textStyle, GeminiFrame.fontSize);
-        StyleConstants.setBold(textStyle, false);
+        //StyleConstants.setBold(textStyle, false);
         StyleConstants.setForeground(textStyle, foreground);
 
         Style listStyle = doc.addStyle("*", textStyle);
