@@ -1939,7 +1939,7 @@ public final class GeminiFrame extends JFrame {
     public void importPem(URI uri, File f) {
         String host = uri.getHost();
         if (host == null || !uri.getScheme().equals("gemini")) {
-            Util.infoDialog(this, "Invalid", "Invalid domain. Can't import PEM file.");
+            Util.infoDialog(this, "Invalid", "Invalid scheme. Can't import PEM file.");
             return;
         }
         if (f == null) {
