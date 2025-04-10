@@ -791,7 +791,7 @@ public final class GeminiFrame extends JFrame {
             if (font != null) {
                 saveFont = font;
 
-                proportionalFamily = font.getFamily();
+                proportionalFamily = font.getName();
                 fontSize = font.getSize();
                 Alhena.updateFrames(false, false);
 
