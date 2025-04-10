@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dialog;
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.Frame;
@@ -370,6 +371,8 @@ public class Util {
 
     public static Font getFont(GeminiFrame f, Font font) {
         FontChooser fontChooser = new FontChooser(font);
+        fontChooser.setPreferredSize(new Dimension(700, 350));
+        
         JSlider slider = new JSlider(JSlider.HORIZONTAL, 5, 35, GeminiFrame.monoFontSize);
         slider.setMajorTickSpacing(5);   
         slider.setMinorTickSpacing(5);
@@ -943,19 +946,19 @@ public class Util {
     //             return false;  // not monospaced
     //         }
     //     }
-
+    //     g.dispose();
     //     return true;  // monospaced
     // }
 
     // public static boolean findMonospacedFonts() {
-    //     String[] fonts = GraphicsEnvironment
-    //             .getLocalGraphicsEnvironment()
-    //             .getAvailableFontFamilyNames();
+    //     Font[] fonts = GraphicsEnvironment
+    //             .getLocalGraphicsEnvironment().getAllFonts();
+    //             //.getAvailableFontFamilyNames();
 
-    //     for (String font : fonts) {
-    //         Font f = new Font(font, Font.PLAIN, 12);
+    //     for (Font f : fonts) {
+    //         //Font f = new Font(font, Font.PLAIN, 12);
     //         if(isMonospaced(f)){
-    //             System.out.println(font);
+    //             System.out.println(f.getName());
     //         }
 
     //     }
