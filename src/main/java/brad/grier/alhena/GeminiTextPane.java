@@ -131,10 +131,10 @@ public class GeminiTextPane extends JTextPane {
 
     static {
         String userDefined = System.getenv("alhena_monofont");
-        if(SystemInfo.isWindows){
-            
+        if (SystemInfo.isWindows) {
+
             monospacedFamily = userDefined == null || userDefined.isBlank() ? "Source Code Pro" : userDefined;
-        }else if(SystemInfo.isMacOS){
+        } else if (SystemInfo.isMacOS) {
             // PT Mono - some horizontal lines but works
             // Menlo - taller horizontal lines
             // Courier New - works!
@@ -142,14 +142,14 @@ public class GeminiTextPane extends JTextPane {
             // Liberation Mono - works on pi but lines
             String uff = userDefined == null ? "" : userDefined;
             List<String> goodFonts = List.of(uff, "Courier New", "Andale Mono", "PT Mono", "Monospaced");
-            for(String ff : goodFonts){
-                if(Util.isFontAvailable(ff)){
+            for (String ff : goodFonts) {
+                if (Util.isFontAvailable(ff)) {
                     monospacedFamily = ff;
                     break;
                 }
             }
 
-        }else{ // linux, bsd and whatnot
+        } else { // linux, bsd and whatnot
             monospacedFamily = userDefined == null || userDefined.isBlank() ? "Monospaced" : userDefined;
         }
         dropExtensions = new ArrayList<>(Alhena.fileExtensions);
@@ -220,7 +220,6 @@ public class GeminiTextPane extends JTextPane {
         this.f = f;
         this.page = page;
         docURL = url;
-
 
         Insets insets = getMargin();
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
@@ -582,6 +581,11 @@ public class GeminiTextPane extends JTextPane {
                             f.createCert(getURI());
                         });
                         popupMenu.add(certItem);
+                        boolean disable = uri.getHost() == null || !uri.getScheme().equals("gemini");
+                        if(disable){
+                            pemItem.setEnabled(false);
+                            certItem.setEnabled(false);
+                        }
                     }
 
                     if (currentMode == HISTORY_MODE) {
@@ -1772,31 +1776,14 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private boolean isClickableRangeVisible(ClickableRange range) {
-       // try {
-            //Rectangle2D startRect = modelToView2D(range.start);
-            //Rectangle2D endRect = modelToView2D(range.end);
-//System.out.println(range.start + " " + range.end);
-            //if (startRect == null || endRect == null) {
-            //return false;
-            //}
-            // Rectangle2D fullRangeRect;
-            // if (startRect.getY() == endRect.getY() ){ // Same line
-            //     fullRangeRect = new Rectangle((int) startRect.getX(), (int) startRect.getY(), (int) (endRect.getX() - startRect.getX()), (int) startRect.getHeight());
-            // } else {
-            //     fullRangeRect = startRect.createUnion(endRect);
-            // }
-            Rectangle cb = getCharacterBounds(this, range.start, range.end);
-            Rectangle newRect = SwingUtilities.convertRectangle(this, cb, this);
-            //System.out.println(fullRangeRect);
-            //Rectangle newRect = SwingUtilities.convertRectangle(this, new Rectangle((int) fullRangeRect.getX(), (int) fullRangeRect.getY() + (fm.getMaxDescent()), (int) fullRangeRect.getWidth(), (int) fullRangeRect.getHeight() - (fm.getMaxDescent() * 3)), this);
-            JViewport viewport = (JViewport) getParent();
-            Rectangle viewRect = viewport.getViewRect();
-            //Rectangle adjViewRect = SwingUtilities.convertRectangle(this, viewRect, this);
-            return viewRect.contains(newRect.getBounds());
-        // } catch (BadLocationException e) {
-        //     e.printStackTrace();
-        //     return false;
-        // }
+
+        Rectangle cb = getCharacterBounds(this, range.start, range.end);
+        Rectangle newRect = SwingUtilities.convertRectangle(this, cb, this);
+        JViewport viewport = (JViewport) getParent();
+        Rectangle viewRect = viewport.getViewRect();
+
+        return viewRect.contains(newRect.getBounds());
+
     }
 
 }
