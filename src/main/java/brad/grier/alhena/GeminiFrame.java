@@ -1688,8 +1688,7 @@ public final class GeminiFrame extends JFrame {
 
                     p.loading();
                 }
-
-                setBusy(false, p);
+                textPane.end();
             });
 
         }).start();
@@ -1735,8 +1734,7 @@ public final class GeminiFrame extends JFrame {
 
                     p.loading();
                 }
-
-                setBusy(false, p);
+                textPane.end();
             });
 
         }).start();
