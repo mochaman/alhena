@@ -62,6 +62,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -70,6 +71,8 @@ import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.text.DefaultEditorKit;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -354,6 +357,14 @@ public class Alhena {
                 FlatLightLaf.setup();
                 theme = "com.formdev.flatlaf.FlatLightLaf";
                 DB.insertPref("theme", theme);
+            }
+
+            if (SystemInfo.isMacOS) {
+                InputMap im = (InputMap) UIManager.get("TextField.focusInputMap");
+                im.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, KeyEvent.META_DOWN_MASK), DefaultEditorKit.copyAction);
+                im.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, KeyEvent.META_DOWN_MASK), DefaultEditorKit.pasteAction);
+                im.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, KeyEvent.META_DOWN_MASK), DefaultEditorKit.cutAction);
+
             }
 
             String u = Util.getHome();
@@ -1035,7 +1046,7 @@ public class Alhena {
                 int[] hLength = {0};
                 // Handle the response
                 connection.result().handler(buffer -> {
-                    
+
                     // we have to make sure we have the entire header before we proceed
                     if (firstBuffer[0]) {
 
@@ -1599,6 +1610,7 @@ public class Alhena {
         BooleanSupplier bs = () -> {
             JTextField cnField = new JTextField(PROG_NAME);
 
+            cnField.addMouseListener(new ContextMenuMouseListener());
             JRadioButton dcButton = new JRadioButton("Domain Certificate");
             dcButton.setSelected(true);
             JRadioButton pcButton = new JRadioButton("Page Certificate");
