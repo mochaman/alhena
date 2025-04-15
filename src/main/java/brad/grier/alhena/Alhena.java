@@ -1508,11 +1508,7 @@ public class Alhena {
                 AsyncFile file = fileRes.result();
 
                 file.write(buffer);
-// bg(()->{
-//     System.out.println(buffer.length());
-//     runOnDone.run();
 
-// });
                 boolean[] done = {false};
                 Runnable r = () -> {
                     if (!done[0]) {
