@@ -62,7 +62,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
-import javax.swing.InputMap;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -71,8 +70,6 @@ import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.text.DefaultEditorKit;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -127,10 +124,12 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.0.1";
+    public final static String VERSION = "5.0.2";
     private static volatile boolean interrupted;
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg");
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
+    public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov");
+    public static final List<String> videoExtensions = List.of(".mp4", ".mov");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
     private static String theme;
@@ -142,6 +141,7 @@ public class Alhena {
 
     private static boolean keyDown;
     private static LinkGlassPane lgp;
+    public static boolean allowVLC;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -197,9 +197,10 @@ public class Alhena {
                     if (select != null) {
                         StringSelection selectedText = new StringSelection(select);
                         clipboard.setContents(selectedText, selectedText);
+                        e.consume();
+                        return true;
                     }
-                    e.consume();
-                    return true;
+
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, MOD))) {
                     gf.backButton.doClick();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET, MOD))) {
@@ -345,6 +346,8 @@ public class Alhena {
 
         // initialize the database
         DB.init();
+        allowVLC = DB.getPref("allowvlc", "false").equals("true");
+
         httpProxy = DB.getPref("httpproxy", null);
         gopherProxy = DB.getPref("gopherproxy", null);
 
@@ -357,14 +360,6 @@ public class Alhena {
                 FlatLightLaf.setup();
                 theme = "com.formdev.flatlaf.FlatLightLaf";
                 DB.insertPref("theme", theme);
-            }
-
-            if (SystemInfo.isMacOS) {
-                InputMap im = (InputMap) UIManager.get("TextField.focusInputMap");
-                im.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, KeyEvent.META_DOWN_MASK), DefaultEditorKit.copyAction);
-                im.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, KeyEvent.META_DOWN_MASK), DefaultEditorKit.pasteAction);
-                im.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, KeyEvent.META_DOWN_MASK), DefaultEditorKit.cutAction);
-
             }
 
             String u = Util.getHome();
@@ -461,6 +456,11 @@ public class Alhena {
     }
 
     public static void exit(GeminiFrame gf) {
+        for (GeminiFrame jf : frameList) {
+            jf.forEachPage(page -> {
+                page.textPane().closePlayers();
+            });
+        }
         if (frameList.size() == 1) {
             gf.setVisible(false); // closes faster for the naysayers
             System.exit(0);
@@ -772,6 +772,33 @@ public class Alhena {
                                     } catch (SQLException ex) {
                                         ex.printStackTrace();
                                     }
+                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
+                                    try {
+                                        connection.result().pause();
+                                        connection.result().handler(null);
+                                        try {
+                                            DB.insertHistory(origURL, null);
+                                        } catch (SQLException ex) {
+                                            ex.printStackTrace();
+                                        }
+                                        File af = File.createTempFile("alhena", "media");
+                                        af.deleteOnExit();
+                                        String finalMime = mime;
+                                        Runnable r = () -> {
+                                            p.frame().showGlassPane(false);
+                                            GeminiTextPane tPane = cPage.textPane;
+                                            if (tPane.awatingImage()) {
+                                                tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
+                                            } else {
+                                                p.textPane.end(" ", false, origURL, true);
+                                                p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
+                                            }
+                                        };
+                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r);
+                                        return;
+                                    } catch (IOException ex) {
+                                        ex.printStackTrace();
+                                    }
 
                                 } else {
                                     File[] file = new File[1];
@@ -802,7 +829,7 @@ public class Alhena {
                                         file[0] = p.getDataFile();
                                     }
 
-                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL);
+                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null);
                                     return;
                                 }
                             }
@@ -1100,7 +1127,6 @@ public class Alhena {
                                 if (mime.isBlank()) {
                                     mime = "text/gemini"; // apparently mime type is optional in type 20 -  NOT ANYMORE
                                 }
-
                                 final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                 if (mime.startsWith("text/gemini")) {
                                     if (titanEdit[0]) {
@@ -1126,7 +1152,33 @@ public class Alhena {
                                     } catch (SQLException ex) {
                                         ex.printStackTrace();
                                     }
-
+                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
+                                    try {
+                                        connection.result().pause();
+                                        connection.result().handler(null);
+                                        try {
+                                            DB.insertHistory(origURL, null);
+                                        } catch (SQLException ex) {
+                                            ex.printStackTrace();
+                                        }
+                                        File af = File.createTempFile("alhena", "media");
+                                        af.deleteOnExit();
+                                        String finalMime = mime;
+                                        Runnable r = () -> {
+                                            p.frame().showGlassPane(false);
+                                            GeminiTextPane tPane = cPage.textPane;
+                                            if (tPane.awatingImage()) {
+                                                tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
+                                            } else {
+                                                p.textPane.end(" ", false, origURL, true);
+                                                p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
+                                            }
+                                        };
+                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r);
+                                        return;
+                                    } catch (IOException ex) {
+                                        ex.printStackTrace();
+                                    }
                                 } else {
                                     File[] file = new File[1];
                                     connection.result().handler(null);
@@ -1155,7 +1207,7 @@ public class Alhena {
                                         file[0] = p.getDataFile();
                                     }
 
-                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL);
+                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null);
                                     return;
                                 }
                             }
@@ -1450,30 +1502,40 @@ public class Alhena {
         }
     }
 
-    private static void streamToFile(NetSocket socket, File outFile, Buffer buffer, Page p, String url) {
+    private static void streamToFile(NetSocket socket, File outFile, Buffer buffer, Page p, String url, Runnable runOnDone) {
         vertx.fileSystem().open(outFile.getAbsolutePath(), new OpenOptions().setWrite(true).setCreate(true).setTruncateExisting(true), fileRes -> {
             if (fileRes.succeeded()) {
                 AsyncFile file = fileRes.result();
 
                 file.write(buffer);
+// bg(()->{
+//     System.out.println(buffer.length());
+//     runOnDone.run();
 
+// });
                 boolean[] done = {false};
                 Runnable r = () -> {
                     if (!done[0]) {
+                        System.out.println("connection closed");
                         done[0] = true;
+
                         file.close();
                         bg(() -> {
-                            try {
-                                DB.insertHistory(url, null);
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                            p.frame().showGlassPane(false);
-                            if (p.getDataFile() == null) {
-                                Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
+                            if (runOnDone == null) {
+                                try {
+                                    DB.insertHistory(url, null);
+                                } catch (SQLException ex) {
+                                    ex.printStackTrace();
+                                }
+                                p.frame().showGlassPane(false);
+                                if (p.getDataFile() == null) {
+                                    Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
+                                } else {
+                                    // restore downloaded file
+                                    Util.importData(p.frame(), outFile, true);
+                                }
                             } else {
-                                // restore downloaded file
-                                Util.importData(p.frame(), outFile, true);
+                                runOnDone.run();
                             }
                         });
                     }
@@ -1484,6 +1546,7 @@ public class Alhena {
                 });
                 // Close file when socket closes
                 socket.closeHandler(v -> {
+
                     r.run();
 
                 });
@@ -2037,13 +2100,13 @@ public class Alhena {
     private static void processCommand(String url, Page p) {
         boolean plainText = false;
         String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
-        String message = "# Valid commands:\n\n* ansialert\n* scrollspeed\n* info\n\nType 'alhena:[command]' for details.\n";
+        String message = "# Commands:\n\n* ansialert\n* scrollspeed\n* info\n* art\n\nType 'alhena:[command]' for details.\n";
         if (cmd.length == 1) {
 
             if (cmd[0].equals("ansialert")) {
-                message = "# ansialert\n###Toggle alert when ANSI color codes detected\nValid values: 'true' or 'false'";
+                message = "# ansialert\n###Display alert when ANSI color codes detected\nalhena:ansialert=true";
             } else if (cmd[0].equals("scrollspeed")) {
-                message = "# scrollspeed\n###Set the mouse wheel speed: scrollspeed=10\nscrollspeed=default resets. Negative numbers reverse scroll direction.";
+                message = "# scrollspeed\n###Set the mouse wheel speed\nalhena:scrollspeed=10\nalhena:scrollspeed=default resets. Negative numbers reverse scroll direction.";
 
             } else if (cmd[0].equals("info")) {
                 plainText = true;
@@ -2084,8 +2147,7 @@ public class Alhena {
                 } else {
                     message = "## Value must be 'true' or 'false'\n";
                 }
-
-            }
+            } 
         }
         p.textPane.end(message, plainText, url, true);
 
@@ -2127,6 +2189,15 @@ public class Alhena {
         return sb;
     }
 
+    // call on EDT only
+    public static void pauseMedia(){
+        for(GeminiFrame gf : frameList){
+            gf.forEachPage(page ->{
+                page.textPane.pausePlayers();
+            });
+        }
+    }
+
     private static void handleFile(String url, Page p, Page cPage) {
         URL fileUrl;
         try {
@@ -2144,61 +2215,69 @@ public class Alhena {
                     boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
                     p.textPane.updatePage("", pformatted, fUrl, true);
                     boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                    boolean isMedia = isImage == false ? mediaExtensions.stream().anyMatch(url.toLowerCase()::endsWith) : false;
 
-                    Buffer imageBuffer = Buffer.buffer();
+                    if (isMedia) {
+                        String type = videoExtensions.stream().anyMatch(url.toLowerCase()::endsWith) ? "video" : "audio";
+                        p.textPane.end(" ", false, fUrl, true);
+                        p.textPane.insertMediaPlayer(file.getAbsolutePath(), type);
 
-                    vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
-                        if (result.succeeded()) {
-                            AsyncFile asyncFile = result.result();
+                    } else {
 
-                            // read the file in chunks
-                            asyncFile.handler(buffer -> {
-                                if (isImage) {
-                                    imageBuffer.appendBuffer(buffer);
-                                } else {
+                        Buffer imageBuffer = Buffer.buffer();
+
+                        vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
+                            if (result.succeeded()) {
+                                AsyncFile asyncFile = result.result();
+
+                                // read the file in chunks
+                                asyncFile.handler(buffer -> {
+                                    if (isImage) {
+                                        imageBuffer.appendBuffer(buffer);
+                                    } else {
+                                        bg(() -> {
+                                            p.textPane.addPage(buffer.toString());
+                                        });
+                                    }
+
+                                });
+
+                                // process the content when reading is done
+                                asyncFile.endHandler(v -> {
+                                    if (isImage) {
+                                        bg(() -> {
+                                            p.textPane.end(" ", false, fUrl, true);
+                                            p.textPane.insertImage(imageBuffer.getBytes());
+                                            //p.frame().showGlassPane(false);
+                                        });
+
+                                    } else {
+                                        bg(() -> {
+                                            p.textPane.end();
+                                            //p.frame().showGlassPane(false);
+                                        });
+                                    }
+
+                                    asyncFile.close();
+
+                                });
+
+                                asyncFile.exceptionHandler(throwable -> {
+
                                     bg(() -> {
-                                        p.textPane.addPage(buffer.toString());
-                                    });
-                                }
-
-                            });
-
-                            // process the content when reading is done
-                            asyncFile.endHandler(v -> {
-                                if (isImage) {
-                                    bg(() -> {
-                                        p.textPane.end(" ", false, fUrl, true);
-                                        p.textPane.insertImage(imageBuffer.getBytes());
+                                        p.textPane.end("## Error reading file\n", false, fUrl, true);
                                         //p.frame().showGlassPane(false);
                                     });
-
-                                } else {
-                                    bg(() -> {
-                                        p.textPane.end();
-                                        //p.frame().showGlassPane(false);
-                                    });
-                                }
-
-                                asyncFile.close();
-
-                            });
-
-                            asyncFile.exceptionHandler(throwable -> {
+                                });
+                            } else {
 
                                 bg(() -> {
-                                    p.textPane.end("## Error reading file\n", false, fUrl, true);
+                                    p.textPane.end("## Error opening file\n", false, fUrl, true);
                                     //p.frame().showGlassPane(false);
                                 });
-                            });
-                        } else {
-
-                            bg(() -> {
-                                p.textPane.end("## Error opening file\n", false, fUrl, true);
-                                //p.frame().showGlassPane(false);
-                            });
-                        }
-                    });
-
+                            }
+                        });
+                    }
                 } else {
                     p.textPane.end("## Invalid file type\n", false, url, true);
                     //p.frame().showGlassPane(false);
