@@ -12,6 +12,7 @@
 - Color emojis with four emoji sets
 - ZWJ (Zero Width Joiner) emojis
 - ANSI colors for formatted text
+- Inline audio and video (VLC required)
 - Font chooser for proportional fonts
 - Inline image viewer
 - Smooth adaptive scrolling
@@ -52,18 +53,41 @@ The `alhena.jar` will be created and copied to `target/lib`. To run, call java -
 ```sh
 java -jar ./lib/alhena.jar
 ```
+## 📽️ Inline Media With VLC
+
+Alhena now supports inline video and audio playback when VLC is installed. The feature must be enabled from the 'Settings' menu.
+
+The vlcj library does a good job of detecting the location of VLC but there may be instances where you need to specify the location. This can be done by creating a vlcj.config file in the ~/.config/vlcj directory. Examples:
+
+On MacOS, if you build from source, auto-discovery works fine. If you use one of the available installs, you will likely need to create the vlcj.config file with the following line (assuming VLC is installed in the default location):
+```sh
+nativeDirectory=/Applications/VLC.app/Contents/MacOS/lib
+```
+On versions of Linux using a snap install of VLC (like modern Ubuntu), you need to create the vlcj.config file. The following is based on an Ubunutu snap install:
+```sh
+nativeDirectory=/snap/vlc/current/usr/lib
+```
+Whether the ~/.config/vlcj/vlcj.config file is required depends on if the vlcj auto-discovery can find VLC. In testing, the embedded player worked "out of the box" on Windows, MacOS (built from source) and Raspberry Pi.
+
+VLC 3.x is required. Older versions will not work. VLC 4.x (in development) may not work.
+
+**Privacy Considerations: Per the author of vlcj, "it may be possible that a remote network access is made for meta data and album/cover art. This may unintentionally expose sensitive data regarding the media being parsed."**
+
+Eliminating/Mitigating this possibility will be a priority in future Alhena releases.
+
+
 
 ## 📥 Installs
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD in Releases. Java is NOT required. Each archive includes a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.0.1/alhena-5.0.1_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.1/alhena-5.0.1_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.0.1/alhena-5.0.1_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.0.1/alhena-5.0.1_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.1/alhena-5.0.1_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.0.1/alhena-5.0.1_freebsd_x64.tgz) untar and run script
-- [Standalone (No Java)](https://github.com/mochaman/alhena/releases/download/v5.0.1/alhena-5.0.1_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.0.2/alhena-5.0.2_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.2/alhena-5.0.2_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.0.2/alhena-5.0.2_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.0.2/alhena-5.0.2_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.2/alhena-5.0.2_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.0.2/alhena-5.0.2_freebsd_x64.tgz) untar and run script
+- [Standalone (No Java)](https://github.com/mochaman/alhena/releases/download/v5.0.2/alhena-5.0.2_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
 
 ## 🐳 Docker
 
@@ -100,5 +124,4 @@ Alhena is licensed under the **BSD 2-Clause License**. See [LICENSE](LICENSE) fo
 ---
 
 Have suggestions or found a bug? Open an issue or contribute via pull requests! 🚀
-
 
