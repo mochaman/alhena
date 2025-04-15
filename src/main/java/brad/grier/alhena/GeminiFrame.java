@@ -194,6 +194,10 @@ public final class GeminiFrame extends JFrame {
                 int histIdx = rootPage.incAndGetArrayIndex(); // should get same result if calling on page.
                 if (histIdx < histList.size()) {
                     List<Page> sl = histList.subList(histIdx, histList.size());
+                    for (Page p : sl) {
+
+                        p.textPane.closePlayers();
+                    }
                     sl.clear();
                 }
             }
@@ -224,6 +228,11 @@ public final class GeminiFrame extends JFrame {
                 int histIdx = rootPage.incAndGetArrayIndex();
                 if (histIdx < histList.size()) {
                     List<Page> sl = histList.subList(histIdx, histList.size());
+                    System.out.println("sl size: " + sl.size());
+                    for (Page p : sl) {
+                        //System.out.println("removing: " + p);
+                        p.textPane.closePlayers();
+                    }
                     sl.clear();
                 }
 
@@ -303,7 +312,7 @@ public final class GeminiFrame extends JFrame {
         fontSize = Integer.parseInt(fs);
         String mfs = DB.getPref("monofontsize", "15");
         monoFontSize = Integer.parseInt(mfs);
-        
+
         String dbFont = DB.getPref("font", "SansSerif");
         saveFont = new Font(dbFont, Font.PLAIN, fontSize);
 
@@ -655,7 +664,7 @@ public final class GeminiFrame extends JFrame {
 
         JMenu viewMenu = new JMenu("View");
         viewMenu.setMnemonic('V');
-        
+
         for (String label : CUSTOM_LABELS) {
             KeyStroke ks = null;
             if (!label.equals(INFO_LABEL)) {
@@ -727,6 +736,10 @@ public final class GeminiFrame extends JFrame {
 
         aboutMenu.add(createMenuItem("Details", null, () -> {
             fetchURL("alhena:info");
+        }));
+
+        aboutMenu.add(createMenuItem("Commands", null, () -> {
+            fetchURL("alhena:");
         }));
 
         menuBar.add(aboutMenu);
@@ -876,11 +889,27 @@ public final class GeminiFrame extends JFrame {
 
             });
             DB.insertPref("smoothscrolling", String.valueOf(smoothScrolling));
-            String txt = smoothScrolling ? "on." : "off.";
-            Util.infoDialog(GeminiFrame.this, "Update", "Mouse wheel adaptive scrolling turned " + txt);
+            // String txt = smoothScrolling ? "on." : "off.";
+            // Util.infoDialog(GeminiFrame.this, "Update", "Mouse wheel adaptive scrolling turned " + txt);
 
         });
         settingsMenu.add(smoothItem);
+
+        JCheckBoxMenuItem vlcItem = new JCheckBoxMenuItem("Embedded VLC", Alhena.allowVLC);
+        vlcItem.addItemListener(ae -> {
+
+            boolean useVLC = !DB.getPref("allowvlc", "false").equals("true"); // toggle
+            Alhena.allowVLC = useVLC;
+
+            DB.insertPref("allowvlc", String.valueOf(useVLC));
+
+            if (useVLC) {
+                Util.infoDialog(GeminiFrame.this, "Update", "Embedded VLC media player activated. VLC must be installed on your system.\nSee FAQ for details.");
+            }
+
+        });
+        settingsMenu.add(vlcItem);
+
         settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem("HTTP Proxy");
         proxyItem.addActionListener(ae -> {
@@ -918,10 +947,10 @@ public final class GeminiFrame extends JFrame {
 
     private static JRadioButtonMenuItem lastSelectedItem;
 
-    public void editPage(){
+    public void editPage() {
         Page vp = visiblePage();
         URI uri = vp.textPane.getURI();
-        if(uri.getScheme() != null && uri.getScheme().equals("gemini")){
+        if (uri.getScheme() != null && uri.getScheme().equals("gemini")) {
             String port = uri.getPort() != -1 ? ":" + uri.getPort() : "";
             String query = uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery();
             String editUrl = "titan://" + uri.getHost() + port + uri.getPath() + ";edit" + query;
@@ -1078,7 +1107,6 @@ public final class GeminiFrame extends JFrame {
     public MenuItem getMenuItem() {
         return mi;
     }
-
 
     // don't leak this from your constructor says IDE
     private void init(String url, Page page) {
@@ -1948,16 +1976,16 @@ public final class GeminiFrame extends JFrame {
         if (f != null) {
             try {
                 PemData pemData = Util.extractPemParts(f.getAbsolutePath());
-                if(pemData.cert() == null || pemData.key() == null){
-                    Util.infoDialog(this, "Format", "Not a recognized PEM format");    
-                }else{
+                if (pemData.cert() == null || pemData.key() == null) {
+                    Util.infoDialog(this, "Format", "Not a recognized PEM format");
+                } else {
                     int port = uri.getPort() == -1 ? 1965 : uri.getPort();
                     String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
 
                     boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(pemData.cert()) && c.domain().equals(prunedUrl));
-                    if(exists){
-                        Util.infoDialog(this, "Duplicate", "This cert already exists for: " + uri, JOptionPane.WARNING_MESSAGE);    
-                    }else{
+                    if (exists) {
+                        Util.infoDialog(this, "Duplicate", "This cert already exists for: " + uri, JOptionPane.WARNING_MESSAGE);
+                    } else {
                         ClientCertInfo ci = DB.getClientCertInfo(prunedUrl);
                         if (ci != null) {
                             DB.toggleCert(ci.id(), false, prunedUrl, false); // set existing for host to inactive
@@ -2072,6 +2100,14 @@ public final class GeminiFrame extends JFrame {
 
     }
 
+    private void removeRootPageAudioPlayers(Page page) {
+        ArrayList<Page> hPageList = pageHistoryMap.get(page);
+        for (Page p : hPageList) {
+            p.textPane.closePlayers();
+        }
+        page.textPane.closePlayers();
+    }
+
     public void newTab(String url) {
 
         if (tabbedPane == null) {
@@ -2092,6 +2128,7 @@ public final class GeminiFrame extends JFrame {
                             }
 
                             Page page = (Page) tabbedPane.getComponentAt(tabIndex);
+                            removeRootPageAudioPlayers(getRootPage(page));
                             pageHistoryMap.remove(getRootPage(page));
                             tabbedPane.remove(tabIndex);
                             page = (Page) tabbedPane.getSelectedComponent();
@@ -2109,6 +2146,7 @@ public final class GeminiFrame extends JFrame {
                             GeminiFrame.this.validate();
                         } else {
                             Page page = (Page) tabbedPane.getComponentAt(tabIndex);
+                            removeRootPageAudioPlayers(getRootPage(page));
                             pageHistoryMap.remove(getRootPage(page));
                             tabbedPane.remove(tabIndex);
                         }
@@ -2183,7 +2221,6 @@ public final class GeminiFrame extends JFrame {
 
         Alhena.processURL(url, pb, null, currentPage);
         currentPage.setBusy(false);
-
 
     }
 
@@ -2341,7 +2378,6 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-
     public Page visiblePage() {
         Page vPage;
         Component centerComponent = ((BorderLayout) getContentPane().getLayout()).getLayoutComponent(BorderLayout.CENTER);
@@ -2369,7 +2405,6 @@ public final class GeminiFrame extends JFrame {
         }
         return t;
     }
-
 
     public static String getArt() {
 
