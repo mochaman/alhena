@@ -646,6 +646,7 @@ public class DB {
     }
 
     public static int restoreDB(File inputFile) throws Exception {
+        boolean vlc = Alhena.allowVLC;
         int version = 0;
         try (FileSystem zipFs = FileSystems.newFileSystem(inputFile.toPath(), (ClassLoader) null)) {
             version = Integer.parseInt(Files.readString(zipFs.getPath("/version.txt")).trim());
@@ -667,6 +668,7 @@ public class DB {
             runStatement("DROP TABLE CACERTS");
         }
 
+        DB.insertPref("allowvlc", String.valueOf(vlc)); //  do not restore vlc setting as vlc may not exist on different machine
         Alhena.httpProxy = DB.getPref("httpproxy", null);
         Alhena.gopherProxy = DB.getPref("gopherproxy", null);
 
