@@ -1,6 +1,7 @@
 package brad.grier.alhena;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.EventQueue;
@@ -39,6 +40,7 @@ import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
@@ -654,9 +656,22 @@ public class GeminiTextPane extends JTextPane {
         try {
             Element element = doc.getCharacterElement(index + 2);
             AttributeSet attrs = element.getAttributes();
-
-            if (StyleConstants.getIcon(attrs) != null) {
-                doc.remove(index + 2, 1); // Remove the image
+            Component jc = StyleConstants.getComponent(attrs);
+            if (StyleConstants.getIcon(attrs) != null || jc != null) {
+                if (jc != null) {
+                    MediaComponent removedAp = null;
+                    for (MediaComponent ap : playerList) {
+                        if (ap == jc) {
+                            ap.dispose();
+                            removedAp = ap;
+                            break;
+                        }
+                    }
+                    if (removedAp != null) {
+                        playerList.remove(removedAp);
+                    }
+                }
+                doc.remove(index + 2, 1); // Remove the image/component
                 doc.remove(index + 1, 2);
                 boolean start = false;
                 for (ClickableRange range : clickableRegions) {
@@ -696,6 +711,65 @@ public class GeminiTextPane extends JTextPane {
 
     public boolean imageOnly() {
         return imageOnly;
+    }
+
+    private final ArrayList<MediaComponent> playerList = new ArrayList<>();
+
+    public void closePlayers() {
+        for (MediaComponent ap : playerList) {
+            ap.dispose();
+        }
+        playerList.clear();
+    }
+
+    public void pausePlayers(){
+        for(MediaComponent mc : playerList){
+            mc.pause();
+        }
+    }
+
+    public void insertMediaPlayer(String path, String mime) {
+        Alhena.pauseMedia();
+        MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
+
+        playerList.add(ap);
+
+        SimpleAttributeSet apStyle = new SimpleAttributeSet();
+        StyleConstants.setComponent(apStyle, (JPanel) ap);
+
+        try {
+            if (lastClicked == null) {
+
+                doc.insertString(0, " ", apStyle);
+                imageOnly = true;
+            } else {
+
+                doc.insertString(lastClicked.end + 1, "\n\n", null);
+                doc.insertString(lastClicked.end + 2, " ", apStyle);
+                lastClicked.imageIndex = lastClicked.end;
+                boolean start = false;
+                for (ClickableRange range : clickableRegions) {
+                    if (range == lastClicked) {
+                        start = true;
+                        continue;
+                    }
+                    if (start) {
+                        range.start = range.start + 3;
+                        range.end = range.end + 3;
+                        if (range.imageIndex != -1) {
+                            range.imageIndex = range.imageIndex + 3;
+                        }
+                    }
+                }
+                lastClicked = null;
+            }
+
+            ap.start(path);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        f.setBusy(false, page);
     }
 
     public void insertImage(byte[] imageBytes) {
@@ -1133,6 +1207,9 @@ public class GeminiTextPane extends JTextPane {
     private SimpleAttributeSet defPP;
 
     public void addPage(String geminiDoc) {
+        if (pageBuffer == null) {
+            return;
+        }
         pageBuffer.append(geminiDoc);
 
         if (bufferedLine != null) {
@@ -1166,6 +1243,10 @@ public class GeminiTextPane extends JTextPane {
     private String emojiProportional;
 
     private void buildStyles() {
+        for (MediaComponent ap : playerList) {
+            ap.dispose();
+        }
+        playerList.clear();
 
         emojiProportional = "Noto Emoji";
         if (SystemInfo.isMacOS) {
@@ -1192,7 +1273,7 @@ public class GeminiTextPane extends JTextPane {
         Style h1Style = doc.addStyle("###", null);
         StyleConstants.setFontFamily(h1Style, GeminiFrame.proportionalFamily);
         StyleConstants.setFontSize(h1Style, GeminiFrame.fontSize + 3); // 18
-        
+
         StyleConstants.setBold(h1Style, false);
         StyleConstants.setItalic(h1Style, false);
         StyleConstants.setUnderline(h1Style, false);
