@@ -36,6 +36,8 @@ public class TextEditor extends JPanel {
         setLayout(new BorderLayout(0, 10));
         tabbedPane = new JTabbedPane();
         textArea = new JTextPane();
+        textArea.requestFocusInWindow();
+
         String fontName = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
         Font font = new Font(fontName, Font.PLAIN, 14);
         textArea.setFont(font);
@@ -47,7 +49,7 @@ public class TextEditor extends JPanel {
         fileChooser = new JFileChooser();
         fileChooser.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0),
                 BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(UIManager.getColor("ComboBox.buttonSeparatorColor")), BorderFactory.createEmptyBorder(10, 10, 10, 10))));
-        
+
         fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
         fileChooser.setControlButtonsAreShown(false);
 
