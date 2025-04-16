@@ -55,27 +55,19 @@ java -jar ./lib/alhena.jar
 ```
 ## 📽️ Inline Media With VLC
 
-Alhena now supports inline video and audio playback when VLC is installed. The feature must be enabled from the 'Settings' menu.
+Alhena supports inline video and audio playback when VLC is installed. The feature must be enabled from the 'Settings' menu. The vlcj library does a good job of detecting VLC but there may be instances where you need to specify the location. This is done by creating a vlcj.config file in the ~/.config/vlcj directory. Examples:
 
-The vlcj library does a good job of detecting the location of VLC but there may be instances where you need to specify the location. This can be done by creating a vlcj.config file in the ~/.config/vlcj directory. Examples:
-
-On MacOS, if you build from source, auto-discovery works fine. If you use one of the available installs, you will likely need to create the vlcj.config file with the following line (assuming VLC is installed in the default location):
+On MacOS, discovery works fine if building from source. If you use one of the pre-build .dmg installs, you will likely need to create the vlcj.config file with the following line (assuming VLC is installed in the default location):
 ```sh
 nativeDirectory=/Applications/VLC.app/Contents/MacOS/lib
 ```
-On versions of Linux using a snap install of VLC (like modern Ubuntu), you need to create the vlcj.config file. The following is based on an Ubunutu snap install:
+On versions of Linux using a snap install of VLC (like modern Ubuntu), you will likely need to create the vlcj.config file. The following is based on an Ubunutu snap install:
 ```sh
 nativeDirectory=/snap/vlc/current/usr/lib
 ```
-Whether the ~/.config/vlcj/vlcj.config file is required depends on if the vlcj auto-discovery can find VLC. In testing, the embedded player worked "out of the box" on Windows, MacOS (built from source) and Raspberry Pi.
+Whether the ~/.config/vlcj/vlcj.config file is required depends on whether discovery can find VLC. In testing, the embedded player worked "out of the box" on Windows, MacOS (built from source) and Raspberry Pi. VLC 3.x is required. Older versions will not work. VLC 4.x (in development) may not work.
 
-VLC 3.x is required. Older versions will not work. VLC 4.x (in development) may not work.
-
-**Privacy Considerations: Per the author of vlcj, "it may be possible that a remote network access is made for meta data and album/cover art. This may unintentionally expose sensitive data regarding the media being parsed."**
-
-Eliminating/Mitigating this possibility will be a priority in future Alhena releases.
-
-
+Privacy Considerations: Per the author of vlcj, "it may be possible that a remote network access is made for meta data and album/cover art. This may unintentionally expose sensitive data regarding the media being parsed." If this is a concern, the embedded media player can be turned off from 'Settings'.
 
 ## 📥 Installs
 
