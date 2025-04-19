@@ -414,11 +414,9 @@ public class Util {
             } else if (val.equals("Reset")) {
                 GeminiFrame.monoFontSize = 15;
                 return new Font("SansSerif", Font.PLAIN, 15);
-            } else {
-                return null;
-            }
+            } 
         }
-        return null; // never happens
+        return null;
 
     }
 
