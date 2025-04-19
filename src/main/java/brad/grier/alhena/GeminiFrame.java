@@ -3,6 +3,7 @@ package brad.grier.alhena;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -63,6 +64,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JSeparator;
+import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
@@ -875,6 +877,27 @@ public final class GeminiFrame extends JFrame {
         }
 
         settingsMenu.add(emojiMenu);
+
+        settingsMenu.add(createMenuItem("Layout", null, () -> {
+            JSlider slider = new JSlider(50, 100, (int) (GeminiTextPane.contentPercentage * 100f));
+
+            slider.setMajorTickSpacing(10);
+            slider.setMinorTickSpacing(5);
+            slider.setPaintTicks(true);
+            slider.setPaintLabels(true);
+
+            slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
+            Object[] comps = {new JLabel("Select content width percentage."), slider};
+            String res = Util.inputDialog2(GeminiFrame.this, "Layout", comps);
+            //Util.fancyInfoDialog(GeminiFrame.this, "Margins", comps);
+            if (res != null) {
+                GeminiTextPane.contentPercentage = (float) slider.getValue() / 100f;
+                DB.insertPref("contentwidth", String.valueOf(slider.getValue()));
+                Alhena.updateFrames(false, false);
+            }
+
+        }));
+
         settingsMenu.add(new JSeparator());
         JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem("Adaptive Scrolling", DB.getPref("smoothscrolling", "true").equals("true"));
         smoothItem.addItemListener(ae -> {
@@ -1420,13 +1443,14 @@ public final class GeminiFrame extends JFrame {
             label = INFO_LABEL; // hack
         }
         Page currentPB = visiblePage();
+
         Page rootPage = getRootPage(currentPB);
         if (rootPage != null && !inPlace) {
 
             if (tabbedPane == null) {
 
                 Page pb = newPage(label, null, false);
-
+                pb.ignoreStart();
                 boolean[] first = {true};
                 Runnable r = () -> {
                     if (first[0]) {
@@ -1469,6 +1493,7 @@ public final class GeminiFrame extends JFrame {
                 int currentTabIdx = tabbedPane.getSelectedIndex();
 
                 Page pb = newPage(label, null, false);
+                pb.ignoreStart();
                 boolean[] first = {true};
                 Runnable r = () -> {
                     if (first[0]) {
@@ -1522,7 +1547,7 @@ public final class GeminiFrame extends JFrame {
             }
         } else {
             Page visiblePB = visiblePage(); // empty page (new tab/window)
-
+            visiblePB.ignoreStart();
             Page nPage = !inPlace ? addPageToHistory(null, visiblePB, true) : visiblePB;
 
             switch (label) {
