@@ -16,6 +16,8 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -126,10 +128,11 @@ public class GeminiTextPane extends JTextPane {
     private int scrollDirection = 0;
     private int holdTime = 0;
     private final Page page;
-    private int pfModeStart;
-    private AttributeSet pAttributes;
+
     private static final ConcurrentHashMap<String, Point> emojiSheetMap = new ConcurrentHashMap<>();
     private static BufferedImage sheetImage = null;
+    public static int indent;
+    public static float contentPercentage = .80f;
 
     static {
         String userDefined = System.getenv("alhena_monofont");
@@ -225,7 +228,7 @@ public class GeminiTextPane extends JTextPane {
 
         Insets insets = getMargin();
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
-
+        setEditorKit(new GeminiEditorKit());
         setEditable(false);
         setCaret(new DefaultCaret() {
             @Override
@@ -259,7 +262,7 @@ public class GeminiTextPane extends JTextPane {
                 for (ClickableRange range : clickableRegions) {
                     if (pos >= range.start && pos < range.end) {
 
-                        Rectangle rect = getCharacterBounds(GeminiTextPane.this, range.start, range.end);
+                        Rectangle rect = getCharacterBounds(range.start, range.end);
                         if (rect != null && rect.contains(e.getPoint())) {
                             entered = true;
 
@@ -371,6 +374,20 @@ public class GeminiTextPane extends JTextPane {
             }
         });
 
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                applyCenteredParagraphStyle();
+            }
+
+            @Override
+            public void componentResized(ComponentEvent e) {
+                if (doc != null) {
+                    applyCenteredParagraphStyle();
+                }
+            }
+        });
+
     }
 
     public static void setSheetImage(BufferedImage sheet) {
@@ -384,7 +401,7 @@ public class GeminiTextPane extends JTextPane {
             if (pos >= 0 && pos < doc.getLength()) {
                 for (ClickableRange range : clickableRegions) {
                     if (pos >= range.start && pos < range.end) {
-                        Rectangle rect = getCharacterBounds(GeminiTextPane.this, range.start, range.end);
+                        Rectangle rect = getCharacterBounds(range.start, range.end);
                         if (rect != null && rect.contains(e.getPoint())) {
                             linkClicked = true;
                             if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
@@ -722,8 +739,8 @@ public class GeminiTextPane extends JTextPane {
         playerList.clear();
     }
 
-    public void pausePlayers(){
-        for(MediaComponent mc : playerList){
+    public void pausePlayers() {
+        for (MediaComponent mc : playerList) {
             mc.pause();
         }
     }
@@ -772,9 +789,20 @@ public class GeminiTextPane extends JTextPane {
         f.setBusy(false, page);
     }
 
+    public int getFormattedWidth() {
+        Insets insets = getInsets();
+        int width = getWidth()
+                - insets.left
+                - insets.right
+                - indent * 2
+                - UIManager.getInt("ScrollBar.width") - 1;
+        return width;
+    }
+
     public void insertImage(byte[] imageBytes) {
 
-        int width = (int) (f.getWidth() * .85);
+        int width = getFormattedWidth();
+
         BufferedImage image = Util.getImage(imageBytes, width, width * 2);
 
         ImageIcon icon = new ImageIcon(image);
@@ -919,7 +947,8 @@ public class GeminiTextPane extends JTextPane {
 
         scanForAnsi();
         bStyle = null;
-        defPP = null;
+        foregroundHandling = false;
+        //defPP = null;
         page.doneLoading();
 
         page.setBusy(false);
@@ -966,9 +995,9 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private ParserFactory factory;
-    private boolean hasAnsi;
+    public boolean hasAnsi;
 
-    private void handleAnsi(String line, Style style) {
+    private void handleAnsi(String line) {
         if (factory == null) {
             ParserFactoryConfig config = new ParserFactoryConfig();
             config.setEnvironment(Environment._8_BIT);
@@ -976,13 +1005,10 @@ public class GeminiTextPane extends JTextPane {
             ParserFactoryService factoryService = new ParserFactoryProvider();
             factory = factoryService.createFactory(config);
         }
+
         if (bStyle == null) {
-            bStyle = new SimpleAttributeSet();
-
-            // probably not needed anymore
-            bStyle.addAttribute(StyleConstants.FontFamily, monospacedFamily);
-            bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.monoFontSize);
-
+            // copy the preformat style
+            bStyle = new SimpleAttributeSet(doc.getStyle("```"));
         }
 
         var parser = factory.createParser(line);
@@ -990,18 +1016,21 @@ public class GeminiTextPane extends JTextPane {
         while ((fragment = parser.parse()) != null) {
             if (fragment.getType() == FragmentType.TEXT) {
                 TextFragment textFragment = (TextFragment) fragment;
-
-                convert(textFragment.getText(), style);
+                convert(textFragment.getText());
             }
-
         }
-    }
-    SimpleAttributeSet bStyle;
 
-    private void convert(String txt, Style style) {
+    }
+
+    private SimpleAttributeSet bStyle;
+    private boolean foregroundHandling;
+
+    private void convert(String txt) {
 
         if (!txt.startsWith("[")) {
-
+            if (foregroundHandling) {
+                StyleConstants.setForeground(bStyle, getForeground());
+            }
             try {
                 doc.insertString(doc.getLength(), txt, bStyle);
             } catch (BadLocationException ex) {
@@ -1113,9 +1142,18 @@ public class GeminiTextPane extends JTextPane {
                 case "[107m" ->
                     ansiBG(AnsiColor.BRIGHT_WHITE);
                 case "[0m" -> {
-                    bStyle = new SimpleAttributeSet();
-                    bStyle.addAttribute(StyleConstants.FontFamily, monospacedFamily);
-                    bStyle.addAttribute(StyleConstants.FontSize, GeminiFrame.monoFontSize);
+
+                    // setting the forground on blank strings causes a layout change that breaks
+                    // the no line wrap on preformatted text
+                    if (!line.isBlank()) {
+                        StyleConstants.setForeground(bStyle, getForeground());
+                    } else {
+                        foregroundHandling = true;
+
+                    }
+
+                    StyleConstants.setBackground(bStyle, getBackground());
+                    StyleConstants.setBold(bStyle, false);
 
                 }
                 case "[1m" -> {
@@ -1127,7 +1165,10 @@ public class GeminiTextPane extends JTextPane {
 
             try {
 
-                // DO NOT CALL the insertString method in this class!!!!!
+                if (foregroundHandling && !line.isBlank()) {
+                    StyleConstants.setForeground(bStyle, getForeground());
+                }
+ 
                 doc.insertString(doc.getLength(), line, bStyle);
 
             } catch (BadLocationException ex) {
@@ -1139,6 +1180,7 @@ public class GeminiTextPane extends JTextPane {
 
     private void ansiFG(Color c) {
         StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark"), .2d, .8d, .15d));
+        foregroundHandling = false;
     }
 
     private void ansiBG(Color c) {
@@ -1146,7 +1188,6 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
-
         if (!docURL.equals(this.docURL) && newRequest) {
 
             if (currentMode == DEFAULT_MODE)
@@ -1191,20 +1232,42 @@ public class GeminiTextPane extends JTextPane {
 
         setStyledDocument(doc);
         buildStyles();
-        if (defPP == null) { // create and save the default paragraph attributes
-            defPP = new SimpleAttributeSet();
-            StyleConstants.setLeftIndent(defPP, 50); // Set left indentation in points
-            StyleConstants.setRightIndent(defPP, 50); // Optional: Adjust the right margin
-            StyleConstants.setLineSpacing(defPP, 0.3f); // Optional: Set line spacing if needed
-            StyleConstants.setForeground(defPP, getForeground());
-        }
-        doc.setParagraphAttributes(0, doc.getLength(), defPP, false);
+        //defPP = new SimpleAttributeSet();
 
+        applyCenteredParagraphStyle();
         addPage(geminiDoc);
 
     }
 
-    private SimpleAttributeSet defPP;
+    private static int totalWidth;
+
+    private void applyCenteredParagraphStyle() {
+
+        JViewport viewport = (JViewport) getParent();
+
+        int width = viewport.getWidth();
+
+        if (width > 0) {
+            totalWidth = width;
+        }
+        if (totalWidth <= 0) {
+            return;
+        }
+
+        float contentWidth = totalWidth * contentPercentage;
+        indent = (int) ((totalWidth - contentWidth) / 2f);
+        //System.out.println("contentWidth: " + contentWidth + " totalWidth: " + totalWidth + " indent: " + indent);
+        SimpleAttributeSet attrs = new SimpleAttributeSet();
+        StyleConstants.setLeftIndent(attrs, indent);
+        StyleConstants.setRightIndent(attrs, indent);
+        StyleConstants.setForeground(attrs, getForeground());
+        //defPP = attrs;
+        //StyledDocument doc = getStyledDocument();
+        doc.setParagraphAttributes(0, doc.getLength(), attrs, false);
+
+    }
+
+    //private SimpleAttributeSet defPP;
 
     public void addPage(String geminiDoc) {
         if (pageBuffer == null) {
@@ -1325,28 +1388,11 @@ public class GeminiTextPane extends JTextPane {
 
         if (line.startsWith("```") && !plainTextMode) {
             preformattedMode = !preformattedMode;
-
-            if (preformattedMode) {
-                pfModeStart = doc.getLength();
-                if (pfModeStart == 0) {
-                    pAttributes = defPP;
-                } else {
-                    pAttributes = getParagraphAttributes();
-                }
-
-            } else {
-                // executed at end block
-                SimpleAttributeSet indentAttributes = new SimpleAttributeSet();
-
-                StyleConstants.setLeftIndent(indentAttributes, 50); // Set left indentation in points
-                StyleConstants.setRightIndent(indentAttributes, 50); // Optional: Adjust the right margin
-                //StyleConstants.setLineSpacing(indentAttributes, pfAdjust); // Optional: Set line spacing if needed
-                Color pfColor = UIManager.getBoolean("laf.dark") ? AnsiColor.blend(linkColor, Color.WHITE, .1f) : AnsiColor.blend(linkColor, Color.BLACK, .1f);
-                StyleConstants.setForeground(indentAttributes, pfColor);
-                doc.setParagraphAttributes(pfModeStart, doc.getLength(), indentAttributes, true);
-
-                doc.setParagraphAttributes(doc.getLength(), doc.getLength(), pAttributes, true);
+            if(!preformattedMode){
+                foregroundHandling = false;
+                bStyle = null;
             }
+
             addStyledText(lastLine, "\n", "```", null);
         } else if (preformattedMode) {
             if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) && line.startsWith("=>")) {
@@ -1575,7 +1621,8 @@ public class GeminiTextPane extends JTextPane {
     private void insertString(int length, String txt, Style style) {
         try {
             if (hasAnsi && preformattedMode) {
-                handleAnsi(txt, style);
+                //handleAnsi(txt, style);
+                handleAnsi(txt);
             } else {
                 doc.insertString(length, txt, style);
             }
@@ -1601,10 +1648,10 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    public Rectangle getCharacterBounds(JTextPane textPane, int start, int end) {
+    public Rectangle getCharacterBounds(int start, int end) {
         try {
-            Rectangle startRect = textPane.modelToView2D(start).getBounds();
-            Rectangle endRect = textPane.modelToView2D(end).getBounds();
+            Rectangle startRect = modelToView2D(start).getBounds();
+            Rectangle endRect = modelToView2D(end).getBounds();
 
             if (startRect.y == endRect.y) { // Same line
                 return new Rectangle(startRect.x, startRect.y, endRect.x - startRect.x, startRect.height);
@@ -1614,7 +1661,7 @@ public class GeminiTextPane extends JTextPane {
 
                 int currentPos = start;
                 while (currentPos < end) {
-                    Rectangle currentRect = textPane.modelToView2D(currentPos).getBounds();
+                    Rectangle currentRect = modelToView2D(currentPos).getBounds();
 
                     // extend the combined rectangle to include the current rectangle
                     combinedRect.add(currentRect);
@@ -1859,7 +1906,7 @@ public class GeminiTextPane extends JTextPane {
 
     private boolean isClickableRangeVisible(ClickableRange range) {
 
-        Rectangle cb = getCharacterBounds(this, range.start, range.end);
+        Rectangle cb = getCharacterBounds(range.start, range.end);
         Rectangle newRect = SwingUtilities.convertRectangle(this, cb, this);
         JViewport viewport = (JViewport) getParent();
         Rectangle viewRect = viewport.getViewRect();
@@ -1867,5 +1914,6 @@ public class GeminiTextPane extends JTextPane {
         return viewRect.contains(newRect.getBounds());
 
     }
+
 
 }
