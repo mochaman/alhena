@@ -354,6 +354,7 @@ public class Alhena {
         EventQueue.invokeLater(() -> {
             int contentP = Integer.parseInt(DB.getPref("contentwidth", "80"));
             GeminiTextPane.contentPercentage = (float)((float)contentP / 100f);
+            GeminiTextPane.wrapPF = DB.getPref("linewrappf", "false").equals("true");
             
             theme = DB.getPref("theme", null);
             if (theme != null) {

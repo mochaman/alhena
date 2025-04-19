@@ -52,6 +52,7 @@ import javax.swing.Action;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -887,10 +888,14 @@ public final class GeminiFrame extends JFrame {
             slider.setPaintLabels(true);
 
             slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
-            Object[] comps = {new JLabel("Select content width percentage."), slider};
+            JCheckBox lineWrapCB = new JCheckBox("Line wrap preformatted text");
+            lineWrapCB.setSelected(GeminiTextPane.wrapPF);
+            Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB};
             String res = Util.inputDialog2(GeminiFrame.this, "Layout", comps);
             //Util.fancyInfoDialog(GeminiFrame.this, "Margins", comps);
             if (res != null) {
+                GeminiTextPane.wrapPF = lineWrapCB.isSelected();
+                DB.insertPref("linewrappf", String.valueOf(GeminiTextPane.wrapPF));
                 GeminiTextPane.contentPercentage = (float) slider.getValue() / 100f;
                 DB.insertPref("contentwidth", String.valueOf(slider.getValue()));
                 Alhena.updateFrames(false, false);

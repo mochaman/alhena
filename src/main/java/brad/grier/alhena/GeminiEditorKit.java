@@ -57,7 +57,7 @@ public class GeminiEditorKit extends StyledEditorKit {
         @Override
         public float getMinimumSpan(int axis) {
             AttributeSet attrs = getAttributes();
-            if (axis == View.X_AXIS && isPreformatted(attrs)) {
+            if (axis == View.X_AXIS && !GeminiTextPane.wrapPF && isPreformatted(attrs)) {
                 return super.getPreferredSpan(axis);
             }
             return super.getMinimumSpan(axis); // allow wrap

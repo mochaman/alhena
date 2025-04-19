@@ -133,6 +133,7 @@ public class GeminiTextPane extends JTextPane {
     private static BufferedImage sheetImage = null;
     public static int indent;
     public static float contentPercentage = .80f;
+    public static boolean wrapPF;
 
     static {
         String userDefined = System.getenv("alhena_monofont");
@@ -228,7 +229,9 @@ public class GeminiTextPane extends JTextPane {
 
         Insets insets = getMargin();
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
+
         setEditorKit(new GeminiEditorKit());
+        
         setEditable(false);
         setCaret(new DefaultCaret() {
             @Override
@@ -1168,7 +1171,7 @@ public class GeminiTextPane extends JTextPane {
                 if (foregroundHandling && !line.isBlank()) {
                     StyleConstants.setForeground(bStyle, getForeground());
                 }
- 
+
                 doc.insertString(doc.getLength(), line, bStyle);
 
             } catch (BadLocationException ex) {
@@ -1268,7 +1271,6 @@ public class GeminiTextPane extends JTextPane {
     }
 
     //private SimpleAttributeSet defPP;
-
     public void addPage(String geminiDoc) {
         if (pageBuffer == null) {
             return;
@@ -1388,7 +1390,7 @@ public class GeminiTextPane extends JTextPane {
 
         if (line.startsWith("```") && !plainTextMode) {
             preformattedMode = !preformattedMode;
-            if(!preformattedMode){
+            if (!preformattedMode) {
                 foregroundHandling = false;
                 bStyle = null;
             }
@@ -1914,6 +1916,5 @@ public class GeminiTextPane extends JTextPane {
         return viewRect.contains(newRect.getBounds());
 
     }
-
 
 }
