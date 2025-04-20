@@ -347,15 +347,15 @@ public class Alhena {
         // initialize the database
         DB.init();
         allowVLC = DB.getPref("allowvlc", "false").equals("true");
-        
+
         httpProxy = DB.getPref("httpproxy", null);
         gopherProxy = DB.getPref("gopherproxy", null);
 
         EventQueue.invokeLater(() -> {
             int contentP = Integer.parseInt(DB.getPref("contentwidth", "80"));
-            GeminiTextPane.contentPercentage = (float)((float)contentP / 100f);
+            GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
             GeminiTextPane.wrapPF = DB.getPref("linewrappf", "false").equals("true");
-            
+
             theme = DB.getPref("theme", null);
             if (theme != null) {
                 Util.setupTheme(theme);
@@ -502,12 +502,6 @@ public class Alhena {
                 return;
             }
         }
-
-        if (url.startsWith("file:/")) {
-            handleFile(url, p, cPage);
-            return;
-        }
-
         // URI prevURI = redirectUrl == null ? p.textPane.getURI() : new URI(redirectUrl);
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
 
@@ -552,6 +546,11 @@ public class Alhena {
 
             origURL += "/"; // origURL keeps the emoji
             url += "/";
+        }
+
+        if (origURL.startsWith("file:/")) {
+            handleFile(origURL, p, cPage);
+            return;
         }
 
         // handle those hosts with emoji (shrimp and whatnot)
@@ -2146,7 +2145,7 @@ public class Alhena {
                 } else {
                     message = "## Value must be 'true' or 'false'\n";
                 }
-            } 
+            }
         }
         p.textPane.end(message, plainText, url, true);
 
@@ -2189,9 +2188,9 @@ public class Alhena {
     }
 
     // call on EDT only
-    public static void pauseMedia(){
-        for(GeminiFrame gf : frameList){
-            gf.forEachPage(page ->{
+    public static void pauseMedia() {
+        for (GeminiFrame gf : frameList) {
+            gf.forEachPage(page -> {
                 page.textPane.pausePlayers();
             });
         }
@@ -2212,14 +2211,21 @@ public class Alhena {
                     String fUrl = url;
                     p.frame().setBusy(true, cPage);
                     boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
-                    p.textPane.updatePage("", pformatted, fUrl, true);
+                    if (!cPage.textPane.awatingImage()) {
+                        p.textPane.updatePage("", pformatted, fUrl, true);
+                    }
                     boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                     boolean isMedia = isImage == false ? mediaExtensions.stream().anyMatch(url.toLowerCase()::endsWith) : false;
 
                     if (isMedia) {
                         String type = videoExtensions.stream().anyMatch(url.toLowerCase()::endsWith) ? "video" : "audio";
-                        p.textPane.end(" ", false, fUrl, true);
-                        p.textPane.insertMediaPlayer(file.getAbsolutePath(), type);
+                        if (cPage.textPane.awatingImage()) {
+                            cPage.textPane.insertMediaPlayer(file.getAbsolutePath(), type);
+                        } else {
+
+                            p.textPane.end(" ", false, fUrl, true);
+                            p.textPane.insertMediaPlayer(file.getAbsolutePath(), type);
+                        }
 
                     } else {
 
@@ -2245,9 +2251,16 @@ public class Alhena {
                                 asyncFile.endHandler(v -> {
                                     if (isImage) {
                                         bg(() -> {
-                                            p.textPane.end(" ", false, fUrl, true);
-                                            p.textPane.insertImage(imageBuffer.getBytes());
-                                            //p.frame().showGlassPane(false);
+
+                                            GeminiTextPane tPane = cPage.textPane;
+
+                                            if (tPane.awatingImage()) {
+                                                tPane.insertImage(imageBuffer.getBytes());
+
+                                            } else {
+                                                p.textPane.end(" ", false, fUrl, true);
+                                                p.textPane.insertImage(imageBuffer.getBytes());
+                                            }
                                         });
 
                                     } else {
