@@ -385,6 +385,10 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void componentResized(ComponentEvent e) {
+                if(inserting){
+                    inserting = false;
+                    return;
+                }
                 if (doc != null) {
                     applyCenteredParagraphStyle();
                 }
@@ -392,6 +396,8 @@ public class GeminiTextPane extends JTextPane {
         });
 
     }
+
+    private boolean inserting;
 
     public static void setSheetImage(BufferedImage sheet) {
         sheetImage = sheet;
@@ -749,6 +755,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void insertMediaPlayer(String path, String mime) {
+        inserting = true;
         Alhena.pauseMedia();
         MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
 
@@ -803,7 +810,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void insertImage(byte[] imageBytes) {
-
+        inserting = true;
         int width = getFormattedWidth();
 
         BufferedImage image = Util.getImage(imageBytes, width, width * 2);
@@ -843,6 +850,7 @@ public class GeminiTextPane extends JTextPane {
             ex.printStackTrace();
         }
         f.setBusy(false, page);
+
     }
 
     public String getFirstHeading() {
@@ -1223,7 +1231,6 @@ public class GeminiTextPane extends JTextPane {
 
         bufferedLine = null; // probably not necessary here
 
-        //f.setStatus(" ");
         preformattedMode = pfMode;
         plainTextMode = pfMode;
         // map to track clickable regions and their actions
@@ -1623,7 +1630,6 @@ public class GeminiTextPane extends JTextPane {
     private void insertString(int length, String txt, Style style) {
         try {
             if (hasAnsi && preformattedMode) {
-                //handleAnsi(txt, style);
                 handleAnsi(txt);
             } else {
                 doc.insertString(length, txt, style);
