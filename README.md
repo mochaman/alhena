@@ -65,7 +65,7 @@ On versions of Linux using a snap install of VLC (like modern Ubuntu), you will 
 ```sh
 nativeDirectory=/snap/vlc/current/usr/lib
 ```
-Whether the ~/.config/vlcj/vlcj.config file is required depends on whether discovery can find VLC. In testing, the embedded player worked "out of the box" on Windows, MacOS (built from source) and Raspberry Pi. VLC 3.x is required. Older versions will not work. VLC 4.x (in development) may not work.
+Whether the ~/.config/vlcj/vlcj.config file is required depends on whether discovery can find VLC. In testing, the embedded player worked "out of the box" on Windows, MacOS (built from source), Raspberry Pi and FreeBSD. VLC 3.x is required. Older versions will not work. VLC 4.x (in development) may or may not work.
 
 Privacy Considerations: Per the author of vlcj, "it may be possible that a remote network access is made for meta data and album/cover art. This may unintentionally expose sensitive data regarding the media being parsed." If this is a concern, the embedded media player can be turned off from 'Settings'.
 
@@ -73,13 +73,13 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD in Releases. Java is NOT required. Each archive includes a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.0.3/alhena-5.0.3_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.3/alhena-5.0.3_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.0.3/alhena-5.0.3_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.0.3/alhena-5.0.3_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.3/alhena-5.0.3_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.0.3/alhena-5.0.3_freebsd_x64.tgz) untar and run script
-- [Standalone (No Java)](https://github.com/mochaman/alhena/releases/download/v5.0.3/alhena-5.0.3_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.0.4/alhena-5.0.4_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.4/alhena-5.0.4_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.0.4/alhena-5.0.4_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.0.4/alhena-5.0.4_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.4/alhena-5.0.4_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.0.4/alhena-5.0.4_freebsd_x64.tgz) untar and run script
+- [Standalone (No Java)](https://github.com/mochaman/alhena/releases/download/v5.0.4/alhena-5.0.4_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
 
 ## 🐳 Docker
 
