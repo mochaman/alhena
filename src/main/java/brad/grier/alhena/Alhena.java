@@ -521,7 +521,7 @@ public class Alhena {
                 url = prevURI.getScheme() + ":" + url;
             } else {
 
-                if (host == null) {
+                if (host == null && !"file".equals(checkURI.getScheme())){
 
                     if (checkURI.getScheme() == null) {
                         url = prevURI.resolve(checkURI).toString();
