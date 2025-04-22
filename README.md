@@ -113,6 +113,11 @@ ANSI Color:
 ## 🛠 License
 Alhena is licensed under the **GNU General Public License v3.0 (GPLv3)**. See [LICENSE](LICENSE) for details.
 
+### License Change Notice:
+As of version 5.0.5, Alhena is licensed under the GPLv3.  
+Previous versions (<= 5.0.1) were licensed under the BSD 2-Clause License
+
+
 ---
 
 Have suggestions or found a bug? Open an issue or contribute via pull requests! 🚀
