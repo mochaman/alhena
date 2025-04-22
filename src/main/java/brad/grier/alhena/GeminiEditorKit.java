@@ -28,19 +28,23 @@ public class GeminiEditorKit extends StyledEditorKit {
         public View create(Element elem) {
 
             String kind = elem.getName();
-
             if (kind != null) {
                 switch (kind) {
-                    case AbstractDocument.ContentElementName:
+                    case AbstractDocument.ContentElementName -> {
                         return new GeminiLabelView(elem);
-                    case AbstractDocument.ParagraphElementName:
+                    }
+                    case AbstractDocument.ParagraphElementName -> {
                         return new ParagraphView(elem);
-                    case AbstractDocument.SectionElementName:
+                    }
+                    case AbstractDocument.SectionElementName -> {
                         return new BoxView(elem, View.Y_AXIS);
-                    case StyleConstants.ComponentElementName:
+                    }
+                    case StyleConstants.ComponentElementName -> {
                         return new ComponentView(elem);
-                    case StyleConstants.IconElementName:
+                    }
+                    case StyleConstants.IconElementName -> {
                         return new IconView(elem);
+                    }
                 }
             }
             return new LabelView(elem);
