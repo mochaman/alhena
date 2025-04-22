@@ -111,7 +111,7 @@ ANSI Color:
 ![Inline Images](https://metaloupe.com/alhena/images/mac_ansi.png)
 
 ## 🛠 License
-Alhena is licensed under the **BSD 2-Clause License**. See [LICENSE](LICENSE) for details.
+Alhena is licensed under the **GNU General Public License v3.0 (GPLv3)**. See [LICENSE](LICENSE) for details.
 
 ---
 
