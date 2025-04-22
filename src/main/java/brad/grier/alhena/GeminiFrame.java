@@ -904,7 +904,7 @@ public final class GeminiFrame extends JFrame {
         }));
 
         settingsMenu.add(new JSeparator());
-        JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem("Adaptive Scrolling", DB.getPref("smoothscrolling", "true").equals("true"));
+        JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem("Smooth Scrolling", DB.getPref("smoothscrolling", "true").equals("true"));
         smoothItem.addItemListener(ae -> {
 
             boolean smoothScrolling = !DB.getPref("smoothscrolling", "true").equals("true"); // toggle
@@ -917,8 +917,7 @@ public final class GeminiFrame extends JFrame {
 
             });
             DB.insertPref("smoothscrolling", String.valueOf(smoothScrolling));
-            // String txt = smoothScrolling ? "on." : "off.";
-            // Util.infoDialog(GeminiFrame.this, "Update", "Mouse wheel adaptive scrolling turned " + txt);
+
 
         });
         settingsMenu.add(smoothItem);
