@@ -2168,6 +2168,7 @@ public final class GeminiFrame extends JFrame {
                             String frameTitle = createTitle(page.textPane.getDocURLString(), page.textPane.getFirstHeading());
                             if (frameTitle != null) {
                                 setTitle(frameTitle);
+                                selectComboBoxItem(page.textPane.getDocURLString());
                             } else {
                                 setTitle("New Tab");
                                 selectComboBoxItem("");
