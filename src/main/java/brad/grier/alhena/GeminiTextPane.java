@@ -136,7 +136,7 @@ public class GeminiTextPane extends JTextPane {
     public static boolean wrapPF;
 
     static {
-        String userDefined = System.getenv("alhena_monofont");
+        String userDefined = System.getenv("ALHENA_MONOFONT");
         if (SystemInfo.isWindows) {
 
             monospacedFamily = userDefined == null || userDefined.isBlank() ? "Source Code Pro" : userDefined;
@@ -799,19 +799,14 @@ public class GeminiTextPane extends JTextPane {
         f.setBusy(false, page);
     }
 
-    public int getFormattedWidth() {
-        Insets insets = getInsets();
-        int width = getWidth()
-                - insets.left
-                - insets.right
-                - indent * 2
-                - UIManager.getInt("ScrollBar.width") - 1;
-        return width;
-    }
+
 
     public void insertImage(byte[] imageBytes) {
         inserting = true;
-        int width = getFormattedWidth();
+
+        // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
+        // that doesn't cause the horizontal scrollbar to appear
+        int width = (int)contentWidth - 50;
 
         BufferedImage image = Util.getImage(imageBytes, width, width * 2);
 
@@ -1264,20 +1259,20 @@ public class GeminiTextPane extends JTextPane {
             return;
         }
 
-        float contentWidth = totalWidth * contentPercentage;
+        contentWidth = totalWidth * contentPercentage;
         indent = (int) ((totalWidth - contentWidth) / 2f);
-        //System.out.println("contentWidth: " + contentWidth + " totalWidth: " + totalWidth + " indent: " + indent);
+
         SimpleAttributeSet attrs = new SimpleAttributeSet();
         StyleConstants.setLeftIndent(attrs, indent);
         StyleConstants.setRightIndent(attrs, indent);
         StyleConstants.setForeground(attrs, getForeground());
-        //defPP = attrs;
-        //StyledDocument doc = getStyledDocument();
+
         doc.setParagraphAttributes(0, doc.getLength(), attrs, false);
 
     }
 
-    //private SimpleAttributeSet defPP;
+    private float contentWidth;
+
     public void addPage(String geminiDoc) {
         if (pageBuffer == null) {
             return;
