@@ -16,6 +16,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
@@ -39,7 +40,10 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.imageio.ImageIO;
+import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
+import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -50,6 +54,7 @@ import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextPane;
 import javax.swing.JViewport;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
@@ -231,14 +236,42 @@ public class GeminiTextPane extends JTextPane {
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
 
         setEditorKit(new GeminiEditorKit());
-        
+
         setEditable(false);
-        setCaret(new DefaultCaret() {
+        DefaultCaret newCaret = new DefaultCaret() {
             @Override
             public void paint(Graphics g) {
                 // do nothing to prevent caret from being painted
             }
+        };
+        setCaret(newCaret);
+
+        EventQueue.invokeLater(()->{
+            scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
         });
+
+
+        // take over up and down arrow scrolling
+        InputMap inputMap = getInputMap(JComponent.WHEN_FOCUSED);
+        inputMap.put(KeyStroke.getKeyStroke("UP"), "scrollUpNow");
+        getActionMap().put("scrollUpNow", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                JScrollBar bar = scrollPane.getVerticalScrollBar();
+                bar.setValue(bar.getValue() - bar.getUnitIncrement(-1));
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke("DOWN"), "scrollDownNow");
+        getActionMap().put("scrollDownNow", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JScrollBar bar = scrollPane.getVerticalScrollBar();
+                bar.setValue(bar.getValue() + bar.getUnitIncrement(1));
+            }
+        });
+
         boolean smoothPref = DB.getPref("smoothscrolling", "true").equals("true");
         if (smoothPref) {
             setupAdaptiveScrolling();
@@ -248,9 +281,7 @@ public class GeminiTextPane extends JTextPane {
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-                    if (scrollPane == null) {
-                        scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
-                    }
+
                     checkScroll(e, scrollPane);
                 }
             }
@@ -327,9 +358,6 @@ public class GeminiTextPane extends JTextPane {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e) && currentCursor != Cursor.HAND_CURSOR) {
-                    if (scrollPane == null) {
-                        scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
-                    }
 
                     checkScroll(e, scrollPane);
                 }
@@ -385,7 +413,7 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void componentResized(ComponentEvent e) {
-                if(inserting){
+                if (inserting) {
                     inserting = false;
                     return;
                 }
@@ -799,14 +827,12 @@ public class GeminiTextPane extends JTextPane {
         f.setBusy(false, page);
     }
 
-
-
     public void insertImage(byte[] imageBytes) {
         inserting = true;
 
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
-        int width = (int)contentWidth - 50;
+        int width = (int) contentWidth - 50;
 
         BufferedImage image = Util.getImage(imageBytes, width, width * 2);
 
@@ -958,6 +984,7 @@ public class GeminiTextPane extends JTextPane {
         page.doneLoading();
 
         page.setBusy(false);
+        requestFocusInWindow();
     }
 
     private void scanForAnsi() {
@@ -1842,9 +1869,6 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private void smoothScroll(double amount) {
-        if (scrollPane == null) {
-            scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
-        }
 
         JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
         int currentValue = verticalScrollBar.getValue();
