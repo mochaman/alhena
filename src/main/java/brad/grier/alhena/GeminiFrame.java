@@ -13,6 +13,8 @@ import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.MenuItem;
 import java.awt.event.ActionEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
@@ -113,8 +115,9 @@ public final class GeminiFrame extends JFrame {
     public static final String SERVERS_LABEL = "Servers";
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL); // make immutable
     public static String proportionalFamily = "SansSerif";
-    public static int fontSize = 15;
-    public static int monoFontSize = 15;
+    public static final int DEFAULT_FONT_SIZE = 20;
+    public static int fontSize = DEFAULT_FONT_SIZE;
+    public static int monoFontSize = DEFAULT_FONT_SIZE;
     public static boolean ansiAlert;
     private static Font saveFont;
     public final static String SYNC_SERVER = "ultimatumlabs.com:1965/";
@@ -311,9 +314,9 @@ public final class GeminiFrame extends JFrame {
         }
 
         proportionalFamily = DB.getPref("fontfamily", "SansSerif");
-        String fs = DB.getPref("fontsize", "15");
+        String fs = DB.getPref("fontsize", String.valueOf(DEFAULT_FONT_SIZE));
         fontSize = Integer.parseInt(fs);
-        String mfs = DB.getPref("monofontsize", "15");
+        String mfs = DB.getPref("monofontsize", String.valueOf(DEFAULT_FONT_SIZE));
         monoFontSize = Integer.parseInt(mfs);
 
         String dbFont = DB.getPref("font", "SansSerif");
@@ -323,9 +326,9 @@ public final class GeminiFrame extends JFrame {
         // fonts created with invalid names are created anyway with Dialog font family
         if (saveFont.getFamily().equals("Dialog") && !saveFont.getName().equals("Dialog")) {
 
-            saveFont = new Font("SansSerif", Font.PLAIN, 15);
+            saveFont = new Font("SansSerif", Font.PLAIN, DEFAULT_FONT_SIZE);
             proportionalFamily = "SansSerif";
-            monoFontSize = fontSize = 15;
+            monoFontSize = fontSize = DEFAULT_FONT_SIZE;
         }
 
         boolean addToHistory = url != null || baseUrl != null;
@@ -802,7 +805,7 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(darkThemeMenu);
 
         settingsMenu.add(createMenuItem("Font", KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
-            Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, 15);
+            Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, DEFAULT_FONT_SIZE);
             Font font = Util.getFont(GeminiFrame.this, defFont);
             if (font != null) {
                 saveFont = font;
@@ -918,7 +921,6 @@ public final class GeminiFrame extends JFrame {
             });
             DB.insertPref("smoothscrolling", String.valueOf(smoothScrolling));
 
-
         });
         settingsMenu.add(smoothItem);
 
@@ -1000,9 +1002,9 @@ public final class GeminiFrame extends JFrame {
     // change font after restore
     public void resetFont() {
         proportionalFamily = DB.getPref("fontfamily", "SansSerif");
-        String fs = DB.getPref("fontsize", "15");
+        String fs = DB.getPref("fontsize", String.valueOf(DEFAULT_FONT_SIZE));
         fontSize = Integer.parseInt(fs);
-        String mfs = DB.getPref("monofontsize", "15");
+        String mfs = DB.getPref("monofontsize", String.valueOf(DEFAULT_FONT_SIZE));
         monoFontSize = Integer.parseInt(mfs);
         String dbFont = DB.getPref("font", "SansSerif");
         saveFont = new Font(dbFont, Font.PLAIN, fontSize);
@@ -1112,6 +1114,14 @@ public final class GeminiFrame extends JFrame {
         JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
 
         textField.addMouseListener(new ContextMenuMouseListener());
+        textField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                SwingUtilities.invokeLater(() -> {
+                    textField.selectAll();
+                });
+            }
+        });
     }
 
     public void recolorIcons() {
