@@ -412,8 +412,8 @@ public class Util {
                 GeminiFrame.monoFontSize = slider.getValue();
                 return fontChooser.getSelectedFont();
             } else if (val.equals("Reset")) {
-                GeminiFrame.monoFontSize = 15;
-                return new Font("SansSerif", Font.PLAIN, 15);
+                GeminiFrame.monoFontSize = GeminiFrame.DEFAULT_FONT_SIZE;
+                return new Font("SansSerif", Font.PLAIN, GeminiFrame.DEFAULT_FONT_SIZE);
             } 
         }
         return null;
