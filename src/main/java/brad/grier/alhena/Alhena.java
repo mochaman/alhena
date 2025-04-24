@@ -1110,10 +1110,14 @@ public class Alhena {
                                     String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, respType == '1');
 
                                     if (input != null) {
+                                        String nUrl = uri.toString();
+                                        int idx = nUrl.indexOf('?');
+                                        if(idx != -1){
+                                            nUrl = nUrl.substring(0, idx);
+                                        }
 
-                                        String questionMark = uri.toString().endsWith("?") ? "" : "?";
                                         p.setStart();
-                                        processURL(uri + questionMark + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
+                                        processURL(nUrl + "?" + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
 
                                     } else {
                                         cPage.textPane.resetLastClicked();
