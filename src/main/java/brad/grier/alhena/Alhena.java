@@ -183,7 +183,13 @@ public class Alhena {
                         return true; // consume
                     }
                     return false;
-
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_UP, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
+                    // go to root
+                    URI uri = gf.visiblePage().textPane().getURI();
+                    if (uri.getHost() != null && uri.getScheme() != null) {
+                        URI rootURI = URI.create(uri.getScheme() + "://" + uri.getHost());
+                        gf.fetchURL(rootURI.toString());
+                    }
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.ALT_DOWN_MASK)))) {
 
                     gf.editPage();
@@ -521,7 +527,7 @@ public class Alhena {
                 url = prevURI.getScheme() + ":" + url;
             } else {
 
-                if (host == null && !"file".equals(checkURI.getScheme())){
+                if (host == null && !"file".equals(checkURI.getScheme())) {
 
                     if (checkURI.getScheme() == null) {
                         url = prevURI.resolve(checkURI).toString();
@@ -1112,7 +1118,7 @@ public class Alhena {
                                     if (input != null) {
                                         String nUrl = uri.toString();
                                         int idx = nUrl.indexOf('?');
-                                        if(idx != -1){
+                                        if (idx != -1) {
                                             nUrl = nUrl.substring(0, idx);
                                         }
 
