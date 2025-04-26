@@ -67,6 +67,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
@@ -1714,6 +1715,12 @@ public class Alhena {
                 }
                 if (msg != null) { // from type 60
                     processURL(reqURL, p, null, cPage);
+                    // if opening page in a new tab, need to set busy false on original page
+                    if(p.getParent() instanceof JTabbedPane){
+                        
+                        cPage.setBusy(false);    
+                    }
+
                 }
                 return true;
 
