@@ -2204,7 +2204,9 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.addChangeListener(ce -> {
 
                 Page page = (Page) tabbedPane.getSelectedComponent();
-
+                if(page == null){
+                    return;
+                }
                 if (!page.busy() && getGlassPane().isShowing()) {
                     showGlassPane(false);
                 } else if (page.busy() && !getGlassPane().isShowing()) {
