@@ -531,7 +531,14 @@ public class Alhena {
                 if (host == null && !"file".equals(checkURI.getScheme())) {
 
                     if (checkURI.getScheme() == null) {
-                        url = prevURI.resolve(checkURI).toString();
+                        //URI.resolve is removing last segment of path when checkURI is only a query???
+                        if (url.startsWith("?")) {
+                            // do not preserve prevURI's query if there is one
+                            url = prevURI.getScheme() + "://" + prevURI.getHost() + prevURI.getPath() + url;
+                            
+                        } else {
+                            url = prevURI.resolve(checkURI).toString();
+                        }
                     } else {
                         //  corner case - no host but there's a scheme - is this legal?
                         // spartan://greatfractal.com/
@@ -1239,6 +1246,9 @@ public class Alhena {
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
                                 p.redirectCount++;
 
+                                //String rQuery = uri.getQuery();
+                                // String rQuery = null;
+                                // rQuery = rQuery == null ? "" : "?" + rQuery;
                                 processURL(redirectURI, p, origURL, cPage);
                             }
                             case '4', '5' -> {
@@ -1716,9 +1726,9 @@ public class Alhena {
                 if (msg != null) { // from type 60
                     processURL(reqURL, p, null, cPage);
                     // if opening page in a new tab, need to set busy false on original page
-                    if(p.getParent() instanceof JTabbedPane){
-                        
-                        cPage.setBusy(false);    
+                    if (p.getParent() instanceof JTabbedPane) {
+
+                        cPage.setBusy(false);
                     }
 
                 }
