@@ -535,7 +535,7 @@ public class Alhena {
                         if (url.startsWith("?")) {
                             // do not preserve prevURI's query if there is one
                             url = prevURI.getScheme() + "://" + prevURI.getHost() + prevURI.getPath() + url;
-                            
+
                         } else {
                             url = prevURI.resolve(checkURI).toString();
                         }
@@ -588,7 +588,7 @@ public class Alhena {
                 TextEditor textEditor = new TextEditor("", true);
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
-                String res = Util.inputDialog2(p.frame(), "Edit", comps);
+                Object res = Util.inputDialog2(p.frame(), "Edit", comps, null);
                 if (res == null) {
 
                     return;
@@ -1353,7 +1353,7 @@ public class Alhena {
                                     TextEditor textEditor = new TextEditor(titanSB.toString(), true);
                                     Object[] comps = new Object[1];
                                     comps[0] = textEditor;
-                                    String res = Util.inputDialog2(p.frame(), "Edit", comps);
+                                    Object res = Util.inputDialog2(p.frame(), "Edit", comps, null);
 
                                     if (res != null) {
                                         Object rsp = textEditor.getResult();
@@ -1706,9 +1706,15 @@ public class Alhena {
             comps[2] = new JLabel(" ");
             comps[3] = dcButton;
             comps[4] = pcButton;
-            String cn = Util.inputDialog2(p.frame(), "New Client Certificate", comps);
+            Object[] options = {"OK", "Cancel"};
+            if (msg != null) {
+                Object[] newOptions = {"OK", "Cancel", "Import PEM"};
+                options = newOptions;
+            }
 
-            if (cn != null) {
+            Object cn = Util.inputDialog2(p.frame(), "New Client Certificate", comps, options);
+
+            if ("OK".equals(cn)) {
                 String cnString = cnField.getText();
                 cnString = cnString.isEmpty() ? PROG_NAME : cnString;
                 addCertToTrustStore(uri, cert);
@@ -1734,6 +1740,25 @@ public class Alhena {
                 }
                 return true;
 
+            } else if ("Import PEM".equals(cn)) { // never happen when msg == null
+                if (dcButton.isSelected()) {
+                    String port = uri.getPort() == -1 ? ":1965" : ":" + uri.getPort();
+                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + port + "/");
+                    p.frame().importPem(newURI, null);
+                    //createClientCert(newURI, cnString);
+
+                } else {
+                    //createClientCert(uri, cnString);
+                    p.frame().importPem(uri, null);
+
+                }
+                processURL(reqURL, p, null, cPage);
+                // if opening page in a new tab, need to set busy false on original page
+                if (p.getParent() instanceof JTabbedPane) {
+
+                    cPage.setBusy(false);
+                }
+                //p.frame().importPem(uri, null);
             }
             return false;
 
