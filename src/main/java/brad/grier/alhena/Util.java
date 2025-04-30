@@ -186,15 +186,15 @@ public class Util {
         return inputDialog(c, title, msg, pswd, null, null);
     }
 
-    public static String inputDialog2(Component c, String title, Object[] components) {
+    public static Object inputDialog2(Component c, String title, Object[] components, Object[] options) {
 
         JOptionPane optionPane = new JOptionPane(
                 components, // Message
                 JOptionPane.QUESTION_MESSAGE, // Message type
                 JOptionPane.OK_CANCEL_OPTION, // Option type
                 null, // Icon (null for default)
-                null, // Options (null for default buttons)
-                null // Initial value
+                options, // Options (null for default buttons)
+                options != null ? options[0] : null // Initial value
         );
 
         optionPane.setWantsInput(false);
@@ -227,13 +227,14 @@ public class Util {
         });
         dialog.setVisible(true);
 
-        if (optionPane.getValue() instanceof Integer result) {
-            if (result == JOptionPane.OK_OPTION) {
-
-                return "Ok";
+        // return null for cancel as a shortcut
+        if(options == null && optionPane.getValue() instanceof Integer val){
+            if(val == JOptionPane.CANCEL_OPTION){
+                return null;
             }
         }
-        return null;
+        return optionPane.getValue();
+
 
     }
 
