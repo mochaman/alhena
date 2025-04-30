@@ -894,8 +894,8 @@ public final class GeminiFrame extends JFrame {
             JCheckBox lineWrapCB = new JCheckBox("Line wrap preformatted text");
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
             Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB};
-            String res = Util.inputDialog2(GeminiFrame.this, "Layout", comps);
-            //Util.fancyInfoDialog(GeminiFrame.this, "Margins", comps);
+            Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null);
+
             if (res != null) {
                 GeminiTextPane.wrapPF = lineWrapCB.isSelected();
                 DB.insertPref("linewrappf", String.valueOf(GeminiTextPane.wrapPF));
@@ -1188,7 +1188,7 @@ public final class GeminiFrame extends JFrame {
         comps[1] = labelField;
         comps[2] = "Bookmark Folder:";
         comps[3] = bmComboBox;
-        String res = Util.inputDialog2(this, "New", comps);
+        Object res = Util.inputDialog2(this, "New", comps, null);
         if (res != null) {
 
             if (labelField.getText().trim().isEmpty() || ((String) bmComboBox.getSelectedItem()).trim().isEmpty()) {
@@ -1715,7 +1715,7 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), info.title);
         }
 
-        textPane.end(info.content, false, INFO_LABEL, false);
+        textPane.end(info.content, true, INFO_LABEL, false);
         textPane.setDocURL(info.title);
 
         // problem: end already sets comboBox
@@ -1964,7 +1964,7 @@ public final class GeminiFrame extends JFrame {
             comps[1] = labelField;
             comps[2] = "Bookmark Folder:";
             comps[3] = bmComboBox;
-            String res = Util.inputDialog2(this, "New", comps);
+            Object res = Util.inputDialog2(this, "New", comps, null);
             if (res != null) {
                 if (!labelField.getText().trim().isEmpty() && !((String) bmComboBox.getSelectedItem()).trim().isEmpty()) {
                     DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem());
