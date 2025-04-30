@@ -1470,7 +1470,7 @@ public class GeminiTextPane extends JTextPane {
                             TextEditor textEditor = new TextEditor("", false);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
-                            String res = Util.inputDialog2(f, "Edit", comps);
+                            Object res = Util.inputDialog2(f, "Edit", comps, null);
                             if (res != null) {
                                 Object result = textEditor.getResult();
                                 if (result instanceof String string) {
