@@ -466,7 +466,7 @@ public class DB {
         int count = 0;
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
 
-            try (ResultSet rs = st.executeQuery("SELECT DOMAIN, EXPIRES, TIME_STAMP FROM SERVERCERTS ORDER BY TIME_STAMP ASC")) {
+            try (ResultSet rs = st.executeQuery("SELECT DOMAIN, FINGERPRINT, EXPIRES, TIME_STAMP FROM SERVERCERTS ORDER BY TIME_STAMP ASC")) {
                 String saveDate = null;
 
                 Locale systemLocale = Locale.getDefault(); // Get system locale
@@ -475,8 +475,9 @@ public class DB {
                 while (rs.next()) {
                     count++;
                     String domain = rs.getString(1);
-                    Timestamp expireTs = rs.getTimestamp(2);
-                    Timestamp ts = rs.getTimestamp(3);
+                    String fingerprint = rs.getString(2);
+                    Timestamp expireTs = rs.getTimestamp(3);
+                    Timestamp ts = rs.getTimestamp(4);
 
                     String saved = groupFormat.format(ts);
                     String expires = dateFormat.format(expireTs);
@@ -489,7 +490,8 @@ public class DB {
                     }
 
                     EventQueue.invokeLater(() -> {
-                        textPane.addPage("* " + domain + " expires " + expires + "\n");
+                        textPane.addPage(domain + " expires " + expires + "\n");
+                        textPane.addPage(fingerprint + "\n\n");
                     });
 
                 }

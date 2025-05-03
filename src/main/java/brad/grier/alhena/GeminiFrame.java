@@ -1780,7 +1780,7 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), SERVERS_LABEL);
         }
 
-        textPane.updatePage("# Servers 🖥\n", false, SERVERS_LABEL, true);
+        textPane.updatePage("# Servers 🖥\nDomain, Expiration Date and SHA-256 Hash\n", false, SERVERS_LABEL, true);
         new Thread(() -> {
             int[] count = {0};
             try {
