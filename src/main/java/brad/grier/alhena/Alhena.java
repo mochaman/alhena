@@ -60,6 +60,7 @@ import java.util.function.BooleanSupplier;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
@@ -125,10 +126,10 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.0.8";
+    public final static String VERSION = "5.0.9";
     private static volatile boolean interrupted;
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov");
-    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg");
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp");
+    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp");
     public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov");
     public static final List<String> videoExtensions = List.of(".mp4", ".mov");
     public static boolean browsingSupported, mailSupported;
@@ -1022,7 +1023,7 @@ public class Alhena {
                             String resHost = res.host == null ? "" : "The server certificate is from the wrong domain: " + res.cn + "\n";
                             // this blocks vertx event loop
                             EventQueue.invokeAndWait(() -> {
-                                Object diagRes = Util.confirmDialog(p.frame(), "Certificate Issue", resMsg + resHost + "Do you want to continue?", JOptionPane.YES_NO_OPTION, null);
+                                Object diagRes = Util.confirmDialog(p.frame(), "Certificate Issue", resMsg + resHost + "Do you want to continue?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                                 if (diagRes instanceof Integer result) {
                                     proceed[0] = result == JOptionPane.YES_OPTION;
                                 } else {
@@ -1031,11 +1032,17 @@ public class Alhena {
 
                             });
                         } catch (InterruptedException | InvocationTargetException ex) {
+                            proceed[0] = false;
                         }
                         if (!proceed[0]) {
 
                             connection.result().close();
-                            p.frame().showGlassPane(false);
+                            bg(() -> {
+                                p.frame().showGlassPane(false);
+                                p.frame().setBusy(false, cPage);
+                                p.setBusy(false);
+                            });
+
                             return;
                         } else {
                             cnConfirmedList.add(res.host);
@@ -1275,6 +1282,35 @@ public class Alhena {
                                 }
                                 char respType = (char) saveBuffer.getByte(1);
                                 if (respType == '0') { // 60 cert required
+                                    SSLSession sslSession = connection.result().sslSession();
+                                    if ("TLSv1.2".equals(sslSession.getProtocol())) {
+                                        try {
+                                            EventQueue.invokeAndWait(() -> {
+
+                                                Object res = Util.confirmDialog(p.frame(), "Warning", "A TLSv1.2 server is requesting a client certificate.\nDo you want to continue?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                                if (res instanceof Integer result) {
+                                                    proceed[0] = result == JOptionPane.YES_OPTION;
+                                                } else {
+                                                    proceed[0] = false;
+                                                }
+
+                                            });
+                                        } catch (InterruptedException | InvocationTargetException ex) {
+                                            proceed[0] = false;
+
+                                        }
+                                    }
+                                    if (!proceed[0]) {
+
+                                        connection.result().close();
+                                        bg(() -> {
+                                            p.frame().showGlassPane(false);
+                                            p.frame().setBusy(false, cPage);
+
+                                        });
+
+                                        return;
+                                    }
                                     titanEdit[0] = false;
                                     p.frame().setBusy(false, cPage);
                                     String msg = saveBuffer.getString(3, i - 1).trim();
@@ -1731,11 +1767,8 @@ public class Alhena {
                 }
                 if (msg != null) { // from type 60
                     processURL(reqURL, p, null, cPage);
-                    // if opening page in a new tab, need to set busy false on original page
-                    if (p.getParent() instanceof JTabbedPane) {
 
-                        cPage.setBusy(false);
-                    }
+                    p.frame().setBusy(false, cPage);
 
                 }
                 return true;
