@@ -166,6 +166,7 @@ public class GeminiTextPane extends JTextPane {
         dropExtensions = new ArrayList<>(Alhena.fileExtensions);
         dropExtensions.add(".png");
         dropExtensions.add(".jpg");
+        dropExtensions.add(".webp");
 
         String emojiPref = DB.getPref("emoji", null);
         if (emojiPref == null || emojiPref.equals("google")) { // first time or the default set from jar
@@ -1002,7 +1003,7 @@ public class GeminiTextPane extends JTextPane {
                                     f.refreshFromCache(page);
                                 };
                                 if (GeminiFrame.ansiAlert) {
-                                    Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page?", JOptionPane.YES_NO_OPTION, null);
+                                    Object res = Util.confirmDialog(f, "ANSI", "This page uses ANSI escape sequences to style text.\nDo you want to render the page?", JOptionPane.YES_NO_OPTION, null, null);
                                     if (res instanceof Integer result) {
                                         if (result == JOptionPane.YES_OPTION) {
                                             r.run();
