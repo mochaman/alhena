@@ -152,17 +152,18 @@ public class Util {
         textArea.setFont(font);
         textArea.setText(GeminiFrame.getArt());
 
-        Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "Written by Brad Grier", textArea};
+        Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "© 2025 Brad Grier", textArea};
         Util.fancyInfoDialog(c, "About", comps);
     }
 
-    public static Object confirmDialog(Component parent, String title, String question, int msgType, Object[] options) {
+    public static Object confirmDialog(Component parent, String title, String question, int optionType, Object[] options, Integer msgType) {
 
         //JOptionPane optionPane = new JOptionPane(question, JOptionPane.QUESTION_MESSAGE, msgType);
         JOptionPane optionPane = new JOptionPane(
                 question, // Message
-                JOptionPane.QUESTION_MESSAGE, // Message type
-                options != null ? JOptionPane.DEFAULT_OPTION : msgType,
+                msgType == null ? JOptionPane.QUESTION_MESSAGE : msgType,
+                // JOptionPane.QUESTION_MESSAGE, // Message type
+                options != null ? JOptionPane.DEFAULT_OPTION : optionType,
                 null, // Icon (null for default)
                 options, // Options (null for default buttons)
                 options != null ? options[0] : null // Initial value
@@ -453,7 +454,7 @@ public class Util {
             if (JFileChooser.APPROVE_SELECTION.equals(event.getActionCommand())) {
                 File returnedFile = fileChooser.getSelectedFile();
                 if (!isOpenMode && returnedFile.exists()) {
-                    Object res = Util.confirmDialog(dialog, "Exists", "File already exists. Continue?", JOptionPane.YES_NO_OPTION, null);
+                    Object res = Util.confirmDialog(dialog, "Exists", "File already exists. Continue?", JOptionPane.YES_NO_OPTION, null, null);
                     if (res instanceof Integer result) {
                         if (result == JOptionPane.YES_OPTION) {
                             selectedFile[0] = returnedFile;
@@ -767,7 +768,7 @@ public class Util {
 
         }
         Object[] options = {"Merge", "Replace", "Cancel"};
-        Object res = confirmDialog(frame, "Confirm", "'Replace' will completely overwrite your existing configuration.\n'Merge' will safely combine the data.", JOptionPane.YES_NO_OPTION, options);
+        Object res = confirmDialog(frame, "Confirm", "'Replace' will completely overwrite your existing configuration.\n'Merge' will safely combine the data.", JOptionPane.YES_NO_OPTION, options, JOptionPane.WARNING_MESSAGE);
         if (res instanceof String result) {
 
             if (result.equals("Replace")) {
