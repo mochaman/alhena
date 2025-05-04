@@ -13,10 +13,9 @@ import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.MenuItem;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -346,30 +345,32 @@ public final class GeminiFrame extends JFrame {
         });
 
         comboBox = new JComboBox();
+        // this allows keyboard traversal with ActionListener
+        comboBox.putClientProperty("JComboBox.isTableCellEditor", Boolean.TRUE);
 
         comboBox.setEditable(true);
 
-        comboBox.addItemListener(il -> {
-            if (il.getStateChange() == ItemEvent.SELECTED) {
+        comboBox.addActionListener(al -> {
+            if (comboBox.getSelectedItem() == null) {
+                return;
+            }
+            String cbUrl = comboBox.getSelectedItem().toString();
 
-                String cbUrl = comboBox.getSelectedItem().toString();
-
-                Object obj = comboBox.getSelectedItem();
-                boolean processed = false;
-                if (obj instanceof ComboItem ci) {
-                    if (ci.supplier != null) {
-                        showCustomPage(ci.url, ci.supplier.get());
-                        processed = true;
-                    }
+            Object obj = comboBox.getSelectedItem();
+            boolean processed = false;
+            if (obj instanceof ComboItem ci) {
+                if (ci.supplier != null) {
+                    showCustomPage(ci.url, ci.supplier.get());
+                    processed = true;
                 }
-                if (!processed) {
-                    if (CUSTOM_LABELS.contains(cbUrl) && !cbUrl.equals(INFO_LABEL)) {
-                        showCustomPage(cbUrl, null);
+            }
+            if (!processed) {
+                if (CUSTOM_LABELS.contains(cbUrl) && !cbUrl.equals(INFO_LABEL)) {
+                    showCustomPage(cbUrl, null);
 
-                    } else {
+                } else {
 
-                        fetchURL(cbUrl);
-                    }
+                    fetchURL(cbUrl);
                 }
             }
         });
@@ -510,7 +511,8 @@ public final class GeminiFrame extends JFrame {
         GridBagConstraints gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(0, 5, 5, 0);
+        gridBagConstraints.weighty = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(1, 6, 7, 4);
 
         navPanel.add(comboBox, gridBagConstraints);
 
@@ -598,7 +600,7 @@ public final class GeminiFrame extends JFrame {
             try {
                 ClientCertInfo ci = DB.getClientCertInfo(SYNC_SERVER);
                 if (ci == null) {
-                    Object r = Util.confirmDialog(GeminiFrame.this, "Missing Cert", "You do not have an active certificate for " + SYNC_SERVER + "\nDo you want to create one?", JOptionPane.YES_NO_OPTION, null);
+                    Object r = Util.confirmDialog(GeminiFrame.this, "Missing Cert", "You do not have an active certificate for " + SYNC_SERVER + "\nDo you want to create one?", JOptionPane.YES_NO_OPTION, null, null);
                     if (r instanceof Integer result) {
                         if (result == JOptionPane.YES_OPTION) {
                             try {
@@ -615,7 +617,7 @@ public final class GeminiFrame extends JFrame {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-            Object r = Util.confirmDialog(GeminiFrame.this, "Sync", "This will overwrite any previously saved information on the server.\nAre you sure you want to upload your encrypted data?", JOptionPane.YES_NO_OPTION, null);
+            Object r = Util.confirmDialog(GeminiFrame.this, "Sync", "This will overwrite any previously saved information on the server.\nAre you sure you want to upload your encrypted data?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (r instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     ClientCertInfo certInfo;
@@ -1811,7 +1813,7 @@ public final class GeminiFrame extends JFrame {
         int bmId = Integer.parseInt(id);
         try {
             Bookmark bm = DB.getBookmark(bmId);
-            Object res = Util.confirmDialog(f, "Delete?", "Are you sure you want to delete this bookmark?\n" + bm.label(), JOptionPane.YES_NO_OPTION, null);
+            Object res = Util.confirmDialog(f, "Delete?", "Are you sure you want to delete this bookmark?\n" + bm.label(), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     DB.deleteBookmark(bmId);
@@ -1848,7 +1850,7 @@ public final class GeminiFrame extends JFrame {
             ClientCertInfo certInfo = DB.getClientCertInfo(id);
             X509Certificate xc = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
             X500Principal principal = xc.getSubjectX500Principal();
-            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete this certificate?\n" + certInfo.domain() + " [" + principal.getName() + "]", JOptionPane.YES_NO_OPTION, null);
+            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete this certificate?\n" + certInfo.domain() + " [" + principal.getName() + "]", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
 
@@ -1890,7 +1892,7 @@ public final class GeminiFrame extends JFrame {
                 return;
 
             } else {
-                Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history containing:\n\"" + match + "\"", JOptionPane.YES_NO_OPTION, null);
+                Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history containing:\n\"" + match + "\"", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                 if (res instanceof Integer result) {
                     if (result == JOptionPane.NO_OPTION) {
                         return;
@@ -1913,7 +1915,7 @@ public final class GeminiFrame extends JFrame {
 
     public void clearHistory() {
         try {
-            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history?", JOptionPane.YES_NO_OPTION, null);
+            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     int rowCount = DB.deleteHistory();
@@ -2204,7 +2206,7 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.addChangeListener(ce -> {
 
                 Page page = (Page) tabbedPane.getSelectedComponent();
-                if(page == null){
+                if (page == null) {
                     return;
                 }
                 if (!page.busy() && getGlassPane().isShowing()) {
@@ -2372,10 +2374,10 @@ public final class GeminiFrame extends JFrame {
     private void updateComboBox(ComboItem origURL) {
 
         EventQueue.invokeLater(() -> {
-            ItemListener[] il = comboBox.getItemListeners();
+            ActionListener[] il = comboBox.getActionListeners();
 
-            for (ItemListener i : il) {
-                comboBox.removeItemListener(i);
+            for (ActionListener i : il) {
+                comboBox.removeActionListener(i);
             }
 
             ComboItem foundItem = null;
@@ -2397,8 +2399,8 @@ public final class GeminiFrame extends JFrame {
                 comboBox.setSelectedItem(origURL);
             }
 
-            for (ItemListener j : il) {
-                comboBox.addItemListener(j);
+            for (ActionListener j : il) {
+                comboBox.addActionListener(j);
             }
         });
     }
@@ -2408,15 +2410,14 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void selectComboBoxItem(ComboItem item) {
-        // only call from event dispatch thread
-        ItemListener[] il = comboBox.getItemListeners();
-        for (ItemListener i : il) {
-            comboBox.removeItemListener(i);
+        ActionListener[] il = comboBox.getActionListeners();
+        for (ActionListener i : il) {
+            comboBox.removeActionListener(i);
         }
         comboBox.setSelectedItem(item);
 
-        for (ItemListener i : il) {
-            comboBox.addItemListener(i);
+        for (ActionListener i : il) {
+            comboBox.addActionListener(i);
         }
     }
 
