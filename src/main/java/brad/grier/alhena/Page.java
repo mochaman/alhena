@@ -8,6 +8,7 @@ import java.security.cert.X509Certificate;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 
 /**
@@ -50,6 +51,7 @@ public class Page extends JPanel {
         setLayout(new BorderLayout());
         textPane = new GeminiTextPane(frame, this, url);
         scrollPane = new JScrollPane(textPane);
+        scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
         String ss = DB.getPref("scrollspeed", null);
 
         if (ss != null) {
