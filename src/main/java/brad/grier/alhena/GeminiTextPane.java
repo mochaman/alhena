@@ -35,9 +35,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -134,7 +134,8 @@ public class GeminiTextPane extends JTextPane {
     private int holdTime = 0;
     private final Page page;
 
-    private static final ConcurrentHashMap<String, Point> emojiSheetMap = new ConcurrentHashMap<>();
+    //private static final ConcurrentHashMap<String, Point> emojiSheetMap = new ConcurrentHashMap<>();
+    private static final HashMap<String, Point> emojiSheetMap = new HashMap<>();
     private static BufferedImage sheetImage = null;
     public static int indent;
     public static float contentPercentage = .80f;
@@ -172,6 +173,7 @@ public class GeminiTextPane extends JTextPane {
         if (emojiPref == null || emojiPref.equals("google")) { // first time or the default set from jar
             setSheetImage(Util.loadImage(GeminiFrame.emojiNameMap.get("google")));
             DB.insertPref("emoji", "google");  // only really need to this for null
+            readEmojiJson();
         } else if (!emojiPref.equals("font")) {
             String url = GeminiFrame.emojiNameMap.get(emojiPref);
             String fn = url.substring(url.lastIndexOf('/') + 1);
@@ -191,8 +193,12 @@ public class GeminiTextPane extends JTextPane {
                 setSheetImage(Util.loadImage(GeminiFrame.emojiNameMap.get("google")));
                 DB.insertPref("emoji", "google");
             }
-
+            readEmojiJson();
         }
+    }
+
+    private static void readEmojiJson(){
+
         try (InputStream is = GeminiTextPane.class.getResourceAsStream("/emoji.json")) {
             if (is == null) {
                 throw new RuntimeException("Resource not found: /emoji.json");
@@ -224,7 +230,6 @@ public class GeminiTextPane extends JTextPane {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     // IBM Plex Mono works for proper alignment too
@@ -247,10 +252,9 @@ public class GeminiTextPane extends JTextPane {
         };
         setCaret(newCaret);
 
-        EventQueue.invokeLater(()->{
+        EventQueue.invokeLater(() -> {
             scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
         });
-
 
         // take over up and down arrow scrolling
         InputMap inputMap = getInputMap(JComponent.WHEN_FOCUSED);
@@ -429,6 +433,9 @@ public class GeminiTextPane extends JTextPane {
     private boolean inserting;
 
     public static void setSheetImage(BufferedImage sheet) {
+        if(sheet != null && emojiSheetMap.isEmpty()){
+            readEmojiJson();
+        }
         sheetImage = sheet;
     }
 
@@ -1542,7 +1549,7 @@ public class GeminiTextPane extends JTextPane {
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
 
             IndexedEmoji emoji;
-            // can't iterate by code point without preprocessing first to get png name
+            // can't iterate by code point without preprocessing first to get name
             for (int i = 0; i < text.length(); i++) {
 
                 if ((emoji = isEmoji(emojis, i)) != null) {
@@ -1553,15 +1560,16 @@ public class GeminiTextPane extends JTextPane {
 
                         Point p = emojiSheetMap.get(key);
                         ImageIcon icon = null;
-                        int imgSize = fontSize + 4;
+                        int imgSize = fontSize + 4;                        
                         if (p != null) {
-                            icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset);
+                            icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset, fontSize);
                         } else {
                             int dashIdx = key.indexOf('-');
                             if (dashIdx != -1) {
+                                
                                 p = emojiSheetMap.get(key.substring(0, dashIdx));
                                 if (p != null) {
-                                    icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset);
+                                    icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset, fontSize);
                                 }
                             }
                         }
@@ -1780,7 +1788,7 @@ public class GeminiTextPane extends JTextPane {
         holdTime = 0; // Reset hold time
     }
 
-    private static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height) {
+    private static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
 
         int x = (sheetX * (sheetSize + 2)) + 1;
         int y = (sheetY * (sheetSize + 2)) + 1;
@@ -1788,7 +1796,7 @@ public class GeminiTextPane extends JTextPane {
         BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
         Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
 
-        return new ImageIcon(scaledImg);
+        return new BaselineShiftedIcon(scaledImg, fontSize / 10);
     }
 
     private static final double FRICTION = 0.93; // friction coefficient (lower = more friction) .90
