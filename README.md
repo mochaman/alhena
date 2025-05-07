@@ -2,7 +2,7 @@
 
 **Alhena** is an easy-to-use, multi-platform Gemini/Spartan browser sporting an uncluttered, modern interface. Browse the small web in style!
 
-[![Alhena Screenshot](https://metaloupe.com/alhena/images/alhena_mac_main.png)](https://metaloupe.com/alhena/alhena.html)
+[![Alhena Screenshot](https://metaloupe.com/alhena/images/alhena_main2.png)](https://metaloupe.com/alhena/alhena.html)
 
 🔗 **[Official Website](https://metaloupe.com/alhena/alhena.html)**
 
@@ -71,15 +71,15 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 ## 📥 Installs
 
-Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD in Releases. Java is NOT required. Each archive includes a small, custom jvm created with jlink.
+Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT required (except for the Basic install). The platform specific installs each include a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.0.9/alhena-5.0.9_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.9/alhena-5.0.9_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.0.9/alhena-5.0.9_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.0.9/alhena-5.0.9_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.0.9/alhena-5.0.9_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.0.9/alhena-5.0.9_freebsd_x64.tgz) untar and run script
-- [Standalone (No Java)](https://github.com/mochaman/alhena/releases/download/v5.0.9/alhena-5.0.9_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.1.0/alhena-5.1.0_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.1.0/alhena-5.1.0_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.1.0/alhena-5.1.0_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.1.0/alhena-5.1.0_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.1.0/alhena-5.1.0_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.1.0/alhena-5.1.0_freebsd_x64.tgz) untar and run script
+- [Basic](https://github.com/mochaman/alhena/releases/download/v5.1.0/alhena-5.1.0_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
 
 ## 🐳 Docker
 
@@ -100,7 +100,7 @@ The password is `alhena`
 
 Titan Text Editor: 
 
-![Dark Theme](https://ultimatumlabs.com/static/titantexteditor.png)
+![Editor](https://metaloupe.com/alhena/images/titan_editor_windows.png)
 
 Light Theme:
 
@@ -108,7 +108,7 @@ Light Theme:
 
 ANSI Color:  
 
-![Inline Images](https://metaloupe.com/alhena/images/mac_ansi.png)
+![ANSI](https://metaloupe.com/alhena/images/astro_dark_windows.png)
 
 ## 🛠 License
 Alhena is licensed under the **GNU General Public License v3.0 (GPLv3)**. See [LICENSE](LICENSE) for details.
