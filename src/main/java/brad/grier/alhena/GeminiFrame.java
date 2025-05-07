@@ -354,23 +354,25 @@ public final class GeminiFrame extends JFrame {
             if (comboBox.getSelectedItem() == null) {
                 return;
             }
-            String cbUrl = comboBox.getSelectedItem().toString();
+            if ("comboBoxChanged".equals(al.getActionCommand())) {
+                String cbUrl = comboBox.getSelectedItem().toString();
 
-            Object obj = comboBox.getSelectedItem();
-            boolean processed = false;
-            if (obj instanceof ComboItem ci) {
-                if (ci.supplier != null) {
-                    showCustomPage(ci.url, ci.supplier.get());
-                    processed = true;
+                Object obj = comboBox.getSelectedItem();
+                boolean processed = false;
+                if (obj instanceof ComboItem ci) {
+                    if (ci.supplier != null) {
+                        showCustomPage(ci.url, ci.supplier.get());
+                        processed = true;
+                    }
                 }
-            }
-            if (!processed) {
-                if (CUSTOM_LABELS.contains(cbUrl) && !cbUrl.equals(INFO_LABEL)) {
-                    showCustomPage(cbUrl, null);
+                if (!processed) {
+                    if (CUSTOM_LABELS.contains(cbUrl) && !cbUrl.equals(INFO_LABEL)) {
+                        showCustomPage(cbUrl, null);
 
-                } else {
+                    } else {
 
-                    fetchURL(cbUrl);
+                        fetchURL(cbUrl);
+                    }
                 }
             }
         });
