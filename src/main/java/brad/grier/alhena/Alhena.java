@@ -45,6 +45,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -1429,12 +1430,26 @@ public class Alhena {
                 } else {
                     bg(() -> {
                         p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                        String cause = causedByCertificateParsingException(connection.cause());
+                        if ( cause != null){
+                            Util.infoDialog(p.frame(), "Certificate Error", cause, JOptionPane.ERROR_MESSAGE);
+                        }
                     });
                     //connection.cause().printStackTrace();
                     System.out.println("Failed to connect: " + connection.cause().getMessage());
                 }
             }
         });
+    }
+
+    public static String causedByCertificateParsingException(Throwable throwable) {
+        while (throwable != null) {
+            if (throwable instanceof CertificateParsingException) {
+                return throwable.getLocalizedMessage();
+            }
+            throwable = throwable.getCause();
+        }
+        return null;
     }
 
     private static record CertTest(String msg, String host, String cn) {
