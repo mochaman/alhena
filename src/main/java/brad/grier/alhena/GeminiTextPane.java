@@ -8,6 +8,7 @@ import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -119,7 +120,6 @@ public class GeminiTextPane extends JTextPane {
     private String lastSearch;
     private int lastSearchIdx;
     private final int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
-    private Point mousePoint;
     private static final List<String> dropExtensions;
     private boolean imageOnly;
     private JScrollPane scrollPane;
@@ -197,7 +197,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static void readEmojiJson(){
+    private static void readEmojiJson() {
 
         try (InputStream is = GeminiTextPane.class.getResourceAsStream("/emoji.json")) {
             if (is == null) {
@@ -294,7 +294,6 @@ public class GeminiTextPane extends JTextPane {
             @Override
             public void mouseMoved(MouseEvent e) {
 
-                mousePoint = e.getPoint();
                 int pos = viewToModel2D(e.getPoint());
                 boolean entered = false;
 
@@ -433,7 +432,7 @@ public class GeminiTextPane extends JTextPane {
     private boolean inserting;
 
     public static void setSheetImage(BufferedImage sheet) {
-        if(sheet != null && emojiSheetMap.isEmpty()){
+        if (sheet != null && emojiSheetMap.isEmpty()) {
             readEmojiJson();
         }
         sheetImage = sheet;
@@ -679,16 +678,16 @@ public class GeminiTextPane extends JTextPane {
     public void processKeyEvent(KeyEvent e) {
 
         if ((e.getModifiersEx() & mod) != 0) {
-            if (e.getKeyCode() == KeyEvent.VK_I) {
-                if (e.getID() == KeyEvent.KEY_PRESSED) {
-                    long now = System.currentTimeMillis();
-                    int x = mousePoint.x;
-                    int y = mousePoint.y;
-                    MouseEvent pressEvent = new MouseEvent(this, MouseEvent.MOUSE_PRESSED, now,
-                            InputEvent.BUTTON3_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON3);
-                    showPopup(pressEvent);
+            if (e.getKeyCode() == KeyEvent.VK_I && e.getID() == KeyEvent.KEY_PRESSED) {
+                Point mousePoint = MouseInfo.getPointerInfo().getLocation();
+                SwingUtilities.convertPointFromScreen(mousePoint, GeminiTextPane.this);
 
-                }
+                long now = System.currentTimeMillis();
+                int x = mousePoint.x;
+                int y = mousePoint.y;
+                MouseEvent pressEvent = new MouseEvent(this, MouseEvent.MOUSE_PRESSED, now,
+                        InputEvent.BUTTON3_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON3);
+                showPopup(pressEvent);
 
             }
         } else {
@@ -1560,13 +1559,13 @@ public class GeminiTextPane extends JTextPane {
 
                         Point p = emojiSheetMap.get(key);
                         ImageIcon icon = null;
-                        int imgSize = fontSize + 4;                        
+                        int imgSize = fontSize + 4;
                         if (p != null) {
                             icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset, fontSize);
                         } else {
                             int dashIdx = key.indexOf('-');
                             if (dashIdx != -1) {
-                                
+
                                 p = emojiSheetMap.get(key.substring(0, dashIdx));
                                 if (p != null) {
                                     icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset, fontSize);
