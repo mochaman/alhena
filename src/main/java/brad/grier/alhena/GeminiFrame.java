@@ -423,13 +423,13 @@ public final class GeminiFrame extends JFrame {
 
             validate();
             repaint();
+            visiblePage().textPane.requestFocusInWindow();
 
         });
 
-        //forwardButton.setFont(buttonFont);
         forwardButton.setEnabled(false);
         forwardButton.addActionListener(al -> {
-            //showGlassPane(true);
+
             Page vPage = visiblePage();
             Page groupPane = getRootPage(vPage);
             if (hasNext(groupPane)) {
@@ -462,6 +462,7 @@ public final class GeminiFrame extends JFrame {
 
             validate();
             repaint();
+            visiblePage().textPane.requestFocusInWindow();
 
         });
 
