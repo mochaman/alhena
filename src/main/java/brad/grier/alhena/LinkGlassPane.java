@@ -48,10 +48,10 @@ public class LinkGlassPane extends JComponent {
         }
         g2.setFont(f);
         int textWidth = metrics.stringWidth("W");
-        for (int i = 0; i < visibleLinks.size(); i++) {
+        int max = Math.min(visibleLinks.size(), 35);
+        for (int i = 0; i < max; i++) {
 
             ClickableRange range = visibleLinks.get(i);
-
             try {
                 Rectangle2D startRect = textPane.modelToView2D(range.start);
                 Rectangle2D endRect = textPane.modelToView2D(range.end);
