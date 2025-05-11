@@ -141,7 +141,7 @@ public class Alhena {
     private static NetClient spartanClient = null;
     private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private static final int MODIFIER = (InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
-
+    private static final ArrayList<String> cnConfirmedList = new ArrayList<>();
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
@@ -991,7 +991,6 @@ public class Alhena {
             }
         });
     }
-    private static final ArrayList<String> cnConfirmedList = new ArrayList<>();
 
     private static void gemini(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
         if (p.redirectCount == 0) {
@@ -1351,8 +1350,9 @@ public class Alhena {
                                     titanSB.append(buffer.toString());
 
                                 } else {
+                                    Buffer cleanedBuffer = trimTrailingNulls(buffer);
                                     bg(() -> {
-                                        p.textPane.addPage(buffer.toString());
+                                        p.textPane.addPage(cleanedBuffer.toString());
                                     });
                                 }
                             }
@@ -1431,7 +1431,7 @@ public class Alhena {
                     bg(() -> {
                         p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                         String cause = causedByCertificateParsingException(connection.cause());
-                        if ( cause != null){
+                        if (cause != null) {
                             Util.infoDialog(p.frame(), "Certificate Error", cause, JOptionPane.ERROR_MESSAGE);
                         }
                     });
@@ -1440,6 +1440,21 @@ public class Alhena {
                 }
             }
         });
+    }
+
+    // stargate.gemi.dev appends variable number of 0x00 to the end of the buffer
+    // should be doing this defensively anyway?????
+    private static Buffer trimTrailingNulls(Buffer buffer) {
+        if (buffer.getByte(buffer.length() - 1) == 0x00) {
+            int len = buffer.length();
+            while (len > 0 && buffer.getByte(len - 1) == 0x00) {
+                len--;
+            }
+            if (len < buffer.length()) {
+                return buffer.slice(0, len);
+            }
+        }
+        return buffer;
     }
 
     public static String causedByCertificateParsingException(Throwable throwable) {
