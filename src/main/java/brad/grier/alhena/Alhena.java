@@ -1350,9 +1350,8 @@ public class Alhena {
                                     titanSB.append(buffer.toString());
 
                                 } else {
-                                    Buffer cleanedBuffer = trimTrailingNulls(buffer);
                                     bg(() -> {
-                                        p.textPane.addPage(cleanedBuffer.toString());
+                                        p.textPane.addPage(buffer.toString());
                                     });
                                 }
                             }
@@ -1442,20 +1441,6 @@ public class Alhena {
         });
     }
 
-    // stargate.gemi.dev appends variable number of 0x00 to the end of the buffer
-    // should be doing this defensively anyway?????
-    private static Buffer trimTrailingNulls(Buffer buffer) {
-        if (buffer.getByte(buffer.length() - 1) == 0x00) {
-            int len = buffer.length();
-            while (len > 0 && buffer.getByte(len - 1) == 0x00) {
-                len--;
-            }
-            if (len < buffer.length()) {
-                return buffer.slice(0, len);
-            }
-        }
-        return buffer;
-    }
 
     public static String causedByCertificateParsingException(Throwable throwable) {
         while (throwable != null) {
