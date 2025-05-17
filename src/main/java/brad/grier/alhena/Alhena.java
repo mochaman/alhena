@@ -129,9 +129,9 @@ public class Alhena {
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
     public final static String VERSION = "5.1.1";
     private static volatile boolean interrupted;
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp");
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp", ".flac");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp");
-    public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov");
+    public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov", ".flac");
     public static final List<String> videoExtensions = List.of(".mp4", ".mov");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
@@ -1007,6 +1007,9 @@ public class Alhena {
         }
         client.connect(port[0], host, connection -> {
             if (connection.succeeded()) {
+                SSLSession sslSession = connection.result().sslSession();
+                p.setConnectInfo(sslSession.getProtocol(), sslSession.getCipherSuite());
+
                 boolean[] titanEdit = {uri.getScheme().equals("titan") && uri.getPath().endsWith(";edit")};
                 StringBuilder titanSB = new StringBuilder();
                 boolean[] proceed = {true};
@@ -1282,7 +1285,7 @@ public class Alhena {
                                 }
                                 char respType = (char) saveBuffer.getByte(1);
                                 if (respType == '0') { // 60 cert required
-                                    SSLSession sslSession = connection.result().sslSession();
+                                    //SSLSession sslSession = connection.result().sslSession();
                                     if ("TLSv1.2".equals(sslSession.getProtocol())) {
                                         try {
                                             EventQueue.invokeAndWait(() -> {
@@ -1440,7 +1443,6 @@ public class Alhena {
             }
         });
     }
-
 
     public static String causedByCertificateParsingException(Throwable throwable) {
         while (throwable != null) {
