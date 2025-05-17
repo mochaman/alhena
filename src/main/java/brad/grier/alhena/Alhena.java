@@ -1544,9 +1544,14 @@ public class Alhena {
 
                 java.sql.Timestamp ts = new java.sql.Timestamp(cert.getNotAfter().getTime());
                 DB.upsertCert(host, fp, ts, null);   // TOFU  
-            } else if (!fp.equals(dbFingerprint) && expires.before(new Date())) {
-
-                return new CertTest("Server certificate has changed without expiring.", badHost, cn);
+            } else if (!fp.equals(dbFingerprint)) {
+                if (expires.after(new Date())) {
+                    return new CertTest("Server certificate has changed without expiring.\n\n" + host + "\nSaved Expiration: " + 
+                        expires + "\nNew Expiration: " + new java.sql.Timestamp(cert.getNotAfter().getTime()) + "\n", badHost, cn);
+                } else {
+                    // update record
+                    saveCert(host, cert);
+                }
             }
 
         } catch (Exception ex) {
@@ -2500,6 +2505,11 @@ public class Alhena {
                 }
             });
         });
+    }
+
+    public static void clearCnList(){
+        // called when use complete replaces a db - saved server certs may be different
+        cnConfirmedList.clear();
     }
 
 }
