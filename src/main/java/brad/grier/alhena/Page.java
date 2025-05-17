@@ -62,21 +62,22 @@ public class Page extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
 
     }
-    
+
     private String editedText;
-    public void setEditedText(String editedText){
+
+    public void setEditedText(String editedText) {
         this.editedText = editedText;
     }
 
-    public String getEditedText(){
+    public String getEditedText() {
         return editedText;
     }
 
-    public void setSpartan(boolean isSpartan){
+    public void setSpartan(boolean isSpartan) {
         this.isSpartan = isSpartan;
     }
 
-    public boolean isSpartan(){
+    public boolean isSpartan() {
         return isSpartan;
     }
 
@@ -106,19 +107,22 @@ public class Page extends JPanel {
     }
 
     private boolean titanEdited;
-    public void setTitanEdited(boolean te){
+
+    public void setTitanEdited(boolean te) {
         titanEdited = te;
     }
-    public boolean getTitanEdited(){
+
+    public boolean getTitanEdited() {
         return titanEdited;
     }
 
     private String titanToken;
-    public void setTitanToken(String token){
+
+    public void setTitanToken(String token) {
         titanToken = token;
     }
 
-    public String getTitanToken(){
+    public String getTitanToken() {
         return titanToken;
     }
 
@@ -183,7 +187,12 @@ public class Page extends JPanel {
     public void doneLoading() {
         if (start != 0) {
             elapsed = System.currentTimeMillis() - start;
-            frame.setTmpStatus(elapsed + " ms");
+            
+            if (protocol != null) {
+                frame.setTmpStatus(elapsed + " ms " + protocol + " " + cipherSuite);
+            }else{
+                frame.setTmpStatus(elapsed + " ms");
+            }
         }
 
         if (onDone != null) {
@@ -292,6 +301,21 @@ public class Page extends JPanel {
 
     public X509Certificate getCert() {
         return cert;
+    }
+
+    private String protocol, cipherSuite;
+
+    public void setConnectInfo(String protocol, String cipherSuite) {
+        this.protocol = protocol;
+        this.cipherSuite = cipherSuite;
+    }
+
+    public String getProtocol() {
+        return protocol;
+    }
+
+    public String getCipherSuite() {
+        return cipherSuite;
     }
 
 }
