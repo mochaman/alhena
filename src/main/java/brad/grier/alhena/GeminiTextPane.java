@@ -482,8 +482,13 @@ public class GeminiTextPane extends JTextPane {
                                 if (Alhena.httpProxy == null && Alhena.browsingSupported && range.url.startsWith("http")) {
                                     String useB = DB.getPref("browser", null);
                                     boolean useBrowser = useB == null ? true : useB.equals("true");
-                                    //boolean useBrowser = DB.getPref("browser", "false").equals("true");
+
                                     // show the opposite of the setting - this then becomes the default
+                                    if(useBrowser){
+                                        // do not allow open in new window or tab if using system browser
+                                        menuItem1.setEnabled(false);
+                                        menuItem2.setEnabled(false);
+                                    }
                                     String label = useBrowser ? "Alhena" : "Browser";
                                     JMenuItem httpMenuItem = new JMenuItem("Open In " + label);
                                     httpMenuItem.addActionListener(al -> {
