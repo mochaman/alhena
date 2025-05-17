@@ -791,6 +791,7 @@ public class Util {
                         }
                         frame.resetFont();
                         infoDialog(frame, "Complete", "Data successfully imported.");
+                        Alhena.clearCnList();
                         Alhena.updateFrames(true, true);
                     }
                 } catch (Exception ex) {
