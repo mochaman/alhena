@@ -120,7 +120,6 @@ public class GeminiTextPane extends JTextPane {
     private String lastSearch;
     private int lastSearchIdx;
     private final int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
-    private static final List<String> dropExtensions;
     private boolean imageOnly;
     private JScrollPane scrollPane;
     private static final int INITIAL_SCROLL_SPEED = 1;
@@ -164,10 +163,6 @@ public class GeminiTextPane extends JTextPane {
         } else { // linux, bsd and whatnot
             monospacedFamily = userDefined == null || userDefined.isBlank() ? "Monospaced" : userDefined;
         }
-        dropExtensions = new ArrayList<>(Alhena.fileExtensions);
-        dropExtensions.add(".png");
-        dropExtensions.add(".jpg");
-        dropExtensions.add(".webp");
 
         String emojiPref = DB.getPref("emoji", null);
         if (emojiPref == null || emojiPref.equals("google")) { // first time or the default set from jar
@@ -389,7 +384,7 @@ public class GeminiTextPane extends JTextPane {
 
                     for (File file : droppedFiles) {
                         String lcName = file.getName().toLowerCase();
-                        boolean matches = dropExtensions.stream().anyMatch(lcName::endsWith);
+                        boolean matches = Alhena.fileExtensions.stream().anyMatch(lcName::endsWith);
                         if (matches) {
 
                             if (lcName.endsWith(".pem")) {
