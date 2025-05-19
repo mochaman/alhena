@@ -16,7 +16,7 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 * Inline image viewer
 * ANSI colors on preformatted text
 * Font chooser for proportional text
-* Smooth adaptive scrolling
+* Smooth mouse wheel scrolling
 * Asynchronous networking and file I/O
 * Certificate creation and TOFU management
 * Bookmarks and history
@@ -32,8 +32,8 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 
 ### 🥽 Ultimatum Labs
 => gemini://ultimatumlabs.com/alhena.gmi Alhena's home in Geminispace
-=> gemini://ultimatumlabs.com A Gemini server written in vert.x
-=> https://ultimatumlabs.com Ultimatum Labs Website
+=> gemini://ultimatumlabs.com A Gemini server written in asynchronous vert.x
+=> https://ultimatumlabs.com vert.x Web Testbed
 
 ### 🔗 Cool Links
 => gemini://gemi.dev/ gemi.dev
