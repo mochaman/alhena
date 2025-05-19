@@ -127,7 +127,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.1.1";
+    public final static String VERSION = "5.1.2";
     private static volatile boolean interrupted;
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp", ".flac");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp");
@@ -145,6 +145,7 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+    private static final int READ_IDLE_TIMEOUT = 30;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -685,6 +686,7 @@ public class Alhena {
         if (spartanClient == null) {
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
+                    .setReadIdleTimeout(READ_IDLE_TIMEOUT)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
             spartanClient = vertx.createNetClient(options);
 
@@ -1664,6 +1666,7 @@ public class Alhena {
 
                     NetClientOptions options = new NetClientOptions()
                             .setConnectTimeout(60000)
+                            .setReadIdleTimeout(READ_IDLE_TIMEOUT)
                             .setSsl(true) // Gemini uses TLS   
                             .setTrustAll(true)
                             .setHostnameVerificationAlgorithm("");
@@ -1674,6 +1677,7 @@ public class Alhena {
                 if (!certMap.containsKey(cci)) {
                     NetClientOptions options = new NetClientOptions()
                             .setSsl(true) // gemini uses TLS
+                            .setReadIdleTimeout(READ_IDLE_TIMEOUT)
                             .setTrustAll(true) // gemini self-signed certs
                             .setHostnameVerificationAlgorithm("")
                             .setSslEngineOptions(new JdkSSLEngineOptions() {
