@@ -1128,9 +1128,16 @@ public class Alhena {
                                     p.redirectCount--;
                                 }
                                 p.frame().setBusy(false, cPage);
-                                String reqMsg = saveBuffer.getString(3, i - 1);
-                                char respType = (char) saveBuffer.getByte(1);
-
+                                String reqMsg;
+                                char respType;
+                                if(i == 3){
+                                    // no prompt message (apparently a thing). see gemini://gemini.thegonz.net/diohsc/
+                                    reqMsg = "";
+                                    respType = '0';
+                                }else{
+                                    reqMsg = saveBuffer.getString(3, i - 1);
+                                    respType = (char) saveBuffer.getByte(1);
+                                }
                                 bg(() -> {
 
                                     String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, respType == '1');
