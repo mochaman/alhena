@@ -129,9 +129,9 @@ public class Alhena {
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
     public final static String VERSION = "5.1.2";
     private static volatile boolean interrupted;
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp", ".flac");
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp", ".flac", ".xml", ".wav");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp");
-    public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov", ".flac");
+    public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov", ".flac", ".wav");
     public static final List<String> videoExtensions = List.of(".mp4", ".mov");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
@@ -512,10 +512,11 @@ public class Alhena {
                 return;
             }
         }
-        // URI prevURI = redirectUrl == null ? p.textPane.getURI() : new URI(redirectUrl);
+
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
 
-        if (httpProxy == null && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
+        // this can surely be optimized
+        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
             handleHttp(url, prevURI, p, cPage);
             return;
         }
@@ -2098,7 +2099,7 @@ public class Alhena {
                     String line = processElement(child, host).trim();
                     if (!line.isBlank()) {
 
-                        gt.append(line).append("\n");
+                        gt.append(line).append("\n\n");
                     }
                 });
                 yield gt.toString();
@@ -2176,7 +2177,7 @@ public class Alhena {
                         String line = processElement(child, host);
 
                         if (!line.isBlank() && !child.hasAttr("hidden")) {
-                            sb.append(line.trim()).append("\n");
+                            sb.append(line.trim()).append("\n\n");
                         }
                     });
                     yield sb.toString();
