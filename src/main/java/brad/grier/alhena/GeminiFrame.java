@@ -1596,7 +1596,7 @@ public final class GeminiFrame extends JFrame {
             shortTitle = firstHeading;
 
         }
-        if (shortTitle == null) {
+        if (shortTitle == null || shortTitle.isBlank()) {
             shortTitle = url;
         }
         return shortTitle;
