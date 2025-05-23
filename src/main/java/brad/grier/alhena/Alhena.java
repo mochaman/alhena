@@ -515,12 +515,6 @@ public class Alhena {
 
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
 
-        // this can surely be optimized
-        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
-            handleHttp(url, prevURI, p, cPage);
-            return;
-        }
-
         URI checkURI = URI.create(url);
 
         // because getHost() can return null for hosts with emoji
@@ -581,6 +575,11 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
+        // this can surely be optimized
+        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
+            handleHttp(punyURI.toString(), prevURI, p, cPage);
+            return;
+        }
 
         if (punyURI.getScheme().equals("titan") && !punyURI.getPath().endsWith(";edit") /*&& p.getDataFile() == null */) {
             String port = punyURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
@@ -1129,16 +1128,8 @@ public class Alhena {
                                     p.redirectCount--;
                                 }
                                 p.frame().setBusy(false, cPage);
-                                String reqMsg;
-                                char respType;
-                                if(i == 3){
-                                    // no prompt message (apparently a thing). see gemini://gemini.thegonz.net/diohsc/
-                                    reqMsg = "";
-                                    respType = '0';
-                                }else{
-                                    reqMsg = saveBuffer.getString(3, i - 1);
-                                    respType = (char) saveBuffer.getByte(1);
-                                }
+                                String reqMsg = i == 3 ? "" : saveBuffer.getString(3, i - 1);
+                                char respType = (char) saveBuffer.getByte(1);
                                 bg(() -> {
 
                                     String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, respType == '1');
@@ -1556,8 +1547,8 @@ public class Alhena {
                 DB.upsertCert(host, fp, ts, null);   // TOFU  
             } else if (!fp.equals(dbFingerprint)) {
                 if (expires.after(new Date())) {
-                    return new CertTest("Server certificate has changed without expiring.\n\n" + host + "\nSaved Expiration: " + 
-                        expires + "\nNew Expiration: " + new java.sql.Timestamp(cert.getNotAfter().getTime()) + "\n", badHost, cn);
+                    return new CertTest("Server certificate has changed without expiring.\n\n" + host + "\nSaved Expiration: "
+                            + expires + "\nNew Expiration: " + new java.sql.Timestamp(cert.getNotAfter().getTime()) + "\n", badHost, cn);
                 } else {
                     // update record
                     saveCert(host, cert);
@@ -2437,9 +2428,7 @@ public class Alhena {
             p.frame().updateComboBox(prevURI.toString());
             return;
         }
-        if (!url.startsWith("https")) {
-            url = prevURI.resolve(url).toString();
-        }
+
         if (httpClient == null) {
             HttpClientOptions options = new HttpClientOptions().
                     setSsl(true).
@@ -2457,10 +2446,15 @@ public class Alhena {
                 if (ar2.succeeded()) {
                     HttpClientResponse resp = ar2.result();
                     String contentType = resp.getHeader("Content-Type");
-                    if (contentType != null && contentType.startsWith("text/html")) {
+
+                    if (contentType != null && contentType.startsWith("text/")) {
                         resp.body().onSuccess(buffer -> {
                             bg(() -> {
-                                p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURL), false, finalURL, true);
+                                if (contentType.startsWith("text/html")) {
+                                    p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURI.getScheme() + "://" + finalURI.getAuthority()), false, finalURL, true);
+                                }else{
+                                    p.textPane.end(buffer.toString(), false, finalURL, true);
+                                }
                                 cPage.setBusy(false);
                                 //p.frame().showGlassPane(false);
                             });
@@ -2471,6 +2465,51 @@ public class Alhena {
                                 p.textPane.end("error getting web page\n", true, finalURL, true);
                             });
                             req.end();
+                        });
+                    } else if (contentType != null && contentType.startsWith("image/")) {
+                        File file;
+                        resp.pause();
+                        try {
+                            file = File.createTempFile("alhena", "media");
+                            file.deleteOnExit();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                            bg(() -> {
+                                p.frame().showGlassPane(false);
+                            });
+                            return;
+                        }
+                        vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
+                            if (fileResult.succeeded()) {
+                                AsyncFile af = fileResult.result();
+                                resp.resume();
+                                Pump pump = Pump.pump(resp, af);
+                                pump.start();
+                                resp.endHandler(eh -> {
+                                    af.close();
+                                    req.end();
+                                    bg(() -> {
+                                        // Util.infoDialog(p.frame(), "Complete", file[0].getName() + " downloaded");
+                                        GeminiTextPane tPane = cPage.textPane;
+
+                                        try {
+                                            byte[] data = Files.readAllBytes(file.toPath());
+                                            file.delete();
+                                            if (tPane.awatingImage()) {
+                                                tPane.insertImage(data);
+
+                                            } else {
+                                                p.textPane.end(" ", false, finalURL, true);
+                                                p.textPane.insertImage(data);
+                                            }
+                                        } catch (IOException ex) {
+                                            ex.printStackTrace();
+                                        }
+
+                                        p.frame().showGlassPane(false);
+                                    });
+                                });
+                            }
                         });
                     } else {
                         try {
@@ -2519,7 +2558,7 @@ public class Alhena {
         });
     }
 
-    public static void clearCnList(){
+    public static void clearCnList() {
         // called when use complete replaces a db - saved server certs may be different
         cnConfirmedList.clear();
     }
