@@ -484,7 +484,7 @@ public class GeminiTextPane extends JTextPane {
                                     boolean useBrowser = useB == null ? true : useB.equals("true");
 
                                     // show the opposite of the setting - this then becomes the default
-                                    if(useBrowser){
+                                    if (useBrowser) {
                                         // do not allow open in new window or tab if using system browser
                                         menuItem1.setEnabled(false);
                                         menuItem2.setEnabled(false);
@@ -1344,6 +1344,7 @@ public class GeminiTextPane extends JTextPane {
     private String emojiProportional;
 
     private void buildStyles() {
+
         for (MediaComponent ap : playerList) {
             ap.dispose();
         }
@@ -1389,8 +1390,16 @@ public class GeminiTextPane extends JTextPane {
         Style h3Style = doc.addStyle("#", h1Style);
         StyleConstants.setFontSize(h3Style, GeminiFrame.fontSize + 17); // 32
 
-        Style linkStyle = doc.addStyle("=>", h1Style);
-        StyleConstants.setFontSize(linkStyle, GeminiFrame.fontSize);
+        Style linkStyle;
+        if (page.isNex()) {
+            linkStyle = doc.addStyle("=>", h1Style);
+            StyleConstants.setFontFamily(linkStyle, monospacedFamily);
+            StyleConstants.setFontSize(linkStyle, GeminiFrame.monoFontSize);
+        } else {
+            linkStyle = doc.addStyle("=>", h1Style);
+            StyleConstants.setFontSize(linkStyle, GeminiFrame.fontSize);
+
+        }
         StyleConstants.setForeground(linkStyle, linkColor);
         //StyleConstants.setBold(linkStyle, true);
 
@@ -1421,8 +1430,57 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    // Segoe UI is nice on Windows
     private void processLine(String line, boolean lastLine) {
+        if (page.isNex() && docURL.endsWith("/")) {
+
+            if (line.startsWith("=>")) {
+                String ll = line.substring(2).trim();
+
+                int i;
+                for (i = 0; i < ll.length(); i++) {
+                    if (Character.isWhitespace(ll.charAt(i))) {
+                        break;
+                    }
+                }
+                String url = ll.substring(0, i);
+                String[] directive = {null};
+
+                String finalUrl = url;
+                String label = ll.substring(i).trim();
+
+                String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
+
+                ClickableRange cr = addStyledText(lastLine, label.isEmpty() ? url : label, linkStyle,
+                        () -> {
+                            String useB = DB.getPref("browser", null);
+                            boolean useBrowser = useB == null ? true : useB.equals("true");
+                            if (Alhena.httpProxy == null && finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
+                                try {
+                                    Desktop.getDesktop().browse(new URI(finalUrl));
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            } else if (finalUrl.startsWith("mailto:") && Alhena.mailSupported) {
+                                try {
+                                    Desktop.getDesktop().mail(new URI(finalUrl));
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+
+                            } else {
+                                f.addClickedLink(finalUrl);
+                                f.fetchURL(finalUrl);
+                            }
+
+                        });
+                cr.url = url;
+                cr.directive = directive[0];
+
+            } else {
+                addStyledText(lastLine, line, "```", null);
+            }
+            return;
+        }
 
         if (line.startsWith("```") && !plainTextMode) {
             preformattedMode = !preformattedMode;
