@@ -34,6 +34,7 @@ public class Page extends JPanel {
     public int redirectCount;
     private boolean busy = true;
     private boolean isSpartan;
+    private boolean isNex;
 
     private Page() {
 
@@ -79,6 +80,14 @@ public class Page extends JPanel {
 
     public boolean isSpartan() {
         return isSpartan;
+    }
+
+    public void setNex(boolean isNex) {
+        this.isNex = isNex;
+    }
+
+    public boolean isNex() {
+        return isNex;
     }
 
     public void setStart() {
