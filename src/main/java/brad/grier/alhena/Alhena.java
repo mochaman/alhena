@@ -127,12 +127,14 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.1.2";
+    public final static String VERSION = "5.1.3";
     private static volatile boolean interrupted;
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp", ".flac", ".xml", ".wav");
+    // TODO: combine the other lists to arrive at this
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp", ".flac", ".xml", ".wav", ".json");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp");
     public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov", ".flac", ".wav");
     public static final List<String> videoExtensions = List.of(".mp4", ".mov");
+    public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
     private static String theme;
@@ -501,7 +503,7 @@ public class Alhena {
         }
         if (url.contains("://")) {
             // optimize this
-            if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("spartan://")
+            if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("spartan://") && !url.startsWith("nex://")
                     && !url.startsWith("https://") && !url.startsWith("http://")
                     && !url.startsWith("titan://") && !(gopherProxy != null && url.startsWith("gopher://"))) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
@@ -576,7 +578,7 @@ public class Alhena {
         }
         URI punyURI = URI.create(url).normalize();
         // this can surely be optimized
-        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
+        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://") && !url.startsWith("nex://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
             handleHttp(punyURI.toString(), prevURI, p, cPage);
             return;
         }
@@ -657,10 +659,10 @@ public class Alhena {
             punyURI = URI.create("gemini://" + gopherProxy);
         }
 
-        if (punyURI.getScheme().equals("gemini") || punyURI.getScheme().equals("titan")) {
-            gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
-        } else {
-            spartan(punyURI, p, origURL, cPage);
+        switch (punyURI.getScheme()) {
+            case "gemini", "titan" -> gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
+            case "spartan" -> spartan(punyURI, p, origURL, cPage);
+            default -> nex(punyURI, p, origURL, cPage);
         }
 
     }
@@ -850,7 +852,7 @@ public class Alhena {
                                     }
 
                                     streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null);
-                                    return;
+
                                 }
                             }
 
@@ -946,6 +948,152 @@ public class Alhena {
                 });
             } else {
                 p.redirectCount = 0;
+                if (interrupted) {
+                    interrupted = false;
+                    p.frame().setBusy(false, cPage);
+                } else {
+                    bg(() -> {
+                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                    });
+                    //connection.cause().printStackTrace();
+                    System.out.println("Failed to connect: " + connection.cause().getMessage());
+                }
+            }
+        });
+
+    }
+
+    private static void nex(URI uri, Page p, String origURL, Page cPage) {
+        //if (p.redirectCount == 0) {
+        p.frame().setBusy(true, cPage);
+        //}
+        p.setNex(true);
+        if (spartanClient == null) {
+            NetClientOptions options = new NetClientOptions()
+                    .setConnectTimeout(60000)
+                    .setReadIdleTimeout(READ_IDLE_TIMEOUT)
+                    .setSsl(false).setHostnameVerificationAlgorithm("");
+            spartanClient = vertx.createNetClient(options);
+
+        }
+        String host = uri.getHost();
+
+        int[] port = {uri.getPort()};
+
+        if (port[0] == -1) {
+            port[0] = 1900;
+        }
+        spartanClient.connect(port[0], host, connection -> {
+            if (connection.succeeded()) {
+
+                System.out.println("connected: " + host);
+                // wrap for the lambda
+                boolean[] firstBuffer = {true};
+                // if it turns out this is an image request we need to track where it starts
+                int[] imageStartIdx = {-1};
+
+                //File uploadFile = p.getDataFile();
+                String path = uri.getPath();
+                int extIdx = path.lastIndexOf('.');
+                String[] extension = {null};
+                if (extIdx != -1) {
+                    extension[0] = path.substring(extIdx);
+                    if (imageExtensions.stream().anyMatch(ext -> ext.equalsIgnoreCase(extension[0]))) {
+                        imageStartIdx[0] = 0;
+                    }
+                }
+                boolean isText = txtExtensions.stream().anyMatch(ext -> ext.equalsIgnoreCase(extension[0]));
+                connection.result().write(path.equals("/") ? "\n" : path + "\n");
+
+                Buffer saveBuffer = Buffer.buffer();
+
+                // Handle the response
+                connection.result().handler(buffer -> {
+
+                    // if (!error[0]) {
+                    if (imageStartIdx[0] != -1) {
+                        try {
+                            DB.insertHistory(origURL, null);
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                        }
+                        saveBuffer.appendBuffer(buffer);
+                    } else if (isText || extension[0] == null) {
+                        if (firstBuffer[0]) {
+                            firstBuffer[0] = false;
+                            p.textPane.updatePage(buffer.toString(), true, origURL, true);
+                        } else {
+                            bg(() -> {
+                                p.textPane.addPage(buffer.toString());
+                            });
+                        }
+                    } else {
+                        File[] file = new File[1];
+                        connection.result().pause();
+                        connection.result().handler(null);
+
+                        if (p.getDataFile() == null) {
+
+                            try {
+
+                                EventQueue.invokeAndWait(() -> {
+                                    String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
+                                    file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+
+                                });
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+
+                            if (file[0] == null) {
+                                // canceled
+                                //textPane.end("# Download canceled", false, origURL, true, r);
+                                connection.result().close();
+                                p.frame().showGlassPane(false);
+                                return;
+                            }
+                        } 
+                        // else {
+                        //     file[0] = p.getDataFile();
+                        // }
+
+                        streamToFile(connection.result(), file[0], buffer, p, origURL, null);
+                    }
+
+                    // }
+                });
+
+                connection.result().closeHandler(v -> {
+
+                    System.out.println("connection closed");
+                    if (imageStartIdx[0] != -1) {
+
+                        bg(() -> {
+                            // insert into existing page and not new page created for the call to processUrl
+                            // get rid of this - maybe put spawning page in page ref
+
+                            GeminiTextPane tPane = cPage.textPane;
+
+                            if (tPane.awatingImage()) {
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+
+                            } else {
+                                p.textPane.end(" ", false, origURL, true);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                            }
+                        });
+                    } else {
+                        if (p.redirectCount == 0) {
+                            bg(() -> {
+                                p.textPane.end();
+
+                            });
+                        }
+                    }
+
+                });
+            } else {
+                //p.redirectCount = 0;
                 if (interrupted) {
                     interrupted = false;
                     p.frame().setBusy(false, cPage);
@@ -2452,7 +2600,7 @@ public class Alhena {
                             bg(() -> {
                                 if (contentType.startsWith("text/html")) {
                                     p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURI.getScheme() + "://" + finalURI.getAuthority()), false, finalURL, true);
-                                }else{
+                                } else {
                                     p.textPane.end(buffer.toString(), false, finalURL, true);
                                 }
                                 cPage.setBusy(false);
