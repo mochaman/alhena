@@ -123,6 +123,7 @@ public final class GeminiFrame extends JFrame {
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private MenuItem mi;
     private Color saveButtonFG = null;
+    private static JRadioButtonMenuItem lastSelectedItem;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatArcIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme", "Arc", false)),
@@ -713,6 +714,10 @@ public final class GeminiFrame extends JFrame {
             }
         }));
 
+        viewMenu.add(createMenuItem("Find Again", KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0), () -> {
+            findAgain();
+        }));
+
         menuBar.add(viewMenu);
 
         addBookmarks();
@@ -763,6 +768,15 @@ public final class GeminiFrame extends JFrame {
             init(url, pb);
         }
 
+    }
+
+    public void findAgain() {
+        if(lastSearch == null){
+            return;
+        }
+        if (!visiblePage().textPane.find(lastSearch)) {
+            lastSearch = null;
+        }
     }
 
     private void addWindowsMenu() {
@@ -978,8 +992,6 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(gopherItem);
 
     }
-
-    private static JRadioButtonMenuItem lastSelectedItem;
 
     public void editPage() {
         Page vp = visiblePage();
@@ -2466,5 +2478,9 @@ public final class GeminiFrame extends JFrame {
         int randomIdx = new Random().nextInt(blocks.size());
         return blocks.get(randomIdx);
 
+    }
+
+    public void focusOnAddressBar() {
+        comboBox.requestFocusInWindow();
     }
 }
