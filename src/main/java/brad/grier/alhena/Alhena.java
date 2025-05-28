@@ -212,7 +212,10 @@ public class Alhena {
                         e.consume();
                         return true;
                     }
-
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0))) {
+                    gf.findAgain();
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_L, MOD))) {
+                    gf.focusOnAddressBar();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, MOD))) {
                     gf.backButton.doClick();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET, MOD))) {
@@ -660,9 +663,12 @@ public class Alhena {
         }
 
         switch (punyURI.getScheme()) {
-            case "gemini", "titan" -> gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
-            case "spartan" -> spartan(punyURI, p, origURL, cPage);
-            default -> nex(punyURI, p, origURL, cPage);
+            case "gemini", "titan" ->
+                gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
+            case "spartan" ->
+                spartan(punyURI, p, origURL, cPage);
+            default ->
+                nex(punyURI, p, origURL, cPage);
         }
 
     }
@@ -1052,7 +1058,7 @@ public class Alhena {
                                 p.frame().showGlassPane(false);
                                 return;
                             }
-                        } 
+                        }
                         // else {
                         //     file[0] = p.getDataFile();
                         // }
