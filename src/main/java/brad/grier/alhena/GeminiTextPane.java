@@ -271,6 +271,24 @@ public class GeminiTextPane extends JTextPane {
                 bar.setValue(bar.getValue() + bar.getUnitIncrement(1));
             }
         });
+        if (!SystemInfo.isMacOS) {
+            inputMap.put(KeyStroke.getKeyStroke("HOME"), "docHome");
+            getActionMap().put("docHome", new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    JScrollBar bar = scrollPane.getVerticalScrollBar();
+                    bar.setValue(bar.getMinimum());
+                }
+            });
+            inputMap.put(KeyStroke.getKeyStroke("END"), "docEnd");
+            getActionMap().put("docEnd", new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    JScrollBar bar = scrollPane.getVerticalScrollBar();
+                    bar.setValue(bar.getMaximum());
+                }
+            });
+        }
 
         boolean smoothPref = DB.getPref("smoothscrolling", "true").equals("true");
         if (smoothPref) {
