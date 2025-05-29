@@ -619,15 +619,17 @@ public class GeminiTextPane extends JTextPane {
 
                     popupMenu.add(homePageMenuItem);
                     homePageMenuItem.setEnabled(currentMode != INFO_MODE);
-                    String menuText = plainTextMode ? "View As GemText" : "View As Plain Text";
-                    JMenuItem ptMenuItem = new JMenuItem(menuText);
-                    ptMenuItem.setEnabled(!imageOnly);
-                    ptMenuItem.addActionListener(al -> {
-                        plainTextMode = !plainTextMode;
-                        f.toggleView(GeminiTextPane.this, plainTextMode);
-                    });
+                    if (!page.isNex()) {
+                        String menuText = plainTextMode ? "View As GemText" : "View As Plain Text";
+                        JMenuItem ptMenuItem = new JMenuItem(menuText);
+                        ptMenuItem.setEnabled(!imageOnly);
+                        ptMenuItem.addActionListener(al -> {
+                            plainTextMode = !plainTextMode;
+                            f.toggleView(GeminiTextPane.this, plainTextMode);
+                        });
 
-                    popupMenu.add(ptMenuItem);
+                        popupMenu.add(ptMenuItem);
+                    }
 
                     JMenuItem crtMenuItem = new JMenuItem("View Server Cert");
                     URI uri = getURI();
@@ -1461,7 +1463,6 @@ public class GeminiTextPane extends JTextPane {
                     }
                 }
                 String url = ll.substring(0, i);
-                String[] directive = {null};
 
                 String finalUrl = url;
                 String label = ll.substring(i).trim();
@@ -1492,7 +1493,6 @@ public class GeminiTextPane extends JTextPane {
 
                         });
                 cr.url = url;
-                cr.directive = directive[0];
 
             } else {
                 addStyledText(lastLine, line, "```", null);
