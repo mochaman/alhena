@@ -147,7 +147,6 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
-    private static final int READ_IDLE_TIMEOUT = 30;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -694,7 +693,6 @@ public class Alhena {
         if (spartanClient == null) {
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
-                    .setReadIdleTimeout(READ_IDLE_TIMEOUT)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
             spartanClient = vertx.createNetClient(options);
 
@@ -970,14 +968,13 @@ public class Alhena {
     }
 
     private static void nex(URI uri, Page p, String origURL, Page cPage) {
-        //if (p.redirectCount == 0) {
+
         p.frame().setBusy(true, cPage);
-        //}
+
         p.setNex(true);
         if (spartanClient == null) {
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
-                    .setReadIdleTimeout(READ_IDLE_TIMEOUT)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
             spartanClient = vertx.createNetClient(options);
 
@@ -998,17 +995,14 @@ public class Alhena {
                 // if it turns out this is an image request we need to track where it starts
                 int[] imageStartIdx = {-1};
 
-                //File uploadFile = p.getDataFile();
                 String path = uri.getPath();
-                int extIdx = path.lastIndexOf('.');
-                String[] extension = {null};
-                if (extIdx != -1) {
-                    extension[0] = path.substring(extIdx);
-                    if (imageExtensions.stream().anyMatch(ext -> ext.equalsIgnoreCase(extension[0]))) {
-                        imageStartIdx[0] = 0;
-                    }
+
+                if(imageExtensions.stream().anyMatch(ext -> origURL.endsWith(ext))){
+                    imageStartIdx[0] = 0;
                 }
-                boolean isText = txtExtensions.stream().anyMatch(ext -> ext.equalsIgnoreCase(extension[0]));
+                // boolean isText = txtExtensions.stream().anyMatch(ext -> ext.equalsIgnoreCase(extension[0]));
+                boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.endsWith(ext));
+                
                 connection.result().write(path.equals("/") ? "\n" : path + "\n");
 
                 Buffer saveBuffer = Buffer.buffer();
@@ -1016,7 +1010,6 @@ public class Alhena {
                 // Handle the response
                 connection.result().handler(buffer -> {
 
-                    // if (!error[0]) {
                     if (imageStartIdx[0] != -1) {
                         try {
                             DB.insertHistory(origURL, null);
@@ -1024,7 +1017,7 @@ public class Alhena {
                             ex.printStackTrace();
                         }
                         saveBuffer.appendBuffer(buffer);
-                    } else if (isText || extension[0] == null) {
+                    } else if (isText || path.lastIndexOf('.') == -1) {
                         if (firstBuffer[0]) {
                             firstBuffer[0] = false;
                             p.textPane.updatePage(buffer.toString(), true, origURL, true);
@@ -1059,14 +1052,10 @@ public class Alhena {
                                 return;
                             }
                         }
-                        // else {
-                        //     file[0] = p.getDataFile();
-                        // }
 
                         streamToFile(connection.result(), file[0], buffer, p, origURL, null);
                     }
 
-                    // }
                 });
 
                 connection.result().closeHandler(v -> {
@@ -1337,7 +1326,7 @@ public class Alhena {
                                     } catch (SQLException ex) {
                                         ex.printStackTrace();
                                     }
-                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
+                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/") || videoExtensions.stream().anyMatch(ext -> uri.getPath().endsWith(ext)))) {
                                     try {
                                         connection.result().pause();
                                         connection.result().handler(null);
@@ -1819,7 +1808,6 @@ public class Alhena {
 
                     NetClientOptions options = new NetClientOptions()
                             .setConnectTimeout(60000)
-                            .setReadIdleTimeout(READ_IDLE_TIMEOUT)
                             .setSsl(true) // Gemini uses TLS   
                             .setTrustAll(true)
                             .setHostnameVerificationAlgorithm("");
@@ -1830,7 +1818,6 @@ public class Alhena {
                 if (!certMap.containsKey(cci)) {
                     NetClientOptions options = new NetClientOptions()
                             .setSsl(true) // gemini uses TLS
-                            .setReadIdleTimeout(READ_IDLE_TIMEOUT)
                             .setTrustAll(true) // gemini self-signed certs
                             .setHostnameVerificationAlgorithm("")
                             .setSslEngineOptions(new JdkSSLEngineOptions() {
