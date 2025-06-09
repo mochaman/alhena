@@ -122,15 +122,17 @@ public class GeminiTextPane extends JTextPane {
     private final int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private boolean imageOnly;
     private JScrollPane scrollPane;
-    private static final int INITIAL_SCROLL_SPEED = 1;
-    private static final int MAX_SCROLL_SPEED = 50;
-    private static final int INITIAL_DELAY = 100;
-    private static final int MIN_DELAY = 30;
-    private static final int EDGE_MARGIN = 50;
+    
+    // REMOVE AUTOSCROLL - INTERFERING WITH TEXT SELECTION
+    // private static final int INITIAL_SCROLL_SPEED = 1;
+    // private static final int MAX_SCROLL_SPEED = 50;
+    // private static final int INITIAL_DELAY = 100;
+    // private static final int MIN_DELAY = 30;
+    // private static final int EDGE_MARGIN = 50;
 
-    private Timer pressTimer;
-    private int scrollDirection = 0;
-    private int holdTime = 0;
+    // private Timer pressTimer;
+    // private int scrollDirection = 0;
+    // private int holdTime = 0;
     private final Page page;
 
     //private static final ConcurrentHashMap<String, Point> emojiSheetMap = new ConcurrentHashMap<>();
@@ -295,14 +297,14 @@ public class GeminiTextPane extends JTextPane {
             setupAdaptiveScrolling();
         }
         addMouseMotionListener(new MouseAdapter() {
+            // remove autoscroll - interfering with ctrl+c
+            // @Override
+            // public void mouseDragged(MouseEvent e) {
+            //     if (SwingUtilities.isLeftMouseButton(e)) {
 
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e)) {
-
-                    checkScroll(e, scrollPane);
-                }
-            }
+            //         checkScroll(e, scrollPane);
+            //     }
+            // }
 
             @Override
             public void mouseMoved(MouseEvent e) {
@@ -371,19 +373,19 @@ public class GeminiTextPane extends JTextPane {
         });
 
         addMouseListener(new MouseAdapter() {
+            // remove autoscroll which is interfering with text selection
+            // @Override
+            // public void mousePressed(MouseEvent e) {
+            //     if (SwingUtilities.isLeftMouseButton(e) && currentCursor != Cursor.HAND_CURSOR) {
 
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e) && currentCursor != Cursor.HAND_CURSOR) {
+            //         checkScroll(e, scrollPane);
+            //     }
+            // }
 
-                    checkScroll(e, scrollPane);
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                stopScrolling();
-            }
+            // @Override
+            // public void mouseReleased(MouseEvent e) {
+            //     stopScrolling();
+            // }
 
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -1814,54 +1816,55 @@ public class GeminiTextPane extends JTextPane {
         return new CurrentPage(pageBuffer, preformattedMode);
     }
 
-    private void checkScroll(MouseEvent e, JScrollPane scrollPane) {
-        Point point = e.getPoint();
-        Rectangle viewRect = scrollPane.getViewport().getViewRect();
+// AUTOSCROLL - INTERFERING WITH TEXT SELECTION
+    // private void checkScroll(MouseEvent e, JScrollPane scrollPane) {
+    //     Point point = e.getPoint();
+    //     Rectangle viewRect = scrollPane.getViewport().getViewRect();
 
-        if (point.y <= viewRect.y + EDGE_MARGIN) {
-            startScrolling(scrollPane, -1); // Scroll up
-        } else if (point.y >= viewRect.y + viewRect.height - EDGE_MARGIN) {
-            startScrolling(scrollPane, 1); // Scroll down
-        } else {
-            stopScrolling();
-        }
-    }
+    //     if (point.y <= viewRect.y + EDGE_MARGIN) {
+    //         startScrolling(scrollPane, -1); // Scroll up
+    //     } else if (point.y >= viewRect.y + viewRect.height - EDGE_MARGIN) {
+    //         startScrolling(scrollPane, 1); // Scroll down
+    //     } else {
+    //         stopScrolling();
+    //     }
+    // }
 
-    private void startScrolling(JScrollPane scrollPane, int direction) {
-        if (pressTimer != null && pressTimer.isRunning() && scrollDirection == direction) {
-            return;
-        }
-        stopScrolling(); // Ensure only one timer is running
+    // private void startScrolling(JScrollPane scrollPane, int direction) {
+    //     if (pressTimer != null && pressTimer.isRunning() && scrollDirection == direction) {
+    //         return;
+    //     }
+    //     stopScrolling(); // Ensure only one timer is running
 
-        scrollDirection = direction;
-        holdTime = 0; // Reset hold time
+    //     scrollDirection = direction;
+    //     holdTime = 0; // Reset hold time
 
-        pressTimer = new Timer(INITIAL_DELAY, e -> {
-            holdTime++; // Increment hold time
+    //     pressTimer = new Timer(INITIAL_DELAY, e -> {
+    //         holdTime++; // Increment hold time
 
-            // Dynamically adjust speed based on hold time
-            int scrollSpeed = Math.min(INITIAL_SCROLL_SPEED + holdTime, MAX_SCROLL_SPEED);
-            int newDelay = Math.max(INITIAL_DELAY - (holdTime * 5), MIN_DELAY); // Reduce delay over time
+    //         // Dynamically adjust speed based on hold time
+    //         int scrollSpeed = Math.min(INITIAL_SCROLL_SPEED + holdTime, MAX_SCROLL_SPEED);
+    //         int newDelay = Math.max(INITIAL_DELAY - (holdTime * 5), MIN_DELAY); // Reduce delay over time
 
-            // Apply new speed and delay
-            JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
-            int newValue = verticalBar.getValue() + (scrollSpeed * direction);
-            verticalBar.setValue(newValue);
-            // Reset caret position to avoid selection
-            setCaretPosition(getCaretPosition());
-            pressTimer.setDelay(newDelay); // Update timer delay
-        });
-        pressTimer.start();
-    }
+    //         // Apply new speed and delay
+    //         JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+    //         int newValue = verticalBar.getValue() + (scrollSpeed * direction);
+    //         verticalBar.setValue(newValue);
+    //         // Reset caret position to avoid selection
+    //         setCaretPosition(getCaretPosition());
+    //         pressTimer.setDelay(newDelay); // Update timer delay
+    //     });
+    //     pressTimer.start();
+    // }
 
-    private void stopScrolling() {
-        if (pressTimer != null) {
-            pressTimer.stop();
-            pressTimer = null;
-        }
-        scrollDirection = 0;
-        holdTime = 0; // Reset hold time
-    }
+    // private void stopScrolling() {
+    //     if (pressTimer != null) {
+    //         pressTimer.stop();
+    //         pressTimer = null;
+    //     }
+    //     scrollDirection = 0;
+    //     holdTime = 0; // Reset hold time
+    // }
 
     private static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
 
