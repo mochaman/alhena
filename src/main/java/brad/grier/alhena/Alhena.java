@@ -738,6 +738,7 @@ public class Alhena {
 
                 boolean[] error = {false};
                 int[] lineEnd = {0};
+                Buffer[] charIncompleteBuffer = {Buffer.buffer()};
                 // Handle the response
                 connection.result().handler(buffer -> {
 
@@ -782,9 +783,14 @@ public class Alhena {
                                 }
 
                                 if (mime.startsWith("text/gemini")) {
-                                    final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
+
+                                    BufferSplit split = splitBuffer(saveBuffer.slice(i + 1, saveBuffer.length()));
                                     bg(() -> {
-                                        p.textPane.updatePage(chunk, false, origURL, true);
+                                        charIncompleteBuffer[0].appendBuffer(split.complete);
+
+                                        p.textPane.updatePage(charIncompleteBuffer[0].toString(), false, origURL, true);
+                                        charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
+
                                     });
                                 } else if (mime.startsWith("text/") || isAscii(saveBuffer.slice(i + 1, saveBuffer.length()))) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
@@ -910,7 +916,11 @@ public class Alhena {
                             } else {
 
                                 bg(() -> {
-                                    p.textPane.addPage(buffer.toString());
+                                    BufferSplit split = splitBuffer(buffer);
+                                    charIncompleteBuffer[0].appendBuffer(split.complete);
+                                    p.textPane.addPage(charIncompleteBuffer[0].toString());
+                                    charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
+
                                 });
                             }
 
@@ -997,12 +1007,12 @@ public class Alhena {
 
                 String path = uri.getPath();
 
-                if(imageExtensions.stream().anyMatch(ext -> origURL.endsWith(ext))){
+                if (imageExtensions.stream().anyMatch(ext -> origURL.endsWith(ext))) {
                     imageStartIdx[0] = 0;
                 }
                 // boolean isText = txtExtensions.stream().anyMatch(ext -> ext.equalsIgnoreCase(extension[0]));
                 boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.endsWith(ext));
-                
+
                 connection.result().write(path.equals("/") ? "\n" : path + "\n");
 
                 Buffer saveBuffer = Buffer.buffer();
@@ -1242,6 +1252,7 @@ public class Alhena {
 
                 boolean[] error = {false};
                 int[] hLength = {0};
+                Buffer[] charIncompleteBuffer = {Buffer.buffer()};
                 // Handle the response
                 connection.result().handler(buffer -> {
 
@@ -1301,16 +1312,23 @@ public class Alhena {
                                 if (mime.isBlank()) {
                                     mime = "text/gemini"; // apparently mime type is optional in type 20 -  NOT ANYMORE
                                 }
-                                final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
+
                                 if (mime.startsWith("text/gemini")) {
                                     if (titanEdit[0]) {
-                                        titanSB.append(chunk);
+                                        titanSB.append(saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8"));
                                     } else {
+                                        BufferSplit split = splitBuffer(saveBuffer.slice(i + 1, saveBuffer.length()));
                                         bg(() -> {
-                                            p.textPane.updatePage(chunk, false, origURL, true);
+
+                                            charIncompleteBuffer[0].appendBuffer(split.complete);
+
+                                            p.textPane.updatePage(charIncompleteBuffer[0].toString(), false, origURL, true);
+                                            charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
+
                                         });
                                     }
                                 } else if (mime.startsWith("text/")) {
+                                    final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     if (titanEdit[0]) {
                                         titanSB.append(chunk);
                                     } else {
@@ -1498,7 +1516,11 @@ public class Alhena {
 
                                 } else {
                                     bg(() -> {
-                                        p.textPane.addPage(buffer.toString());
+                                        BufferSplit split = splitBuffer(buffer);
+                                        charIncompleteBuffer[0].appendBuffer(split.complete);
+                                        p.textPane.addPage(charIncompleteBuffer[0].toString());
+                                        charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
+
                                     });
                                 }
                             }
@@ -2485,14 +2507,18 @@ public class Alhena {
                         vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
                             if (result.succeeded()) {
                                 AsyncFile asyncFile = result.result();
-
+                                Buffer[] charIncompleteBuffer = {Buffer.buffer()};
                                 // read the file in chunks
                                 asyncFile.handler(buffer -> {
                                     if (isImage) {
                                         imageBuffer.appendBuffer(buffer);
                                     } else {
                                         bg(() -> {
-                                            p.textPane.addPage(buffer.toString());
+                                            BufferSplit split = splitBuffer(buffer);
+                                            charIncompleteBuffer[0].appendBuffer(split.complete);
+                                            p.textPane.addPage(charIncompleteBuffer[0].toString());
+                                            charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
+
                                         });
                                     }
 
@@ -2702,6 +2728,136 @@ public class Alhena {
     public static void clearCnList() {
         // called when use complete replaces a db - saved server certs may be different
         cnConfirmedList.clear();
+    }
+
+    private static int findLastValidUTF8Position(Buffer buffer) {
+        if (buffer == null || buffer.length() == 0) {
+            return 0;
+        }
+
+        int length = buffer.length();
+
+        // check from the end backwards to find any incomplete UTF-8 sequence
+        for (int i = length - 1; i >= Math.max(0, length - 4); i--) {
+            int b = buffer.getByte(i) & 0xFF;
+
+            // check if this could be the start of a UTF-8 character
+            if (isUTF8Start(b)) {
+                int expectedLength = getUTF8CharLength(b);
+                int remainingBytes = length - i;
+
+                if (remainingBytes >= expectedLength) {
+                    // complete character found - validate it
+                    if (isValidUTF8Sequence(buffer, i, expectedLength)) {
+                        return i + expectedLength;
+                    }
+                } else {
+                    // incomplete character - return position before it
+                    return i;
+                }
+            }
+        }
+
+        return length; // all chars complete
+    }
+
+    // check if a byte is the start of a UTF-8 character
+    private static boolean isUTF8Start(int b) {
+        return (b & 0x80) == 0
+                || // 0xxxxxxx (1-byte)
+                (b & 0xE0) == 0xC0
+                || // 110xxxxx (2-byte start)
+                (b & 0xF0) == 0xE0
+                || // 1110xxxx (3-byte start)
+                (b & 0xF8) == 0xF0;     // 11110xxx (4-byte start)
+    }
+
+    // get the expected length of a UTF-8 character from its first byte
+    private static int getUTF8CharLength(int firstByte) {
+        if ((firstByte & 0x80) == 0) {
+            return 1;      // 0xxxxxxx
+
+        }
+        if ((firstByte & 0xE0) == 0xC0) {
+            return 2;   // 110xxxxx
+
+        }
+        if ((firstByte & 0xF0) == 0xE0) {
+            return 3;   // 1110xxxx
+
+        }
+        if ((firstByte & 0xF8) == 0xF0) {
+            return 4;   // 11110xxx
+
+        }
+        return 1; // invalid, treat as single byte
+    }
+
+    // validates a UTF-8 sequence starting at the given position
+
+    private static boolean isValidUTF8Sequence(Buffer buffer, int start, int length) {
+        if (start + length > buffer.length()) {
+            return false;
+        }
+
+        // check first byte
+        int firstByte = buffer.getByte(start) & 0xFF;
+
+        // check continuation bytes
+        for (int i = 1; i < length; i++) {
+            int b = buffer.getByte(start + i) & 0xFF;
+            if ((b & 0xC0) != 0x80) { // Should be 10xxxxxx
+                return false;
+            }
+        }
+
+        // additional validation for overlong sequences and invalid ranges
+        switch (length) {
+            case 2 -> {
+                int codePoint = ((firstByte & 0x1F) << 6) | (buffer.getByte(start + 1) & 0x3F);
+                return codePoint >= 0x80;
+            }
+            case 3 -> {
+                int codePoint = ((firstByte & 0x0F) << 12)
+                        | ((buffer.getByte(start + 1) & 0x3F) << 6)
+                        | (buffer.getByte(start + 2) & 0x3F);
+                return codePoint >= 0x800 && (codePoint < 0xD800 || codePoint > 0xDFFF);
+            }
+            case 4 -> {
+                int codePoint = ((firstByte & 0x07) << 18)
+                        | ((buffer.getByte(start + 1) & 0x3F) << 12)
+                        | ((buffer.getByte(start + 2) & 0x3F) << 6)
+                        | (buffer.getByte(start + 3) & 0x3F);
+                return codePoint >= 0x10000 && codePoint <= 0x10FFFF;
+            }
+            default -> {
+            }
+        }
+
+        return true;
+    }
+
+    // splits a buffer into complete UTF-8 characters and incomplete bytes
+    public static BufferSplit splitBuffer(Buffer buffer) {
+        int validPosition = findLastValidUTF8Position(buffer);
+
+        Buffer complete = buffer.slice(0, validPosition);
+        Buffer incomplete = validPosition < buffer.length()
+                ? buffer.slice(validPosition, buffer.length())
+                : Buffer.buffer();
+
+        return new BufferSplit(complete, incomplete);
+    }
+
+    public static class BufferSplit {
+
+        public final Buffer complete;
+        public final Buffer incomplete;
+
+        public BufferSplit(Buffer complete, Buffer incomplete) {
+            this.complete = complete;
+            this.incomplete = incomplete;
+        }
     }
 
 }
