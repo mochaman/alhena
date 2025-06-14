@@ -495,7 +495,17 @@ public class Alhena {
 
     }
 
+    // only call from EDT
     public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
+
+        if (!EventQueue.isDispatchThread()) {
+
+            String finalUrl = url;
+            bg(() -> {
+                processURL(finalUrl, p, redirectUrl, cPage);
+            });
+            return;
+        }
         // this method needs to be refactored
         url = url.trim();
 
@@ -585,7 +595,7 @@ public class Alhena {
             return;
         }
 
-        if (punyURI.getScheme().equals("titan") && !punyURI.getPath().endsWith(";edit") /*&& p.getDataFile() == null */) {
+        if (punyURI.getScheme().equals("titan") && !punyURI.getPath().endsWith(";edit")) {
             String port = punyURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
             String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
             if (!p.getTitanEdited() && p.getDataFile() == null) {
@@ -672,7 +682,7 @@ public class Alhena {
 
     }
 
-    public static boolean isAscii(Buffer buffer) {
+    private static boolean isAscii(Buffer buffer) {
 
         if (buffer.length() == 0) {
             return false;
@@ -1417,10 +1427,6 @@ public class Alhena {
                                 p.setTitanEdited(false);
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
                                 p.redirectCount++;
-
-                                //String rQuery = uri.getQuery();
-                                // String rQuery = null;
-                                // rQuery = rQuery == null ? "" : "?" + rQuery;
                                 processURL(redirectURI, p, origURL, cPage);
                             }
                             case '4', '5' -> {
@@ -1800,7 +1806,10 @@ public class Alhena {
                 pump.start();
 
             } else {
-                p.textPane.end("# Failed to open file: " + outFile, false, url, true);
+                bg(() -> {
+                    p.textPane.end("# Failed to open file: " + outFile, false, url, true);
+                });
+
                 fileRes.cause().printStackTrace();
 
             }
@@ -1830,6 +1839,7 @@ public class Alhena {
 
                     NetClientOptions options = new NetClientOptions()
                             .setConnectTimeout(60000)
+                            .setSslHandshakeTimeout(30)
                             .setSsl(true) // Gemini uses TLS   
                             .setTrustAll(true)
                             .setHostnameVerificationAlgorithm("");
@@ -1841,6 +1851,7 @@ public class Alhena {
                     NetClientOptions options = new NetClientOptions()
                             .setSsl(true) // gemini uses TLS
                             .setTrustAll(true) // gemini self-signed certs
+                            .setSslHandshakeTimeout(30)
                             .setHostnameVerificationAlgorithm("")
                             .setSslEngineOptions(new JdkSSLEngineOptions() {
                                 @Override
@@ -2469,6 +2480,7 @@ public class Alhena {
         }
     }
 
+    // only call from EDT
     private static void handleFile(String url, Page p, Page cPage) {
         URL fileUrl;
         try {
@@ -2543,7 +2555,6 @@ public class Alhena {
                                     } else {
                                         bg(() -> {
                                             p.textPane.end();
-                                            //p.frame().showGlassPane(false);
                                         });
                                     }
 
@@ -2555,25 +2566,21 @@ public class Alhena {
 
                                     bg(() -> {
                                         p.textPane.end("## Error reading file\n", false, fUrl, true);
-                                        //p.frame().showGlassPane(false);
                                     });
                                 });
                             } else {
 
                                 bg(() -> {
                                     p.textPane.end("## Error opening file\n", false, fUrl, true);
-                                    //p.frame().showGlassPane(false);
                                 });
                             }
                         });
                     }
                 } else {
                     p.textPane.end("## Invalid file type\n", false, url, true);
-                    //p.frame().showGlassPane(false);
                 }
             } else {
                 p.textPane.end("## File not found\n", false, url, true);
-                //p.frame().showGlassPane(false);
             }
         } catch (Exception ex) {
             p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
@@ -2582,6 +2589,7 @@ public class Alhena {
         }
     }
 
+    // only call on EDT
     private static void handleHttp(String url, URI prevURI, Page p, Page cPage) {
         String useB = DB.getPref("browser", null);
         boolean useBrowser = useB == null ? true : useB.equals("true");
@@ -2656,7 +2664,7 @@ public class Alhena {
                                     af.close();
                                     req.end();
                                     bg(() -> {
-                                        // Util.infoDialog(p.frame(), "Complete", file[0].getName() + " downloaded");
+
                                         GeminiTextPane tPane = cPage.textPane;
 
                                         try {
@@ -2710,15 +2718,14 @@ public class Alhena {
                                     p.frame().showGlassPane(false);
                                 });
                             }
-                        } catch (InterruptedException ex) {
-                        } catch (InvocationTargetException ex) {
+                        } catch (InterruptedException | InvocationTargetException ex) {
+                            ex.printStackTrace();
                         }
                     }
                 } else {
                     ar2.cause().printStackTrace();
                     bg(() -> {
                         p.textPane.end("broke\n", true, finalURL, true);
-                        //p.frame().showGlassPane(false);
                     });
                 }
             });
@@ -2794,7 +2801,6 @@ public class Alhena {
     }
 
     // validates a UTF-8 sequence starting at the given position
-
     private static boolean isValidUTF8Sequence(Buffer buffer, int start, int length) {
         if (start + length > buffer.length()) {
             return false;
