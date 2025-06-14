@@ -771,7 +771,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void findAgain() {
-        if(lastSearch == null){
+        if (lastSearch == null) {
             return;
         }
         if (!visiblePage().textPane.find(lastSearch)) {
@@ -1779,14 +1779,22 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void setTmpStatus(String msg) {
-        setStatus(msg);
-        Timer timer = new Timer(5000, event -> {
-            if (statusField.getText().equals(msg)) {
-                setStatus(" ");
-            }
-        });
-        timer.setRepeats(false);
-        timer.start();
+        Runnable r = () ->{
+
+            setStatus(msg);
+            Timer timer = new Timer(5000, event -> {
+                if (statusField.getText().equals(msg)) {
+                    setStatus(" ");
+                }
+            });
+            timer.setRepeats(false);
+            timer.start();
+        };
+        if (!EventQueue.isDispatchThread()) {
+            EventQueue.invokeLater(r);
+        }else{
+            r.run();
+        }
     }
 
     private void loadServers(GeminiTextPane textPane, Page p) {
