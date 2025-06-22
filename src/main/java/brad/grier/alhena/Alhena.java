@@ -496,7 +496,7 @@ public class Alhena {
     }
 
     // only call from EDT
-    public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
+        public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
 
         if (!EventQueue.isDispatchThread()) {
 
@@ -512,8 +512,11 @@ public class Alhena {
         if (url.startsWith("alhena:")) {
             processCommand(url, p);
             return;
-        }
-        if (url.contains("://")) {
+        } 
+        int idx = url.indexOf("://");
+        if (idx != -1) {
+            String lcScheme = url.substring(0, idx).toLowerCase();
+            url = lcScheme + url.substring(idx);
             // optimize this
             if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("spartan://") && !url.startsWith("nex://")
                     && !url.startsWith("https://") && !url.startsWith("http://")
