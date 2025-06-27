@@ -147,6 +147,10 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+    private static final List<String> allowedSchemes = List.of(
+            "gemini://", "file://", "spartan://", "nex://",
+            "https://", "http://", "titan://"
+    );
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -496,7 +500,7 @@ public class Alhena {
     }
 
     // only call from EDT
-        public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
+    public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
 
         if (!EventQueue.isDispatchThread()) {
 
@@ -512,15 +516,13 @@ public class Alhena {
         if (url.startsWith("alhena:")) {
             processCommand(url, p);
             return;
-        } 
+        }
         int idx = url.indexOf("://");
         if (idx != -1) {
             String lcScheme = url.substring(0, idx).toLowerCase();
             url = lcScheme + url.substring(idx);
-            // optimize this
-            if (!url.startsWith("gemini://") && !url.startsWith("file://") && !url.startsWith("spartan://") && !url.startsWith("nex://")
-                    && !url.startsWith("https://") && !url.startsWith("http://")
-                    && !url.startsWith("titan://") && !(gopherProxy != null && url.startsWith("gopher://"))) {
+            boolean isGopher = gopherProxy != null && url.startsWith("gopher");
+            if (allowedSchemes.stream().noneMatch(url::startsWith) && !isGopher) {
                 p.textPane.end("## Bad scheme\n", false, url, true);
                 return;
 
@@ -592,8 +594,9 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
-        // this can surely be optimized
-        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://") || ((!url.startsWith("gemini://") && !url.startsWith("spartan://") && !url.startsWith("nex://")) && (prevURI != null && prevURI.getScheme() != null && prevURI.getScheme().equals("https"))))) {
+
+        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://")
+                || ((!url.startsWith("gemini://") && !url.startsWith("spartan://") && !url.startsWith("nex://")) && (prevURI != null && "https".equalsIgnoreCase(prevURI.getScheme()))))) {
             handleHttp(punyURI.toString(), prevURI, p, cPage);
             return;
         }
