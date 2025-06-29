@@ -2074,15 +2074,7 @@ public final class GeminiFrame extends JFrame {
     public void openFile(File file) {
 
         if (file == null) {
-            String desc = Alhena.fileExtensions.stream().collect(Collectors.joining(", "));
-            String[] exts = Alhena.fileExtensions.toArray(new String[0]);
-            String[] cleanExtensions = Alhena.fileExtensions.stream()
-                    .map(ext -> ext.substring(1))
-                    .toArray(String[]::new);
-
-            FileNameExtensionFilter filter = new FileNameExtensionFilter(desc, cleanExtensions);
-
-            file = Util.getFile(this, null, true, "Select File", filter);
+            file = Util.getFile(this, null, true, "Select File", null);
         }
 
         if (file != null && file.exists()) {
