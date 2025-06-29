@@ -108,6 +108,7 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.net.JdkSSLEngineOptions;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
@@ -794,8 +795,11 @@ public class Alhena {
 
                                 // have to assume there's at least one byte
                                 String mime = saveBuffer.getString(2, i - 1);
-                                if (mime.isBlank()) {
-                                    mime = "text/gemini"; // apparently mime type is optional in type 20 -  NOT ANYMORE
+
+                                if (mime.isBlank() || "application/octet-stream".equals(mime)) {
+                                    String mimeFromExt = MimeMapping.getMimeTypeForFilename(uri.getPath());
+                                    
+                                    mime = mimeFromExt == null ? "text/gemini" : mimeFromExt;
                                 }
 
                                 if (mime.startsWith("text/gemini")) {
@@ -1325,9 +1329,12 @@ public class Alhena {
                                 }
                                 // have to assume there's at least one byte
                                 String mime = saveBuffer.getString(3, i - 1);
-                                if (mime.isBlank()) {
-                                    mime = "text/gemini"; // apparently mime type is optional in type 20 -  NOT ANYMORE
+                                if (mime.isBlank() || "application/octet-stream".equals(mime)) {
+                                    String mimeFromExt = MimeMapping.getMimeTypeForFilename(uri.getPath());
+                                    // once upon a time mime type was optional - no longer the case (officially)
+                                    mime = mimeFromExt == null ? "text/gemini" : mimeFromExt;
                                 }
+
 
                                 if (mime.startsWith("text/gemini")) {
                                     if (titanEdit[0]) {
@@ -1360,7 +1367,7 @@ public class Alhena {
                                     } catch (SQLException ex) {
                                         ex.printStackTrace();
                                     }
-                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/") || videoExtensions.stream().anyMatch(ext -> uri.getPath().endsWith(ext)))) {
+                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
                                     try {
                                         connection.result().pause();
                                         connection.result().handler(null);
