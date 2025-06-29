@@ -130,11 +130,9 @@ public class Alhena {
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
     public final static String VERSION = "5.1.5";
     private static volatile boolean interrupted;
-    // TODO: combine the other lists to arrive at this
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".ogg", ".opus", ".mov", ".webp", ".flac", ".xml", ".wav", ".json");
-    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp");
-    public static final List<String> mediaExtensions = List.of(".mp4", ".mp3", ".ogg", ".opus", ".mov", ".flac", ".wav");
-    public static final List<String> videoExtensions = List.of(".mp4", ".mov");
+    // remove vlc extensions and let MimeMapper decide
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp");
+    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp");
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
@@ -756,6 +754,7 @@ public class Alhena {
                 boolean[] error = {false};
                 int[] lineEnd = {0};
                 Buffer[] charIncompleteBuffer = {Buffer.buffer()};
+                int[] hLength = {0};
                 // Handle the response
                 connection.result().handler(buffer -> {
 
@@ -798,7 +797,7 @@ public class Alhena {
 
                                 if (mime.isBlank() || "application/octet-stream".equals(mime)) {
                                     String mimeFromExt = MimeMapping.getMimeTypeForFilename(uri.getPath());
-                                    
+
                                     mime = mimeFromExt == null ? "text/gemini" : mimeFromExt;
                                 }
 
@@ -819,6 +818,7 @@ public class Alhena {
                                     });
                                 } else if (mime.startsWith("image/")) {
                                     imageStartIdx[0] = i + 1;
+                                    hLength[0] = i + 1;
                                     try {
                                         DB.insertHistory(origURL, null);
                                     } catch (SQLException ex) {
@@ -847,7 +847,7 @@ public class Alhena {
                                             }
                                         };
                                         streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r);
-                                        return;
+
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
                                     }
@@ -932,6 +932,7 @@ public class Alhena {
                         //p.redirectCount = 0;
                         if (!error[0]) {
                             if (imageStartIdx[0] != -1) {
+                                cPage.frame().setTmpStatus((saveBuffer.length() - hLength[0]) + " bytes");
                                 saveBuffer.appendBuffer(buffer);
                             } else {
 
@@ -1030,7 +1031,7 @@ public class Alhena {
                 if (imageExtensions.stream().anyMatch(ext -> origURL.endsWith(ext))) {
                     imageStartIdx[0] = 0;
                 }
-                // boolean isText = txtExtensions.stream().anyMatch(ext -> ext.equalsIgnoreCase(extension[0]));
+
                 boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.endsWith(ext));
 
                 connection.result().write(path.equals("/") ? "\n" : path + "\n");
@@ -1334,7 +1335,6 @@ public class Alhena {
                                     // once upon a time mime type was optional - no longer the case (officially)
                                     mime = mimeFromExt == null ? "text/gemini" : mimeFromExt;
                                 }
-
 
                                 if (mime.startsWith("text/gemini")) {
                                     if (titanEdit[0]) {
@@ -1812,10 +1812,14 @@ public class Alhena {
                     r.run();
 
                 });
+                CountingWriteStream stream = new CountingWriteStream(file)
+                        .progressHandler(count -> {
+                            p.frame().setTmpStatus(count + " bytes");
+                        });
                 // socket.handler(null);
                 socket.resume();
                 // Use Pump to stream to file
-                Pump pump = Pump.pump(socket, file);
+                Pump pump = Pump.pump(socket, stream);
                 pump.start();
 
             } else {
@@ -2502,9 +2506,10 @@ public class Alhena {
 
             File file = new File(fileUrl.toURI());
             if (file.exists()) {
-
+                String mimeExt = MimeMapping.getMimeTypeForFilename(url);
+                boolean vlcType = url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video")));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-                if (matches) {
+                if (matches || vlcType) {
 
                     String fUrl = url;
                     p.frame().setBusy(true, cPage);
@@ -2512,21 +2517,22 @@ public class Alhena {
                     if (!cPage.textPane.awatingImage()) {
                         p.textPane.updatePage("", pformatted, fUrl, true);
                     }
-                    boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-                    boolean isMedia = isImage == false ? mediaExtensions.stream().anyMatch(url.toLowerCase()::endsWith) : false;
 
-                    if (isMedia) {
-                        String type = videoExtensions.stream().anyMatch(url.toLowerCase()::endsWith) ? "video" : "audio";
+                    if (vlcType) {
+                        if (url.toLowerCase().endsWith(".opus")) {
+                            mimeExt = "audio/opus"; // .opus files are not in MimeMapper
+                        }
+
                         if (cPage.textPane.awatingImage()) {
-                            cPage.textPane.insertMediaPlayer(file.getAbsolutePath(), type);
+                            cPage.textPane.insertMediaPlayer(file.getAbsolutePath(), mimeExt);
                         } else {
 
                             p.textPane.end(" ", false, fUrl, true);
-                            p.textPane.insertMediaPlayer(file.getAbsolutePath(), type);
+                            p.textPane.insertMediaPlayer(file.getAbsolutePath(), mimeExt);
                         }
 
                     } else {
-
+                        boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                         Buffer imageBuffer = Buffer.buffer();
 
                         vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
@@ -2590,7 +2596,7 @@ public class Alhena {
                         });
                     }
                 } else {
-                    p.textPane.end("## Invalid file type\n", false, url, true);
+                    p.textPane.end("## Unrecognized file type\n", false, url, true);
                 }
             } else {
                 p.textPane.end("## File not found\n", false, url, true);
