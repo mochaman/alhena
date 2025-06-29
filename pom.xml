@@ -8,7 +8,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <exec.mainClass>brad.grier.alhena.Alhena</exec.mainClass>
-        <vertx.version>4.5.13</vertx.version>  
+        <vertx.version>4.5.16</vertx.version>  
     </properties>
     <dependencies>
         <dependency>
