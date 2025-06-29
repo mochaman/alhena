@@ -80,6 +80,7 @@ import com.techsenger.ansi4j.core.api.spi.ParserFactoryConfig;
 import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
 import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
+import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import net.fellbaum.jemoji.EmojiManager;
@@ -405,7 +406,9 @@ public class GeminiTextPane extends JTextPane {
                     for (File file : droppedFiles) {
                         String lcName = file.getName().toLowerCase();
                         boolean matches = Alhena.fileExtensions.stream().anyMatch(lcName::endsWith);
-                        if (matches) {
+                        String mimeExt = MimeMapping.getMimeTypeForFilename(lcName);
+                        boolean vlcType = url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video")));
+                        if (matches || vlcType) {
 
                             if (lcName.endsWith(".pem")) {
                                 f.importPem(new URI(getDocURLString()), file);
