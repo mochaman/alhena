@@ -128,7 +128,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.1.5";
+    public final static String VERSION = "5.1.6";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp");
@@ -795,10 +795,15 @@ public class Alhena {
                                 // have to assume there's at least one byte
                                 String mime = saveBuffer.getString(2, i - 1);
 
-                                if (mime.isBlank() || "application/octet-stream".equals(mime)) {
+                                boolean appOct = "application/octet-stream".equals(mime);
+                                if (mime.isBlank() || appOct) {
                                     String mimeFromExt = MimeMapping.getMimeTypeForFilename(uri.getPath());
-
-                                    mime = mimeFromExt == null ? "text/gemini" : mimeFromExt;
+                                    if(mimeFromExt != null){
+                                        mime = mimeFromExt;    
+                                    }else if(!appOct){
+                                        mime = "text/gemini";
+                                    
+                                    }
                                 }
 
                                 if (mime.startsWith("text/gemini")) {
@@ -1330,10 +1335,15 @@ public class Alhena {
                                 }
                                 // have to assume there's at least one byte
                                 String mime = saveBuffer.getString(3, i - 1);
-                                if (mime.isBlank() || "application/octet-stream".equals(mime)) {
+                                boolean appOct = "application/octet-stream".equals(mime);
+                                if (mime.isBlank() || appOct) {
                                     String mimeFromExt = MimeMapping.getMimeTypeForFilename(uri.getPath());
-                                    // once upon a time mime type was optional - no longer the case (officially)
-                                    mime = mimeFromExt == null ? "text/gemini" : mimeFromExt;
+                                    if(mimeFromExt != null){
+                                        mime = mimeFromExt;    
+                                    }else if(!appOct){
+                                        mime = "text/gemini";
+                                    
+                                    }
                                 }
 
                                 if (mime.startsWith("text/gemini")) {
