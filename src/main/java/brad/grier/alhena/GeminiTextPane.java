@@ -1617,9 +1617,8 @@ public class GeminiTextPane extends JTextPane {
         ClickableRange cr = null;
 
         int start = doc.getLength();
-        boolean monospace = styleName.equals("```");
-        int heightOffset = monospace ? 4 : 0;
-        if (!(hasAnsi && monospace) && EmojiManager.containsAnyEmoji(text)) {
+
+        if (!(hasAnsi && styleName.equals("```")) && EmojiManager.containsAnyEmoji(text)) {
 
             String fontFamily = StyleConstants.getFontFamily(style);
             int fontSize = StyleConstants.getFontSize(style);
@@ -1642,14 +1641,14 @@ public class GeminiTextPane extends JTextPane {
                         ImageIcon icon = null;
                         int imgSize = fontSize + 4;
                         if (p != null) {
-                            icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset, fontSize);
+                            icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
                         } else {
                             int dashIdx = key.indexOf('-');
                             if (dashIdx != -1) {
 
                                 p = emojiSheetMap.get(key.substring(0, dashIdx));
                                 if (p != null) {
-                                    icon = extractSprite(p.x, p.y, 64, imgSize, imgSize - heightOffset, fontSize);
+                                    icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
                                 }
                             }
                         }
