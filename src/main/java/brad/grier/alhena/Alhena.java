@@ -123,7 +123,7 @@ import io.vertx.core.streams.Pump;
 public class Alhena {
 
     private static Vertx vertx;
-    private static HttpClient httpClient;
+    private static HttpClient httpClient80, httpClient443;
 
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
@@ -179,7 +179,8 @@ public class Alhena {
                         interrupted = true;
                         // closing and recreating the client doesn't work for ending connection handshake
                         // close vertx and recreate
-                        httpClient = null;
+                        httpClient80 = null;
+                        httpClient443 = null;
                         spartanClient = null;
                         vertx.close();
                         VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
@@ -596,7 +597,7 @@ public class Alhena {
 
         if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://")
                 || ((!url.startsWith("gemini://") && !url.startsWith("spartan://") && !url.startsWith("nex://")) && (prevURI != null && "https".equalsIgnoreCase(prevURI.getScheme()))))) {
-            handleHttp(punyURI.toString(), prevURI, p, cPage);
+            handleHttp(punyURI.toString(), prevURI, p, cPage, 0);
             return;
         }
 
@@ -798,11 +799,11 @@ public class Alhena {
                                 boolean appOct = "application/octet-stream".equals(mime);
                                 if (mime.isBlank() || appOct) {
                                     String mimeFromExt = MimeMapping.getMimeTypeForFilename(uri.getPath());
-                                    if(mimeFromExt != null){
-                                        mime = mimeFromExt;    
-                                    }else if(!appOct){
+                                    if (mimeFromExt != null) {
+                                        mime = mimeFromExt;
+                                    } else if (!appOct) {
                                         mime = "text/gemini";
-                                    
+
                                     }
                                 }
 
@@ -1338,11 +1339,11 @@ public class Alhena {
                                 boolean appOct = "application/octet-stream".equals(mime);
                                 if (mime.isBlank() || appOct) {
                                     String mimeFromExt = MimeMapping.getMimeTypeForFilename(uri.getPath());
-                                    if(mimeFromExt != null){
-                                        mime = mimeFromExt;    
-                                    }else if(!appOct){
+                                    if (mimeFromExt != null) {
+                                        mime = mimeFromExt;
+                                    } else if (!appOct) {
                                         mime = "text/gemini";
-                                    
+
                                     }
                                 }
 
@@ -1400,7 +1401,7 @@ public class Alhena {
                                             }
                                         };
                                         streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r);
-                                        return;
+
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
                                     }
@@ -1433,7 +1434,6 @@ public class Alhena {
                                     }
 
                                     streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null);
-                                    return;
                                 }
                             }
 
@@ -2619,7 +2619,7 @@ public class Alhena {
     }
 
     // only call on EDT
-    private static void handleHttp(String url, URI prevURI, Page p, Page cPage) {
+    private static void handleHttp(String url, URI prevURI, Page p, Page cPage, int redirectCount) {
         String useB = DB.getPref("browser", null);
         boolean useBrowser = useB == null ? true : useB.equals("true");
         if (browsingSupported && useBrowser) {
@@ -2632,29 +2632,68 @@ public class Alhena {
             p.frame().updateComboBox(prevURI.toString());
             return;
         }
-
-        if (httpClient == null) {
-            HttpClientOptions options = new HttpClientOptions().
-                    setSsl(true).
-                    setTrustAll(true)
-                    .setLogActivity(true);
-            httpClient = vertx.createHttpClient(options);
-        }
-        p.frame().setBusy(true, cPage);
         String finalURL = url;
 
+        if (redirectCount > 4) {
+            p.textPane.end("too many redirects\n", true, finalURL, true);
+            return;
+        }
+
         URI finalURI = URI.create(finalURL);
-        httpClient.request(HttpMethod.GET, 443, finalURI.getHost(), finalURI.getPath()).onComplete(ar -> {
+        String fullPath = finalURI.getRawPath();
+        if (finalURI.getRawQuery() != null) {
+            fullPath += "?" + finalURI.getRawQuery();
+        }
+        boolean isSSL = finalURI.getScheme().equals("https");
+        int port = finalURI.getPort() != -1 ? finalURI.getPort() : (isSSL ? 443 : 80);
+        HttpClient httpClient = isSSL ? httpClient443 : httpClient80;
+        if (httpClient == null) {
+            HttpClientOptions options = new HttpClientOptions().
+                    setSsl(isSSL).
+                    setTrustAll(true)
+                    .setLogActivity(false);
+            if (isSSL) {
+                httpClient443 = vertx.createHttpClient(options);
+            } else {
+                httpClient80 = vertx.createHttpClient(options);
+            }
+            httpClient = isSSL ? httpClient443 : httpClient80;
+        }
+        p.frame().setBusy(true, cPage);
+
+        httpClient.request(HttpMethod.GET, port, finalURI.getHost(), fullPath).onComplete(ar -> {
             HttpClientRequest req = ar.result();
             req.send().onComplete(ar2 -> {
                 if (ar2.succeeded()) {
                     HttpClientResponse resp = ar2.result();
+
                     String contentType = resp.getHeader("Content-Type");
 
+                    if (resp.statusCode() >= 300 && resp.statusCode() < 400) {
+
+                        String location = resp.getHeader("Location");
+                        if (location != null) {
+                            handleHttp(location, prevURI, p, cPage, redirectCount + 1);
+                        } else {
+                            bg(() -> {
+                                p.textPane.end("redirect without location\n", true, finalURL, true);
+                            });
+                        }
+                        return;
+                    }
+                    String fileName = Util.extractFilenameFromUrl(finalURL);
+                    if (fileName == null) {
+                        fileName = finalURL.substring(finalURL.lastIndexOf("/") + 1);
+                    }
+                    if (contentType == null) {
+                        contentType = MimeMapping.getMimeTypeForFilename(fileName);
+                    }
+                    String finalCT = contentType;
+                    String finalName = fileName;
                     if (contentType != null && contentType.startsWith("text/")) {
                         resp.body().onSuccess(buffer -> {
                             bg(() -> {
-                                if (contentType.startsWith("text/html")) {
+                                if (finalCT.startsWith("text/html")) {
                                     p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURI.getScheme() + "://" + finalURI.getAuthority()), false, finalURL, true);
                                 } else {
                                     p.textPane.end(buffer.toString(), false, finalURL, true);
@@ -2715,14 +2754,51 @@ public class Alhena {
                                 });
                             }
                         });
+                    } else if (contentType != null && (allowVLC && (contentType.startsWith("audio/") || contentType.startsWith("video/")))) {
+                        resp.pause();
+
+                        File df;
+                        try {
+                            df = File.createTempFile("alhena", "media");
+                            df.deleteOnExit();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                            bg(() -> {
+                                p.frame().showGlassPane(false);
+                            });
+                            return;
+                        }
+                        String absPath = df.getAbsolutePath();
+                        vertx.fileSystem().open(df.getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
+                            if (fileResult.succeeded()) {
+                                AsyncFile af = fileResult.result();
+                                resp.resume();
+                                Pump pump = Pump.pump(resp, af);
+                                pump.start();
+                                resp.endHandler(eh -> {
+                                    af.close();
+                                    req.end();
+                                    bg(() -> {
+                                        p.frame().showGlassPane(false);
+                                        GeminiTextPane tPane = cPage.textPane;
+                                        if (tPane.awatingImage()) {
+                                            tPane.insertMediaPlayer(absPath, finalCT);
+                                        } else {
+                                            p.textPane.end(" ", false, finalURL, true);
+                                            p.textPane.insertMediaPlayer(absPath, finalCT);
+                                        }
+                                    });
+                                });
+                            }
+                        });
+
                     } else {
                         try {
                             // download!
                             File[] file = new File[1];
                             resp.pause();
                             EventQueue.invokeAndWait(() -> {
-                                String fileName = finalURL.substring(finalURL.lastIndexOf("/") + 1);
-                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+                                file[0] = Util.getFile(p.frame(), finalName, false, "Save File", null);
                             });
                             if (file[0] != null) {
                                 vertx.fileSystem().open(file[0].getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
@@ -2757,7 +2833,8 @@ public class Alhena {
                         p.textPane.end("broke\n", true, finalURL, true);
                     });
                 }
-            });
+            }
+            );
         });
     }
 
