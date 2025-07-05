@@ -32,6 +32,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.StandardCharsets;
@@ -47,6 +48,8 @@ import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -229,13 +232,12 @@ public class Util {
         dialog.setVisible(true);
 
         // return null for cancel as a shortcut
-        if(options == null && optionPane.getValue() instanceof Integer val){
-            if(val == JOptionPane.CANCEL_OPTION){
+        if (options == null && optionPane.getValue() instanceof Integer val) {
+            if (val == JOptionPane.CANCEL_OPTION) {
                 return null;
             }
         }
         return optionPane.getValue();
-
 
     }
 
@@ -374,11 +376,11 @@ public class Util {
     public static Font getFont(GeminiFrame f, Font font) {
         FontChooser fontChooser = new FontChooser(font);
         fontChooser.setPreferredSize(new Dimension(700, 350));
-        
+
         JSlider slider = new JSlider(JSlider.HORIZONTAL, 5, 35, GeminiFrame.monoFontSize);
-        slider.setMajorTickSpacing(5);   
+        slider.setMajorTickSpacing(5);
         slider.setMinorTickSpacing(5);
-        slider.setPaintTicks(true); 
+        slider.setPaintTicks(true);
         slider.setPaintLabels(true);
         Object[] message = {
             fontChooser,
@@ -416,7 +418,7 @@ public class Util {
             } else if (val.equals("Reset")) {
                 GeminiFrame.monoFontSize = GeminiFrame.DEFAULT_FONT_SIZE;
                 return new Font("SansSerif", Font.PLAIN, GeminiFrame.DEFAULT_FONT_SIZE);
-            } 
+            }
         }
         return null;
 
@@ -926,13 +928,30 @@ public class Util {
         return false;
     }
 
-    // public static boolean isMonospaced(Font font) {
+    // get filename - used by github to download from amazon bucket
+    public static String extractFilenameFromUrl(String url) {
+        Pattern outer = Pattern.compile("response-content-disposition=([^&]+)");
+        Matcher outerMatcher = outer.matcher(url);
 
+        if (outerMatcher.find()) {
+            String encodedDisposition = outerMatcher.group(1);
+            String disposition = URLDecoder.decode(encodedDisposition, StandardCharsets.UTF_8);
+
+            Pattern inner = Pattern.compile("filename=([^;\\s]+)");
+            Matcher innerMatcher = inner.matcher(disposition);
+            if (innerMatcher.find()) {
+                return innerMatcher.group(1);
+            }
+        }
+
+        return null; 
+    }
+
+    // public static boolean isMonospaced(Font font) {
     //     BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
     //     Graphics g = img.getGraphics();
     //     g.setFont(font);
     //     FontMetrics fm = g.getFontMetrics();
-
     //     // Try a few different characters
     //     int[] widths = {
     //         fm.charWidth('i'),
@@ -941,7 +960,6 @@ public class Util {
     //         fm.charWidth('1'),
     //         fm.charWidth('m')
     //     };
-
     //     for (int i = 1; i < widths.length; i++) {
     //         if (widths[i] != widths[0]) {
     //             return false;  // not monospaced
@@ -950,20 +968,16 @@ public class Util {
     //     g.dispose();
     //     return true;  // monospaced
     // }
-
     // public static boolean findMonospacedFonts() {
     //     Font[] fonts = GraphicsEnvironment
     //             .getLocalGraphicsEnvironment().getAllFonts();
     //             //.getAvailableFontFamilyNames();
-
     //     for (Font f : fonts) {
     //         //Font f = new Font(font, Font.PLAIN, 12);
     //         if(isMonospaced(f)){
     //             System.out.println(f.getName());
     //         }
-
     //     }
     //     return false;
     // }
-
 }
