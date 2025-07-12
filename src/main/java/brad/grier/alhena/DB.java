@@ -404,12 +404,14 @@ public class DB {
 
     }
 
-    public static void updateBookmark(int id, String label, String folder) throws SQLException {
+    public static void updateBookmark(int id, String label, String folder, String url) throws SQLException {
 
-        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE BOOKMARKS SET LABEL = ?, FOLDER = ? WHERE ID = ?")) {
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE BOOKMARKS SET LABEL = ?, FOLDER = ?, URL = ? WHERE ID = ?")) {
             ps.setString(1, label);
             ps.setString(2, folder);
-            ps.setInt(3, id);
+            ps.setString(3, url);
+            ps.setInt(4, id);
+            
             ps.execute();
         }
 
@@ -599,7 +601,6 @@ public class DB {
             ResultSet rs = st.executeQuery("SCRIPT");
 
             while (rs.next()) {
-                //System.out.println(rs.getString(1)); // Prints SQL statements
                 encryptor.writeString(rs.getString(1));
             }
             encryptor.close();
