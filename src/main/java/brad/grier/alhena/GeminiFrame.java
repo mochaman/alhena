@@ -1182,6 +1182,12 @@ public final class GeminiFrame extends JFrame {
         if (subject != null) {
             labelField.setText(subject);
         }
+        JTextField urlField = new JTextField();
+        urlField.addMouseListener(new ContextMenuMouseListener());
+
+        urlField.setPreferredSize(new Dimension(400, urlField.getPreferredSize().height));
+        urlField.setText(visiblePage().getUrl());
+        urlField.setCaretPosition(0);
         JComboBox bmComboBox = new JComboBox();
         List<String> folders;
         try {
@@ -1200,19 +1206,21 @@ public final class GeminiFrame extends JFrame {
         bmComboBox.setEditable(true);
         bmComboBox.getEditor().getEditorComponent().addMouseListener(new ContextMenuMouseListener());
 
-        Object[] comps = new Object[4];
+        Object[] comps = new Object[6];
         comps[0] = "Label:";
         comps[1] = labelField;
-        comps[2] = "Bookmark Folder:";
-        comps[3] = bmComboBox;
+        comps[2] = "URL:";
+        comps[3] = urlField;
+        comps[4] = "Bookmark Folder:";
+        comps[5] = bmComboBox;
         Object res = Util.inputDialog2(this, "New", comps, null);
         if (res != null) {
 
-            if (labelField.getText().trim().isEmpty() || ((String) bmComboBox.getSelectedItem()).trim().isEmpty()) {
-                Util.infoDialog(this, "Required", "Bookmark label and folder required.");
+            if (labelField.getText().trim().isEmpty() || ((String) bmComboBox.getSelectedItem()).trim().isEmpty() || urlField.getText().trim().isEmpty()) {
+                Util.infoDialog(this, "Required", "Bookmark label, url and folder required.");
             } else {
                 try {
-                    DB.insertBookmark(labelField.getText().trim(), visiblePage().getUrl(), ((String) bmComboBox.getSelectedItem()).trim(), null);
+                    DB.insertBookmark(labelField.getText().trim(), urlField.getText().trim(), ((String) bmComboBox.getSelectedItem()).trim(), null);
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                 }
@@ -1779,7 +1787,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void setTmpStatus(String msg) {
-        Runnable r = () ->{
+        Runnable r = () -> {
 
             setStatus(msg);
             Timer timer = new Timer(5000, event -> {
@@ -1792,7 +1800,7 @@ public final class GeminiFrame extends JFrame {
         };
         if (!EventQueue.isDispatchThread()) {
             EventQueue.invokeLater(r);
-        }else{
+        } else {
             r.run();
         }
     }
@@ -1963,6 +1971,13 @@ public final class GeminiFrame extends JFrame {
 
             labelField.addMouseListener(new ContextMenuMouseListener());
             labelField.setText(bm.label());
+
+            JTextField urlField = new JTextField();
+            urlField.addMouseListener(new ContextMenuMouseListener());
+            urlField.setPreferredSize(new Dimension(400, urlField.getPreferredSize().height));
+            urlField.setText(bm.url());
+            urlField.setCaretPosition(0);
+
             JComboBox bmComboBox = new JComboBox();
 
             List<String> folders;
@@ -1984,15 +1999,17 @@ public final class GeminiFrame extends JFrame {
 
             bmComboBox.getEditor().getEditorComponent().addMouseListener(new ContextMenuMouseListener());
 
-            Object[] comps = new Object[4];
+            Object[] comps = new Object[6];
             comps[0] = "Label:";
             comps[1] = labelField;
-            comps[2] = "Bookmark Folder:";
-            comps[3] = bmComboBox;
+            comps[2] = "URL";
+            comps[3] = urlField;
+            comps[4] = "Bookmark Folder:";
+            comps[5] = bmComboBox;
             Object res = Util.inputDialog2(this, "New", comps, null);
             if (res != null) {
-                if (!labelField.getText().trim().isEmpty() && !((String) bmComboBox.getSelectedItem()).trim().isEmpty()) {
-                    DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem());
+                if (!labelField.getText().trim().isEmpty() && !((String) bmComboBox.getSelectedItem()).trim().isEmpty() && !urlField.getText().trim().isEmpty()) {
+                    DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem(), urlField.getText());
                 }
                 refresh();
             }
