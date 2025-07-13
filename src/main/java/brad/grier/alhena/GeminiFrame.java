@@ -499,7 +499,7 @@ public final class GeminiFrame extends JFrame {
         favButton = new JButton("🔖");
         favButton.setToolTipText("Bookmark this page");
         favButton.addActionListener(al -> {
-            bookmarkPage();
+            bookmarkPage(false);
 
         });
 
@@ -1171,29 +1171,34 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void bookmarkPage() {
-        if (visiblePage().textPane.getDocMode() == GeminiTextPane.INFO_MODE) {
+    private void bookmarkPage(boolean newBookmark) {
+
+        if (!newBookmark && visiblePage().textPane.getDocMode() == GeminiTextPane.INFO_MODE) {
             Util.infoDialog(this, "Invalid", "This page can't be bookmarked");
             return;
         }
-        String subject = visiblePage().textPane.getFirstHeading();
+
         JTextField labelField = new JTextField();
         labelField.addMouseListener(new ContextMenuMouseListener());
-        if (subject != null) {
-            labelField.setText(subject);
-        }
         JTextField urlField = new JTextField();
         urlField.addMouseListener(new ContextMenuMouseListener());
-
         urlField.setPreferredSize(new Dimension(400, urlField.getPreferredSize().height));
-        urlField.setText(visiblePage().getUrl());
-        urlField.setCaretPosition(0);
+        if (!newBookmark) {
+            String subject = visiblePage().textPane.getFirstHeading();
+
+            if (subject != null) {
+                labelField.setText(subject);
+            }
+            urlField.setText(visiblePage().getUrl());
+            urlField.setCaretPosition(0);
+        }
+
         JComboBox bmComboBox = new JComboBox();
         List<String> folders;
         try {
             folders = DB.bookmarkFolders();
         } catch (SQLException ex) {
-            folders = new ArrayList<String>();
+            folders = new ArrayList<>();
         }
 
         if (!folders.contains("ROOT")) {
@@ -1242,9 +1247,11 @@ public final class GeminiFrame extends JFrame {
                 bookmarkMenu.setMnemonic('B');
                 menuBar.add(bookmarkMenu);
             }
-
+            bookmarkMenu.add(createMenuItem("New Bookmark", KeyStroke.getKeyStroke(KeyEvent.VK_W, mod), () -> {
+                bookmarkPage(true);
+            }));
             bookmarkMenu.add(createMenuItem("Bookmark Page", KeyStroke.getKeyStroke(KeyEvent.VK_D, mod), () -> {
-                bookmarkPage();
+                bookmarkPage(false);
             }));
             if (!bookmarks.isEmpty()) {
                 bookmarkMenu.add(new JSeparator());
