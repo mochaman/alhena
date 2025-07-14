@@ -88,6 +88,7 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
@@ -95,6 +96,7 @@ import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.DB.CertInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
+import de.vandermeer.asciitable.AsciiTable;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.JdkSslContext;
@@ -2284,6 +2286,31 @@ public class Alhena {
         String tagName = element.tagName();
 
         return switch (tagName) {
+            case "table" -> {
+                if (containsNestedTable(element)) {
+                    // fallback to old behavior: treat table like a stack of rows
+                    StringBuilder sb = new StringBuilder();
+                    if (tagName.equals("tr")) {
+                        sb.append("-".repeat(100) + "\n");
+                    }
+
+                    element.children().stream().forEach(child -> {
+                        String line = processElement(child, host);
+
+                        if (!line.isBlank() && !child.hasAttr("hidden")) {
+                            sb.append(line.trim()).append("\n\n");
+                        }
+                    });
+                    yield sb.toString();
+                } else {
+                    TableResult result = processTable(element);
+                    StringBuilder sb = new StringBuilder(result.asciiTable);
+                    for (String link : result.links) {
+                        sb.append(link).append("\n");
+                    }
+                    yield sb.toString();
+                }
+            }
 
             case "div" -> {
                 StringBuilder gt = new StringBuilder();
@@ -2320,7 +2347,7 @@ public class Alhena {
 
                 StringBuilder sb = new StringBuilder();
                 sb.append("```\n");
-                sb.append(element.text() + "\n");
+                sb.append(element.text()).append("\n");
                 sb.append("```\n");
                 yield sb.toString();
 
@@ -2361,9 +2388,9 @@ public class Alhena {
                 if (element.ownText().isBlank()) {
 
                     StringBuilder sb = new StringBuilder();
-                    if (tagName.equals("tr")) {
-                        sb.append("-".repeat(100) + "\n");
-                    }
+                    // if (tagName.equals("tr")) {
+                    //     sb.append("-".repeat(100) + "\n");
+                    // }
 
                     element.children().stream().forEach(child -> {
                         String line = processElement(child, host);
@@ -2404,6 +2431,188 @@ public class Alhena {
             list.append(processElement(li, null)).append("\n");
         }
         return list.toString();
+    }
+
+    private static class TableResult {
+
+        String asciiTable;
+        List<String> links;
+    }
+
+    private static TableResult processTable(Element table) {
+        AsciiTable at = new AsciiTable();
+        at.addRule();
+
+        List<String> links = new ArrayList<>();
+        Elements rows = table.select("tr");
+        int expectedColumns = -1;
+
+        for (Element row : rows) {
+            Elements cells = row.select("th, td");
+            if (cells.isEmpty()) {
+                continue;
+            }
+
+            if (expectedColumns == -1) {
+                expectedColumns = cells.size();
+            }
+
+            List<String> cellTexts = new ArrayList<>();
+
+            for (Element cell : cells) {
+                StringBuilder sb = new StringBuilder();
+
+                for (Element el : cell.getAllElements()) {
+                    switch (el.tagName()) {
+                        case "img" -> {
+                            String alt = el.attr("alt");
+                            String src = el.attr("src");
+
+                            if (!alt.isEmpty()) {
+                                sb.append(alt).append(" ");
+                            }
+                            if (!src.isEmpty()) {
+                                links.add("=> " + src + " " + (alt.isEmpty() ? "🖼️ [Image]" : "🖼️ " + alt));
+                            }
+
+                        }
+                        case "a" -> {
+                            String href = el.attr("href");
+                            String text = el.text().trim();
+
+                            // if text empty, try to use alt text of any img child
+                            if (text.isEmpty()) {
+                                Element img = el.selectFirst("img[alt]");
+                                if (img != null) {
+                                    text = img.attr("alt").trim();
+                                }
+                            }
+
+                            if (!text.isEmpty()) {
+                                sb.append(text).append(" ");
+                            }
+
+                            if (!href.isEmpty()) {
+                                links.add("=> " + href + " " + (text.isEmpty() ? "🔗 [Link]" : "🔗 " + text));
+                            }
+                        }
+                    }
+                }
+
+                // fallback if empty
+                if (sb.isEmpty()) {
+                    sb.append(cell.text());
+                }
+
+                cellTexts.add(sb.toString().trim());
+            }
+
+            while (cellTexts.size() < expectedColumns) {
+                cellTexts.add("");
+            }
+            if (cellTexts.size() > expectedColumns) {
+                cellTexts = cellTexts.subList(0, expectedColumns);
+            }
+
+            at.addRow(cellTexts.toArray());
+            at.addRule();
+        }
+
+        TableResult result = new TableResult();
+        result.asciiTable = "```\n" + at.render() + "\n```\n";
+        result.links = links;
+        return result;
+    }
+
+    // private static String processTable(Element table) {
+    //     AsciiTable at = new AsciiTable();
+    //     at.addRule();
+    //     Elements rows = table.select("tr");
+    //     int expectedColumns = -1;
+    //     for (Element row : rows) {
+    //         Elements cells = row.select("th, td");
+    //         if (cells.isEmpty()) {
+    //             continue;
+    //         }
+    //         if (expectedColumns == -1) {
+    //             expectedColumns = cells.size();
+    //         }
+    //         List<String> cellTexts = new ArrayList<>();
+    //         for (Element cell : cells) {
+    //             StringBuilder sb = new StringBuilder();
+    //             for (Element el : cell.getAllElements()) {
+    //                 switch (el.tagName()) {
+    //                     case "img" -> {
+    //                         String alt = el.attr("alt");
+    //                         if (!alt.isEmpty()) {
+    //                             sb.append(alt).append(" ");
+    //                         }
+    //                     }
+    //                     case "a" -> {
+    //                         String text = el.text();
+    //                         if (!text.isEmpty()) {
+    //                             sb.append(text).append(" ");
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //             // fallback: if no img or a tags, use normal cell text
+    //             if (sb.isEmpty()) {
+    //                 sb.append(cell.text());
+    //             }
+    //             cellTexts.add(sb.toString().trim());
+    //         }
+    //         // Pad or trim to match expectedColumns
+    //         while (cellTexts.size() < expectedColumns) {
+    //             cellTexts.add("");
+    //         }
+    //         if (cellTexts.size() > expectedColumns) {
+    //             cellTexts = cellTexts.subList(0, expectedColumns);
+    //         }
+    //         at.addRow(cellTexts.toArray());
+    //         at.addRule();
+    //     }
+    //     return "```\n" + at.render() + "\n```\n";
+    // }
+    // private static String processTable(Element table) {
+    //     AsciiTable at = new AsciiTable();
+    //     at.addRule();
+    //     Elements rows = table.select("tr");
+    //     int expectedColumns = -1;
+    //     for (Element row : rows) {
+    //         Elements cells = row.select("th, td");
+    //         // Skip completely empty rows
+    //         if (cells.isEmpty()) {
+    //             continue;
+    //         }
+    //         // Initialize column count if not already done
+    //         if (expectedColumns == -1) {
+    //             expectedColumns = cells.size();
+    //         }
+    //         // Pad or trim to match expected column count
+    //         List<String> cellTexts = cells.stream().map(Element::text).toList();
+    //         int currentSize = cellTexts.size();
+    //         if (currentSize < expectedColumns) {
+    //             // Pad with empty strings
+    //             for (int i = currentSize; i < expectedColumns; i++) {
+    //                 cellTexts = new ArrayList<>(cellTexts); // make mutable
+    //                 cellTexts.add("");
+    //             }
+    //         } else if (currentSize > expectedColumns) {
+    //             cellTexts = cellTexts.subList(0, expectedColumns);
+    //         }
+    //         at.addRow(cellTexts.toArray());
+    //         at.addRule();
+    //     }
+    //     return "```\n" + at.render() + "\n```\n";
+    // }
+    private static boolean containsNestedTable(Element table) {
+        for (Element nested : table.select("table")) {
+            if (!nested.equals(table) && !nested.select("table").isEmpty()) {
+                return true; // nested table contains another table
+            }
+        }
+        return false;
     }
 
     private static void processCommand(String url, Page p) {
@@ -2644,7 +2853,13 @@ public class Alhena {
         if (finalURI.getRawQuery() != null) {
             fullPath += "?" + finalURI.getRawQuery();
         }
-        boolean isSSL = finalURI.getScheme().equals("https");
+        String scheme;
+        if (finalURI.getScheme() == null) {
+            scheme = prevURI.getScheme();
+        } else {
+            scheme = finalURI.getScheme();
+        }
+        boolean isSSL = scheme.equals("https");
         int port = finalURI.getPort() != -1 ? finalURI.getPort() : (isSSL ? 443 : 80);
         HttpClient httpClient = isSSL ? httpClient443 : httpClient80;
         if (httpClient == null) {
@@ -2662,7 +2877,15 @@ public class Alhena {
         p.frame().setBusy(true, cPage);
 
         httpClient.request(HttpMethod.GET, port, finalURI.getHost(), fullPath).onComplete(ar -> {
+            if (ar.failed()) {
+                bg(() -> {
+
+                    p.textPane.end(ar.cause().getMessage(), true, finalURL, true);
+                });
+                return;
+            }
             HttpClientRequest req = ar.result();
+            req.putHeader("User-Agent", "Mozilla/5.0 (compatible; Alhena/" + VERSION + "; +https://github.com/mochaman/alhena)");
             req.send().onComplete(ar2 -> {
                 if (ar2.succeeded()) {
                     HttpClientResponse resp = ar2.result();
@@ -2673,7 +2896,11 @@ public class Alhena {
 
                         String location = resp.getHeader("Location");
                         if (location != null) {
-                            handleHttp(location, prevURI, p, cPage, redirectCount + 1);
+                            URI redirectURI = URI.create(location);
+                            if (redirectURI.getScheme() == null) {
+                                redirectURI = prevURI.resolve(redirectURI);
+                            }
+                            handleHttp(redirectURI.toString(), prevURI, p, cPage, redirectCount + 1);
                         } else {
                             bg(() -> {
                                 p.textPane.end("redirect without location\n", true, finalURL, true);
