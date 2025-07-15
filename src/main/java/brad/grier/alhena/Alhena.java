@@ -97,9 +97,13 @@ import com.formdev.flatlaf.util.SystemInfo;
 import brad.grier.alhena.DB.CertInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
 import de.vandermeer.asciitable.AsciiTable;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
@@ -115,6 +119,7 @@ import io.vertx.core.net.JdkSSLEngineOptions;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
+import io.vertx.core.net.impl.NetSocketInternal;
 import io.vertx.core.spi.tls.SslContextFactory;
 import io.vertx.core.streams.Pump;
 
@@ -1191,6 +1196,22 @@ public class Alhena {
         }
         client.connect(port[0], host, connection -> {
             if (connection.succeeded()) {
+                NetSocket socket = connection.result();
+
+                NetSocketInternal socketInternal = (NetSocketInternal) socket;
+                Channel channel = socketInternal.channelHandlerContext().channel();
+
+                // the vger gemini server sends close_notify without immediately closing the connection
+                channel.pipeline().addAfter("ssl", "ssl-close-detector", new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof SslCloseCompletionEvent) {
+                            socket.close();
+                        }
+                        super.userEventTriggered(ctx, evt);
+                    }
+                });
+
                 SSLSession sslSession = connection.result().sslSession();
                 p.setConnectInfo(sslSession.getProtocol(), sslSession.getCipherSuite());
 
