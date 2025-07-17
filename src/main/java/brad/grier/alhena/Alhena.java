@@ -146,6 +146,7 @@ public class Alhena {
     private static String theme;
     public static String httpProxy;
     public static String gopherProxy;
+    public static String searchUrl;
     private static NetClient spartanClient = null;
     private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private static final int MODIFIER = (InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
@@ -204,7 +205,7 @@ public class Alhena {
                     URI uri = gf.visiblePage().textPane().getURI();
                     if (uri.getHost() != null && uri.getScheme() != null) {
                         URI rootURI = URI.create(uri.getScheme() + "://" + uri.getHost());
-                        gf.fetchURL(rootURI.toString());
+                        gf.fetchURL(rootURI.toString(), false);
                     }
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.ALT_DOWN_MASK)))) {
                     // titan edit
@@ -375,6 +376,7 @@ public class Alhena {
 
         httpProxy = DB.getPref("httpproxy", null);
         gopherProxy = DB.getPref("gopherproxy", null);
+        searchUrl = DB.getPref("searchurl", null);
 
         EventQueue.invokeLater(() -> {
             int contentP = Integer.parseInt(DB.getPref("contentwidth", "80"));
@@ -507,13 +509,13 @@ public class Alhena {
     }
 
     // only call from EDT
-    public static void processURL(String url, Page p, String redirectUrl, Page cPage) {
+    public static void processURL(String url, Page p, String redirectUrl, Page cPage, boolean userInput) {
 
         if (!EventQueue.isDispatchThread()) {
 
             String finalUrl = url;
             bg(() -> {
-                processURL(finalUrl, p, redirectUrl, cPage);
+                processURL(finalUrl, p, redirectUrl, cPage, userInput);
             });
             return;
         }
@@ -537,6 +539,10 @@ public class Alhena {
             if (url.length() == url.indexOf("//") + 2) {
                 return;
             }
+        }else if(userInput && searchUrl != null){
+            // submit to search engine
+            url = searchUrl + "?" + URLEncoder.encode(url);
+
         }
 
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
@@ -914,7 +920,7 @@ public class Alhena {
                                 String prt = port[0] == 300 ? "" : (":" + port[0]);
                                 // can redirect return full path?
                                 String redirect = "spartan://" + uri.getHost() + prt + redirectPath;
-                                processURL(redirect, p, origURL, cPage);
+                                processURL(redirect, p, origURL, cPage, false);
                             }
                             case '4', '5' -> {
                                 if (p.redirectCount > 0) {
@@ -1346,7 +1352,7 @@ public class Alhena {
                                         }
 
                                         p.setStart();
-                                        processURL(nUrl + "?" + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage);
+                                        processURL(nUrl + "?" + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage, false);
 
                                     } else {
                                         cPage.textPane.resetLastClicked();
@@ -1473,7 +1479,7 @@ public class Alhena {
                                 p.setTitanEdited(false);
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
                                 p.redirectCount++;
-                                processURL(redirectURI, p, origURL, cPage);
+                                processURL(redirectURI, p, origURL, cPage, false);
                             }
                             case '4', '5' -> {
                                 if (p.redirectCount > 0) {
@@ -1626,7 +1632,7 @@ public class Alhena {
                                             p.setDataFile((File) rsp);
                                         }
                                         p.setTitanToken(textEditor.getTokenParam());
-                                        processURL(uriString.substring(0, uriString.indexOf(";edit")), p, origURL, cPage);
+                                        processURL(uriString.substring(0, uriString.indexOf(";edit")), p, origURL, cPage, false);
 
                                     } else {
                                         p.frame().setBusy(false, cPage);
@@ -2015,7 +2021,7 @@ public class Alhena {
 
                 }
                 if (msg != null) { // from type 60
-                    processURL(reqURL, p, null, cPage);
+                    processURL(reqURL, p, null, cPage, false);
 
                     p.frame().setBusy(false, cPage);
 
@@ -2034,7 +2040,7 @@ public class Alhena {
                     p.frame().importPem(uri, null);
 
                 }
-                processURL(reqURL, p, null, cPage);
+                processURL(reqURL, p, null, cPage, false);
                 // if opening page in a new tab, need to set busy false on original page
                 if (p.getParent() instanceof JTabbedPane) {
 

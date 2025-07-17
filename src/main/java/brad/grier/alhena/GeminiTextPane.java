@@ -517,7 +517,7 @@ public class GeminiTextPane extends JTextPane {
                                     httpMenuItem.addActionListener(al -> {
 
                                         DB.insertPref("browser", String.valueOf(!useBrowser));
-                                        f.fetchURL(range.url);
+                                        f.fetchURL(range.url, false);
                                     });
 
                                     popupMenu.add(httpMenuItem);
@@ -1493,7 +1493,7 @@ public class GeminiTextPane extends JTextPane {
 
                             } else {
                                 f.addClickedLink(finalUrl);
-                                f.fetchURL(finalUrl);
+                                f.fetchURL(finalUrl, false);
                             }
 
                         });
@@ -1564,11 +1564,11 @@ public class GeminiTextPane extends JTextPane {
                                 if (result instanceof String string) {
                                     if (!string.isBlank()) {
                                         f.addClickedLink(finalUrl);
-                                        f.fetchURL(finalUrl + "?" + URLEncoder.encode(string).replace("+", "%20"));
+                                        f.fetchURL(finalUrl + "?" + URLEncoder.encode(string).replace("+", "%20"), false);
                                     }
                                 } else {
                                     f.addClickedLink(finalUrl);
-                                    f.fetchURL(finalUrl, (File) result);
+                                    f.fetchURL(finalUrl, (File) result, false);
                                 }
                             }
 
@@ -1593,7 +1593,7 @@ public class GeminiTextPane extends JTextPane {
 
                         } else {
                             f.addClickedLink(finalUrl);
-                            f.fetchURL(finalUrl);
+                            f.fetchURL(finalUrl, false);
                         }
 
                     });

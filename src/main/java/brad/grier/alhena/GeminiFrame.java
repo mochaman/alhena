@@ -372,7 +372,7 @@ public final class GeminiFrame extends JFrame {
 
                     } else {
 
-                        fetchURL(cbUrl);
+                        fetchURL(cbUrl, true);
                     }
                 }
             }
@@ -491,7 +491,7 @@ public final class GeminiFrame extends JFrame {
             if (GeminiFrame.CUSTOM_LABELS.contains(homePage)) {
                 showCustomPage(homePage, null);
             } else {
-                fetchURL(homePage);
+                fetchURL(homePage, false);
             }
         });
         homeButton.setFont(buttonFont);
@@ -640,7 +640,7 @@ public final class GeminiFrame extends JFrame {
                         encFile.deleteOnExit();
 
                         String titanUrl = "titan://" + SYNC_SERVER + "/sync;token=alhenasync;mime=application/octet-stream;size=" + encFile.length() + "?hash=" + hash;
-                        fetchURL(titanUrl, encFile);
+                        fetchURL(titanUrl, encFile, false);
 
                     } catch (Exception ex) {
                         Util.infoDialog(GeminiFrame.this, "Error", "Sync failed.\n" + ex.getMessage());
@@ -655,7 +655,7 @@ public final class GeminiFrame extends JFrame {
             try {
                 File file = File.createTempFile("alhenadb", ".enc");
 
-                fetchURL("gemini://" + SYNC_SERVER + "/sync/", file);
+                fetchURL("gemini://" + SYNC_SERVER + "/sync/", file, false);
                 file.deleteOnExit();
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -738,24 +738,24 @@ public final class GeminiFrame extends JFrame {
             File file = Util.copyFromJar(homeDir);
             URI fileUri = file.toURI();
 
-            fetchURL(fileUri.toString());
+            fetchURL(fileUri.toString(), false);
 
         }));
 
         aboutMenu.add(createMenuItem("Changes", null, () -> {
-            fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi");
+            fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi", false);
         }));
 
         aboutMenu.add(createMenuItem("FAQ", null, () -> {
-            fetchURL("gemini://ultimatumlabs.com/alhenafaq.gmi");
+            fetchURL("gemini://ultimatumlabs.com/alhenafaq.gmi", false);
         }));
 
         aboutMenu.add(createMenuItem("Details", null, () -> {
-            fetchURL("alhena:info");
+            fetchURL("alhena:info", false);
         }));
 
         aboutMenu.add(createMenuItem("Commands", null, () -> {
-            fetchURL("alhena:");
+            fetchURL("alhena:", false);
         }));
 
         menuBar.add(aboutMenu);
@@ -991,6 +991,23 @@ public final class GeminiFrame extends JFrame {
         });
         settingsMenu.add(gopherItem);
 
+        settingsMenu.add(new JSeparator());
+        JMenuItem searchItem = new JMenuItem("Search URL");
+        searchItem.addActionListener(ae -> {
+
+            String sUrl = Util.inputDialog(GeminiFrame.this, "Search URL", "Enter search URL.",
+                    false, Alhena.searchUrl == null ? "" : Alhena.searchUrl, null);
+            if (sUrl != null) {
+                if (sUrl.isBlank()) {
+                    Alhena.searchUrl = null;
+                } else {
+                    Alhena.searchUrl = sUrl;
+                }
+                DB.insertPref("searchurl", Alhena.searchUrl);
+            }
+        });
+        settingsMenu.add(searchItem);
+
     }
 
     public void editPage() {
@@ -1000,7 +1017,7 @@ public final class GeminiFrame extends JFrame {
             String port = uri.getPort() != -1 ? ":" + uri.getPort() : "";
             String query = uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery();
             String editUrl = "titan://" + uri.getHost() + port + uri.getPath() + ";edit" + query;
-            fetchURL(editUrl);
+            fetchURL(editUrl, false);
         }
     }
 
@@ -1167,7 +1184,7 @@ public final class GeminiFrame extends JFrame {
         if (CUSTOM_LABELS.contains(url) && !url.equals(INFO_LABEL)) {
             showCustomPage(url, true, null);
         } else {
-            Alhena.processURL(url, page, null, page);
+            Alhena.processURL(url, page, null, page, false);
         }
     }
 
@@ -1263,7 +1280,7 @@ public final class GeminiFrame extends JFrame {
 
                     r = () -> showCustomPage(bm.url(), null); // DO NOT LET INFO PAGE GET BOOKMARKED!!!
                 } else {
-                    r = () -> fetchURL(bm.url());
+                    r = () -> fetchURL(bm.url(), false);
                 }
                 if (bm.folder().equals("ROOT")) {
 
@@ -1290,11 +1307,11 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    public void fetchURL(String url) {
-        fetchURL(url, null);
+    public void fetchURL(String url, boolean searchInput) {
+        fetchURL(url, null, searchInput);
     }
 
-    public void fetchURL(String url, File dataFile) {
+    public void fetchURL(String url, File dataFile, boolean searchInput) {
         if (CUSTOM_LABELS.contains(url)) {
             return;
         }
@@ -1335,7 +1352,7 @@ public final class GeminiFrame extends JFrame {
                 };
                 pb.runWhenLoading(r);
                 pb.setDataFile(dataFile);
-                Alhena.processURL(url, pb, null, currentPB);
+                Alhena.processURL(url, pb, null, currentPB, searchInput);
 
             } else {
                 int currentTabIdx = tabbedPane.getSelectedIndex();
@@ -1381,13 +1398,13 @@ public final class GeminiFrame extends JFrame {
                 };
                 pb.runWhenLoading(r);
                 pb.setDataFile(dataFile);
-                Alhena.processURL(url, pb, null, currentPB);
+                Alhena.processURL(url, pb, null, currentPB, searchInput);
             }
         } else {
             Page nPage = addPageToHistory(null, currentPB, true);
             nPage.setDataFile(dataFile);
             nPage.runWhenLoading(() -> nPage.setDataFile(null));
-            Alhena.processURL(url, nPage, null, currentPB);
+            Alhena.processURL(url, nPage, null, currentPB, searchInput);
 
         }
     }
@@ -1415,7 +1432,7 @@ public final class GeminiFrame extends JFrame {
                 case GeminiTextPane.DEFAULT_MODE -> {
                     if (!cURL.isEmpty()) {
                         visiblePage.setStart();
-                        Alhena.processURL(cURL, visiblePage, null, visiblePage);
+                        Alhena.processURL(cURL, visiblePage, null, visiblePage, false);
                     }
                 }
                 default -> {
@@ -2104,7 +2121,7 @@ public final class GeminiFrame extends JFrame {
         if (file != null && file.exists()) {
             try {
                 URI fileUri = file.toURI();
-                fetchURL(fileUri.toString());
+                fetchURL(fileUri.toString(), false);
 
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -2302,7 +2319,7 @@ public final class GeminiFrame extends JFrame {
 
         tabbedPane.setSelectedComponent(pb);
 
-        Alhena.processURL(url, pb, null, currentPage);
+        Alhena.processURL(url, pb, null, currentPage, false);
         currentPage.setBusy(false);
 
     }
