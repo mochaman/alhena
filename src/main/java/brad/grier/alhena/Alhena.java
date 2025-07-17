@@ -541,7 +541,7 @@ public class Alhena {
             }
         }else if(userInput && searchUrl != null){
             // submit to search engine
-            url = searchUrl + "?" + URLEncoder.encode(url);
+            url = searchUrl + "?" + URLEncoder.encode(url).replace("+", "%20");
 
         }
 
