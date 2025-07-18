@@ -329,6 +329,19 @@ public class DB {
         return bookmarkList;
     }
 
+    public static List<Bookmark> loadTopBookmarks() throws SQLException {
+        ArrayList<Bookmark> bookmarkList = new ArrayList<>();
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+
+            try (ResultSet rs = st.executeQuery("select b.id, b.url, b.label, b.folder, count(h.url) as visit_count from bookmarks b join history h on b.url = h.url group by b.id, b.url, b.label, b.folder order by visit_count desc limit 20")) {
+                while (rs.next()) {
+                    bookmarkList.add(new Bookmark(rs.getString(3), rs.getString(2), rs.getString(4), rs.getInt(1)));
+                }
+            }
+        }
+        return bookmarkList;
+    }
+
     public static List<DBClientCertInfo> loadCerts() throws SQLException {
         ArrayList<DBClientCertInfo> certList = new ArrayList<>();
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {

@@ -520,6 +520,28 @@ public final class GeminiFrame extends JFrame {
 
         navPanel.add(comboBox, gridBagConstraints);
 
+        
+        Supplier<List<JMenuItem>> dynamicMenuSupplier = () -> {
+            List<JMenuItem> items = new ArrayList<>();
+            try {
+                List<Bookmark> mList = DB.loadTopBookmarks();
+
+                mList.stream().forEach(bmark ->{
+                    JMenuItem mi = new JMenuItem(bmark.label());
+                    mi.addActionListener(e ->{fetchURL(bmark.url(), false);});
+                    items.add(mi);
+                });
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+
+            return items;
+        };
+        PopupMenuButton hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, "No History");
+        hotButton.setToolTipText("Display top bookmarks");
+        hotButton.setFont(buttonFont);
+
+        navPanel.add(hotButton, c);
         navPanel.add(homeButton, c);
 
         GridBagConstraints c1 = new java.awt.GridBagConstraints();
