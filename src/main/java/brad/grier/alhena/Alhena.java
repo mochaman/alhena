@@ -25,7 +25,6 @@ import java.math.BigInteger;
 import java.net.IDN;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -135,7 +134,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.1.8";
+    public final static String VERSION = "5.1.9";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp");
@@ -158,6 +157,7 @@ public class Alhena {
             "gemini://", "file://", "spartan://", "nex://",
             "https://", "http://", "titan://"
     );
+    public static boolean sDown;
 
     public static void main(String[] args) throws Exception {
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -173,6 +173,7 @@ public class Alhena {
                 if (gf.getGlassPane() instanceof LinkGlassPane) {
                     gf.getGlassPane().setVisible(false);
                 }
+                sDown = false;
                 return false;
             } else if (e.getID() == KeyEvent.KEY_PRESSED) {
 
@@ -223,8 +224,7 @@ public class Alhena {
                         e.consume();
                         return true;
                     }
-                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0))) {
-                    gf.findAgain();
+
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_L, MOD))) {
                     gf.focusOnAddressBar();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, MOD))) {
@@ -233,7 +233,8 @@ public class Alhena {
                     gf.forwardButton.doClick();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_R, MOD))) {
                     gf.refreshButton.doClick();
-
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0))) {
+                    sDown = true;
                 } else {
 
                     if ((e.getModifiersEx() & MODIFIER) == MODIFIER) {
@@ -382,6 +383,9 @@ public class Alhena {
             int contentP = Integer.parseInt(DB.getPref("contentwidth", "80"));
             GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
             GeminiTextPane.wrapPF = DB.getPref("linewrappf", "false").equals("true");
+            GeminiTextPane.embedPF = DB.getPref("embedpf", "true").equals("true");
+            GeminiTextPane.showSB = DB.getPref("showsb", "false").equals("true");
+            GeminiTextPane.shadePF = DB.getPref("shadepf", "false").equals("true");
 
             theme = DB.getPref("theme", null);
             if (theme != null) {
@@ -539,9 +543,9 @@ public class Alhena {
             if (url.length() == url.indexOf("//") + 2) {
                 return;
             }
-        }else if(userInput && searchUrl != null){
+        } else if (userInput && searchUrl != null) {
             // submit to search engine
-            url = searchUrl + "?" + URLEncoder.encode(url).replace("+", "%20");
+            url = searchUrl + "?" + Util.uEncode(url);
 
         }
 
@@ -1352,7 +1356,7 @@ public class Alhena {
                                         }
 
                                         p.setStart();
-                                        processURL(nUrl + "?" + URLEncoder.encode(input).replace("+", "%20"), p, null, cPage, false);
+                                        processURL(nUrl + "?" + Util.uEncode(input), p, null, cPage, false);
 
                                     } else {
                                         cPage.textPane.resetLastClicked();
