@@ -933,19 +933,19 @@ public final class GeminiFrame extends JFrame {
             slider.setPaintLabels(true);
 
             slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
-            JCheckBox lineWrapCB = new JCheckBox("Line wrap preformatted text");
-            lineWrapCB.setToolTipText("Non-standard. Not recommended.");
+            JCheckBox lineWrapCB = new JCheckBox("Line wrap pre-formatted text");
+            // lineWrapCB.setToolTipText("Non-standard.");
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
 
-            JCheckBox showsbCB = new JCheckBox("Show horizontal scrollbar");
-            showsbCB.setToolTipText("Display scrollbar when using scrollable preformatted text.");
+            JCheckBox showsbCB = new JCheckBox("Show horizontal scrollbar for pre-formatted text");
+            // showsbCB.setToolTipText("Display scrollbar when using scrollable pre-formatted text.");
             showsbCB.setSelected(GeminiTextPane.showSB);
 
-            JCheckBox shadeCB = new JCheckBox("Shade pre-formatted text");
+            JCheckBox shadeCB = new JCheckBox("Shade pre-formatted text background");
             shadeCB.setSelected(GeminiTextPane.shadePF);
             
-            JCheckBox embedPFCB = new JCheckBox("Scrollable preformatted text");
-            embedPFCB.setToolTipText("If enabled, hold down 's' to horizontally sroll preformatted text.\nDisabling (legacy) can affect where gemtext wraps.");
+            JCheckBox embedPFCB = new JCheckBox("Scrollable pre-formatted text");
+            // embedPFCB.setToolTipText("If enabled, hold down 's' to horizontally sroll pre-formatted text.\nDisabling (legacy) can affect where gemtext wraps.");
             embedPFCB.setSelected(GeminiTextPane.embedPF);
             embedPFCB.addActionListener(e -> {
                 boolean selected = embedPFCB.isSelected();
