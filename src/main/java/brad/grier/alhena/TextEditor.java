@@ -5,7 +5,6 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.io.File;
-import java.net.URLEncoder;
 
 import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
@@ -81,7 +80,7 @@ public class TextEditor extends JPanel {
     public String getTokenParam() {
         String token = tokenField.getText().isBlank() ? null : tokenField.getText();
         if (token != null) {
-            return ";token=" + URLEncoder.encode(token).replace("+", "%20");
+            return ";token=" + Util.uEncode(token);
         } else {
             return "";
         }
