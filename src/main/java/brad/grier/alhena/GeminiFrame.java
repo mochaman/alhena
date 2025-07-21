@@ -520,15 +520,16 @@ public final class GeminiFrame extends JFrame {
 
         navPanel.add(comboBox, gridBagConstraints);
 
-        
         Supplier<List<JMenuItem>> dynamicMenuSupplier = () -> {
             List<JMenuItem> items = new ArrayList<>();
             try {
                 List<Bookmark> mList = DB.loadTopBookmarks();
 
-                mList.stream().forEach(bmark ->{
+                mList.stream().forEach(bmark -> {
                     JMenuItem mi = new JMenuItem(bmark.label());
-                    mi.addActionListener(e ->{fetchURL(bmark.url(), false);});
+                    mi.addActionListener(e -> {
+                        fetchURL(bmark.url(), false);
+                    });
                     items.add(mi);
                 });
             } catch (SQLException ex) {
@@ -727,12 +728,13 @@ public final class GeminiFrame extends JFrame {
         viewMenu.add(new JSeparator());
 
         viewMenu.add(createMenuItem("Find", KeyStroke.getKeyStroke(KeyEvent.VK_F, mod), () -> {
-            String input = Util.inputDialog(this, "Find In Page", "Enter search term", false, lastSearch, null);
+
+            String input = Util.inputDialog(this, "Find In Page", "Enter search term", false, "", null);
             if (input != null) {
+                visiblePage().textPane.resetSearch();
                 lastSearch = input;
-                if (!visiblePage().textPane.find(input)) {
-                    lastSearch = null;
-                }
+                visiblePage().textPane.find(input);
+
             }
         }));
 
@@ -796,9 +798,8 @@ public final class GeminiFrame extends JFrame {
         if (lastSearch == null) {
             return;
         }
-        if (!visiblePage().textPane.find(lastSearch)) {
-            lastSearch = null;
-        }
+        visiblePage().textPane.find(lastSearch);
+
     }
 
     private void addWindowsMenu() {
@@ -933,8 +934,29 @@ public final class GeminiFrame extends JFrame {
 
             slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
             JCheckBox lineWrapCB = new JCheckBox("Line wrap preformatted text");
+            lineWrapCB.setToolTipText("Non-standard. Not recommended.");
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
-            Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB};
+
+            JCheckBox showsbCB = new JCheckBox("Show horizontal scrollbar");
+            showsbCB.setToolTipText("Display scrollbar when using scrollable preformatted text.");
+            showsbCB.setSelected(GeminiTextPane.showSB);
+
+            JCheckBox shadeCB = new JCheckBox("Shade pre-formatted text");
+            shadeCB.setSelected(GeminiTextPane.shadePF);
+            
+            JCheckBox embedPFCB = new JCheckBox("Scrollable preformatted text");
+            embedPFCB.setToolTipText("If enabled, hold down 's' to horizontally sroll preformatted text.\nDisabling (legacy) can affect where gemtext wraps.");
+            embedPFCB.setSelected(GeminiTextPane.embedPF);
+            embedPFCB.addActionListener(e -> {
+                boolean selected = embedPFCB.isSelected();
+                showsbCB.setEnabled(selected);
+                shadeCB.setEnabled(selected);
+            });
+
+            showsbCB.setEnabled(embedPFCB.isSelected());
+            shadeCB.setEnabled(embedPFCB.isSelected());
+
+            Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB, embedPFCB, showsbCB, shadeCB};
             Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null);
 
             if (res != null) {
@@ -942,6 +964,12 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("linewrappf", String.valueOf(GeminiTextPane.wrapPF));
                 GeminiTextPane.contentPercentage = (float) slider.getValue() / 100f;
                 DB.insertPref("contentwidth", String.valueOf(slider.getValue()));
+                GeminiTextPane.embedPF = embedPFCB.isSelected();
+                DB.insertPref("embedpf", String.valueOf(GeminiTextPane.embedPF));
+                GeminiTextPane.showSB = showsbCB.isSelected();
+                DB.insertPref("showsb", String.valueOf(GeminiTextPane.showSB));
+                GeminiTextPane.shadePF = shadeCB.isSelected();
+                DB.insertPref("shadepf", String.valueOf(GeminiTextPane.shadePF));
                 Alhena.updateFrames(false, false);
             }
 
