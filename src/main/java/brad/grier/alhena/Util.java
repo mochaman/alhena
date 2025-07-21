@@ -33,6 +33,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.StandardCharsets;
@@ -945,6 +946,10 @@ public class Util {
         }
 
         return null; 
+    }
+
+    public static String uEncode(String s){
+        return URLEncoder.encode(s).replace("+", "%20");
     }
 
     // public static boolean isMonospaced(Font font) {
