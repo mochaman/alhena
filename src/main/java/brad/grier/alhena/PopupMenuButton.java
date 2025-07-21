@@ -38,7 +38,7 @@ public class PopupMenuButton extends JButton {
                         public void popupMenuWillBecomeVisible(PopupMenuEvent pme) {
 
                             List<JMenuItem> mList = menuItemSupplier.get();
-                            if(mList.isEmpty()){
+                            if (mList.isEmpty()) {
                                 popupMenu.add(new JMenuItem(emptyMessage));
                             }
                             for (JMenuItem item : mList) {
@@ -53,7 +53,6 @@ public class PopupMenuButton extends JButton {
                             EventQueue.invokeLater(() -> {
                                 addMouseListener(ma);
                             });
-
                         }
 
                         @Override
@@ -69,6 +68,18 @@ public class PopupMenuButton extends JButton {
         };
         // mouse listener instead of action listener to avoid double-triggering
         addMouseListener(ma);
+        addActionListener(e -> {
 
+            JPopupMenu popupMenu = new JPopupMenu();
+            List<JMenuItem> mList = menuItemSupplier.get();
+            if (mList.isEmpty()) {
+                popupMenu.add(new JMenuItem(emptyMessage));
+            }
+            for (JMenuItem item : mList) {
+                popupMenu.add(item);
+            }
+            popupMenu.show(PopupMenuButton.this, 0, getHeight());
+
+        });
     }
 }
