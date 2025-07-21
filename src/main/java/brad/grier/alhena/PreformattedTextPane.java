@@ -122,15 +122,18 @@ public class PreformattedTextPane extends JTextPane {
             }
         }
     }
-
+    
+    private boolean hasAnsi;
     private void addStyledText(String text, String styleName) {
 
         Style style = doc.getStyle(styleName);
-        boolean ansi = text.indexOf(27) >= 0;
+        if (!hasAnsi) {
+            hasAnsi = text.indexOf(27) >= 0;
+        }
 
         int start = doc.getLength();
 
-        if (!(ansi && styleName.equals("```")) && EmojiManager.containsAnyEmoji(text)) {
+        if (!(hasAnsi && styleName.equals("```")) && EmojiManager.containsAnyEmoji(text)) {
 
             String fontFamily = StyleConstants.getFontFamily(style);
             int fontSize = StyleConstants.getFontSize(style);
@@ -170,7 +173,7 @@ public class PreformattedTextPane extends JTextPane {
 
                             i = emoji.getEndCharIndex() + 1;
 
-                            insertString(doc.getLength(), new String(chars), style, ansi);
+                            insertString(doc.getLength(), new String(chars), style);
 
                         } else {
                             // single char emoji followed by unneccessary variation selector
@@ -198,19 +201,19 @@ public class PreformattedTextPane extends JTextPane {
 
                         StyleConstants.setFontFamily(style, emojiProportional);
 
-                        insertString(doc.getLength(), new String(chars), style, ansi);
+                        insertString(doc.getLength(), new String(chars), style);
                     }
                 } else {
 
                     StyleConstants.setFontFamily(style, fontFamily);
 
-                    insertString(doc.getLength(), String.valueOf(text.charAt(i)), style, ansi);
+                    insertString(doc.getLength(), String.valueOf(text.charAt(i)), style);
 
                 }
             }
             StyleConstants.setFontFamily(style, fontFamily);
         } else {
-            insertString(start, text, style, ansi);
+            insertString(start, text, style);
         }
 
         int caretPosition = getCaretPosition();
@@ -224,9 +227,9 @@ public class PreformattedTextPane extends JTextPane {
 
     }
 
-    private void insertString(int length, String txt, Style style, boolean ansi) {
+    private void insertString(int length, String txt, Style style) {
         try {
-            if (ansi) {
+            if (hasAnsi) {
                 handleAnsi(txt);
             } else {
                 doc.insertString(length, txt, style);
@@ -399,8 +402,8 @@ public class PreformattedTextPane extends JTextPane {
                 case "[1m" -> {
                     StyleConstants.setBold(bStyle, true);
                 }
-                //default ->
-                //System.out.println("unknown: " + txt);
+                // default ->
+                //     System.out.println("unknown: " + txt);
             }
 
             try {
