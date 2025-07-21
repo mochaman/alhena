@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -21,6 +22,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -32,7 +34,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -44,10 +45,10 @@ import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.InputMap;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
@@ -97,7 +98,7 @@ public class GeminiTextPane extends JTextPane {
     private int currentCursor = Cursor.DEFAULT_CURSOR;
     private boolean preformattedMode;
     private String currentStatus = Alhena.WELCOME_MESSAGE;
-    private static String monospacedFamily;
+    public static String monospacedFamily;
     private final GeminiFrame f;
     // use StringBuilder instead of StringBuffer as only updated in EventDispatch at creation
     private StringBuilder pageBuffer;
@@ -120,28 +121,31 @@ public class GeminiTextPane extends JTextPane {
     private boolean plainTextMode;
     private String lastSearch;
     private int lastSearchIdx;
+    int lastSearchDoc = -1;
     private final int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private boolean imageOnly;
     private JScrollPane scrollPane;
-    
+
     // REMOVE AUTOSCROLL - INTERFERING WITH TEXT SELECTION
     // private static final int INITIAL_SCROLL_SPEED = 1;
     // private static final int MAX_SCROLL_SPEED = 50;
     // private static final int INITIAL_DELAY = 100;
     // private static final int MIN_DELAY = 30;
     // private static final int EDGE_MARGIN = 50;
-
     // private Timer pressTimer;
     // private int scrollDirection = 0;
     // private int holdTime = 0;
     private final Page page;
 
     //private static final ConcurrentHashMap<String, Point> emojiSheetMap = new ConcurrentHashMap<>();
-    private static final HashMap<String, Point> emojiSheetMap = new HashMap<>();
-    private static BufferedImage sheetImage = null;
+    public static final HashMap<String, Point> emojiSheetMap = new HashMap<>();
+    public static BufferedImage sheetImage = null;
     public static int indent;
     public static float contentPercentage = .80f;
     public static boolean wrapPF;
+    public static boolean embedPF;
+    public static boolean showSB;
+    public static boolean shadePF;
 
     static {
         String userDefined = System.getenv("ALHENA_MONOFONT");
@@ -235,6 +239,9 @@ public class GeminiTextPane extends JTextPane {
         this.f = f;
         this.page = page;
         docURL = url;
+        setFocusTraversalPolicy(
+                new ClassFocusTraversalPolicy(PreformattedTextPane.class)
+        );
 
         Insets insets = getMargin();
         setMargin(new Insets(35, insets.left, insets.bottom, insets.right));
@@ -306,7 +313,6 @@ public class GeminiTextPane extends JTextPane {
             //         checkScroll(e, scrollPane);
             //     }
             // }
-
             @Override
             public void mouseMoved(MouseEvent e) {
 
@@ -382,12 +388,10 @@ public class GeminiTextPane extends JTextPane {
             //         checkScroll(e, scrollPane);
             //     }
             // }
-
             // @Override
             // public void mouseReleased(MouseEvent e) {
             //     stopScrolling();
             // }
-
             @Override
             public void mouseClicked(MouseEvent e) {
 
@@ -585,7 +589,7 @@ public class GeminiTextPane extends JTextPane {
                             } else {
 
                                 if (range.imageIndex != -1) {
-                                    removeImageAtIndex(range);
+                                    removeItemAtIndex(range);
                                     range.imageIndex = -1;
 
                                 } else {
@@ -736,7 +740,7 @@ public class GeminiTextPane extends JTextPane {
         return currentMode;
     }
 
-    private void removeImageAtIndex(ClickableRange rg) {
+    private void removeItemAtIndex(ClickableRange rg) {
 
         int index = rg.imageIndex;
         try {
@@ -814,15 +818,21 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    public void insertMediaPlayer(String path, String mime) {
-        inserting = true;
-        Alhena.pauseMedia();
-        MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
-
-        playerList.add(ap);
-
+    private void insertComp(Component c, int pos) {
         SimpleAttributeSet apStyle = new SimpleAttributeSet();
-        StyleConstants.setComponent(apStyle, (JPanel) ap);
+        StyleConstants.setComponent(apStyle, c);
+
+        try {
+            doc.insertString(pos, " ", apStyle);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void insertComp(Component c) {
+        SimpleAttributeSet apStyle = new SimpleAttributeSet();
+        StyleConstants.setComponent(apStyle, c);
 
         try {
             if (lastClicked == null) {
@@ -851,12 +861,22 @@ public class GeminiTextPane extends JTextPane {
                 lastClicked = null;
             }
 
-            ap.start(path);
-
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    public void insertMediaPlayer(String path, String mime) {
+        inserting = true;
+        Alhena.pauseMedia();
+        MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
+
+        playerList.add(ap);
+
+        insertComp((Component) ap);
+        ap.start(path);
         f.setBusy(false, page);
+
     }
 
     public void insertImage(byte[] imageBytes) {
@@ -935,35 +955,101 @@ public class GeminiTextPane extends JTextPane {
         return null;
     }
 
-    public boolean find(String word) {
+    public void resetSearch() {
+        lastSearch = null;
+        lastSearchIdx = 0;
+        lastSearchDoc = -1;
+    }
+
+    public void find(String word) {
         boolean found = false;
         try {
-            requestFocus();
+            int pos = -1;
             int startIdx = word.equals(lastSearch) ? lastSearchIdx : 0;
-            lastSearch = word;
+            if (lastSearchDoc == -1) {
 
-            String text = doc.getText(0, doc.getLength());
+                lastSearch = word;
 
-            int pos = text.indexOf(word, startIdx);
+                String text = doc.getText(0, doc.getLength()).toLowerCase();
+
+                pos = text.indexOf(word.toLowerCase(), startIdx);
+            }
             if (pos >= 0) {
-                // select the word
-                setCaretPosition(pos);
-                moveCaretPosition(pos + word.length());
-                lastSearchIdx = pos + word.length();
+                int finalPos = pos;
+
+                requestFocusInWindow();
+                setCaretPosition(finalPos);
+                moveCaretPosition(finalPos + word.length());
+                lastSearchIdx = finalPos + word.length();
+
                 // scroll to the position
                 Rectangle viewRect = modelToView2D(pos).getBounds();
                 scrollRectToVisible(viewRect);
                 found = true;
             } else {
+                if (embedPF) {
 
-                f.setStatus("'" + word + "' Not Found");
+                    int start = lastSearchDoc;
+                    if (lastSearchDoc == -1) {
+                        startIdx = 0;
+                        start = 0;
+                    }
 
+                    for (int i = start; i < ptpList.size(); i++) {
+                        PreformattedTextPane textPane = ptpList.get(i);
+                        String content = textPane.getText();
+                        int foundIndex = content.toLowerCase().indexOf(word.toLowerCase(), startIdx);
+
+                        if (foundIndex != -1) {
+                            setCaretPosition(getCaretPosition());
+                            lastSearchDoc = i;
+                            lastSearchIdx = foundIndex + word.length();
+                            //textPane.requestFocus();
+                            //textPane.setFocusable(true);
+                            textPane.requestFocusInWindow();
+                            textPane.setCaretPosition(foundIndex);
+                            textPane.moveCaretPosition(foundIndex + word.length());
+
+                            scrollToText(textPane, foundIndex);
+
+                            found = true;
+
+                            break;
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
 
         }
-        return found;
+        if (!found) {
+            lastSearchDoc = -1;
+            lastSearchIdx = 0;
+            find(word);
+        }
+    }
+
+    public void scrollToText(JTextPane embeddedTextPane, int foundPosition) {
+        try {
+
+            Rectangle textRect = embeddedTextPane.modelToView(foundPosition);
+
+            Rectangle scrollRect = SwingUtilities.convertRectangle(
+                    embeddedTextPane,
+                    textRect,
+                    scrollPane.getViewport().getView()
+            );
+
+            scrollRect.grow(20, 20);
+
+            EventQueue.invokeLater(() -> { // need this so document scrolls in all situations
+                scrollRectToVisible(scrollRect);
+            });
+
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
     }
 
     public void end() {
@@ -975,7 +1061,7 @@ public class GeminiTextPane extends JTextPane {
         if (bufferedLine != null) {
             String lrl = bufferedLine;
             bufferedLine = null;
-            processLine(lrl, false);
+            processLine(lrl);
         }
 
         JTabbedPane tabbedPane = page.frame().tabbedPane;
@@ -1008,8 +1094,9 @@ public class GeminiTextPane extends JTextPane {
         if (pageBuffer != null) {
             pageBuffer.trimToSize();
         }
-
-        scanForAnsi();
+        if (!embedPF) {
+            scanForAnsi();
+        }
         bStyle = null;
         foregroundHandling = false;
         //defPP = null;
@@ -1224,8 +1311,8 @@ public class GeminiTextPane extends JTextPane {
                 case "[1m" -> {
                     StyleConstants.setBold(bStyle, true);
                 }
-                default ->
-                    System.out.println("unknown: " + txt);
+                //default ->
+                //System.out.println("unknown: " + txt);
             }
 
             try {
@@ -1296,6 +1383,7 @@ public class GeminiTextPane extends JTextPane {
 
         setStyledDocument(doc);
         buildStyles();
+        ptpList = new ArrayList<>();
         //defPP = new SimpleAttributeSet();
 
         applyCenteredParagraphStyle();
@@ -1344,7 +1432,7 @@ public class GeminiTextPane extends JTextPane {
         }
         if (geminiDoc.endsWith("\n")) {
 
-            geminiDoc.lines().forEach(line -> processLine(line, false)); // no way to know if a line is the last line
+            geminiDoc.lines().forEach(line -> processLine(line)); // no way to know if a line is the last line
 
         } else {
             int lastNl = geminiDoc.lastIndexOf("\n");
@@ -1354,7 +1442,7 @@ public class GeminiTextPane extends JTextPane {
             } else {
                 bufferedLine = geminiDoc.substring(lastNl + 1);
                 geminiDoc.substring(0, lastNl + 1).lines().forEach(line -> {
-                    processLine(line, false); // no way to know if a line is the last line
+                    processLine(line); // no way to know if a line is the last line
                 });
             }
 
@@ -1455,7 +1543,18 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    private void processLine(String line, boolean lastLine) {
+    private PreformattedTextPane ptp;
+    //private boolean ptpEmpty;
+
+    private boolean checkScrollingNeeded(JScrollPane sp) {
+        JViewport viewport = sp.getViewport();
+        Dimension viewSize = viewport.getViewSize();
+
+        return viewSize.getWidth() > contentWidth;
+    }
+
+    private void processLine(String line) {
+
         if (page.isNex() && docURL.endsWith("/")) {
 
             if (line.startsWith("=>")) {
@@ -1474,7 +1573,7 @@ public class GeminiTextPane extends JTextPane {
 
                 String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
 
-                ClickableRange cr = addStyledText(lastLine, label.isEmpty() ? url : label, linkStyle,
+                ClickableRange cr = addStyledText(label.isEmpty() ? url : label, linkStyle,
                         () -> {
                             String useB = DB.getPref("browser", null);
                             boolean useBrowser = useB == null ? true : useB.equals("true");
@@ -1500,7 +1599,7 @@ public class GeminiTextPane extends JTextPane {
                 cr.url = url;
 
             } else {
-                addStyledText(lastLine, line, "```", null);
+                addStyledText(line, "```", null);
             }
             return;
         }
@@ -1510,20 +1609,41 @@ public class GeminiTextPane extends JTextPane {
             if (!preformattedMode) {
                 foregroundHandling = false;
                 bStyle = null;
-            }
+                if (ptp != null) {
 
-            addStyledText(lastLine, "\n", "```", null);
+                    ptp.end();
+                    //if (!showSB) {
+                    ptp.removeLastChar();
+                    //}
+                    ptp = null;
+                }
+
+            }
+            if (embedPF && preformattedMode) {
+
+                addStyledText("\n", "```", null);
+                ptp = (PreformattedTextPane) createTextComponent();
+                //ptpEmpty = true;
+
+            } else {
+
+                addStyledText("\n", "```", null);
+            }
         } else if (preformattedMode) {
             if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) && line.startsWith("=>")) {
                 line = "=> " + line.substring(line.indexOf(":") + 1);
             }
-            addStyledText(lastLine, line, "```", null);
+            if (ptp != null) {
+                ptp.addText(line + "\n");
+            } else {
+                addStyledText(line, "```", null);
+            }
         } else if (line.startsWith("###")) {
-            addStyledText(lastLine, line.substring(3).trim(), "###", null);
+            addStyledText(line.substring(3).trim(), "###", null);
         } else if (line.startsWith("##")) {
-            addStyledText(lastLine, line.substring(2).trim(), "##", null);
+            addStyledText(line.substring(2).trim(), "##", null);
         } else if (line.startsWith("#")) {
-            addStyledText(lastLine, line.substring(1).trim(), "#", null);
+            addStyledText(line.substring(1).trim(), "#", null);
         } else if (line.startsWith("=>") || (line.startsWith("=: ") && page.isSpartan())) {
             String ll = line.substring(2).trim();
             boolean spartanLink = line.startsWith("=: ");
@@ -1549,7 +1669,7 @@ public class GeminiTextPane extends JTextPane {
 
             String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
 
-            ClickableRange cr = addStyledText(lastLine, label.isEmpty() ? url : label, linkStyle,
+            ClickableRange cr = addStyledText(label.isEmpty() ? url.replace("/", "/\u200B") : label, linkStyle,
                     () -> {
                         String useB = DB.getPref("browser", null);
                         boolean useBrowser = useB == null ? true : useB.equals("true");
@@ -1564,7 +1684,7 @@ public class GeminiTextPane extends JTextPane {
                                 if (result instanceof String string) {
                                     if (!string.isBlank()) {
                                         f.addClickedLink(finalUrl);
-                                        f.fetchURL(finalUrl + "?" + URLEncoder.encode(string).replace("+", "%20"), false);
+                                        f.fetchURL(finalUrl + "?" + Util.uEncode(string), false);
                                     }
                                 } else {
                                     f.addClickedLink(finalUrl);
@@ -1601,16 +1721,101 @@ public class GeminiTextPane extends JTextPane {
             cr.directive = directive[0];
 
         } else if (line.startsWith(">")) {
-            addStyledText(lastLine, line.substring(1).trim(), ">", null);
+            addStyledText(line.substring(1).trim(), ">", null);
         } else if (line.startsWith("* ")) {
-            addStyledText(lastLine, "• " + line.substring(1).trim(), "*", null);
+            addStyledText("• " + line.substring(1).trim(), "*", null);
 
         } else {
-            addStyledText(lastLine, line, "text", null);
+            addStyledText(line, "text", null);
         }
     }
 
-    private ClickableRange addStyledText(boolean lastLine, String text, String styleName, Runnable action) {
+    private Component createTextComponent() {
+        Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
+        PreformattedTextPane pfTextPane = new PreformattedTextPane(background);
+
+        JScrollPane sp = new JScrollPane(pfTextPane);
+        pfTextPane.setFocusTraversalKeysEnabled(false);
+        EventQueue.invokeLater(() -> pfTextPane.setCaretPosition(0));
+
+        pfTextPane.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent ke) {
+                if (ke.getKeyCode() == KeyEvent.VK_TAB) {
+
+                    JButton fButton = f.backButton.isEnabled() ? f.backButton : f.forwardButton.isEnabled() ? f.forwardButton : f.refreshButton;
+
+                    fButton.requestFocusInWindow();
+                    pfTextPane.setCaretPosition(pfTextPane.getCaretPosition());
+                    pfTextPane.setFocusTraversalKeysEnabled(false);
+                }
+                GeminiTextPane.this.dispatchEvent(ke);
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent ke) {
+                GeminiTextPane.this.dispatchEvent(ke);
+            }
+
+            @Override
+            public void keyTyped(KeyEvent ke) {
+                GeminiTextPane.this.dispatchEvent(ke);
+            }
+
+        });
+        pfTextPane.addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (checkScrollingNeeded(sp)) {
+                    f.setTmpStatus("Hold 's' key to scroll");
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                f.setTmpStatus(" ");
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+            }
+        });
+
+        pfTextPane.addMouseWheelListener(e -> {
+            if (!Alhena.sDown) {
+                GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+
+            } else {
+                sp.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, sp));
+            }
+
+        });
+        sp.addMouseWheelListener(e -> {
+            if (!Alhena.sDown) {
+                scrollPane.dispatchEvent(SwingUtilities.convertMouseEvent(sp, e, scrollPane));
+                //e.consume();
+            }
+
+        });
+        sp.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        sp.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+
+        if (!showSB) {
+            sp.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
+        }
+
+        sp.setBorder(null);
+        sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
+        insertComp(sp, doc.getLength());
+        ptpList.add(pfTextPane);
+        return pfTextPane;
+    }
+    private List<PreformattedTextPane> ptpList;
+
+    private ClickableRange addStyledText(String text, String styleName, Runnable action) {
 
         Style style = doc.getStyle(styleName);
 
@@ -1709,11 +1914,10 @@ public class GeminiTextPane extends JTextPane {
             clickableRegions.add(cr);
         }
         int caretPosition = getCaretPosition();
-        if (!lastLine) {
-            try {
-                doc.insertString(doc.getLength(), "\n", style);
-            } catch (BadLocationException ex) {
-            }
+        try {
+            doc.insertString(doc.getLength(), "\n", style);
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
         }
 
         setCaretPosition(caretPosition); // prevent scrolling as content added
@@ -1721,7 +1925,7 @@ public class GeminiTextPane extends JTextPane {
         return cr;
     }
 
-    private static IndexedEmoji isEmoji(List<IndexedEmoji> emojiList, int idx) {
+    public static IndexedEmoji isEmoji(List<IndexedEmoji> emojiList, int idx) {
         for (IndexedEmoji emo : emojiList) {
             if (emo.getCharIndex() == idx) {
                 return emo;
@@ -1730,7 +1934,7 @@ public class GeminiTextPane extends JTextPane {
         return null;
     }
 
-    private static String getEmojiHex(IndexedEmoji emo) {
+    public static String getEmojiHex(IndexedEmoji emo) {
 
         String code = emo.getEmoji().getHtmlHexadecimalCode().replace("&#x", "").replace(";", "-");
         return code.substring(0, code.length() - 1);
@@ -1822,7 +2026,6 @@ public class GeminiTextPane extends JTextPane {
     // private void checkScroll(MouseEvent e, JScrollPane scrollPane) {
     //     Point point = e.getPoint();
     //     Rectangle viewRect = scrollPane.getViewport().getViewRect();
-
     //     if (point.y <= viewRect.y + EDGE_MARGIN) {
     //         startScrolling(scrollPane, -1); // Scroll up
     //     } else if (point.y >= viewRect.y + viewRect.height - EDGE_MARGIN) {
@@ -1831,23 +2034,18 @@ public class GeminiTextPane extends JTextPane {
     //         stopScrolling();
     //     }
     // }
-
     // private void startScrolling(JScrollPane scrollPane, int direction) {
     //     if (pressTimer != null && pressTimer.isRunning() && scrollDirection == direction) {
     //         return;
     //     }
     //     stopScrolling(); // Ensure only one timer is running
-
     //     scrollDirection = direction;
     //     holdTime = 0; // Reset hold time
-
     //     pressTimer = new Timer(INITIAL_DELAY, e -> {
     //         holdTime++; // Increment hold time
-
     //         // Dynamically adjust speed based on hold time
     //         int scrollSpeed = Math.min(INITIAL_SCROLL_SPEED + holdTime, MAX_SCROLL_SPEED);
     //         int newDelay = Math.max(INITIAL_DELAY - (holdTime * 5), MIN_DELAY); // Reduce delay over time
-
     //         // Apply new speed and delay
     //         JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
     //         int newValue = verticalBar.getValue() + (scrollSpeed * direction);
@@ -1858,7 +2056,6 @@ public class GeminiTextPane extends JTextPane {
     //     });
     //     pressTimer.start();
     // }
-
     // private void stopScrolling() {
     //     if (pressTimer != null) {
     //         pressTimer.stop();
@@ -1867,8 +2064,7 @@ public class GeminiTextPane extends JTextPane {
     //     scrollDirection = 0;
     //     holdTime = 0; // Reset hold time
     // }
-
-    private static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
+    public static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
 
         int x = (sheetX * (sheetSize + 2)) + 1;
         int y = (sheetY * (sheetSize + 2)) + 1;
@@ -2004,7 +2200,7 @@ public class GeminiTextPane extends JTextPane {
 
                     if (cr.imageIndex != -1) {
                         setCaretPosition(cr.start);
-                        removeImageAtIndex(cr);
+                        removeItemAtIndex(cr);
                         cr.imageIndex = -1;
 
                     } else {
