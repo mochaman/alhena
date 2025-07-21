@@ -1013,9 +1013,10 @@ public class GeminiTextPane extends JTextPane {
                             scrollToText(textPane, foundIndex);
 
                             found = true;
-
+                            
                             break;
                         }
+                        startIdx = 0;
                     }
                 }
             }
