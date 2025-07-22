@@ -1,5 +1,6 @@
 package brad.grier.alhena;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.EventQueue;
@@ -72,6 +73,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -2661,7 +2663,11 @@ public class Alhena {
                 plainText = true;
                 message = getAlhenaInfo().toString();
             } else if (cmd[0].equals("art")) {
-                message = "```\n" + GeminiFrame.getArt() + "```\n";
+                String art = GeminiFrame.getArt();
+                StringBuilder sb = new StringBuilder();
+                Color c = UIManager.getColor("Component.linkColor");
+                sb.append((char)27).append("[38;2;").append(c.getRed()).append(";").append(c.getGreen()).append(";").append(c.getBlue()).append("m").append(art).append((char)27).append('\n');
+                message = "```\n" + sb + "```\n";
             }
 
         } else if (cmd.length == 2) {
