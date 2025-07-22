@@ -1096,7 +1096,7 @@ public class GeminiTextPane extends JTextPane {
         if (pageBuffer != null) {
             pageBuffer.trimToSize();
         }
-        if (!embedPF) {
+        if (plainTextMode || !embedPF) {
             scanForAnsi();
         }
         bStyle = null;
@@ -1194,127 +1194,144 @@ public class GeminiTextPane extends JTextPane {
             int mIdx = txt.indexOf('m');
             String line = txt.substring(mIdx + 1);
 
-            String ansi = txt.substring(0, mIdx + 1);
+            //String ansi = txt.substring(0, mIdx + 1);
+            String ansi = txt.substring(1, mIdx);
 
             String[] tokens = ansi.split(";");
-            switch (tokens[0]) {
-                case "[38" -> {
-                    // foreground color
-                    if (tokens[1].equals("5")) {
+            outer:
+            for (int i = 0; i < tokens.length; i++) {
+                switch (tokens[i]) {
+                    case "38" -> {
+                        // foreground color
+                        if (tokens[1].equals("5")) {
 
-                        if (tokens.length == 4) {
-                            Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
-                            ansiFG(c);
+                            if (tokens.length == 4) { // no idea why originally put this here - corner case example?
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
+                                ansiFG(c);
 
-                        } else if (tokens.length == 3) {
+                            } else if (tokens.length == 3) {
 
-                            Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2].substring(0, tokens[2].indexOf('m'))));
-                            ansiFG(c);
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
+                                ansiFG(c);
+
+                            }
+
+                        } else if (tokens[1].equals("2")) {
+                            int r = Integer.parseInt(tokens[2]);
+                            int g = Integer.parseInt(tokens[3]);
+                            int b = Integer.parseInt(tokens[4]);
+                            ansiFG(new Color(r, g, b));
+                        
+
+                        }
+                        break outer;
+                    }
+                    case "30" ->
+                        ansiFG(AnsiColor.BLACK);
+                    case "31" ->
+                        ansiFG(AnsiColor.RED);
+                    case "32" ->
+                        ansiFG(AnsiColor.GREEN);
+                    case "33" ->
+                        ansiFG(AnsiColor.YELLOW);
+                    case "34" ->
+                        ansiFG(AnsiColor.BLUE);
+                    case "35" ->
+                        ansiFG(AnsiColor.MAGENTA);
+                    case "36" ->
+                        ansiFG(AnsiColor.CYAN);
+                    case "37" ->
+                        ansiFG(AnsiColor.WHITE);
+                    case "40" ->
+                        ansiBG(Color.BLACK);
+                    case "41" ->
+                        ansiBG(AnsiColor.RED);
+                    case "42" ->
+                        ansiBG(AnsiColor.GREEN);
+                    case "43" ->
+                        ansiBG(AnsiColor.YELLOW);
+                    case "44" ->
+                        ansiBG(AnsiColor.BLUE);
+                    case "45" ->
+                        ansiBG(AnsiColor.MAGENTA);
+                    case "46" ->
+                        ansiBG(AnsiColor.CYAN);
+                    case "47" ->
+                        ansiBG(AnsiColor.WHITE);
+                    case "48" -> {
+                        // foreground color
+                        if (tokens[1].equals("5")) {
+
+                            if (tokens.length == 4) { // why is this here?
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
+                                ansiBG(c);
+
+                            } else if (tokens.length == 3) {
+                                Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
+                                ansiBG(c);        
+
+                            }
+                        }else if(tokens[1].equals("2")){
+                            int r = Integer.parseInt(tokens[2]);
+                            int g = Integer.parseInt(tokens[3]);
+                            int b = Integer.parseInt(tokens[4]);
+                            ansiBG(new Color(r, g, b));
+                        }
+                        break outer;
+                    }
+                    case "90" ->
+                        ansiFG(AnsiColor.BRIGHT_BLACK);
+                    case "91" ->
+                        ansiFG(AnsiColor.BRIGHT_RED);
+                    case "92" ->
+                        ansiFG(AnsiColor.BRIGHT_GREEN);
+                    case "93" ->
+                        ansiFG(AnsiColor.BRIGHT_YELLOW);
+                    case "94" ->
+                        ansiFG(AnsiColor.BRIGHT_BLUE);
+                    case "95" ->
+                        ansiFG(AnsiColor.BRIGHT_MAGENTA);
+                    case "96" ->
+                        ansiFG(AnsiColor.BRIGHT_CYAN);
+                    case "97" ->
+                        ansiFG(AnsiColor.BRIGHT_WHITE);
+                    case "100" ->
+                        ansiBG(AnsiColor.BRIGHT_BLACK);
+                    case "101" ->
+                        ansiBG(AnsiColor.BRIGHT_RED);
+                    case "102" ->
+                        ansiBG(AnsiColor.BRIGHT_GREEN);
+                    case "103" ->
+                        ansiBG(AnsiColor.BRIGHT_YELLOW);
+                    case "104" ->
+                        ansiBG(AnsiColor.BRIGHT_BLUE);
+                    case "105" ->
+                        ansiBG(AnsiColor.BRIGHT_MAGENTA);
+                    case "106" ->
+                        ansiBG(AnsiColor.BRIGHT_CYAN);
+                    case "107" ->
+                        ansiBG(AnsiColor.BRIGHT_WHITE);
+                    case "0" -> {
+
+                        // setting the forground on blank strings causes a layout change that breaks
+                        // the no line wrap on preformatted text
+                        if (!line.isBlank()) {
+                            StyleConstants.setForeground(bStyle, getForeground());
+                        } else {
+                            foregroundHandling = true;
 
                         }
 
-                    }
-                }
-                case "[30m" ->
-                    ansiFG(AnsiColor.BLACK);
-                case "[31m" ->
-                    ansiFG(AnsiColor.RED);
-                case "[32m" ->
-                    ansiFG(AnsiColor.GREEN);
-                case "[33m" ->
-                    ansiFG(AnsiColor.YELLOW);
-                case "[34m" ->
-                    ansiFG(AnsiColor.BLUE);
-                case "[35m" ->
-                    ansiFG(AnsiColor.MAGENTA);
-                case "[36m" ->
-                    ansiFG(AnsiColor.CYAN);
-                case "[37m" ->
-                    ansiFG(AnsiColor.WHITE);
-                case "[40m" ->
-                    ansiBG(Color.BLACK);
-                case "[41m" ->
-                    ansiBG(AnsiColor.RED);
-                case "[42m" ->
-                    ansiBG(AnsiColor.GREEN);
-                case "[43m" ->
-                    ansiBG(AnsiColor.YELLOW);
-                case "[44m" ->
-                    ansiBG(AnsiColor.BLUE);
-                case "[45m" ->
-                    ansiBG(AnsiColor.MAGENTA);
-                case "[46m" ->
-                    ansiBG(AnsiColor.CYAN);
-                case "[47m" ->
-                    ansiBG(AnsiColor.WHITE);
-                case "[48" -> {
-                    // foreground color
-                    if (tokens[1].equals("5")) {
-
-                        if (tokens.length == 4) {
-                            Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
-                            ansiBG(c);
-
-                        } else if (tokens.length == 3) {
-                            Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2].substring(0, tokens[2].indexOf('m'))));
-                            ansiBG(c);
-
-                        }
+                        StyleConstants.setBackground(bStyle, getBackground());
+                        StyleConstants.setBold(bStyle, false);
 
                     }
-                }
-                case "[90m" ->
-                    ansiFG(AnsiColor.BRIGHT_BLACK);
-                case "[91m" ->
-                    ansiFG(AnsiColor.BRIGHT_RED);
-                case "[92m" ->
-                    ansiFG(AnsiColor.BRIGHT_GREEN);
-                case "[93m" ->
-                    ansiFG(AnsiColor.BRIGHT_YELLOW);
-                case "[94m" ->
-                    ansiFG(AnsiColor.BRIGHT_BLUE);
-                case "[95m" ->
-                    ansiFG(AnsiColor.BRIGHT_MAGENTA);
-                case "[96m" ->
-                    ansiFG(AnsiColor.BRIGHT_CYAN);
-                case "[97m" ->
-                    ansiFG(AnsiColor.BRIGHT_WHITE);
-                case "[100m" ->
-                    ansiBG(AnsiColor.BRIGHT_BLACK);
-                case "[101m" ->
-                    ansiBG(AnsiColor.BRIGHT_RED);
-                case "[102m" ->
-                    ansiBG(AnsiColor.BRIGHT_GREEN);
-                case "[103m" ->
-                    ansiBG(AnsiColor.BRIGHT_YELLOW);
-                case "[104m" ->
-                    ansiBG(AnsiColor.BRIGHT_BLUE);
-                case "[105m" ->
-                    ansiBG(AnsiColor.BRIGHT_MAGENTA);
-                case "[106m" ->
-                    ansiBG(AnsiColor.BRIGHT_CYAN);
-                case "[107m" ->
-                    ansiBG(AnsiColor.BRIGHT_WHITE);
-                case "[0m" -> {
-
-                    // setting the forground on blank strings causes a layout change that breaks
-                    // the no line wrap on preformatted text
-                    if (!line.isBlank()) {
-                        StyleConstants.setForeground(bStyle, getForeground());
-                    } else {
-                        foregroundHandling = true;
-
+                    case "1" -> {
+                        StyleConstants.setBold(bStyle, true);
                     }
-
-                    StyleConstants.setBackground(bStyle, getBackground());
-                    StyleConstants.setBold(bStyle, false);
-
+                    // default ->
+                    //     System.out.println("unknown: " + txt);
                 }
-                case "[1m" -> {
-                    StyleConstants.setBold(bStyle, true);
-                }
-                //default ->
-                //System.out.println("unknown: " + txt);
             }
 
             try {
