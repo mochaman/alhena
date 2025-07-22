@@ -446,6 +446,13 @@ public class GeminiTextPane extends JTextPane {
                 if (doc != null) {
                     applyCenteredParagraphStyle();
                 }
+                if (ptpList != null) {
+                    for (PreformattedTextPane ptp : ptpList) {
+                        JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, ptp);
+                        sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
+                        //ptp.setPreferredSize(new Dimension((int) width, preferred.height));
+                    }
+                }
             }
         });
 
@@ -1014,7 +1021,6 @@ public class GeminiTextPane extends JTextPane {
                             scrollToText(textPane, foundIndex);
 
                             found = true;
-                            
                             break;
                         }
                         startIdx = 0;
@@ -1221,7 +1227,6 @@ public class GeminiTextPane extends JTextPane {
                             int g = Integer.parseInt(tokens[3]);
                             int b = Integer.parseInt(tokens[4]);
                             ansiFG(new Color(r, g, b));
-                        
 
                         }
                         break outer;
@@ -1268,10 +1273,10 @@ public class GeminiTextPane extends JTextPane {
 
                             } else if (tokens.length == 3) {
                                 Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
-                                ansiBG(c);        
+                                ansiBG(c);
 
                             }
-                        }else if(tokens[1].equals("2")){
+                        } else if (tokens[1].equals("2")) {
                             int r = Integer.parseInt(tokens[2]);
                             int g = Integer.parseInt(tokens[3]);
                             int b = Integer.parseInt(tokens[4]);
@@ -1750,6 +1755,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private Component createTextComponent() {
+
         Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
         PreformattedTextPane pfTextPane = new PreformattedTextPane(background);
 
