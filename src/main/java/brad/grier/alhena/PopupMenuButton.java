@@ -68,18 +68,18 @@ public class PopupMenuButton extends JButton {
         };
         // mouse listener instead of action listener to avoid double-triggering
         addMouseListener(ma);
-        addActionListener(e -> {
+        // addActionListener(e -> {
 
-            JPopupMenu popupMenu = new JPopupMenu();
-            List<JMenuItem> mList = menuItemSupplier.get();
-            if (mList.isEmpty()) {
-                popupMenu.add(new JMenuItem(emptyMessage));
-            }
-            for (JMenuItem item : mList) {
-                popupMenu.add(item);
-            }
-            popupMenu.show(PopupMenuButton.this, 0, getHeight());
+        //     JPopupMenu popupMenu = new JPopupMenu();
+        //     List<JMenuItem> mList = menuItemSupplier.get();
+        //     if (mList.isEmpty()) {
+        //         popupMenu.add(new JMenuItem(emptyMessage));
+        //     }
+        //     for (JMenuItem item : mList) {
+        //         popupMenu.add(item);
+        //     }
+        //     popupMenu.show(PopupMenuButton.this, 0, getHeight());
 
-        });
+        // });
     }
 }
