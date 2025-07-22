@@ -450,8 +450,9 @@ public class GeminiTextPane extends JTextPane {
                     for (PreformattedTextPane ptp : ptpList) {
                         JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, ptp);
                         sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
-                        //ptp.setPreferredSize(new Dimension((int) width, preferred.height));
-                    }
+                        ptp.revalidate();
+                        ptp.repaint();
+                    }   
                 }
             }
         });
