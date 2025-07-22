@@ -997,7 +997,8 @@ public class GeminiTextPane extends JTextPane {
 
                     for (int i = start; i < ptpList.size(); i++) {
                         PreformattedTextPane textPane = ptpList.get(i);
-                        String content = textPane.getText();
+                        //String content = textPane.getText();
+                        String content = textPane.getDocument().getText(0, textPane.getDocument().getLength());
                         int foundIndex = content.toLowerCase().indexOf(word.toLowerCase(), startIdx);
 
                         if (foundIndex != -1) {
