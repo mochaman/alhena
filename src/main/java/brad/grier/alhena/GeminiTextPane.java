@@ -151,7 +151,16 @@ public class GeminiTextPane extends JTextPane {
         String userDefined = System.getenv("ALHENA_MONOFONT");
         if (SystemInfo.isWindows) {
 
-            monospacedFamily = userDefined == null || userDefined.isBlank() ? "Source Code Pro" : userDefined;
+            //monospacedFamily = userDefined == null || userDefined.isBlank() ? "Source Code Pro" : userDefined;
+            // A lot of windows monospaced fonts do not align correctly in JTextPane
+            String uff = userDefined == null ? "" : userDefined;
+            List<String> goodFonts = List.of(uff, "Courier New", "Consolas", "Source Code Pro");
+            for (String ff : goodFonts) {
+                if (Util.isFontAvailable(ff)) {
+                    monospacedFamily = ff;
+                    break;
+                }
+            }
         } else if (SystemInfo.isMacOS) {
             // PT Mono - some horizontal lines but works
             // Menlo - taller horizontal lines
@@ -452,7 +461,7 @@ public class GeminiTextPane extends JTextPane {
                         sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
                         ptp.revalidate();
                         ptp.repaint();
-                    }   
+                    }
                 }
             }
         });
@@ -1483,7 +1492,7 @@ public class GeminiTextPane extends JTextPane {
     private int customFontSize;
 
     // override for custom screens - used by embedded PreformattedTextPane
-    public void setCustomFontSize(int fs){
+    public void setCustomFontSize(int fs) {
         customFontSize = fs;
     }
 
