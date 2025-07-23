@@ -1480,6 +1480,12 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private String emojiProportional;
+    private int customFontSize;
+
+    // override for custom screens - used by embedded PreformattedTextPane
+    public void setCustomFontSize(int fs){
+        customFontSize = fs;
+    }
 
     private void buildStyles() {
 
@@ -1758,7 +1764,7 @@ public class GeminiTextPane extends JTextPane {
     private Component createTextComponent() {
 
         Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
-        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, null);
+        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize);
 
         JScrollPane sp = new JScrollPane(pfTextPane);
         pfTextPane.setFocusTraversalKeysEnabled(false);

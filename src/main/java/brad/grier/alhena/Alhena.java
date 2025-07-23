@@ -2555,88 +2555,6 @@ public class Alhena {
         return result;
     }
 
-    // private static String processTable(Element table) {
-    //     AsciiTable at = new AsciiTable();
-    //     at.addRule();
-    //     Elements rows = table.select("tr");
-    //     int expectedColumns = -1;
-    //     for (Element row : rows) {
-    //         Elements cells = row.select("th, td");
-    //         if (cells.isEmpty()) {
-    //             continue;
-    //         }
-    //         if (expectedColumns == -1) {
-    //             expectedColumns = cells.size();
-    //         }
-    //         List<String> cellTexts = new ArrayList<>();
-    //         for (Element cell : cells) {
-    //             StringBuilder sb = new StringBuilder();
-    //             for (Element el : cell.getAllElements()) {
-    //                 switch (el.tagName()) {
-    //                     case "img" -> {
-    //                         String alt = el.attr("alt");
-    //                         if (!alt.isEmpty()) {
-    //                             sb.append(alt).append(" ");
-    //                         }
-    //                     }
-    //                     case "a" -> {
-    //                         String text = el.text();
-    //                         if (!text.isEmpty()) {
-    //                             sb.append(text).append(" ");
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //             // fallback: if no img or a tags, use normal cell text
-    //             if (sb.isEmpty()) {
-    //                 sb.append(cell.text());
-    //             }
-    //             cellTexts.add(sb.toString().trim());
-    //         }
-    //         // Pad or trim to match expectedColumns
-    //         while (cellTexts.size() < expectedColumns) {
-    //             cellTexts.add("");
-    //         }
-    //         if (cellTexts.size() > expectedColumns) {
-    //             cellTexts = cellTexts.subList(0, expectedColumns);
-    //         }
-    //         at.addRow(cellTexts.toArray());
-    //         at.addRule();
-    //     }
-    //     return "```\n" + at.render() + "\n```\n";
-    // }
-    // private static String processTable(Element table) {
-    //     AsciiTable at = new AsciiTable();
-    //     at.addRule();
-    //     Elements rows = table.select("tr");
-    //     int expectedColumns = -1;
-    //     for (Element row : rows) {
-    //         Elements cells = row.select("th, td");
-    //         // Skip completely empty rows
-    //         if (cells.isEmpty()) {
-    //             continue;
-    //         }
-    //         // Initialize column count if not already done
-    //         if (expectedColumns == -1) {
-    //             expectedColumns = cells.size();
-    //         }
-    //         // Pad or trim to match expected column count
-    //         List<String> cellTexts = cells.stream().map(Element::text).toList();
-    //         int currentSize = cellTexts.size();
-    //         if (currentSize < expectedColumns) {
-    //             // Pad with empty strings
-    //             for (int i = currentSize; i < expectedColumns; i++) {
-    //                 cellTexts = new ArrayList<>(cellTexts); // make mutable
-    //                 cellTexts.add("");
-    //             }
-    //         } else if (currentSize > expectedColumns) {
-    //             cellTexts = cellTexts.subList(0, expectedColumns);
-    //         }
-    //         at.addRow(cellTexts.toArray());
-    //         at.addRule();
-    //     }
-    //     return "```\n" + at.render() + "\n```\n";
-    // }
     private static boolean containsNestedTable(Element table) {
         for (Element nested : table.select("table")) {
             if (!nested.equals(table) && !nested.select("table").isEmpty()) {
@@ -2648,6 +2566,7 @@ public class Alhena {
 
     private static void processCommand(String url, Page p) {
         boolean plainText = false;
+        boolean embedArt = false;
         String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
         String message = "# Commands:\n\n* ansialert\n* scrollspeed\n* info\n* art\n\nType 'alhena:[command]' for details.\n";
         if (cmd.length == 1) {
@@ -2663,6 +2582,7 @@ public class Alhena {
             } else if (cmd[0].equals("art")) {
                 String art = GeminiFrame.getArt();
                 message = "```\n" + Util.colorize(art) + "```\n";
+                embedArt = true;
             }
 
         } else if (cmd.length == 2) {
@@ -2699,7 +2619,11 @@ public class Alhena {
                 }
             }
         }
-        p.textPane.end(message, plainText, url, true);
+       
+        if (embedArt) {
+            p.textPane().setCustomFontSize(16);
+        }
+         p.textPane.end(message, plainText, url, true);
 
     }
 
