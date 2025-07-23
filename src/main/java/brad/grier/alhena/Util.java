@@ -65,6 +65,7 @@ import javax.swing.JSlider;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
+import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -148,15 +149,20 @@ public class Util {
 
     }
 
-    public static void showAbout(Component c) {
-        JTextArea textArea = new JTextArea();
-        textArea.setEditable(false);
-        String fontName = SystemInfo.isWindows ? "Source Code Pro" : "Monospaced";
-        Font font = new Font(fontName, Font.PLAIN, 14);
-        textArea.setFont(font);
-        textArea.setText(GeminiFrame.getArt());
+    public static String colorize(String s) {
+        StringBuilder sb = new StringBuilder();
+        Color c = UIManager.getColor("Component.linkColor");
+        sb.append((char) 27).append("[38;2;").append(c.getRed()).append(";").append(c.getGreen()).append(";").append(c.getBlue()).append("m").append(s).append((char) 27).append('\n');
+        return sb.toString();
+    }
 
-        Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "© 2025 Brad Grier", textArea};
+    public static void showAbout(Component c) {
+        PreformattedTextPane ptp = new PreformattedTextPane(UIManager.getColor("Panel.background"), 14);
+
+        EventQueue.invokeLater(() -> ptp.setCaretPosition(0));
+        ptp.addText(colorize(GeminiFrame.getArt()));
+
+        Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "© 2025 Brad Grier", ptp};
         Util.fancyInfoDialog(c, "About", comps);
     }
 
@@ -945,10 +951,10 @@ public class Util {
             }
         }
 
-        return null; 
+        return null;
     }
 
-    public static String uEncode(String s){
+    public static String uEncode(String s) {
         return URLEncoder.encode(s).replace("+", "%20");
     }
 

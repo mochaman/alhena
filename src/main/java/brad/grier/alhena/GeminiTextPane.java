@@ -1758,7 +1758,7 @@ public class GeminiTextPane extends JTextPane {
     private Component createTextComponent() {
 
         Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
-        PreformattedTextPane pfTextPane = new PreformattedTextPane(background);
+        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, null);
 
         JScrollPane sp = new JScrollPane(pfTextPane);
         pfTextPane.setFocusTraversalKeysEnabled(false);

@@ -36,8 +36,12 @@ public class PreformattedTextPane extends JTextPane {
     private String emojiProportional;
     private StyledDocument doc;
     private String bufferedLine = null;
+    private int fontSize;
 
-    public PreformattedTextPane(Color bgColor) {
+    public PreformattedTextPane(Color bgColor, Integer fontSize) {
+        if (fontSize != null) {
+            this.fontSize = fontSize;
+        }
         setMargin(new Insets(2, 0, 2, 0));
         setEditable(false);
         setBackground(bgColor);
@@ -65,7 +69,7 @@ public class PreformattedTextPane extends JTextPane {
         Style pfStyle = doc.addStyle("```", null);
         StyleConstants.setFontFamily(pfStyle, GeminiTextPane.monospacedFamily);
         StyleConstants.setBackground(pfStyle, bgColor);
-        StyleConstants.setFontSize(pfStyle, GeminiFrame.monoFontSize);
+        StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : GeminiFrame.monoFontSize);
         StyleConstants.setBold(pfStyle, false);
         StyleConstants.setItalic(pfStyle, false);
         StyleConstants.setUnderline(pfStyle, false);
@@ -311,7 +315,6 @@ public class PreformattedTextPane extends JTextPane {
                             int g = Integer.parseInt(tokens[3]);
                             int b = Integer.parseInt(tokens[4]);
                             ansiFG(new Color(r, g, b));
-                        
 
                         }
                         break outer;
@@ -358,10 +361,10 @@ public class PreformattedTextPane extends JTextPane {
 
                             } else if (tokens.length == 3) {
                                 Color c = AnsiColor.ansiToColor(Integer.parseInt(tokens[2]));
-                                ansiBG(c);        
+                                ansiBG(c);
 
                             }
-                        }else if(tokens[1].equals("2")){
+                        } else if (tokens[1].equals("2")) {
                             int r = Integer.parseInt(tokens[2]);
                             int g = Integer.parseInt(tokens[3]);
                             int b = Integer.parseInt(tokens[4]);
