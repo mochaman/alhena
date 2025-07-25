@@ -34,12 +34,12 @@
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
-            <version>3.5.4</version>
+            <version>3.6.1</version>
         </dependency>   
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf-intellij-themes</artifactId>
-            <version>3.5.4</version>
+            <version>3.6.1</version>
         </dependency>          
         <!-- to get the fat jar to work on the arm mac-->
         <dependency>
@@ -87,6 +87,11 @@
             <groupId>de.vandermeer</groupId>
             <artifactId>asciitable</artifactId>
             <version>0.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fifesoft</groupId>
+            <artifactId>rsyntaxtextarea</artifactId>
+            <version>3.6.0</version>
         </dependency>
     </dependencies>    
     
