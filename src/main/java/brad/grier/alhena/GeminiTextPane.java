@@ -63,8 +63,10 @@ import javax.swing.UIManager;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
+import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.Element;
+import javax.swing.text.Highlighter;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
@@ -466,6 +468,7 @@ public class GeminiTextPane extends JTextPane {
             }
         });
 
+
     }
 
     private boolean inserting;
@@ -674,7 +677,15 @@ public class GeminiTextPane extends JTextPane {
                         f.savePage(GeminiTextPane.this, pageBuffer, currentMode);
                     });
 
+                    JMenuItem titanItem = new JMenuItem("Titan Editor");
+                    titanItem.setEnabled(!imageOnly);
+                    titanItem.addActionListener(al -> {
+
+                        f.editPage();
+                    });
+
                     popupMenu.add(saveItem);
+                    popupMenu.add(titanItem);
 
                     if (currentMode == DEFAULT_MODE) {
                         JMenuItem pemItem = new JMenuItem("Import PEM");
@@ -979,7 +990,23 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void find(String word) {
+        if (word.isBlank()) {
+            getHighlighter().removeAllHighlights();
+            for (PreformattedTextPane p : ptpList) {
+                Highlighter highlighter = p.getHighlighter();
+                highlighter.removeAllHighlights();
+            }
+            return;
+        }
         boolean found = false;
+        try {
+            highlight(this, word.toLowerCase());
+            for (int i = 0; i < ptpList.size(); i++) {
+                highlight(ptpList.get(i), word.toLowerCase());
+            }
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
+        }
         try {
             int pos = -1;
             int startIdx = word.equals(lastSearch) ? lastSearchIdx : 0;
@@ -1045,6 +1072,19 @@ public class GeminiTextPane extends JTextPane {
             lastSearchDoc = -1;
             lastSearchIdx = 0;
             find(word);
+        }
+    }
+
+    public static void highlight(JTextPane textPane, String pattern) throws BadLocationException {
+        Highlighter highlighter = textPane.getHighlighter();
+        highlighter.removeAllHighlights();
+
+        String text = textPane.getDocument().getText(0, textPane.getDocument().getLength()).toLowerCase();
+        int pos = 0;
+        while ((pos = text.indexOf(pattern, pos)) >= 0) {
+            highlighter.addHighlight(pos, pos + pattern.length(),
+                    new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW));
+            pos += pattern.length();
         }
     }
 
@@ -1718,7 +1758,7 @@ public class GeminiTextPane extends JTextPane {
                             TextEditor textEditor = new TextEditor("", false);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
-                            Object res = Util.inputDialog2(f, "Edit", comps, null);
+                            Object res = Util.inputDialog2(f, "Edit", comps, null, true);
                             if (res != null) {
                                 Object result = textEditor.getResult();
                                 if (result instanceof String string) {
