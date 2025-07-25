@@ -3,6 +3,7 @@ package brad.grier.alhena;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.EventQueue;
@@ -48,6 +49,7 @@ import java.security.Security;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -63,7 +65,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JSlider;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -197,7 +198,7 @@ public class Util {
         return inputDialog(c, title, msg, pswd, null, null);
     }
 
-    public static Object inputDialog2(Component c, String title, Object[] components, Object[] options) {
+    public static Object inputDialog2(Component c, String title, Object[] components, Object[] options, boolean resizable) {
 
         JOptionPane optionPane = new JOptionPane(
                 components, // Message
@@ -211,6 +212,7 @@ public class Util {
         optionPane.setWantsInput(false);
 
         JDialog dialog = optionPane.createDialog(c, title);
+        dialog.setResizable(resizable);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
@@ -222,12 +224,7 @@ public class Util {
         dialog.addWindowFocusListener(new WindowFocusListener() {
             @Override
             public void windowGainedFocus(WindowEvent e) {
-                for (Object obj : components) {
-                    if (obj instanceof JTextField jtf) {
-                        jtf.requestFocusInWindow();
-                        break;
-                    }
-                }
+                focusText(dialog);
             }
 
             @Override
@@ -240,12 +237,24 @@ public class Util {
 
         // return null for cancel as a shortcut
         if (options == null && optionPane.getValue() instanceof Integer val) {
-            if (val == JOptionPane.CANCEL_OPTION) {
+            if (val == JOptionPane.CANCEL_OPTION || val == JOptionPane.CLOSED_OPTION) {
                 return null;
             }
         }
         return optionPane.getValue();
 
+    }
+
+    private static void focusText(Container c) {
+        for (Object obj : c.getComponents()) {
+            if (obj instanceof JTextComponent jtf) {
+
+                jtf.requestFocusInWindow();
+                break;
+            }else if(obj instanceof Container){
+                focusText((Container)obj);
+            }
+        }
     }
 
     public static String inputDialog(Frame c, String title, String msg, boolean pswd, String inputFieldText, JComponent addComp) {
@@ -956,6 +965,21 @@ public class Util {
 
     public static String uEncode(String s) {
         return URLEncoder.encode(s).replace("+", "%20");
+    }
+
+    public static String mapTheme(String t) {
+        Map<String, String> themeAliases = Map.of(
+                "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatGitHubIJTheme", "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJTheme",
+                "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatLightOwlIJTheme", "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTLightOwlIJTheme",
+                "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatAtomOneLightIJTheme", "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTAtomOneLightIJTheme",
+                "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialLighterIJTheme", "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme",
+                "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialOceanicIJTheme", "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialOceanicIJTheme",
+                "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialPalenightIJTheme",
+                "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMoonlightIJTheme", "com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMoonlightIJTheme"
+        );
+
+        return themeAliases.getOrDefault(t, t);
+
     }
 
     // public static boolean isMonospaced(Font font) {
