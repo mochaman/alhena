@@ -153,6 +153,7 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+
     private static final List<String> allowedSchemes = List.of(
             "gemini://", "file://", "spartan://", "nex://",
             "https://", "http://", "titan://"
@@ -283,7 +284,6 @@ public class Alhena {
 
                 }
             }
-
             return false; // allow event to be processed
         });
 
@@ -389,7 +389,8 @@ public class Alhena {
 
             theme = DB.getPref("theme", null);
             if (theme != null) {
-                Util.setupTheme(theme);
+        
+                Util.setupTheme(Util.mapTheme(theme));
             } else {
                 FlatLightLaf.setup();
                 theme = "com.formdev.flatlaf.FlatLightLaf";
@@ -628,7 +629,7 @@ public class Alhena {
                 TextEditor textEditor = new TextEditor("", true);
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
-                Object res = Util.inputDialog2(p.frame(), "Edit", comps, null);
+                Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
                 if (res == null) {
 
                     return;
@@ -1620,7 +1621,7 @@ public class Alhena {
                                     TextEditor textEditor = new TextEditor(titanSB.toString(), true);
                                     Object[] comps = new Object[1];
                                     comps[0] = textEditor;
-                                    Object res = Util.inputDialog2(p.frame(), "Edit", comps, null);
+                                    Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
 
                                     if (res != null) {
                                         Object rsp = textEditor.getResult();
@@ -2007,7 +2008,7 @@ public class Alhena {
                 options = newOptions;
             }
 
-            Object cn = Util.inputDialog2(p.frame(), "New Client Certificate", comps, options);
+            Object cn = Util.inputDialog2(p.frame(), "New Client Certificate", comps, options, false);
 
             if ("OK".equals(cn)) {
                 String cnString = cnField.getText();
