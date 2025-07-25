@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
@@ -19,10 +20,10 @@ public class PopupMenuButton extends JButton {
 
     private MouseAdapter ma;
     private ActionListener al;
-    private final Supplier<List<JMenuItem>> menuItemSupplier;
+    private final Supplier<List<JComponent>> menuItemSupplier;
     private final String emptyMessage;
 
-    public PopupMenuButton(String text, Supplier<List<JMenuItem>> menuItemSupplier, String emptyMessage) {
+    public PopupMenuButton(String text, Supplier<List<JComponent>> menuItemSupplier, String emptyMessage) {
         super(text);
         this.menuItemSupplier = menuItemSupplier;
         this.emptyMessage = emptyMessage;
@@ -45,11 +46,11 @@ public class PopupMenuButton extends JButton {
                         @Override
                         public void popupMenuWillBecomeVisible(PopupMenuEvent pme) {
 
-                            List<JMenuItem> mList = menuItemSupplier.get();
+                            List<JComponent> mList = menuItemSupplier.get();
                             if (mList.isEmpty()) {
                                 popupMenu.add(new JMenuItem(emptyMessage));
                             }
-                            for (JMenuItem item : mList) {
+                            for (JComponent item : mList) {
                                 popupMenu.add(item);
                             }
 
@@ -90,11 +91,11 @@ public class PopupMenuButton extends JButton {
             PopupMenuListener pml = new PopupMenuListener() {
                 @Override
                 public void popupMenuWillBecomeVisible(PopupMenuEvent pme) {
-                    List<JMenuItem> mList = menuItemSupplier.get();
+                    List<JComponent> mList = menuItemSupplier.get();
                     if (mList.isEmpty()) {
                         popupMenu1.add(new JMenuItem(emptyMessage));
                     }
-                    for (JMenuItem item : mList) {
+                    for (JComponent item : mList) {
                         popupMenu1.add(item);
                     }
                 }
