@@ -32,6 +32,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,7 +44,6 @@ import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
@@ -130,19 +130,19 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatGruvboxDarkHardIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme", "Gruvbox Dark Hard", true)),
             Map.entry("FlatGradiantoNatureGreenIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoNatureGreenIJTheme", "Gradianto Nature Green", true)),
             Map.entry("FlatDarkFlatIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDarkFlatIJTheme", "Dark Flat", true)),
-            Map.entry("FlatMaterialOceanicIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialOceanicIJTheme", "Material Oceanic", true)),
-            Map.entry("FlatLightOwlIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatLightOwlIJTheme", "Light Owl", false)),
+            Map.entry("FlatMTMaterialOceanicIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialOceanicIJTheme", "Material Oceanic", true)),
+            Map.entry("FlatMTLightOwlIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTLightOwlIJTheme", "Light Owl", false)),
             Map.entry("FlatDarculaLaf", new ThemeInfo("com.formdev.flatlaf.FlatDarculaLaf", "Darcula", true)),
             Map.entry("FlatIntelliJLaf", new ThemeInfo("com.formdev.flatlaf.FlatIntelliJLaf", "IntelliJ", false)),
             Map.entry("FlatMacDarkLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacDarkLaf", "MacOS Dark", true)),
             Map.entry("FlatMacLightLaf", new ThemeInfo("com.formdev.flatlaf.themes.FlatMacLightLaf", "MacOS Light", false)),
-            Map.entry("FlatMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialPalenightIJTheme", "Material Palenight", true)),
+            Map.entry("FlatMTMaterialPalenightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialPalenightIJTheme", "Material Palenight", true)),
             Map.entry("FlatDarkPurpleIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDarkPurpleIJTheme", "Dark Purple", true)),
             Map.entry("FlatMonokaiProIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatMonokaiProIJTheme", "Monokai Pro", true)),
             Map.entry("FlatGradiantoMidnightBlueIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatGradiantoMidnightBlueIJTheme", "Gradianto Midnight Blue", true)),
-            Map.entry("FlatMoonlightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMoonlightIJTheme", "Moonlight", true)),
-            Map.entry("FlatMaterialLighterIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMaterialLighterIJTheme", "Material Lighter", false)),
-            Map.entry("FlatGitHubIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatGitHubIJTheme", "GitHub", false)),
+            Map.entry("FlatMTMoonlightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMoonlightIJTheme", "Moonlight", true)),
+            Map.entry("FlatMTMaterialLighterIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme", "Material Lighter", false)),
+            Map.entry("FlatMTGitHubIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJTheme", "GitHub", false)),
             Map.entry("FlatVuesionIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatVuesionIJTheme", "Vuesion", true)),
             Map.entry("FlatNordIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatNordIJTheme", "Nord", true)),
             Map.entry("FlatHiberbeeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatHiberbeeDarkIJTheme", "Hiberbee Dark", true)),
@@ -160,7 +160,7 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatSolarizedDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedDarkIJTheme", "Solarized Dark", true)),
             Map.entry("FlatDraculaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatDraculaIJTheme", "Dracula", true)),
             Map.entry("FlatXcodeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatXcodeDarkIJTheme", "Xcode Dark", true)),
-            Map.entry("FlatAtomOneLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatAtomOneLightIJTheme", "Atom One Light", false)),
+            Map.entry("FlatMTAtomOneLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTAtomOneLightIJTheme", "Atom One Light", false)),
             Map.entry("FlatSpacegrayIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSpacegrayIJTheme", "Spacegray", true)),
             Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", "Solarized Light", false))
     );
@@ -520,8 +520,8 @@ public final class GeminiFrame extends JFrame {
 
         navPanel.add(comboBox, gridBagConstraints);
 
-        Supplier<List<JMenuItem>> dynamicMenuSupplier = () -> {
-            List<JMenuItem> items = new ArrayList<>();
+        Supplier<List<JComponent>> dynamicMenuSupplier = () -> {
+            List<JComponent> items = new ArrayList<>();
             try {
                 List<Bookmark> mList = DB.loadTopBookmarks();
 
@@ -539,6 +539,7 @@ public final class GeminiFrame extends JFrame {
             return items;
         };
         PopupMenuButton hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, "No History");
+        hotButton.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
         hotButton.setToolTipText("Display top bookmarks");
         hotButton.setFont(buttonFont);
 
@@ -819,7 +820,10 @@ public final class GeminiFrame extends JFrame {
         String theme = UIManager.getLookAndFeel().getClass().toString();
         theme = theme.substring(theme.lastIndexOf('.') + 1);
         String finalTheme = theme;
-        themes.entrySet().stream().sorted(Map.Entry.comparingByKey())
+
+        themes.entrySet()
+                .stream()
+                .sorted(Comparator.comparing(entry -> entry.getValue().label))
                 .forEach(entry -> {
                     String key = entry.getKey();
                     ThemeInfo value = entry.getValue();
@@ -830,7 +834,7 @@ public final class GeminiFrame extends JFrame {
                     themeGroup.add(themeItem);
                     jm.add(themeItem);
                     themeItem.addActionListener(al -> {
-                        //if (!key.equals(currentThemeId))
+
                         try {
 
                             DB.insertPref("theme", value.className());
@@ -943,7 +947,7 @@ public final class GeminiFrame extends JFrame {
 
             JCheckBox shadeCB = new JCheckBox("Shade pre-formatted text background");
             shadeCB.setSelected(GeminiTextPane.shadePF);
-            
+
             JCheckBox embedPFCB = new JCheckBox("Scrollable pre-formatted text");
             // embedPFCB.setToolTipText("If enabled, hold down 's' to horizontally sroll pre-formatted text.\nDisabling (legacy) can affect where gemtext wraps.");
             embedPFCB.setSelected(GeminiTextPane.embedPF);
@@ -957,7 +961,7 @@ public final class GeminiFrame extends JFrame {
             shadeCB.setEnabled(embedPFCB.isSelected());
 
             Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB, embedPFCB, showsbCB, shadeCB};
-            Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null);
+            Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null, false);
 
             if (res != null) {
                 GeminiTextPane.wrapPF = lineWrapCB.isSelected();
@@ -996,16 +1000,16 @@ public final class GeminiFrame extends JFrame {
         JCheckBoxMenuItem vlcItem = new JCheckBoxMenuItem("Embedded VLC", Alhena.allowVLC);
         vlcItem.addItemListener(ae -> {
 
-            boolean useVLC = !DB.getPref("allowvlc", "false").equals("true"); // toggle
-            Alhena.allowVLC = useVLC;
+            Alhena.allowVLC = !Alhena.allowVLC;
 
-            DB.insertPref("allowvlc", String.valueOf(useVLC));
+            DB.insertPref("allowvlc", String.valueOf(Alhena.allowVLC));
 
-            if (useVLC) {
+            if (Alhena.allowVLC) {
                 Util.infoDialog(GeminiFrame.this, "Update", "Embedded VLC media player activated. VLC must be installed on your system.\nSee FAQ for details.");
             }
 
         });
+        
         settingsMenu.add(vlcItem);
 
         settingsMenu.add(new JSeparator());
@@ -1285,7 +1289,7 @@ public final class GeminiFrame extends JFrame {
         comps[3] = urlField;
         comps[4] = "Bookmark Folder:";
         comps[5] = bmComboBox;
-        Object res = Util.inputDialog2(this, "New", comps, null);
+        Object res = Util.inputDialog2(this, "New", comps, null, false);
         if (res != null) {
 
             if (labelField.getText().trim().isEmpty() || ((String) bmComboBox.getSelectedItem()).trim().isEmpty() || urlField.getText().trim().isEmpty()) {
@@ -2080,7 +2084,7 @@ public final class GeminiFrame extends JFrame {
             comps[3] = urlField;
             comps[4] = "Bookmark Folder:";
             comps[5] = bmComboBox;
-            Object res = Util.inputDialog2(this, "New", comps, null);
+            Object res = Util.inputDialog2(this, "New", comps, null, false);
             if (res != null) {
                 if (!labelField.getText().trim().isEmpty() && !((String) bmComboBox.getSelectedItem()).trim().isEmpty() && !urlField.getText().trim().isEmpty()) {
                     DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem(), urlField.getText());
