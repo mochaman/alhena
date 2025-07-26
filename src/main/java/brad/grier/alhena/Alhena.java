@@ -214,6 +214,11 @@ public class Alhena {
                     gf.editPage();
                     e.consume();
                     return true;
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, MOD))) {
+                    // titan edit
+                    gf.editPage();
+                    e.consume();
+                    return true;
 
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_C, MOD))) {
 
@@ -389,7 +394,7 @@ public class Alhena {
 
             theme = DB.getPref("theme", null);
             if (theme != null) {
-        
+
                 Util.setupTheme(Util.mapTheme(theme));
             } else {
                 FlatLightLaf.setup();
@@ -1061,7 +1066,7 @@ public class Alhena {
                 connection.result().write(path.equals("/") ? "\n" : path + "\n");
 
                 Buffer saveBuffer = Buffer.buffer();
-
+                boolean[] rcvdData = {false};
                 // Handle the response
                 connection.result().handler(buffer -> {
 
@@ -1075,13 +1080,19 @@ public class Alhena {
                     } else if (isText || path.lastIndexOf('.') == -1) {
                         if (firstBuffer[0]) {
                             firstBuffer[0] = false;
-                            p.textPane.updatePage(buffer.toString(), true, origURL, true);
+                            rcvdData[0] = true;
+                            bg(() -> {
+                                p.textPane.updatePage(buffer.toString(), true, origURL, true);
+                            });
+
                         } else {
+                            rcvdData[0] = true;
                             bg(() -> {
                                 p.textPane.addPage(buffer.toString());
                             });
                         }
                     } else {
+                        rcvdData[0] = true;
                         File[] file = new File[1];
                         connection.result().pause();
                         connection.result().handler(null);
@@ -1134,10 +1145,18 @@ public class Alhena {
                         });
                     } else {
                         if (p.redirectCount == 0) {
-                            bg(() -> {
-                                p.textPane.end();
+                            if (rcvdData[0]) {
+                                bg(() -> {
+                                    p.textPane.end();
 
-                            });
+                                });
+                            }else{
+                                bg(() -> {
+                                    p.textPane.updatePage("", true, origURL, true);
+                                    p.textPane.end();
+
+                                });                                
+                            }
                         }
                     }
 
@@ -2620,11 +2639,11 @@ public class Alhena {
                 }
             }
         }
-       
+
         if (embedArt) {
             p.textPane().setCustomFontSize(16);
         }
-         p.textPane.end(message, plainText, url, true);
+        p.textPane.end(message, plainText, url, true);
 
     }
 
