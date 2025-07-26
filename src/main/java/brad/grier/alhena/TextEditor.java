@@ -122,6 +122,7 @@ public class TextEditor extends JPanel implements ActionListener {
         AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
         atmf.putMapping("text/gemini", "brad.grier.alhena.GemtextTokenMaker");
         advTextArea.setSyntaxEditingStyle("text/gemini");
+
         advTextArea.setHighlightCurrentLine(false);
         advTextArea.setCodeFoldingEnabled(false);
 
@@ -170,9 +171,9 @@ public class TextEditor extends JPanel implements ActionListener {
         });
 
         findNextItem.addActionListener(TextEditor.this);
-        findNextItem.setAccelerator( KeyStroke.getKeyStroke("F3"));
+        findNextItem.setAccelerator(KeyStroke.getKeyStroke("F3"));
         JMenuItem findPrevItem = new JMenuItem("Find Previous");
-        findPrevItem.setAccelerator( KeyStroke.getKeyStroke("shift F3"));
+        findPrevItem.setAccelerator(KeyStroke.getKeyStroke("shift F3"));
         findPrevItem.addActionListener(al -> {
             forward = false;
             findNextItem.doClick(0);
@@ -205,11 +206,20 @@ public class TextEditor extends JPanel implements ActionListener {
         tb.add(pmb, BorderLayout.EAST);
         editorPanel.add(tb, BorderLayout.NORTH);
 
-        //editorPanel.add(toolBar, BorderLayout.NORTH);
         tabbedPane.addTab("Text", editorPanel);
         tabbedPane.addTab("File", fileChooser);
         add(tabbedPane, BorderLayout.CENTER);
 
+        // Can't get this to work with custom token maker at this time
+        // File zip = new File("/Users/brad/.alhena/english_dic.zip");
+        // System.out.println(zip.exists());
+        // SpellingParser parser;
+        // try {
+        //     parser = SpellingParser.createEnglishSpellingParser(zip, false, false);
+        //     advTextArea.addParser(parser);
+        // } catch (IOException ex) {
+        //     ex.printStackTrace();
+        // }
     }
 
     public Object getResult() {
