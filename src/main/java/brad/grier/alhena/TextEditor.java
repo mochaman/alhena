@@ -202,7 +202,7 @@ public class TextEditor extends JPanel implements ActionListener {
         JPanel tb = new JPanel(new BorderLayout(0, 0));
         PopupMenuButton pmb = new PopupMenuButton("🔎", supplier, "");
         pmb.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
-        tb.add(new JLabel("Edit text and press 'OK' to update. Use 'File' tab to upload file. Clear all text to delete file on server."), BorderLayout.WEST);
+        tb.add(new JLabel("Edit text and press 'OK' to update. Use 'File' tab to upload file. Clear all text to delete file."), BorderLayout.WEST);
         tb.add(pmb, BorderLayout.EAST);
         editorPanel.add(tb, BorderLayout.NORTH);
 
