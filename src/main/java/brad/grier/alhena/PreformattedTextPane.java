@@ -293,8 +293,8 @@ public class PreformattedTextPane extends JTextPane {
 
             String[] tokens = ansi.split(";");
             outer:
-            for (int i = 0; i < tokens.length; i++) {
-                switch (tokens[i]) {
+            for (String token : tokens) {
+                switch (token) {
                     case "38" -> {
                         // foreground color
                         if (tokens[1].equals("5")) {
