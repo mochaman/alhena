@@ -28,6 +28,7 @@
 - Built-In HTTP to Gemtext converter
 - Spartan protocol
 - Nex protocol
+- Gemtext-aware Titan text editor
 
 ## 🎨 Design
 
@@ -73,13 +74,13 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT required (except for the Basic install). The platform specific installs each include a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.2.1/alhena-5.2.1_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.1/alhena-5.2.1_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.2.1/alhena-5.2.1_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.2.1/alhena-5.2.1_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.1/alhena-5.2.1_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.2.1/alhena-5.2.1_freebsd_x64.tgz) untar and run script
-- [Basic](https://github.com/mochaman/alhena/releases/download/v5.2.1/alhena-5.2.1_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.2.2/alhena-5.2.2_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.2/alhena-5.2.2_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.2.2/alhena-5.2.2_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.2.2/alhena-5.2.2_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.2/alhena-5.2.2_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.2.2/alhena-5.2.2_freebsd_x64.tgz) untar and run script
+- [Basic](https://github.com/mochaman/alhena/releases/download/v5.2.2/alhena-5.2.2_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
 
 ## 🐳 Docker
 
@@ -100,15 +101,15 @@ The password is `alhena`
 
 Titan Text Editor: 
 
-![Editor](https://metaloupe.com/alhena/images/titan_editor_windows.png)
+![Editor](https://metaloupe.com/alhena/images/titan_editor_windows2.png)
 
-Light Theme:
+Embedded Video (VLC Required):
 
-![Light Theme](https://metaloupe.com/alhena/images/windows_light.png)
+![Light Theme](https://metaloupe.com/alhena/images/alhenavideo.png)
 
 ANSI Color:  
 
-![ANSI](https://metaloupe.com/alhena/images/astro_dark_windows.png)
+![ANSI](https://metaloupe.com/alhena/images/windowsansi.png)
 
 ## 🛠 License
 Alhena is licensed under the **GNU General Public License v3.0 (GPLv3)**. See [LICENSE](LICENSE) for details.
