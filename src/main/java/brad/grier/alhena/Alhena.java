@@ -385,14 +385,16 @@ public class Alhena {
         searchUrl = DB.getPref("searchurl", null);
 
         EventQueue.invokeLater(() -> {
-            int contentP = Integer.parseInt(DB.getPref("contentwidth", "80"));
+            HashMap<String, String> map = DB.getPrefs("contentwidth", "linewrappf", "asciipf", "embedpf", "showsb", "shadepf", "theme");
+            int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
             GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
-            GeminiTextPane.wrapPF = DB.getPref("linewrappf", "false").equals("true");
-            GeminiTextPane.embedPF = DB.getPref("embedpf", "true").equals("true");
-            GeminiTextPane.showSB = DB.getPref("showsb", "false").equals("true");
-            GeminiTextPane.shadePF = DB.getPref("shadepf", "false").equals("true");
+            GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
+            GeminiTextPane.asciiImage = map.getOrDefault("asciipf", "false").equals("true");
+            GeminiTextPane.embedPF = map.getOrDefault("embedpf", "true").equals("true");
+            GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
+            GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
 
-            theme = DB.getPref("theme", null);
+            theme = map.get("theme");
             if (theme != null) {
 
                 Util.setupTheme(Util.mapTheme(theme));
