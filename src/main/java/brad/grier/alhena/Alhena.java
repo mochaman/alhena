@@ -378,14 +378,15 @@ public class Alhena {
 
         // initialize the database
         DB.init();
-        allowVLC = DB.getPref("allowvlc", "false").equals("true");
+        HashMap<String, String> map = DB.getAllPrefs();
+        allowVLC = map.getOrDefault("allowvlc", "false").equals("true");
 
-        httpProxy = DB.getPref("httpproxy", null);
-        gopherProxy = DB.getPref("gopherproxy", null);
-        searchUrl = DB.getPref("searchurl", null);
+        httpProxy = map.getOrDefault("httpproxy", null);
+        gopherProxy = map.getOrDefault("gopherproxy", null);
+        searchUrl = map.getOrDefault("searchurl", null);
 
         EventQueue.invokeLater(() -> {
-            HashMap<String, String> map = DB.getPrefs("contentwidth", "linewrappf", "asciipf", "embedpf", "showsb", "shadepf", "theme");
+            //HashMap<String, String> map = DB.getPrefs("contentwidth", "linewrappf", "asciipf", "embedpf", "showsb", "shadepf", "theme");
             int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
             GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
             GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
