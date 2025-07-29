@@ -19,11 +19,13 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.h2.jdbcx.JdbcConnectionPool;
 
@@ -424,7 +426,7 @@ public class DB {
             ps.setString(2, folder);
             ps.setString(3, url);
             ps.setInt(4, id);
-            
+
             ps.execute();
         }
 
@@ -586,6 +588,30 @@ public class DB {
             ex.printStackTrace();
         }
         return pref == null ? defVal : pref;
+    }
+
+    public static HashMap<String, String> getPrefs(String... cols) {
+        HashMap<String, String> map = new HashMap<>();
+        String colString = Arrays.stream(cols)
+                .map(s -> "'" + s + "'")
+                .collect(Collectors.joining(", "));
+
+        try {
+            try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+
+                try (ResultSet rs = st.executeQuery("SELECT PREFKEY, PREF FROM PREFS WHERE PREFKEY IN (" + colString + ")")) {
+
+                    while (rs.next()) {
+                        map.put(rs.getString(1), rs.getString(2));    
+                    }
+                }
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return map;
+
     }
 
     public static String getUrlLabel(String url) {
