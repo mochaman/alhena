@@ -162,7 +162,12 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatXcodeDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatXcodeDarkIJTheme", "Xcode Dark", true)),
             Map.entry("FlatMTAtomOneLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTAtomOneLightIJTheme", "Atom One Light", false)),
             Map.entry("FlatSpacegrayIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSpacegrayIJTheme", "Spacegray", true)),
-            Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", "Solarized Light", false))
+            Map.entry("FlatSolarizedLightIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatSolarizedLightIJTheme", "Solarized Light", false)),
+            Map.entry("FlatMTAtomOneDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTAtomOneDarkIJTheme", "Atom One Dark", true)),
+            Map.entry("FlatMTGitHubDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubDarkIJTheme", "GitHub Dark", true)),
+            Map.entry("FlatMTMaterialDarkerIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialDarkerIJTheme", "Material Darker", true)),
+            Map.entry("FlatMTDraculaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTDraculaIJTheme", "Dracula Material", true))
+
     );
 
     public void forEachPage(Consumer<Page> c) {
