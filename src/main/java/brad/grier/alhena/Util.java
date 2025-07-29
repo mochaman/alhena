@@ -158,7 +158,7 @@ public class Util {
     }
 
     public static void showAbout(Component c) {
-        PreformattedTextPane ptp = new PreformattedTextPane(UIManager.getColor("Panel.background"), 14);
+        PreformattedTextPane ptp = new PreformattedTextPane(UIManager.getColor("Panel.background"), 14, UIManager.getBoolean("laf.dark"));
 
         EventQueue.invokeLater(() -> ptp.setCaretPosition(0));
         ptp.addText(colorize(GeminiFrame.getArt()));

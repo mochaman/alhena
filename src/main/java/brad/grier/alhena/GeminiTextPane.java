@@ -47,6 +47,7 @@ import javax.swing.ImageIcon;
 import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -145,9 +146,12 @@ public class GeminiTextPane extends JTextPane {
     public static int indent;
     public static float contentPercentage = .80f;
     public static boolean wrapPF;
+    public static boolean asciiImage;
     public static boolean embedPF;
     public static boolean showSB;
     public static boolean shadePF;
+    private PreformattedTextPane ptp;
+    private StringBuilder asciiSB;
 
     static {
         String userDefined = System.getenv("ALHENA_MONOFONT");
@@ -1404,12 +1408,12 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private void ansiFG(Color c) {
-        StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark"), .2d, .8d, .15d));
+        StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, isDark, .2d, .8d, .15d));
         foregroundHandling = false;
     }
 
     private void ansiBG(Color c) {
-        StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark"), .2d, .8d, .15d));
+        StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, isDark, .2d, .8d, .15d));
     }
 
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
@@ -1529,6 +1533,7 @@ public class GeminiTextPane extends JTextPane {
 
     private String emojiProportional;
     private int customFontSize;
+    private boolean isDark;
 
     // override for custom screens - used by embedded PreformattedTextPane
     public void setCustomFontSize(int fs) {
@@ -1550,7 +1555,7 @@ public class GeminiTextPane extends JTextPane {
             }
         }
 
-        boolean isDark = UIManager.getBoolean("laf.dark");
+        isDark = UIManager.getBoolean("laf.dark");
 
         linkColor = UIManager.getColor("Component.linkColor");
         hoverColor = linkColor.brighter();
@@ -1622,8 +1627,6 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    private PreformattedTextPane ptp;
-    //private boolean ptpEmpty;
 
     private boolean checkScrollingNeeded(JScrollPane sp) {
         JViewport viewport = sp.getViewport();
@@ -1688,34 +1691,59 @@ public class GeminiTextPane extends JTextPane {
             if (!preformattedMode) {
                 foregroundHandling = false;
                 bStyle = null;
+                if (asciiSB != null) {
+                    asciiSB.deleteCharAt(asciiSB.length() - 1);
+                    BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
+                    ImageIcon icon = new ImageIcon(bi);
+                    if (ptp == null) {
+                        insertComp(new JLabel(icon), doc.getLength());
+                    } else {
+                        // insert JLabel into ptp
+                        ptp.insertComp(new JLabel(icon));
+                        ptp = null;
+                    }
+                    asciiSB = null;
+                }
                 if (ptp != null) {
 
                     ptp.end();
-                    //if (!showSB) {
                     ptp.removeLastChar();
-                    //}
                     ptp = null;
+                }
+                addStyledText("\n", "```", null);
+            } else { // preformatted mode
+
+                if (asciiImage) {
+                    if (!embedPF) {
+                        addStyledText("", "```", null);
+                    }
+                    asciiSB = new StringBuilder();
+                }
+                if (embedPF) {
+
+                    addStyledText("\n", "```", null);
+                    ptp = (PreformattedTextPane) createTextComponent();
+
                 }
 
             }
-            if (embedPF && preformattedMode) {
 
-                addStyledText("\n", "```", null);
-                ptp = (PreformattedTextPane) createTextComponent();
-                //ptpEmpty = true;
-
-            } else {
-
-                addStyledText("\n", "```", null);
-            }
         } else if (preformattedMode) {
             if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) && line.startsWith("=>")) {
                 line = "=> " + line.substring(line.indexOf(":") + 1);
             }
             if (ptp != null) {
-                ptp.addText(line + "\n");
+                if (asciiSB != null) {
+                    asciiSB.append(line).append('\n');
+                } else {
+                    ptp.addText(line + "\n");
+                }
             } else {
-                addStyledText(line, "```", null);
+                if (asciiSB != null) {
+                    asciiSB.append(line).append('\n');
+                } else {
+                    addStyledText(line, "```", null);
+                }
             }
         } else if (line.startsWith("###")) {
             addStyledText(line.substring(3).trim(), "###", null);
@@ -1812,7 +1840,7 @@ public class GeminiTextPane extends JTextPane {
     private Component createTextComponent() {
 
         Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
-        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize);
+        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize, isDark);
 
         JScrollPane sp = new JScrollPane(pfTextPane);
         pfTextPane.setFocusTraversalKeysEnabled(false);
@@ -1890,6 +1918,7 @@ public class GeminiTextPane extends JTextPane {
         sp.setBorder(null);
         sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
         insertComp(sp, doc.getLength());
+        addStyledText("", "```", null);
         ptpList.add(pfTextPane);
         return pfTextPane;
     }
@@ -2153,6 +2182,17 @@ public class GeminiTextPane extends JTextPane {
         Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
 
         return new BaselineShiftedIcon(scaledImg, fontSize / 10);
+    }
+
+    public static Image extractSpriteImage(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
+
+        int x = (sheetX * (sheetSize + 2)) + 1;
+        int y = (sheetY * (sheetSize + 2)) + 1;
+
+        BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
+        Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+
+        return scaledImg;
     }
 
     private static final double FRICTION = 0.93; // friction coefficient (lower = more friction) .90

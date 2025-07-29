@@ -937,9 +937,17 @@ public final class GeminiFrame extends JFrame {
             slider.setPaintLabels(true);
 
             slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
-            JCheckBox lineWrapCB = new JCheckBox("Line wrap pre-formatted text");
+
+
+            JCheckBox lineWrapCB = new JCheckBox("Line wrap pre-formatted text (Non-Standard)");
             // lineWrapCB.setToolTipText("Non-standard.");
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
+
+            JCheckBox imagePFCB = new JCheckBox("Render pre-formatted text blocks as images");
+            imagePFCB.setSelected(GeminiTextPane.asciiImage);
+            imagePFCB.addActionListener(al ->{
+                lineWrapCB.setEnabled(!imagePFCB.isSelected());
+            });
 
             JCheckBox showsbCB = new JCheckBox("Show horizontal scrollbar for pre-formatted text");
             // showsbCB.setToolTipText("Display scrollbar when using scrollable pre-formatted text.");
@@ -960,10 +968,12 @@ public final class GeminiFrame extends JFrame {
             showsbCB.setEnabled(embedPFCB.isSelected());
             shadeCB.setEnabled(embedPFCB.isSelected());
 
-            Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB, embedPFCB, showsbCB, shadeCB};
+            Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB, imagePFCB, embedPFCB, showsbCB, shadeCB};
             Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null, false);
 
             if (res != null) {
+                GeminiTextPane.asciiImage = imagePFCB.isSelected();
+                DB.insertPref("asciipf", String.valueOf(GeminiTextPane.asciiImage));
                 GeminiTextPane.wrapPF = lineWrapCB.isSelected();
                 DB.insertPref("linewrappf", String.valueOf(GeminiTextPane.wrapPF));
                 GeminiTextPane.contentPercentage = (float) slider.getValue() / 100f;

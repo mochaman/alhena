@@ -1,6 +1,7 @@
 package brad.grier.alhena;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Insets;
 import java.awt.Point;
@@ -8,7 +9,6 @@ import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JTextPane;
-import javax.swing.UIManager;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
 import javax.swing.text.DefaultStyledDocument;
@@ -37,12 +37,14 @@ public class PreformattedTextPane extends JTextPane {
     private StyledDocument doc;
     private String bufferedLine = null;
     private int fontSize;
+    private boolean isDark;
 
-    public PreformattedTextPane(Color bgColor, Integer fontSize) {
+    public PreformattedTextPane(Color bgColor, Integer fontSize, boolean isDark) {
         if (fontSize != null) {
             this.fontSize = fontSize;
         }
-        setMargin(new Insets(2, 0, 2, 0));
+        this.isDark = isDark;
+        setMargin(new Insets(0, 0, 0, 0));
         setEditable(false);
         setBackground(bgColor);
         DefaultCaret newCaret = new DefaultCaret() {
@@ -273,6 +275,18 @@ public class PreformattedTextPane extends JTextPane {
     }
     private boolean foregroundHandling;
 
+    public void insertComp(Component c) {
+        SimpleAttributeSet apStyle = new SimpleAttributeSet();
+        StyleConstants.setComponent(apStyle, c);
+
+        try {
+            doc.insertString(0, " ", apStyle);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
     private void convert(String txt) {
 
         if (!txt.startsWith("[")) {
@@ -443,12 +457,12 @@ public class PreformattedTextPane extends JTextPane {
     }
 
     private void ansiFG(Color c) {
-        StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark"), .2d, .8d, .15d));
+        StyleConstants.setForeground(bStyle, AnsiColor.adjustColor(c, isDark, .2d, .8d, .15d));
         foregroundHandling = false;
     }
 
     private void ansiBG(Color c) {
-        StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, UIManager.getBoolean("laf.dark"), .2d, .8d, .15d));
+        StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, isDark, .2d, .8d, .15d));
     }
 
 }
