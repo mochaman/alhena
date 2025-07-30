@@ -2,13 +2,16 @@ package brad.grier.alhena;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Insets;
 import java.awt.Point;
 import java.util.List;
 
 import javax.swing.ImageIcon;
+import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
 import javax.swing.text.DefaultStyledDocument;
@@ -285,21 +288,35 @@ public class PreformattedTextPane extends JTextPane {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+        EventQueue.invokeLater(() -> {
+            JScrollPane jsp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, this);
+            jsp.getHorizontalScrollBar().setValue(0);
+        });
+
+    }
+
+    private void plainText(String txt) {
+        if (foregroundHandling) {
+            StyleConstants.setForeground(bStyle, getForeground());
+        }
+        try {
+            doc.insertString(doc.getLength(), txt, bStyle);
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
+        }
     }
 
     private void convert(String txt) {
 
         if (!txt.startsWith("[")) {
-            if (foregroundHandling) {
-                StyleConstants.setForeground(bStyle, getForeground());
-            }
-            try {
-                doc.insertString(doc.getLength(), txt, bStyle);
-            } catch (BadLocationException ex) {
-                ex.printStackTrace();
-            }
+            plainText(txt);
         } else {
             int mIdx = txt.indexOf('m');
+            if(mIdx == -1){
+                plainText(txt);
+                return;
+            }
+
             String line = txt.substring(mIdx + 1);
 
             //String ansi = txt.substring(0, mIdx + 1);
