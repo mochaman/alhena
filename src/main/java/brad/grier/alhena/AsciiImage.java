@@ -35,13 +35,15 @@ public class AsciiImage {
     private static Color ansiFG;
     private static Color ansiBG;
     private static boolean ansiBold;
-    private static ParserFactory factory;
-    private static boolean hasAnsi;
+
     private static boolean isDark;
     // special handling for specific chars not in font set
     private static final Set<Character> PAD_EMOJI_SET = Set.of('⚡');
+
     // for future reference, this class is not thread safe - only call on EDT
     public static BufferedImage renderTextToImage(String text, String fontName, int fontSize, Color bgColor, Color fgColor) {
+        boolean hasAnsi = false;
+        ansiBold = false;
         bgColor = GeminiTextPane.shadePF ? AnsiColor.adjustColor(bgColor, UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : bgColor;
         ansiBG = bgColor;
         ansiFG = fgColor;
@@ -60,6 +62,7 @@ public class AsciiImage {
 
             String line1;
             if (hasAnsi) {
+
                 AnsiInfo ai = handleAnsi(line);
                 line1 = ai.line;
                 colorList.add(ai.pcList);
@@ -210,7 +213,7 @@ public class AsciiImage {
 
                             g2.drawImage(icon, x1, 0, null);
                             g2.dispose();
-                            if(PAD_EMOJI_SET.contains(c)){ // windows or where font doesn't support
+                            if (PAD_EMOJI_SET.contains(c)) { // windows or where font doesn't support
                                 pad += CELL_WIDTH;
                             }
                             i--;
@@ -224,7 +227,7 @@ public class AsciiImage {
                         char[] chars = Character.toChars(line.codePointAt(i));
                         g2.drawString(new String(chars), x1, y1);
                         g2.dispose();
-                        if(PAD_EMOJI_SET.contains(c)){ // windows or where font doesn't support
+                        if (PAD_EMOJI_SET.contains(c)) { // windows or where font doesn't support
                             pad += CELL_WIDTH;
                         }
                     }
@@ -275,13 +278,14 @@ public class AsciiImage {
     }
 
     private static AnsiInfo handleAnsi(String line) {
-        if (factory == null) {
-            ParserFactoryConfig config = new ParserFactoryConfig();
-            config.setEnvironment(Environment._8_BIT);
-            config.setFunctionTypes(List.of(ControlFunctionType.C0_SET, ControlFunctionType.C1_SET));
-            ParserFactoryService factoryService = new ParserFactoryProvider();
-            factory = factoryService.createFactory(config);
-        }
+        //  ParserFactory factory;
+        //if (factory == null) {
+        ParserFactoryConfig config = new ParserFactoryConfig();
+        config.setEnvironment(Environment._8_BIT);
+        config.setFunctionTypes(List.of(ControlFunctionType.C0_SET, ControlFunctionType.C1_SET));
+        ParserFactoryService factoryService = new ParserFactoryProvider();
+        ParserFactory factory = factoryService.createFactory(config);
+        //}
 
         StringBuilder sb = new StringBuilder();
         List<PositionColor> pcList = new ArrayList<>();
@@ -329,6 +333,13 @@ public class AsciiImage {
 
         } else {
             int mIdx = txt.indexOf('m');
+            if (mIdx == -1) {
+                System.out.println("here");
+                if (foregroundHandling) {
+                    ansiFG = fgColor1;
+                }
+                return txt;
+            }
             String line = txt.substring(mIdx + 1);
 
             String ansi = txt.substring(1, mIdx);
