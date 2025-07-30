@@ -1238,22 +1238,30 @@ public class GeminiTextPane extends JTextPane {
     private SimpleAttributeSet bStyle;
     private boolean foregroundHandling;
 
+    private void plainText(String txt) {
+        if (foregroundHandling) {
+            StyleConstants.setForeground(bStyle, getForeground());
+        }
+        try {
+            doc.insertString(doc.getLength(), txt, bStyle);
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     private void convert(String txt) {
 
         if (!txt.startsWith("[")) {
-            if (foregroundHandling) {
-                StyleConstants.setForeground(bStyle, getForeground());
-            }
-            try {
-                doc.insertString(doc.getLength(), txt, bStyle);
-            } catch (BadLocationException ex) {
-                ex.printStackTrace();
-            }
+            plainText(txt);
+
         } else {
             int mIdx = txt.indexOf('m');
+            if(mIdx == -1){
+                plainText(txt);
+                return;
+            }
             String line = txt.substring(mIdx + 1);
 
-            //String ansi = txt.substring(0, mIdx + 1);
             String ansi = txt.substring(1, mIdx);
 
             String[] tokens = ansi.split(";");
@@ -1627,7 +1635,6 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-
     private boolean checkScrollingNeeded(JScrollPane sp) {
         JViewport viewport = sp.getViewport();
         Dimension viewSize = viewport.getViewSize();
@@ -1693,6 +1700,7 @@ public class GeminiTextPane extends JTextPane {
                 bStyle = null;
                 if (asciiSB != null) {
                     asciiSB.deleteCharAt(asciiSB.length() - 1);
+                    
                     BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
                     ImageIcon icon = new ImageIcon(bi);
                     if (ptp == null) {
