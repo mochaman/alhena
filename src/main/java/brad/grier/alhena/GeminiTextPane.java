@@ -1724,6 +1724,8 @@ public class GeminiTextPane extends JTextPane {
                     addStyledText("\n", "```", null);
                     ptp = (PreformattedTextPane) createTextComponent();
 
+                }else{
+                    addStyledText("\n", "```", null);    
                 }
 
             }
