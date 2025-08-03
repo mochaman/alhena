@@ -1026,7 +1026,7 @@ public class GeminiTextPane extends JTextPane {
                 scrollRectToVisible(viewRect);
                 found = true;
             } else {
-                if (embedPF) {
+                if (embedPF && !printing) {
 
                     int start = lastSearchDoc;
                     if (lastSearchDoc == -1) {
@@ -1147,7 +1147,7 @@ public class GeminiTextPane extends JTextPane {
         if (pageBuffer != null) {
             pageBuffer.trimToSize();
         }
-        if (plainTextMode || !embedPF) {
+        if (!printing && (plainTextMode || !embedPF)) {
             scanForAnsi();
         }
         bStyle = null;
@@ -1195,10 +1195,21 @@ public class GeminiTextPane extends JTextPane {
 
     // for one and done messages
     public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
-        updatePage(geminiDoc, pfMode, docURL, newRequest);
-        end();
+        end(geminiDoc, pfMode, docURL, newRequest, false);
     }
 
+    private boolean printing;
+    public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest, boolean printing) {
+        this.printing = printing;
+        if(printing){
+            setBackground(Color.WHITE);
+            hasAnsi = true;
+        }
+        updatePage(geminiDoc, pfMode, docURL, newRequest);
+        
+
+        end();
+    }
     private ParserFactory factory;
     public boolean hasAnsi;
 
@@ -1482,8 +1493,8 @@ public class GeminiTextPane extends JTextPane {
         if (totalWidth <= 0) {
             return;
         }
-
-        contentWidth = totalWidth * contentPercentage;
+        float cp = printing ? 1.0f : contentPercentage;
+        contentWidth = totalWidth * cp;
         indent = (int) ((totalWidth - contentWidth) / 2f);
 
         SimpleAttributeSet attrs = new SimpleAttributeSet();
@@ -1560,18 +1571,19 @@ public class GeminiTextPane extends JTextPane {
         linkColor = UIManager.getColor("Component.linkColor");
         hoverColor = linkColor.brighter();
 
+        int gfMonoFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.monoFontSize;
         Style pfStyle = doc.addStyle("```", null);
         StyleConstants.setFontFamily(pfStyle, monospacedFamily);
-        StyleConstants.setFontSize(pfStyle, GeminiFrame.monoFontSize);
+        StyleConstants.setFontSize(pfStyle, gfMonoFontSize);
         StyleConstants.setBold(pfStyle, false);
         StyleConstants.setItalic(pfStyle, false);
         StyleConstants.setUnderline(pfStyle, false);
 
         Color foreground = UIManager.getColor("TextField.foreground");
-
+        int gfFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.fontSize;
         Style h1Style = doc.addStyle("###", null);
         StyleConstants.setFontFamily(h1Style, GeminiFrame.proportionalFamily);
-        StyleConstants.setFontSize(h1Style, GeminiFrame.fontSize + 3); // 18
+        StyleConstants.setFontSize(h1Style, gfFontSize + 3); // 18
 
         StyleConstants.setBold(h1Style, false);
         StyleConstants.setItalic(h1Style, false);
@@ -1582,19 +1594,19 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setForeground(h1Style, hColor);
 
         Style h2Style = doc.addStyle("##", h1Style);
-        StyleConstants.setFontSize(h2Style, GeminiFrame.fontSize + 9); // 24
+        StyleConstants.setFontSize(h2Style, gfFontSize + 9); // 24
 
         Style h3Style = doc.addStyle("#", h1Style);
-        StyleConstants.setFontSize(h3Style, GeminiFrame.fontSize + 17); // 32
+        StyleConstants.setFontSize(h3Style, gfFontSize + 17); // 32
 
         Style linkStyle;
         if (page.isNex()) {
             linkStyle = doc.addStyle("=>", h1Style);
             StyleConstants.setFontFamily(linkStyle, monospacedFamily);
-            StyleConstants.setFontSize(linkStyle, GeminiFrame.monoFontSize);
+            StyleConstants.setFontSize(linkStyle, gfMonoFontSize);
         } else {
             linkStyle = doc.addStyle("=>", h1Style);
-            StyleConstants.setFontSize(linkStyle, GeminiFrame.fontSize);
+            StyleConstants.setFontSize(linkStyle, gfFontSize);
 
         }
         StyleConstants.setForeground(linkStyle, linkColor);
@@ -1604,13 +1616,13 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setForeground(clickedStyle, isDark ? linkColor.darker() : linkColor.brighter());
 
         Style quoteStyle = doc.addStyle(">", h1Style);
-        StyleConstants.setFontSize(quoteStyle, GeminiFrame.fontSize);
+        StyleConstants.setFontSize(quoteStyle, gfFontSize);
         StyleConstants.setItalic(quoteStyle, true);
         //StyleConstants.setBold(quoteStyle, false);
         StyleConstants.setForeground(quoteStyle, foreground);
 
         Style textStyle = doc.addStyle("text", h1Style);
-        StyleConstants.setFontSize(textStyle, GeminiFrame.fontSize);
+        StyleConstants.setFontSize(textStyle, gfFontSize);
         //StyleConstants.setBold(textStyle, false);
         StyleConstants.setForeground(textStyle, foreground);
 
@@ -1713,13 +1725,13 @@ public class GeminiTextPane extends JTextPane {
                 addStyledText("\n", "```", null);
             } else { // preformatted mode
 
-                if (asciiImage) {
+                if (asciiImage && !printing) {
                     if (!embedPF) {
                         addStyledText("", "```", null);
                     }
                     asciiSB = new StringBuilder();
                 }
-                if (embedPF) {
+                if (embedPF && !printing) {
 
                     addStyledText("\n", "```", null);
                     ptp = (PreformattedTextPane) createTextComponent();
