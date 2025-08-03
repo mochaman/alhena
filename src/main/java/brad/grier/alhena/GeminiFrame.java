@@ -20,6 +20,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.awt.print.PageFormat;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -167,7 +170,6 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatMTGitHubDarkIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubDarkIJTheme", "GitHub Dark", true)),
             Map.entry("FlatMTMaterialDarkerIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialDarkerIJTheme", "Material Darker", true)),
             Map.entry("FlatMTDraculaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTDraculaIJTheme", "Dracula Material", true))
-
     );
 
     public void forEachPage(Consumer<Page> c) {
@@ -582,6 +584,33 @@ public final class GeminiFrame extends JFrame {
         fileMenu.add(createMenuItem("Open File", KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
             openFile(null);
         }));
+
+        fileMenu.add(createMenuItem("Print", KeyStroke.getKeyStroke(KeyEvent.VK_P, mod), () -> {
+            if(!Util.isPrintingAvailable()){
+                Util.infoDialog(GeminiFrame.this, "Status", "No printers available");
+                return;
+            }
+            GeminiTextPane gtp = visiblePage().textPane;
+
+            Page p = new Page(Page.ROOT_PAGE, this, gtp.getDocURLString(), currentThemeId);
+            StringBuilder sb = new StringBuilder(gtp.current().currentPage());
+            p.textPane.end(sb.toString(), gtp.current().pMode(), gtp.getDocURLString(), false, true);
+
+
+            PrinterJob job = PrinterJob.getPrinterJob();
+            PageFormat pf = job.defaultPage();
+
+            job.setPrintable(new ViewBasedTextPanePrinter(p.textPane, pf), pf);
+
+            if (job.printDialog()) {
+                try {
+                    job.print();
+                } catch (PrinterException ex) {
+                    ex.printStackTrace();
+                }
+            }
+
+        }));
         fileMenu.add(new JSeparator());
 
         fileMenu.add(createMenuItem("New Tab", KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
@@ -943,14 +972,13 @@ public final class GeminiFrame extends JFrame {
 
             slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
 
-
             JCheckBox lineWrapCB = new JCheckBox("Line wrap pre-formatted text (Non-Standard)");
             // lineWrapCB.setToolTipText("Non-standard.");
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
 
             JCheckBox imagePFCB = new JCheckBox("Render pre-formatted text blocks as images");
             imagePFCB.setSelected(GeminiTextPane.asciiImage);
-            imagePFCB.addActionListener(al ->{
+            imagePFCB.addActionListener(al -> {
                 lineWrapCB.setEnabled(!imagePFCB.isSelected());
             });
 
@@ -1024,7 +1052,7 @@ public final class GeminiFrame extends JFrame {
             }
 
         });
-        
+
         settingsMenu.add(vlcItem);
 
         settingsMenu.add(new JSeparator());
