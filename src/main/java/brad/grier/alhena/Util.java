@@ -55,6 +55,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
@@ -251,8 +253,8 @@ public class Util {
 
                 jtf.requestFocusInWindow();
                 break;
-            }else if(obj instanceof Container){
-                focusText((Container)obj);
+            } else if (obj instanceof Container) {
+                focusText((Container) obj);
             }
         }
     }
@@ -980,6 +982,11 @@ public class Util {
 
         return themeAliases.getOrDefault(t, t);
 
+    }
+
+    public static boolean isPrintingAvailable() {
+        PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
+        return printServices.length > 0;
     }
 
     // public static boolean isMonospaced(Font font) {
