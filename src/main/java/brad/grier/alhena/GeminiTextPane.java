@@ -1702,7 +1702,7 @@ public class GeminiTextPane extends JTextPane {
             if (!preformattedMode) {
                 foregroundHandling = false;
                 bStyle = null;
-                if (asciiSB != null) {
+                if (asciiSB != null && !asciiSB.isEmpty()) {
                     asciiSB.deleteCharAt(asciiSB.length() - 1);
                     
                     BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
