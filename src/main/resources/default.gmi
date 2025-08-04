@@ -28,6 +28,9 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 * HTTP and Gopher proxies
 * Full spartan:// support
 * nex:// protocol support
+* Gemtext highlighting in Titan text editor
+* Optional favicon.txt support
+* Printing
 
 => gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
 
