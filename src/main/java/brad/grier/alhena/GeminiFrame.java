@@ -586,7 +586,7 @@ public final class GeminiFrame extends JFrame {
         }));
 
         fileMenu.add(createMenuItem("Print", KeyStroke.getKeyStroke(KeyEvent.VK_P, mod), () -> {
-            if(!Util.isPrintingAvailable()){
+            if (!Util.isPrintingAvailable()) {
                 Util.infoDialog(GeminiFrame.this, "Status", "No printers available");
                 return;
             }
@@ -595,7 +595,6 @@ public final class GeminiFrame extends JFrame {
             Page p = new Page(Page.ROOT_PAGE, this, gtp.getDocURLString(), currentThemeId);
             StringBuilder sb = new StringBuilder(gtp.current().currentPage());
             p.textPane.end(sb.toString(), gtp.current().pMode(), gtp.getDocURLString(), false, true);
-
 
             PrinterJob job = PrinterJob.getPrinterJob();
             PageFormat pf = job.defaultPage();
@@ -1053,7 +1052,19 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem favIconItem = new JCheckBoxMenuItem("Display Favicon", Alhena.favIcon);
+        favIconItem.addItemListener(ae -> {
+
+            Alhena.favIcon = !Alhena.favIcon;
+
+            DB.insertPref("favicon", String.valueOf(Alhena.favIcon));
+
+            visiblePage().textPane.repaint();
+
+        });
+
         settingsMenu.add(vlcItem);
+        settingsMenu.add(favIconItem);
 
         settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem("HTTP Proxy");

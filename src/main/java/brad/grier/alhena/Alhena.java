@@ -103,6 +103,8 @@ import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
@@ -153,6 +155,8 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+    public static boolean favIcon;
+    private static final HashMap<String, Object> favMap = new HashMap<>();
 
     private static final List<String> allowedSchemes = List.of(
             "gemini://", "file://", "spartan://", "nex://",
@@ -394,7 +398,8 @@ public class Alhena {
             GeminiTextPane.embedPF = map.getOrDefault("embedpf", "true").equals("true");
             GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
             GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
-
+            GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
+            Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
             theme = map.get("theme");
             if (theme != null) {
 
@@ -444,7 +449,7 @@ public class Alhena {
 
     public static void newWindow(String url, String baseUrl) {
         frameList.add(new GeminiFrame(url, baseUrl));
-        GeminiFrame.ansiAlert = DB.getPref("ansialert", "false").equals("true");
+        // GeminiFrame.ansiAlert = DB.getPref("ansialert", "false").equals("true");
         if (Taskbar.isTaskbarSupported()) {
             Taskbar taskbar = Taskbar.getTaskbar();
             if (taskbar.isSupported(Feature.MENU)) {
@@ -620,6 +625,29 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
+        if (favIcon && punyURI.getScheme().equals("gemini")) {
+            String fiAuthority = punyURI.getAuthority();
+            if (favMap.containsKey(fiAuthority)) {
+                Object o = favMap.get(fiAuthority);
+                if (o != null) {
+                    p.setFavIcon(o);
+                }
+            } else {
+                
+                String favUrl = "gemini://" + fiAuthority + "/favicon.txt";
+
+                // do not care if fail
+                getNetClient(URI.create("gemini://" + fiAuthority));
+                fetchGeminiPage(favUrl).onSuccess(content -> {
+                    Object o = GeminiTextPane.getFavIcon(content.trim());
+                    favMap.put(fiAuthority, o);
+                    p.setFavIcon(o);
+                }).onFailure(error -> {
+                    favMap.put(fiAuthority, null);
+                    //error.printStackTrace();
+                });
+            }
+        }
 
         if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://")
                 || ((!url.startsWith("gemini://") && !url.startsWith("spartan://") && !url.startsWith("nex://")) && (prevURI != null && "https".equalsIgnoreCase(prevURI.getScheme()))))) {
@@ -1153,12 +1181,12 @@ public class Alhena {
                                     p.textPane.end();
 
                                 });
-                            }else{
+                            } else {
                                 bg(() -> {
                                     p.textPane.updatePage("", true, origURL, true);
                                     p.textPane.end();
 
-                                });                                
+                                });
                             }
                         }
                     }
@@ -3176,6 +3204,62 @@ public class Alhena {
             this.complete = complete;
             this.incomplete = incomplete;
         }
+    }
+
+    private final static int MAX_SIZE = 32; // currently only used for favicons
+
+    public static Future<String> fetchGeminiPage(String url) {
+        Promise<String> promise = Promise.promise();
+
+        URI uri = URI.create(url);
+        String host = uri.getHost();
+        int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+
+        certMap.get(null).connect(port, host, ar -> {
+            if (ar.failed()) {
+                promise.fail(ar.cause());
+                return;
+            }
+
+            NetSocket socket = ar.result();
+            socket.write(url + "\r\n");
+
+            Buffer responseBuffer = Buffer.buffer();
+            //socket.handler(buffer -> responseBuffer.appendBuffer(buffer));
+            socket.handler(buffer -> {
+                responseBuffer.appendBuffer(buffer);
+
+                if (responseBuffer.length() > MAX_SIZE) {
+                    // Close the socket to stop receiving more data
+                    socket.close();
+                    promise.tryFail("Document exceeds: " + MAX_SIZE + " bytes");
+                    //logger.info("scriptonite file exceeds max size");
+                }
+            });
+
+            socket.exceptionHandler(promise::fail);
+
+            socket.closeHandler(v -> {
+                //if(promise.tryComplete(host))
+                // Response ends — parse header + body
+                int headerEnd = responseBuffer.toString().indexOf("\r\n");
+                if (headerEnd == -1) {
+                    promise.fail("Malformed Gemini response (missing header)");
+                    return;
+                }
+
+                String header = responseBuffer.getString(0, headerEnd);
+                String body = responseBuffer.getString(headerEnd + 2, responseBuffer.length());
+
+                if (!header.startsWith("20 text/gemini") && !header.startsWith("20 text/plain")) {
+                    promise.tryFail("Bad header: " + header);
+                } else {
+                    promise.tryComplete(body);
+                }
+            });
+        });
+
+        return promise.future();
     }
 
 }

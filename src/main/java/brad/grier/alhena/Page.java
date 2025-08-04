@@ -2,14 +2,24 @@ package brad.grier.alhena;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.io.File;
 import java.security.cert.X509Certificate;
 
+import javax.swing.ImageIcon;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JLayer;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
+import javax.swing.plaf.LayerUI;
+
+import com.formdev.flatlaf.util.SystemInfo;
 
 /**
  * A class that encapsulates the JTextPane and JScrollPane used in the main view
@@ -35,6 +45,8 @@ public class Page extends JPanel {
     private boolean busy = true;
     private boolean isSpartan;
     private boolean isNex;
+    private JLabel overlayLabel;
+    public static final int ICON_SIZE = 39;
 
     private Page() {
 
@@ -55,13 +67,51 @@ public class Page extends JPanel {
         scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
         String ss = DB.getPref("scrollspeed", null);
 
+        overlayLabel = new JLabel("");
+        String fontFamily = "Noto Emoji";
+        if (SystemInfo.isMacOS) {
+            boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
+            if (!macUseNoto) {
+                fontFamily = "SansSerif";
+            }
+        }
+        overlayLabel.setFont(new Font(fontFamily, Font.PLAIN, ICON_SIZE));
+        overlayLabel.setBounds(50, 10, 50, 50); 
+
+        JLayer<JComponent> layer = new JLayer<>(scrollPane, new LayerUI<>() {
+
+            @Override
+            public void paint(Graphics g, JComponent c) {
+                super.paint(g, c);
+                if (Alhena.favIcon && GeminiTextPane.indent > ICON_SIZE + 5) {
+                    int x = GeminiTextPane.indent / 2 - (ICON_SIZE / 2);
+                    int y = scrollPane.getViewport().getExtentSize().height / 2 - ICON_SIZE;
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.translate(x, y);
+                    overlayLabel.paint(g2);
+                    g2.dispose();
+                }
+            }
+        });
+        add(layer, BorderLayout.CENTER);
+
         if (ss != null) {
             int scrollSpeed = Integer.parseInt(ss);
 
             scrollPane.getVerticalScrollBar().setUnitIncrement(scrollSpeed);
         }
-        add(scrollPane, BorderLayout.CENTER);
+    }
 
+    public void setFavIcon(Object icon) {
+
+        if (icon instanceof ImageIcon imageIcon) {
+            overlayLabel.setIcon(imageIcon);
+        } else {
+            //System.out.println(((String) icon).length());
+            if (((String) icon).length() < 5) {
+                overlayLabel.setText((String) icon);
+            }
+        }
     }
 
     private String editedText;
@@ -196,10 +246,10 @@ public class Page extends JPanel {
     public void doneLoading() {
         if (start != 0) {
             elapsed = System.currentTimeMillis() - start;
-            
+
             if (protocol != null) {
                 frame.setTmpStatus(elapsed + " ms " + protocol + " " + cipherSuite);
-            }else{
+            } else {
                 frame.setTmpStatus(elapsed + " ms");
             }
         }

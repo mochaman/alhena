@@ -1199,14 +1199,14 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private boolean printing;
+
     public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest, boolean printing) {
         this.printing = printing;
-        if(printing){
+        if (printing) {
             setBackground(Color.WHITE);
             hasAnsi = true;
         }
         updatePage(geminiDoc, pfMode, docURL, newRequest);
-        
 
         end();
     }
@@ -1259,7 +1259,7 @@ public class GeminiTextPane extends JTextPane {
 
         } else {
             int mIdx = txt.indexOf('m');
-            if(mIdx == -1){
+            if (mIdx == -1) {
                 plainText(txt);
                 return;
             }
@@ -1704,7 +1704,7 @@ public class GeminiTextPane extends JTextPane {
                 bStyle = null;
                 if (asciiSB != null && !asciiSB.isEmpty()) {
                     asciiSB.deleteCharAt(asciiSB.length() - 1);
-                    
+
                     BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
                     ImageIcon icon = new ImageIcon(bi);
                     if (ptp == null) {
@@ -1736,8 +1736,8 @@ public class GeminiTextPane extends JTextPane {
                     addStyledText("\n", "```", null);
                     ptp = (PreformattedTextPane) createTextComponent();
 
-                }else{
-                    addStyledText("\n", "```", null);    
+                } else {
+                    addStyledText("\n", "```", null);
                 }
 
             }
@@ -2359,6 +2359,41 @@ public class GeminiTextPane extends JTextPane {
 
         return viewRect.contains(newRect.getBounds());
 
+    }
+
+    public static Object getFavIcon(String s) {
+        List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(s);
+        IndexedEmoji emoji;
+        ImageIcon icon = null;
+        if ((emoji = isEmoji(emojis, 0)) != null) {
+            if (sheetImage != null) {
+
+                String key = getEmojiHex(emoji);
+
+                Point p = emojiSheetMap.get(key);
+                
+                int imgSize = Page.ICON_SIZE + 4;
+                if (p != null) {
+                    icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, Page.ICON_SIZE);
+                } else {
+                    int dashIdx = key.indexOf('-');
+                    if (dashIdx != -1) {
+
+                        p = emojiSheetMap.get(key.substring(0, dashIdx));
+                        if (p != null) {
+                            icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, Page.ICON_SIZE);
+                        }
+                    }
+                }
+
+            }
+        }
+        if (icon == null) {
+            return s;
+        } else {
+
+            return icon;
+        }
     }
 
 }
