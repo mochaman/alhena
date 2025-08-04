@@ -633,12 +633,12 @@ public class Alhena {
                     p.setFavIcon(o);
                 }
             } else {
-                
+                //System.out.println("favicon check");
                 String favUrl = "gemini://" + fiAuthority + "/favicon.txt";
 
-                // do not care if fail
                 getNetClient(URI.create("gemini://" + fiAuthority));
                 fetchGeminiPage(favUrl).onSuccess(content -> {
+                    //System.out.println("favicon: " + content.trim());
                     Object o = GeminiTextPane.getFavIcon(content.trim());
                     favMap.put(fiAuthority, o);
                     p.setFavIcon(o);
@@ -3206,7 +3206,7 @@ public class Alhena {
         }
     }
 
-    private final static int MAX_SIZE = 32; // currently only used for favicons
+    private final static int MAX_SIZE = 128; // currently only used for favicons
 
     public static Future<String> fetchGeminiPage(String url) {
         Promise<String> promise = Promise.promise();
@@ -3216,12 +3216,28 @@ public class Alhena {
         int port = uri.getPort() == -1 ? 1965 : uri.getPort();
 
         certMap.get(null).connect(port, host, ar -> {
+
             if (ar.failed()) {
                 promise.fail(ar.cause());
                 return;
             }
 
             NetSocket socket = ar.result();
+            //NetSocket socket = connection.result();
+
+            NetSocketInternal socketInternal = (NetSocketInternal) socket;
+            Channel channel = socketInternal.channelHandlerContext().channel();
+
+            // the vger gemini server sends close_notify without immediately closing the connection
+            channel.pipeline().addAfter("ssl", "ssl-close-detector", new ChannelInboundHandlerAdapter() {
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    if (evt instanceof SslCloseCompletionEvent) {
+                        socket.close();
+                    }
+                    super.userEventTriggered(ctx, evt);
+                }
+            });
             socket.write(url + "\r\n");
 
             Buffer responseBuffer = Buffer.buffer();
