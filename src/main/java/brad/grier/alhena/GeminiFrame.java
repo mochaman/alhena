@@ -597,6 +597,8 @@ public final class GeminiFrame extends JFrame {
             p.textPane.end(sb.toString(), gtp.current().pMode(), gtp.getDocURLString(), false, true);
 
             PrinterJob job = PrinterJob.getPrinterJob();
+            job.setJobName("Alhena"); // this might do something somewhere
+
             PageFormat pf = job.defaultPage();
 
             job.setPrintable(new ViewBasedTextPanePrinter(p.textPane, pf), pf);
