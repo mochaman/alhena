@@ -2362,7 +2362,12 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public static Object getFavIcon(String s) {
-        List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(s);
+        List<IndexedEmoji> emojis;
+        try{
+            emojis = EmojiManager.extractEmojisInOrderWithIndex(s);
+        }catch(Exception ex){
+            return s;
+        }
         IndexedEmoji emoji;
         ImageIcon icon = null;
         if ((emoji = isEmoji(emojis, 0)) != null) {
