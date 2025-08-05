@@ -638,10 +638,14 @@ public class Alhena {
 
                 getNetClient(URI.create("gemini://" + fiAuthority));
                 fetchGeminiPage(favUrl).onSuccess(content -> {
+                    
                     //System.out.println("favicon: " + content.trim());
                     Object o = GeminiTextPane.getFavIcon(content.trim());
                     favMap.put(fiAuthority, o);
-                    p.setFavIcon(o);
+                    bg(()->{
+                        p.setFavIcon(o);
+                    });
+                    
                 }).onFailure(error -> {
                     favMap.put(fiAuthority, null);
                     //error.printStackTrace();
