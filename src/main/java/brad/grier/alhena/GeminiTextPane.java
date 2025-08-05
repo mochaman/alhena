@@ -1712,6 +1712,7 @@ public class GeminiTextPane extends JTextPane {
                     } else {
                         // insert JLabel into ptp
                         ptp.insertComp(new JLabel(icon));
+                        ptp.scrollLeft();
                         ptp = null;
                     }
                     asciiSB = null;
@@ -1720,6 +1721,7 @@ public class GeminiTextPane extends JTextPane {
 
                     ptp.end();
                     ptp.removeLastChar();
+                    ptp.scrollLeft();
                     ptp = null;
                 }
                 addStyledText("\n", "```", null);

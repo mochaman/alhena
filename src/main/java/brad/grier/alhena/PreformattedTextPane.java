@@ -288,11 +288,13 @@ public class PreformattedTextPane extends JTextPane {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    public void scrollLeft() {
         EventQueue.invokeLater(() -> {
             JScrollPane jsp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, this);
             jsp.getHorizontalScrollBar().setValue(0);
         });
-
     }
 
     private void plainText(String txt) {
@@ -312,7 +314,7 @@ public class PreformattedTextPane extends JTextPane {
             plainText(txt);
         } else {
             int mIdx = txt.indexOf('m');
-            if(mIdx == -1){
+            if (mIdx == -1) {
                 plainText(txt);
                 return;
             }
