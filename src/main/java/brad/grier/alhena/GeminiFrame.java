@@ -2302,8 +2302,13 @@ public final class GeminiFrame extends JFrame {
 
         Optional<Page> page = Optional.ofNullable(SwingUtilities.getAncestorOfClass(Page.class, textPane))
                 .map(component -> (Page) component);
-        InfoPageInfo pageInfo = new InfoPageInfo("servercert: " + host, page.get().getCert().toString());
-        showCustomPage(INFO_LABEL, pageInfo);
+        X509Certificate pageCert = page.get().getCert();
+        if (pageCert == null) {
+            Util.infoDialog(GeminiFrame.this, "No Cert", "No certificate found");
+        } else {
+            InfoPageInfo pageInfo = new InfoPageInfo("servercert: " + host, pageCert.toString());
+            showCustomPage(INFO_LABEL, pageInfo);
+        }
 
     }
 
