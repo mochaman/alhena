@@ -59,6 +59,7 @@ import java.util.function.BooleanSupplier;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.swing.ButtonGroup;
@@ -638,14 +639,14 @@ public class Alhena {
 
                 getNetClient(URI.create("gemini://" + fiAuthority));
                 fetchGeminiPage(favUrl).onSuccess(content -> {
-                    
+
                     //System.out.println("favicon: " + content.trim());
                     Object o = GeminiTextPane.getFavIcon(content.trim());
                     favMap.put(fiAuthority, o);
-                    bg(()->{
+                    bg(() -> {
                         p.setFavIcon(o);
                     });
-                    
+
                 }).onFailure(error -> {
                     favMap.put(fiAuthority, null);
                     //error.printStackTrace();
@@ -1715,9 +1716,16 @@ public class Alhena {
                 } else {
                     bg(() -> {
                         p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
-                        String cause = causedByCertificateParsingException(connection.cause());
+                        String cause = findCauseMessage(connection.cause(), CertificateParsingException.class);
                         if (cause != null) {
                             Util.infoDialog(p.frame(), "Certificate Error", cause, JOptionPane.ERROR_MESSAGE);
+                        } else {
+                            cause = findCauseMessage(connection.cause(), SSLHandshakeException.class);
+
+                            if (cause != null) {
+                                String msg = "The server certificate may need to be revalidated. Deactivate any client certs for this site before re-connecting. Once connected, re-activate the client cert.";
+                                Util.infoDialog(p.frame(), "SSLHandshake Error", msg, JOptionPane.ERROR_MESSAGE);
+                            }
                         }
                     });
                     //connection.cause().printStackTrace();
@@ -1727,9 +1735,9 @@ public class Alhena {
         });
     }
 
-    public static String causedByCertificateParsingException(Throwable throwable) {
+    private static String findCauseMessage(Throwable throwable, Class<? extends Throwable> targetType) {
         while (throwable != null) {
-            if (throwable instanceof CertificateParsingException) {
+            if (targetType.isInstance(throwable)) {
                 return throwable.getLocalizedMessage();
             }
             throwable = throwable.getCause();
@@ -1861,6 +1869,8 @@ public class Alhena {
             String fp = hexString.substring(0, hexString.length());
             java.sql.Timestamp ts = new java.sql.Timestamp(cert.getNotAfter().getTime());
             DB.upsertCert(host, fp, ts, null);
+            // Update the server cert in cacerts file if and only if it's already there
+            addCertToTrustStore(URI.create("gemini://" + host), cert, true);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -1949,6 +1959,8 @@ public class Alhena {
         NetClient res = null;
         try {
             ClientCertInfo cci = DB.getClientCert(uri);
+            // System.out.println(uri.toString());
+            // System.out.println(cci);
             if (cci == null) {
                 if (!certMap.containsKey(null)) { // default connection
 
@@ -1962,6 +1974,7 @@ public class Alhena {
                 }
                 res = certMap.get(null); // default shared NetClient for connections without client certs
             } else {
+                // TODO: check server cert in cacerts for validity????
                 if (!certMap.containsKey(cci)) {
                     NetClientOptions options = new NetClientOptions()
                             .setSsl(true) // gemini uses TLS
@@ -1974,7 +1987,7 @@ public class Alhena {
                                     return () -> {
                                         try {
                                             return new JdkSslContext(
-                                                    createSSLContext(cci, uri),
+                                                    createSSLContext(cci),
                                                     true,
                                                     null,
                                                     IdentityCipherSuiteFilter.INSTANCE,
@@ -2067,7 +2080,7 @@ public class Alhena {
             if ("OK".equals(cn)) {
                 String cnString = cnField.getText();
                 cnString = cnString.isEmpty() ? PROG_NAME : cnString;
-                addCertToTrustStore(uri, cert);
+                addCertToTrustStore(uri, cert, false);
 
                 if (dcButton.isSelected()) {
                     String port = uri.getPort() == -1 ? ":1965" : ":" + uri.getPort();
@@ -2122,7 +2135,7 @@ public class Alhena {
         return false; // value doesn't matter when called from type 60 (sent to bg())
     }
 
-    public static void addCertToTrustStore(URI uri, X509Certificate cert) {
+    public static void addCertToTrustStore(URI uri, X509Certificate cert, boolean replaceExistingAlias) {
         // add server certs for sites that require a client certificate
 
         String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
@@ -2137,12 +2150,18 @@ public class Alhena {
                     keyStore.load(is, cacertsPassword.toCharArray());
                 }
 
+                int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+                String newAlias = uri.getHost() + "." + port;
+                if (replaceExistingAlias) {
+                    // return if alias does not exist in cacerts file
+                    if (!java.util.Collections.list(keyStore.aliases()).contains(newAlias)) {
+                        return;
+                    }
+                }
+
                 if (certExists(keyStore, calculateFingerprint(cert)) != null) {
                     return;
                 }
-
-                int port = uri.getPort() == -1 ? 1965 : uri.getPort();
-                String newAlias = uri.getHost() + "." + port;
 
                 // add the certificate to the keystore
                 keyStore.setCertificateEntry(newAlias, cert);
@@ -2253,7 +2272,7 @@ public class Alhena {
                 if (cert instanceof X509Certificate x509Cert) {
                     String fingerprint = calculateFingerprint(x509Cert);
                     if (fingerprint.equalsIgnoreCase(certFingerprint)) {
-                        ;
+
                         return alias;
                     }
                 }
@@ -2262,7 +2281,7 @@ public class Alhena {
         return null;
     }
 
-    private static SSLContext createSSLContext(ClientCertInfo certInfo, URI uri) throws Exception {
+    private static SSLContext createSSLContext(ClientCertInfo certInfo) throws Exception {
         // register Bouncy Castle as a security provider
         Security.addProvider(new BouncyCastleProvider());
         X509Certificate cert = (X509Certificate) loadCertificate(certInfo.cert());
