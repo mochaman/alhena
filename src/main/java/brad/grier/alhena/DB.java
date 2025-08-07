@@ -597,7 +597,7 @@ public class DB {
                 try (ResultSet rs = st.executeQuery("SELECT PREFKEY, PREF FROM PREFS")) {
 
                     while (rs.next()) {
-                        map.put(rs.getString(1), rs.getString(2));    
+                        map.put(rs.getString(1), rs.getString(2));
                     }
                 }
             }
@@ -706,8 +706,20 @@ public class DB {
         }
 
         DB.insertPref("allowvlc", String.valueOf(vlc)); //  do not restore vlc setting as vlc may not exist on different machine
-        Alhena.httpProxy = DB.getPref("httpproxy", null);
-        Alhena.gopherProxy = DB.getPref("gopherproxy", null);
+
+        HashMap<String, String> map = DB.getAllPrefs();
+        Alhena.httpProxy = map.getOrDefault("httpproxy", null);
+        Alhena.gopherProxy = map.getOrDefault("gopherproxy", null);
+        Alhena.searchUrl = map.getOrDefault("searchurl", null);
+        int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
+        GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
+        GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
+        GeminiTextPane.asciiImage = map.getOrDefault("asciipf", "false").equals("true");
+        GeminiTextPane.embedPF = map.getOrDefault("embedpf", "true").equals("true");
+        GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
+        GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
+        GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
+        Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
 
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes
