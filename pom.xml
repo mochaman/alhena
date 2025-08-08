@@ -8,7 +8,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <exec.mainClass>brad.grier.alhena.Alhena</exec.mainClass>
-        <vertx.version>4.5.16</vertx.version>  
+        <vertx.version>4.5.17</vertx.version>  
     </properties>
     <dependencies>
         <dependency>
@@ -45,7 +45,7 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <version>4.1.115.Final</version>
+            <version>4.1.123.Final</version>
             <classifier>osx-aarch_64</classifier>
         </dependency>  
         <dependency>
