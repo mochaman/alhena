@@ -1029,11 +1029,11 @@ public class Alhena {
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
 
                             } else {
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
                             }
                         });
                     } else {
@@ -1172,11 +1172,11 @@ public class Alhena {
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
 
                             } else {
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
                             }
                         });
                     } else {
@@ -1660,11 +1660,11 @@ public class Alhena {
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
 
                             } else {
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()));
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
                             }
                         });
                     } else {
@@ -2812,11 +2812,11 @@ public class Alhena {
                                             GeminiTextPane tPane = cPage.textPane;
 
                                             if (tPane.awatingImage()) {
-                                                tPane.insertImage(imageBuffer.getBytes());
+                                                tPane.insertImage(imageBuffer.getBytes(), false);
 
                                             } else {
                                                 p.textPane.end(" ", false, fUrl, true);
-                                                p.textPane.insertImage(imageBuffer.getBytes());
+                                                p.textPane.insertImage(imageBuffer.getBytes(), false);
                                             }
                                         });
 
@@ -2996,11 +2996,11 @@ public class Alhena {
                                             byte[] data = Files.readAllBytes(file.toPath());
                                             file.delete();
                                             if (tPane.awatingImage()) {
-                                                tPane.insertImage(data);
+                                                tPane.insertImage(data, false);
 
                                             } else {
                                                 p.textPane.end(" ", false, finalURL, true);
-                                                p.textPane.insertImage(data);
+                                                p.textPane.insertImage(data, false);
                                             }
                                         } catch (IOException ex) {
                                             ex.printStackTrace();

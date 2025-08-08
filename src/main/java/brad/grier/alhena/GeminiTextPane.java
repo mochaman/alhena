@@ -32,11 +32,14 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -902,7 +905,7 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    public void insertImage(byte[] imageBytes) {
+    public void insertImage(byte[] imageBytes, boolean curPos) {
         inserting = true;
 
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
@@ -917,7 +920,10 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setIcon(emojiStyle, icon);
 
         try {
-            if (lastClicked == null) {
+            if (curPos) {
+                doc.insertString(doc.getLength(), " ", emojiStyle);
+                doc.insertString(doc.getLength(), "\n", null);
+            } else if (lastClicked == null) {
                 doc.insertString(0, " ", emojiStyle);
                 imageOnly = true;
             } else {
@@ -1767,7 +1773,7 @@ public class GeminiTextPane extends JTextPane {
             addStyledText(line.substring(2).trim(), "##", null);
         } else if (line.startsWith("#")) {
             addStyledText(line.substring(1).trim(), "#", null);
-        } else if (line.startsWith("=>") || (line.startsWith("=: ") && page.isSpartan())) {
+        } else if (line.startsWith("=>") || (page.isSpartan() && line.startsWith("=: "))) {
             String ll = line.substring(2).trim();
             boolean spartanLink = line.startsWith("=: ");
             int i;
@@ -1787,6 +1793,8 @@ public class GeminiTextPane extends JTextPane {
                 }
 
             }
+            boolean dataUrl = url.startsWith("data:");
+
             String finalUrl = url;
             String label = ll.substring(i).trim();
 
@@ -1794,6 +1802,9 @@ public class GeminiTextPane extends JTextPane {
 
             ClickableRange cr = addStyledText(label.isEmpty() ? url.replace("/", "/\u200B") : label, linkStyle,
                     () -> {
+                        if (dataUrl) {
+                            return;
+                        }
                         String useB = DB.getPref("browser", null);
                         boolean useBrowser = useB == null ? true : useB.equals("true");
                         if (spartanLink) {
@@ -1840,6 +1851,56 @@ public class GeminiTextPane extends JTextPane {
                         }
 
                     });
+            if (dataUrl) {
+                //data:text/plain,Hello%20world.%20I'm%20an%20attachment.
+                int scIndex = url.indexOf(";");
+                if (scIndex != -1) {
+                    String mime = url.substring(5, scIndex);
+                    boolean base64 = url.substring(scIndex + 1).startsWith("base64,");
+                    if (base64 && mime.startsWith("image")) {
+                        byte[] image = Base64.getDecoder().decode(url.substring(scIndex + 8));
+                        insertImage(image, true);
+                    }
+                } else {
+                    int cIdx = url.indexOf(",");
+                    String mime = url.substring(5, cIdx);
+                    if (mime.startsWith("text")) {
+                        String s;
+                        try {
+                            s = URLDecoder.decode(url.substring(cIdx + 1), "UTF-8");
+
+                            if (embedPF) {
+                                PreformattedTextPane ptpText = (PreformattedTextPane) createTextComponent();
+                                if (asciiImage && !printing) {
+                                    BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
+                                    ImageIcon icon = new ImageIcon(bi);
+                                    ptpText.insertComp(new JLabel(icon));
+                                    ptpText.scrollLeft();
+                                } else {
+                                    ptpText.addText(s + "\n");
+                                    ptpText.end();
+                                    ptpText.removeLastChar();
+                                    ptpText.scrollLeft();
+                                }
+                                ptpList.add(ptpText);
+
+                            } else {
+                                if (asciiImage && !printing) {
+                                    BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
+                                    ImageIcon icon = new ImageIcon(bi);
+                                    insertComp(new JLabel(icon), doc.getLength());
+                                }else{
+                                    addStyledText(s, "```", null);
+                                }
+                            }
+                        } catch (UnsupportedEncodingException ex) {
+                            ex.printStackTrace();
+                        }
+
+                    }
+
+                }
+            }
             cr.url = url;
             cr.directive = directive[0];
 
@@ -2365,9 +2426,9 @@ public class GeminiTextPane extends JTextPane {
 
     public static Object getFavIcon(String s) {
         List<IndexedEmoji> emojis;
-        try{
+        try {
             emojis = EmojiManager.extractEmojisInOrderWithIndex(s);
-        }catch(Exception ex){
+        } catch (Exception ex) {
             return s;
         }
         IndexedEmoji emoji;
@@ -2378,7 +2439,7 @@ public class GeminiTextPane extends JTextPane {
                 String key = getEmojiHex(emoji);
 
                 Point p = emojiSheetMap.get(key);
-                
+
                 int imgSize = Page.ICON_SIZE + 4;
                 if (p != null) {
                     icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, Page.ICON_SIZE);
