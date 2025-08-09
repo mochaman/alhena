@@ -157,6 +157,7 @@ public class Alhena {
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
     public static boolean favIcon;
+    public static boolean dataUrl;
     private static final HashMap<String, Object> favMap = new HashMap<>();
 
     private static final List<String> allowedSchemes = List.of(
@@ -401,6 +402,7 @@ public class Alhena {
             GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
             GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
             Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
+            Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
             theme = map.get("theme");
             if (theme != null) {
 

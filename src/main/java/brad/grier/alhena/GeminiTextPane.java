@@ -612,7 +612,13 @@ public class GeminiTextPane extends JTextPane {
 
                                 } else {
                                     lastClicked = range;
-                                    range.action.run();
+                                    if (!range.dataUrl) {
+                                        range.action.run();
+                                    } else {
+                                        dataURL(range.url, false);
+
+                                    }
+
                                 }
                             }
                             break;
@@ -770,9 +776,10 @@ public class GeminiTextPane extends JTextPane {
 
         int index = rg.imageIndex;
         try {
-            Element element = doc.getCharacterElement(index + 2);
+            Element element = doc.getCharacterElement(index + 1);
             AttributeSet attrs = element.getAttributes();
             Component jc = StyleConstants.getComponent(attrs);
+
             if (StyleConstants.getIcon(attrs) != null || jc != null) {
                 if (jc != null) {
                     MediaComponent removedAp = null;
@@ -787,8 +794,9 @@ public class GeminiTextPane extends JTextPane {
                         playerList.remove(removedAp);
                     }
                 }
-                doc.remove(index + 2, 1); // Remove the image/component
+
                 doc.remove(index + 1, 2);
+
                 boolean start = false;
                 for (ClickableRange range : clickableRegions) {
                     if (range == rg) {
@@ -796,14 +804,22 @@ public class GeminiTextPane extends JTextPane {
                         continue;
                     }
                     if (start) {
-                        range.start = range.start - 3;
-                        range.end = range.end - 3;
+                        range.start = range.start - 2;
+                        range.end = range.end - 2;
                         if (range.imageIndex != -1) {
-                            range.imageIndex = range.imageIndex - 3;
+                            range.imageIndex = range.imageIndex - 2;
                         }
                     }
                 }
             }
+
+            if (rg.dataUrl) {
+                EventQueue.invokeLater(() -> {
+                    updateUI();
+                    //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
+                });
+            }
+
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
@@ -866,9 +882,9 @@ public class GeminiTextPane extends JTextPane {
                 doc.insertString(0, " ", apStyle);
                 imageOnly = true;
             } else {
+                doc.insertString(lastClicked.end + 1, " ", apStyle);
+                doc.insertString(lastClicked.end + 2, "\n", null); //???
 
-                doc.insertString(lastClicked.end + 1, "\n\n", null);
-                doc.insertString(lastClicked.end + 2, " ", apStyle);
                 lastClicked.imageIndex = lastClicked.end;
                 boolean start = false;
                 for (ClickableRange range : clickableRegions) {
@@ -877,10 +893,10 @@ public class GeminiTextPane extends JTextPane {
                         continue;
                     }
                     if (start) {
-                        range.start = range.start + 3;
-                        range.end = range.end + 3;
+                        range.start = range.start + 2;
+                        range.end = range.end + 2;
                         if (range.imageIndex != -1) {
-                            range.imageIndex = range.imageIndex + 3;
+                            range.imageIndex = range.imageIndex + 2;
                         }
                     }
                 }
@@ -890,6 +906,7 @@ public class GeminiTextPane extends JTextPane {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+
     }
 
     public void insertMediaPlayer(String path, String mime) {
@@ -907,7 +924,6 @@ public class GeminiTextPane extends JTextPane {
 
     public void insertImage(byte[] imageBytes, boolean curPos) {
         inserting = true;
-
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
         int width = (int) contentWidth - 50;
@@ -928,8 +944,9 @@ public class GeminiTextPane extends JTextPane {
                 imageOnly = true;
             } else {
 
-                doc.insertString(lastClicked.end + 1, "\n\n", null);
-                doc.insertString(lastClicked.end + 2, " ", emojiStyle);
+                doc.insertString(lastClicked.end + 1, " ", emojiStyle);
+                doc.insertString(lastClicked.end + 2, "\n", null); //???
+
                 lastClicked.imageIndex = lastClicked.end;
                 boolean start = false;
                 for (ClickableRange range : clickableRegions) {
@@ -938,10 +955,10 @@ public class GeminiTextPane extends JTextPane {
                         continue;
                     }
                     if (start) {
-                        range.start = range.start + 3;
-                        range.end = range.end + 3;
+                        range.start = range.start + 2;
+                        range.end = range.end + 2;
                         if (range.imageIndex != -1) {
-                            range.imageIndex = range.imageIndex + 3;
+                            range.imageIndex = range.imageIndex + 2;
                         }
                     }
                 }
@@ -1742,7 +1759,7 @@ public class GeminiTextPane extends JTextPane {
                 if (embedPF && !printing) {
 
                     addStyledText("\n", "```", null);
-                    ptp = (PreformattedTextPane) createTextComponent();
+                    ptp = createTextComponent(true);
 
                 } else {
                     addStyledText("\n", "```", null);
@@ -1802,9 +1819,7 @@ public class GeminiTextPane extends JTextPane {
 
             ClickableRange cr = addStyledText(label.isEmpty() ? url.replace("/", "/\u200B") : label, linkStyle,
                     () -> {
-                        if (dataUrl) {
-                            return;
-                        }
+
                         String useB = DB.getPref("browser", null);
                         boolean useBrowser = useB == null ? true : useB.equals("true");
                         if (spartanLink) {
@@ -1851,56 +1866,12 @@ public class GeminiTextPane extends JTextPane {
                         }
 
                     });
-            if (dataUrl) {
-                //data:text/plain,Hello%20world.%20I'm%20an%20attachment.
-                int scIndex = url.indexOf(";");
-                if (scIndex != -1) {
-                    String mime = url.substring(5, scIndex);
-                    boolean base64 = url.substring(scIndex + 1).startsWith("base64,");
-                    if (base64 && mime.startsWith("image")) {
-                        byte[] image = Base64.getDecoder().decode(url.substring(scIndex + 8));
-                        insertImage(image, true);
-                    }
-                } else {
-                    int cIdx = url.indexOf(",");
-                    String mime = url.substring(5, cIdx);
-                    if (mime.startsWith("text")) {
-                        String s;
-                        try {
-                            s = URLDecoder.decode(url.substring(cIdx + 1), "UTF-8");
+            if (Alhena.dataUrl && dataUrl) { // auto view
+                dataURL(url, true);
+                cr.imageIndex = cr.end;
 
-                            if (embedPF) {
-                                PreformattedTextPane ptpText = (PreformattedTextPane) createTextComponent();
-                                if (asciiImage && !printing) {
-                                    BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
-                                    ImageIcon icon = new ImageIcon(bi);
-                                    ptpText.insertComp(new JLabel(icon));
-                                    ptpText.scrollLeft();
-                                } else {
-                                    ptpText.addText(s + "\n");
-                                    ptpText.end();
-                                    ptpText.removeLastChar();
-                                    ptpText.scrollLeft();
-                                }
-                                ptpList.add(ptpText);
-
-                            } else {
-                                if (asciiImage && !printing) {
-                                    BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
-                                    ImageIcon icon = new ImageIcon(bi);
-                                    insertComp(new JLabel(icon), doc.getLength());
-                                }else{
-                                    addStyledText(s, "```", null);
-                                }
-                            }
-                        } catch (UnsupportedEncodingException ex) {
-                            ex.printStackTrace();
-                        }
-
-                    }
-
-                }
             }
+            cr.dataUrl = dataUrl;
             cr.url = url;
             cr.directive = directive[0];
 
@@ -1914,7 +1885,52 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private Component createTextComponent() {
+    private void dataURL(String url, boolean curPos) {
+        int scIndex = url.indexOf(";");
+        if (scIndex != -1) {
+            String mime = url.substring(5, scIndex);
+            boolean base64 = url.substring(scIndex + 1).startsWith("base64,");
+            if (base64 && mime.startsWith("image")) {
+                byte[] image = Base64.getDecoder().decode(url.substring(scIndex + 8));
+                insertImage(image, curPos);
+            }
+        } else {
+            int cIdx = url.indexOf(",");
+            String mime = url.substring(5, cIdx);
+            if (mime.startsWith("text")) {
+                String s;
+                try {
+                    s = URLDecoder.decode(url.substring(cIdx + 1), "UTF-8");
+
+                    PreformattedTextPane ptpText = createTextComponent(curPos);
+                    if (asciiImage && !printing) {
+                        BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
+                        ImageIcon icon = new ImageIcon(bi);
+                        ptpText.insertComp(new JLabel(icon));
+                        ptpText.scrollLeft();
+                    } else {
+                        ptpText.addText(s + "\n");
+                        ptpText.end();
+                        ptpText.removeLastChar();
+                        ptpText.scrollLeft();
+                    }
+                    ptpList.add(ptpText);
+                    EventQueue.invokeLater(() -> {
+                        updateUI();
+                        //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
+                    });
+
+
+                } catch (UnsupportedEncodingException ex) {
+                    ex.printStackTrace();
+                }
+
+            }
+
+        }
+    }
+
+    private PreformattedTextPane createTextComponent(boolean curPos) {
 
         Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
         PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize, isDark);
@@ -1994,8 +2010,14 @@ public class GeminiTextPane extends JTextPane {
 
         sp.setBorder(null);
         sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
-        insertComp(sp, doc.getLength());
-        addStyledText("", "```", null);
+        if (curPos) {
+            insertComp(sp, doc.getLength());
+            addStyledText("", "```", null);
+        } else {
+            sp.setFocusable(false);
+            insertComp(sp);
+
+        }
         ptpList.add(pfTextPane);
         return pfTextPane;
     }
@@ -2147,6 +2169,7 @@ public class GeminiTextPane extends JTextPane {
         String url;
         String directive;
         int imageIndex = -1;
+        boolean dataUrl;
 
         ClickableRange(int start, int end, Runnable action) {
             this.start = start;
@@ -2402,7 +2425,9 @@ public class GeminiTextPane extends JTextPane {
 
                     } else {
                         lastClicked = cr;
-                        cr.action.run();
+                        if (!cr.dataUrl) {
+                            cr.action.run();
+                        }
                     }
 
                     break;

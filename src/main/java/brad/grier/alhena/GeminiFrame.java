@@ -1065,8 +1065,20 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem dataUrlItem = new JCheckBoxMenuItem("Open Data URLs", Alhena.dataUrl);
+        dataUrlItem.addItemListener(ae -> {
+
+            Alhena.dataUrl = !Alhena.dataUrl;
+
+            DB.insertPref("dataurl", String.valueOf(Alhena.dataUrl));
+
+            Alhena.updateFrames(false, false);
+
+        });
+
         settingsMenu.add(vlcItem);
         settingsMenu.add(favIconItem);
+        settingsMenu.add(dataUrlItem);
 
         settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem("HTTP Proxy");
