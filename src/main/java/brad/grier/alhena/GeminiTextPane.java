@@ -515,9 +515,10 @@ public class GeminiTextPane extends JTextPane {
                                 menuItem1.addActionListener(ev -> {
                                     f.newTab(range.url);
                                 });
+                                menuItem1.setEnabled(!range.dataUrl);
                                 popupMenu.add(menuItem1);
                                 JMenuItem menuItem2 = new JMenuItem("Open in New Window");
-
+                                menuItem2.setEnabled(!range.dataUrl);
                                 menuItem2.addActionListener(ev -> {
                                     Alhena.newWindow(range.url, docURL);
 
