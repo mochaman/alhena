@@ -1076,9 +1076,21 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem linkIconItem = new JCheckBoxMenuItem("Link Icons", Alhena.linkIcons);
+        linkIconItem.addItemListener(ae -> {
+
+            Alhena.linkIcons = !Alhena.linkIcons;
+
+            DB.insertPref("linkicons", String.valueOf(Alhena.linkIcons));
+
+            Alhena.updateFrames(false, false);
+
+        });
+
         settingsMenu.add(vlcItem);
         settingsMenu.add(favIconItem);
         settingsMenu.add(dataUrlItem);
+        settingsMenu.add(linkIconItem);
 
         settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem("HTTP Proxy");
