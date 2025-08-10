@@ -2380,6 +2380,15 @@ public final class GeminiFrame extends JFrame {
                                 setTitle("New Tab");
                                 selectComboBoxItem("");
                             }
+
+                            Page rootPage = getRootPage(page);
+                            if (rootPage != null) { // NOT 100% ON THIS
+                                backButton.setEnabled(hasPrev(rootPage));
+                                forwardButton.setEnabled(hasNext(rootPage));
+                            } else {
+                                backButton.setEnabled(false);
+                                forwardButton.setEnabled(false);
+                            }
                             GeminiFrame.this.validate();
                         } else {
                             Page page = (Page) tabbedPane.getComponentAt(tabIndex);
