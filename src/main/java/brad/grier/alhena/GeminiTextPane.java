@@ -1650,7 +1650,7 @@ public class GeminiTextPane extends JTextPane {
         //StyleConstants.setBold(textStyle, false);
         StyleConstants.setForeground(textStyle, foreground);
 
-        Style listStyle = doc.addStyle("*", textStyle);
+        doc.addStyle("*", textStyle);
 
         hoverStyle = new SimpleAttributeSet();
         StyleConstants.setForeground(hoverStyle, hoverColor);
@@ -1814,11 +1814,31 @@ public class GeminiTextPane extends JTextPane {
             boolean dataUrl = url.startsWith("data:");
 
             String finalUrl = url;
-            String label = ll.substring(i).trim();
+            String label;
+            String sfx = "";
+            if (Alhena.linkIcons && currentMode == DEFAULT_MODE) {
 
+                if (finalUrl.indexOf("://") == -1) {
+
+                    if (finalUrl.startsWith("data")) {
+                        sfx = "📎 ";
+                    } else if (finalUrl.startsWith("mailto")) {
+                        sfx = "✉️ ";
+                    } else {
+                        sfx = !docURL.startsWith("gemini") ? "🌐 " : " ➤ ";
+                    }
+
+                } else {
+                    sfx = !finalUrl.startsWith("gemini") ? "🌐 " : " ➤ ";
+
+                }
+
+            }
+
+            label = ll.substring(i).trim();
             String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
 
-            ClickableRange cr = addStyledText(label.isEmpty() ? url.replace("/", "/\u200B") : label, linkStyle,
+            ClickableRange cr = addStyledText(label.isEmpty() ? sfx + url.replace("/", "/\u200B") : sfx + label, linkStyle,
                     () -> {
 
                         String useB = DB.getPref("browser", null);
@@ -1920,7 +1940,6 @@ public class GeminiTextPane extends JTextPane {
                         updateUI();
                         //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
                     });
-
 
                 } catch (UnsupportedEncodingException ex) {
                     ex.printStackTrace();
@@ -2031,13 +2050,13 @@ public class GeminiTextPane extends JTextPane {
         ClickableRange cr = null;
 
         int start = doc.getLength();
+        boolean pfText = styleName.equals("```");
 
-        if (!(hasAnsi && styleName.equals("```")) && EmojiManager.containsAnyEmoji(text)) {
+        if (!(hasAnsi && pfText) && EmojiManager.containsAnyEmoji(text)) {
 
             String fontFamily = StyleConstants.getFontFamily(style);
             int fontSize = StyleConstants.getFontSize(style);
-
-            SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
+            int imgSize = fontSize + (pfText ? 4 : 0);
 
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
 
@@ -2053,7 +2072,7 @@ public class GeminiTextPane extends JTextPane {
 
                         Point p = emojiSheetMap.get(key);
                         ImageIcon icon = null;
-                        int imgSize = fontSize + 4;
+
                         if (p != null) {
                             icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
                         } else {
@@ -2084,7 +2103,7 @@ public class GeminiTextPane extends JTextPane {
                                 i = emoji.getEndCharIndex() - 1;
 
                             }
-
+                            SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
                             StyleConstants.setIcon(emojiStyle, icon);
                             try {
                                 doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
@@ -2097,9 +2116,7 @@ public class GeminiTextPane extends JTextPane {
                         char[] chars = Character.toChars(text.codePointAt(i));
 
                         i++;
-
                         StyleConstants.setFontFamily(style, emojiProportional);
-
                         insertString(doc.getLength(), new String(chars), style);
                     }
                 } else {
