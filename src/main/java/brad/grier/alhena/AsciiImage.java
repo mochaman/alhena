@@ -41,7 +41,7 @@ public class AsciiImage {
     private static final Set<Character> PAD_EMOJI_SET = Set.of('⚡');
 
     // for future reference, this class is not thread safe - only call on EDT
-    public static BufferedImage renderTextToImage(String text, String fontName, int fontSize, Color bgColor, Color fgColor) {
+    public static BufferedImage renderTextToImage(String text, String fontName, int fontSize, Color bgColor, Color fgColor, boolean override) {
         boolean hasAnsi = false;
         ansiBold = false;
         bgColor = GeminiTextPane.shadePF ? AnsiColor.adjustColor(bgColor, UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : bgColor;
@@ -98,10 +98,14 @@ public class AsciiImage {
         int CELL_HEIGHT = height / lines.length;
         int CELL_WIDTH = width / max_chars;
         String emojiProportional = "Noto Emoji";
-        if (SystemInfo.isMacOS) {
-            boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
-            if (!macUseNoto) {
-                emojiProportional = "SansSerif";
+
+        if(!override){
+            //emojiProportional = "Noto Emoji";
+            if (SystemInfo.isMacOS) {
+                boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
+                if (!macUseNoto) {
+                    emojiProportional = "SansSerif";
+                }
             }
         }
         Font emojiFont = new Font(emojiProportional, Font.PLAIN, fontSize);
@@ -167,7 +171,7 @@ public class AsciiImage {
                         g2.fillRect(0, 0, CELL_WIDTH * 2, CELL_HEIGHT);
                         g2.setColor(fgColor);
                     }
-                    if (GeminiTextPane.sheetImage != null) {
+                    if (GeminiTextPane.sheetImage != null && !override) {
 
                         String key = GeminiTextPane.getEmojiHex(emoji);
 
