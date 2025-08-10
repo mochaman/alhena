@@ -158,6 +158,7 @@ public class Alhena {
     public static boolean allowVLC;
     public static boolean favIcon;
     public static boolean dataUrl;
+    public static boolean linkIcons;
     private static final HashMap<String, Object> favMap = new HashMap<>();
 
     private static final List<String> allowedSchemes = List.of(
@@ -403,6 +404,7 @@ public class Alhena {
             GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
             Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
             Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
+            Alhena.linkIcons = map.getOrDefault("linkicons", "true").equals("true");
             theme = map.get("theme");
             if (theme != null) {
 
@@ -2462,7 +2464,7 @@ public class Alhena {
             case "a" -> {
                 String href = element.attr("href");
                 String origHref = href;
-                if (href.startsWith("#")) {
+                if (href.isBlank() || href.startsWith("#") || href.startsWith("javascript")) {
                     yield "";
                 }
                 if (href.startsWith("/") && host != null) {
