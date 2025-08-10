@@ -1,11 +1,14 @@
 package brad.grier.alhena;
 
+import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Insets;
@@ -2089,7 +2092,7 @@ public class GeminiTextPane extends JTextPane {
                             insertString(doc.getLength(), text.substring(2), style);
                             break;
                         }
-                        
+
                         i++;
                     } else if (sheetImage != null) {
 
@@ -2536,7 +2539,10 @@ public class GeminiTextPane extends JTextPane {
 
     private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color bgColor, Color fgColor) {
         BufferedImage bi = AsciiImage.renderTextToImage(txt, fontName, fontSize, bgColor, fgColor, true);
-        return new BaselineShiftedIcon(bi, fontSize / 10);
+        // this could be optimized as AsciiImage already created font and metrics
+        Font font = new Font(fontName, Font.PLAIN, fontSize);
+        FontMetrics metrics = new Canvas().getFontMetrics(font);
+        return new BaselineShiftedIcon(bi, metrics.getDescent() / 2);
 
     }
 
