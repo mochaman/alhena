@@ -1637,7 +1637,8 @@ public class GeminiTextPane extends JTextPane {
         //StyleConstants.setBold(linkStyle, true);
 
         Style clickedStyle = doc.addStyle("visited", linkStyle);
-        StyleConstants.setForeground(clickedStyle, isDark ? linkColor.darker() : linkColor.brighter());
+        Color visitColor = isDark ? linkColor.darker() : linkColor.brighter();
+        StyleConstants.setForeground(clickedStyle, visitColor);
 
         Style quoteStyle = doc.addStyle(">", h1Style);
         StyleConstants.setFontSize(quoteStyle, gfFontSize);
@@ -1659,8 +1660,11 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setForeground(normalStyle, linkColor);
 
         visitedStyle = new SimpleAttributeSet();
-        StyleConstants.setForeground(visitedStyle, isDark ? linkColor.darker() : linkColor.brighter());
-
+        StyleConstants.setForeground(visitedStyle, visitColor);
+        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, getBackground(), linkColor);
+        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
+        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
+        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, getBackground(), linkColor);
     }
 
     private boolean checkScrollingNeeded(JScrollPane sp) {
@@ -1729,7 +1733,7 @@ public class GeminiTextPane extends JTextPane {
                 if (asciiSB != null && !asciiSB.isEmpty()) {
                     asciiSB.deleteCharAt(asciiSB.length() - 1);
 
-                    BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
+                    BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground(), false);
                     ImageIcon icon = new ImageIcon(bi);
                     if (ptp == null) {
                         insertComp(new JLabel(icon), doc.getLength());
@@ -1819,22 +1823,17 @@ public class GeminiTextPane extends JTextPane {
             if (Alhena.linkIcons && currentMode == DEFAULT_MODE) {
 
                 if (finalUrl.indexOf("://") == -1) {
-
                     if (finalUrl.startsWith("data")) {
-                        sfx = "📎 ";
+                        sfx = "📎";
                     } else if (finalUrl.startsWith("mailto")) {
-                        sfx = "✉️ ";
+                        sfx = "✉️";
                     } else {
-                        sfx = !docURL.startsWith("gemini") ? "🌐 " : " ➤ ";
+                        sfx = !docURL.startsWith("gemini") ? "🌐" : "🔗";
                     }
-
                 } else {
-                    sfx = !finalUrl.startsWith("gemini") ? "🌐 " : " ➤ ";
-
+                    sfx = !finalUrl.startsWith("gemini") ? "🌐" : "🔗";
                 }
-
             }
-
             label = ll.substring(i).trim();
             String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
 
@@ -1925,7 +1924,7 @@ public class GeminiTextPane extends JTextPane {
 
                     PreformattedTextPane ptpText = createTextComponent(curPos);
                     if (asciiImage && !printing) {
-                        BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground());
+                        BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground(), false);
                         ImageIcon icon = new ImageIcon(bi);
                         ptpText.insertComp(new JLabel(icon));
                         ptpText.scrollLeft();
@@ -2042,6 +2041,7 @@ public class GeminiTextPane extends JTextPane {
         return pfTextPane;
     }
     private List<PreformattedTextPane> ptpList;
+    private SimpleAttributeSet emojiStyle1 = new SimpleAttributeSet();
 
     private ClickableRange addStyledText(String text, String styleName, Runnable action) {
 
@@ -2065,8 +2065,33 @@ public class GeminiTextPane extends JTextPane {
             for (int i = 0; i < text.length(); i++) {
 
                 if ((emoji = isEmoji(emojis, i)) != null) {
+                    if (action != null && Alhena.linkIcons && i == 0) {
+                        //ImageIcon icon = new ImageIcon(image);
+                        String em = emoji.getEmoji().getEmoji();
+                        ImageIcon icon;
+                        icon = switch (em) {
+                            case "🌐" ->
+                                otherIcon;
+                            case "📎" ->
+                                dataIcon;
+                            case "✉️" ->
+                                mailIcon;
+                            default ->
+                                geminiIcon;
+                        };
 
-                    if (sheetImage != null) {
+                        StyleConstants.setIcon(emojiStyle1, icon);
+                        try {
+                            doc.insertString(doc.getLength(), " ", emojiStyle1); // Use emoji style
+                        } catch (BadLocationException ex) {
+                        }
+                        if (emojis.size() == 1) {
+                            insertString(doc.getLength(), text.substring(2), style);
+                            break;
+                        }
+                        
+                        i++;
+                    } else if (sheetImage != null) {
 
                         String key = getEmojiHex(emoji);
 
@@ -2167,7 +2192,7 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    private void insertString(int length, String txt, Style style) {
+    private void insertString(int length, String txt, AttributeSet style) {
         try {
             if (hasAnsi && preformattedMode) {
                 handleAnsi(txt);
@@ -2505,6 +2530,14 @@ public class GeminiTextPane extends JTextPane {
 
             return icon;
         }
+    }
+
+    private ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon;
+
+    private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color bgColor, Color fgColor) {
+        BufferedImage bi = AsciiImage.renderTextToImage(txt, fontName, fontSize, bgColor, fgColor, true);
+        return new BaselineShiftedIcon(bi, fontSize / 10);
+
     }
 
 }
