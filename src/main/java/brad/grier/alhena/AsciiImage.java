@@ -99,7 +99,7 @@ public class AsciiImage {
         int CELL_WIDTH = width / max_chars;
         String emojiProportional = "Noto Emoji";
 
-        if(!override){
+        if (!override) {
             //emojiProportional = "Noto Emoji";
             if (SystemInfo.isMacOS) {
                 boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
@@ -225,7 +225,8 @@ public class AsciiImage {
                     } else {
 
                         g2.setFont(emojiFont);
-
+                        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
                         int x1 = (CELL_WIDTH - charWidth) / 2;
                         int y1 = (CELL_HEIGHT - metrics.getHeight()) / 2 + metrics.getAscent();
                         char[] chars = Character.toChars(line.codePointAt(i));
