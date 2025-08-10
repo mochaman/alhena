@@ -404,7 +404,7 @@ public class Alhena {
             GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
             Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
             Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
-            Alhena.linkIcons = map.getOrDefault("linkicons", "true").equals("true");
+            Alhena.linkIcons = map.getOrDefault("linkicons", "false").equals("true");
             theme = map.get("theme");
             if (theme != null) {
 
