@@ -1910,43 +1910,79 @@ public class GeminiTextPane extends JTextPane {
 
     private void dataURL(String url, boolean curPos) {
         int scIndex = url.indexOf(";");
+        byte[] byteData = null;
+        String mime;
+        String charset = null;
         if (scIndex != -1) {
-            String mime = url.substring(5, scIndex);
-            boolean base64 = url.substring(scIndex + 1).startsWith("base64,");
-            if (base64 && mime.startsWith("image")) {
-                byte[] image = Base64.getDecoder().decode(url.substring(scIndex + 8));
-                insertImage(image, curPos);
+            String[] parts = url.split(";");
+            //String mime = url.substring(5, scIndex);
+            mime = parts[0].substring(5);
+            int cIdx = url.indexOf(",");
+            String data = "";
+            
+            if (parts.length == 2) {
+                String encoding = url.substring(scIndex + 1, cIdx);
+                if(encoding.equals("base64")){
+                    data = "base64," + url.substring(cIdx + 1);
+                }else{
+                    if(encoding.toLowerCase().startsWith("charset")){
+                        charset = encoding;
+                    }
+                    data = url.substring(cIdx + 1);
+                }
+
+            } else if (parts.length == 3) {
+                charset = parts[1];
+                data = parts[2];
+            }
+
+            if (data.startsWith("base64,")) {
+                byteData = Base64.getDecoder().decode(data.substring(7));
+            } else {
+                try {
+                    String cs = charset == null ? "UTF-8" : charset.substring(charset.indexOf('=') + 1);
+                    byteData = data.getBytes(cs);
+                } catch (UnsupportedEncodingException ex) {
+                }
+
             }
         } else {
             int cIdx = url.indexOf(",");
-            String mime = url.substring(5, cIdx);
-            if (mime.startsWith("text")) {
-                String s;
-                try {
-                    s = URLDecoder.decode(url.substring(cIdx + 1), "UTF-8");
+            mime = url.substring(5, cIdx);
+            try {
+                byteData = url.substring(cIdx + 1).getBytes("UTF-8");
+            } catch (UnsupportedEncodingException ex) {
+            }
 
-                    PreformattedTextPane ptpText = createTextComponent(curPos);
-                    if (asciiImage && !printing) {
-                        BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground(), false);
-                        ImageIcon icon = new ImageIcon(bi);
-                        ptpText.insertComp(new JLabel(icon));
-                        ptpText.scrollLeft();
-                    } else {
-                        ptpText.addText(s + "\n");
-                        ptpText.end();
-                        ptpText.removeLastChar();
-                        ptpText.scrollLeft();
-                    }
-                    ptpList.add(ptpText);
-                    EventQueue.invokeLater(() -> {
-                        updateUI();
-                        //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
-                    });
+        }
+        String cs = charset == null ? "UTF-8" : charset.substring(charset.indexOf('=') + 1);
+        if (mime.startsWith("image")) {
+            insertImage(byteData, curPos);
+        } else if (mime.startsWith("text")) {
+            String s;
+            try {
+                s = URLDecoder.decode(new String(byteData, cs), cs);
 
-                } catch (UnsupportedEncodingException ex) {
-                    ex.printStackTrace();
+                PreformattedTextPane ptpText = createTextComponent(curPos);
+                if (asciiImage && !printing) {
+                    BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground(), false);
+                    ImageIcon icon = new ImageIcon(bi);
+                    ptpText.insertComp(new JLabel(icon));
+                    ptpText.scrollLeft();
+                } else {
+                    ptpText.addText(s + "\n");
+                    ptpText.end();
+                    ptpText.removeLastChar();
+                    ptpText.scrollLeft();
                 }
+                ptpList.add(ptpText);
+                EventQueue.invokeLater(() -> {
+                    updateUI();
+                    //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
+                });
 
+            } catch (UnsupportedEncodingException ex) {
+                ex.printStackTrace();
             }
 
         }
