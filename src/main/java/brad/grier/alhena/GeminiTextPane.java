@@ -1665,10 +1665,10 @@ public class GeminiTextPane extends JTextPane {
         visitedStyle = new SimpleAttributeSet();
         StyleConstants.setForeground(visitedStyle, visitColor);
 
-        dataIcon = null;
-        mailIcon = null;
-        geminiIcon = null;
-        otherIcon = null;
+        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, getBackground(), linkColor);
+        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
+        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
+        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, getBackground(), linkColor);
     }
 
     private boolean checkScrollingNeeded(JScrollPane sp) {
@@ -1825,24 +1825,18 @@ public class GeminiTextPane extends JTextPane {
             String label;
             String sfx = "";
 
-            if (Alhena.linkIcons && currentMode == DEFAULT_MODE) {
+            if (Alhena.linkIcons) {
                 int gfFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.fontSize;
                 if (finalUrl.indexOf("://") == -1) {
                     if (finalUrl.startsWith("data")) {
                         sfx = "📎";
-                        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, getBackground(), linkColor);
                     } else if (finalUrl.startsWith("mailto")) {
                         sfx = "✉️";
-                        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
                     } else {
                         sfx = !docURL.startsWith("gemini") ? "🌐" : "🔗";
-                        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
-                        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, getBackground(), linkColor);
                     }
                 } else {
                     sfx = !finalUrl.startsWith("gemini") ? "🌐" : "🔗";
-                    geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
-                    otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, getBackground(), linkColor);
                 }
             }
             label = ll.substring(i).trim();
