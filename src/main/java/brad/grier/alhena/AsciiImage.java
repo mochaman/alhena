@@ -11,7 +11,6 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.swing.UIManager;
 
@@ -37,11 +36,10 @@ public class AsciiImage {
     private static boolean ansiBold;
 
     private static boolean isDark;
-    // special handling for specific chars not in font set
-    private static final Set<Character> PAD_EMOJI_SET = Set.of('⚡');
 
     // for future reference, this class is not thread safe - only call on EDT
     public static BufferedImage renderTextToImage(String text, String fontName, int fontSize, Color bgColor, Color fgColor, boolean override) {
+
         boolean hasAnsi = false;
         ansiBold = false;
         bgColor = GeminiTextPane.shadePF ? AnsiColor.adjustColor(bgColor, UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : bgColor;
@@ -76,6 +74,14 @@ public class AsciiImage {
             }
             lines[idx++] = line1;
 
+        }
+        if (override) {
+
+            List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
+            
+            if (emojis.get(0).getEndCharIndex() == 1 || text.charAt(1) == '\uFE0F') {
+                max_chars = 1;
+            }
         }
 
         FontMetrics metrics = new Canvas().getFontMetrics(font);
@@ -125,38 +131,7 @@ public class AsciiImage {
                 BufferedImage cellImage;
                 int charWidth = metrics.charWidth(c);
 
-                if (charWidth > CELL_WIDTH) { // this test fails on windows (or probably when not in font) for '⚡' (and likely others)
-
-                    cellImage = new BufferedImage(CELL_WIDTH * 2, CELL_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-                    Graphics2D g2 = cellImage.createGraphics();
-
-                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                    g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-                    g2.setFont(font);
-
-                    int x1 = (CELL_WIDTH * 2 - charWidth) / 2;
-                    int y1 = (CELL_HEIGHT - metrics.getHeight()) / 2 + metrics.getAscent();
-
-                    List<PositionColor> pcl = colorList.get(lineNum);
-                    if (pcl != null) {
-                        PositionColor pc = pcl.get(i);
-                        g2.setColor(pc.bg);
-                        g2.fillRect(0, 0, CELL_WIDTH * 2, CELL_HEIGHT);
-                        g2.setColor(pc.fg);
-                    } else {
-                        g2.setColor(bgColor);
-                        g2.fillRect(0, 0, CELL_WIDTH * 2, CELL_HEIGHT);
-
-                        g2.setColor(fgColor);
-                    }
-                    g2.drawString(String.valueOf(c), x1, y1);
-
-                    g2.dispose();
-
-                    pad += CELL_WIDTH;
-
-                } else if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null) {
+                if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null) {
 
                     cellImage = new BufferedImage(CELL_WIDTH * 2, CELL_HEIGHT, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D g2 = cellImage.createGraphics();
@@ -171,6 +146,7 @@ public class AsciiImage {
                         g2.fillRect(0, 0, CELL_WIDTH * 2, CELL_HEIGHT);
                         g2.setColor(fgColor);
                     }
+
                     if (GeminiTextPane.sheetImage != null && !override) {
 
                         String key = GeminiTextPane.getEmojiHex(emoji);
@@ -202,7 +178,6 @@ public class AsciiImage {
                             g2.dispose();
 
                         } else {
-
                             // single char emoji followed by unneccessary variation selector
                             // example: snowman
                             if (i == emoji.getEndCharIndex() - 1) {
@@ -217,9 +192,10 @@ public class AsciiImage {
 
                             g2.drawImage(icon, x1, 0, null);
                             g2.dispose();
-                            if (PAD_EMOJI_SET.contains(c)) { // windows or where font doesn't support
+                            if (needsPadding(emoji.getEmoji().getEmoji())) {
                                 pad += CELL_WIDTH;
                             }
+
                             i--;
                         }
                     } else {
@@ -232,7 +208,8 @@ public class AsciiImage {
                         char[] chars = Character.toChars(line.codePointAt(i));
                         g2.drawString(new String(chars), x1, y1);
                         g2.dispose();
-                        if (PAD_EMOJI_SET.contains(c)) { // windows or where font doesn't support
+
+                        if (needsPadding(emoji.getEmoji().getEmoji())) {
                             pad += CELL_WIDTH;
                         }
                     }
@@ -280,6 +257,23 @@ public class AsciiImage {
 
         g.dispose();
         return image;
+    }
+
+    public static boolean needsPadding(String emoji) {
+
+        int codepoint = emoji.codePointAt(0);
+
+        // weather and celestial symbols
+        if (codepoint >= 0x2600 && codepoint <= 0x26FF) {
+            return true; // covers ⚡☁☀
+        }
+
+        // moon phases and celestial emoji
+        if (codepoint >= 0x1F311 && codepoint <= 0x1F31E) {
+            return true;
+        }
+
+        return false;
     }
 
     private static AnsiInfo handleAnsi(String line) {
