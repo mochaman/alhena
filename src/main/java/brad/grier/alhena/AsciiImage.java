@@ -205,13 +205,22 @@ public class AsciiImage {
                         g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
                         int x1 = (CELL_WIDTH - charWidth) / 2;
                         int y1 = (CELL_HEIGHT - metrics.getHeight()) / 2 + metrics.getAscent();
-                        char[] chars = Character.toChars(line.codePointAt(i));
-                        g2.drawString(new String(chars), x1, y1);
-                        g2.dispose();
 
-                        if (needsPadding(emoji.getEmoji().getEmoji())) {
+                        String em = emoji.getEmoji().getEmoji();
+                        g2.drawString(em, x1, y1);
+                        g2.dispose();
+                        int eci = emoji.getEndCharIndex();
+
+                        if (i != eci - 1) {
+
+                           i = eci;
+
+
+                        }
+                        if (needsPadding(em)) {
                             pad += CELL_WIDTH;
                         }
+                        i--;
                     }
                     i++;
 
