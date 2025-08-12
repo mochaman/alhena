@@ -162,7 +162,7 @@ public class Alhena {
     private static final HashMap<String, Object> favMap = new HashMap<>();
 
     private static final List<String> allowedSchemes = List.of(
-            "gemini://", "file://", "spartan://", "nex://",
+            "gemini://", "file:/", "spartan://", "nex://",
             "https://", "http://", "titan://"
     );
     public static boolean sDown;
@@ -549,8 +549,9 @@ public class Alhena {
             processCommand(url, p);
             return;
         }
-        int idx = url.indexOf("://");
+        int idx = url.indexOf(":/"); // only one / due to file url
         if (idx != -1) {
+
             String lcScheme = url.substring(0, idx).toLowerCase();
             url = lcScheme + url.substring(idx);
             boolean isGopher = gopherProxy != null && url.startsWith("gopher");
@@ -1703,6 +1704,7 @@ public class Alhena {
                                     }
 
                                 } else {
+                                    // TODO: charIncompleteBuffer sent to end()????
                                     p.textPane.end();
                                     p.frame().setBusy(false, cPage);
                                 }
@@ -2763,12 +2765,13 @@ public class Alhena {
                 String mimeExt = MimeMapping.getMimeTypeForFilename(url);
                 boolean vlcType = url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video")));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 if (matches || vlcType) {
 
                     String fUrl = url;
                     p.frame().setBusy(true, cPage);
                     boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
-                    if (!cPage.textPane.awatingImage()) {
+                    if (!isImage && !vlcType) {
                         p.textPane.updatePage("", pformatted, fUrl, true);
                     }
 
@@ -2786,7 +2789,7 @@ public class Alhena {
                         }
 
                     } else {
-                        boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                        // boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                         Buffer imageBuffer = Buffer.buffer();
 
                         vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
