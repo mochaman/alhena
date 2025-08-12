@@ -2160,30 +2160,48 @@ public class GeminiTextPane extends JTextPane {
                             insertString(doc.getLength(), new String(chars), style);
 
                         } else {
+                            int eci = emoji.getEndCharIndex();
                             // single char emoji followed by unneccessary variation selector
                             // example: snowman
-                            if (i == emoji.getEndCharIndex() - 1) {
+                            int opto;
+                            if (i == eci - 1) {
                                 i++;
+                                opto = 1;
                             } else {
 
-                                i = emoji.getEndCharIndex() - 1;
+                                i = eci - 1;
+                                opto = 0;
 
                             }
+
                             SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
                             StyleConstants.setIcon(emojiStyle, icon);
                             try {
                                 doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
                             } catch (BadLocationException ex) {
                             }
+                            if (emojis.size() == 1 && eci < text.length()) {
+                                insertString(doc.getLength(), text.substring(eci + opto), style);
+                                break;
+                            }
 
                         }
                     } else {
 
-                        char[] chars = Character.toChars(text.codePointAt(i));
-
-                        i++;
                         StyleConstants.setFontFamily(style, emojiProportional);
-                        insertString(doc.getLength(), new String(chars), style);
+                        insertString(doc.getLength(), unescapeUnicode(emoji.getEmoji().getUnicode()), style);
+                        int eci = emoji.getEndCharIndex();
+                        if (i == eci - 1) {
+                            i++;
+                        } else {
+                            i = eci - 1;
+                        }
+
+                        if (emojis.size() == 1 && eci < text.length()) { // optomize common scenario
+                            StyleConstants.setFontFamily(style, fontFamily);
+                            insertString(doc.getLength(), text.substring(eci), style);
+                            break;
+                        }
                     }
                 } else {
 
@@ -2215,6 +2233,24 @@ public class GeminiTextPane extends JTextPane {
         setCaretPosition(caretPosition); // prevent scrolling as content added
 
         return cr;
+    }
+
+    private final static StringBuilder sb = new StringBuilder();
+    private static String unescapeUnicode(String input) { // not thread safe only use on EDT
+        sb.setLength(0);
+        for (int i = 0; i < input.length();) {
+            char c = input.charAt(i);
+            if (c == '\\' && i + 5 < input.length() && input.charAt(i + 1) == 'u') {
+                // parse 4 hex digits after \\u
+                int code = Integer.parseInt(input.substring(i + 2, i + 6), 16);
+                sb.append((char) code);
+                i += 6;
+            } else {
+                sb.append(c);
+                i++;
+            }
+        }
+        return sb.toString();
     }
 
     public static IndexedEmoji isEmoji(List<IndexedEmoji> emojiList, int idx) {
