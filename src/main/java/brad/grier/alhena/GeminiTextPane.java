@@ -2187,7 +2187,6 @@ public class GeminiTextPane extends JTextPane {
 
                         }
                     } else {
-
                         StyleConstants.setFontFamily(style, emojiProportional);
                         insertString(doc.getLength(), unescapeUnicode(emoji.getEmoji().getUnicode()), style);
                         int eci = emoji.getEndCharIndex();
@@ -2197,22 +2196,36 @@ public class GeminiTextPane extends JTextPane {
                             i = eci - 1;
                         }
 
-                        if (emojis.size() == 1 && eci < text.length()) { // optomize common scenario
-                            StyleConstants.setFontFamily(style, fontFamily);
-                            insertString(doc.getLength(), text.substring(eci), style);
-                            break;
+                        if (eci < text.length()) { // optomize common scenario
+                            if (emojis.indexOf(emoji) == emojis.size() - 1) { // this is last emoji
+                                StyleConstants.setFontFamily(style, fontFamily);
+                                insertString(doc.getLength(), text.substring(eci), style);
+                                break;
+                            }
                         }
                     }
                 } else {
-
+                    IndexedEmoji nextEmoji = null;
+                    for (IndexedEmoji em : emojis) {
+                        if (em.getCharIndex() > i) {
+                            nextEmoji = em;
+                            break;
+                        }
+                    }
                     StyleConstants.setFontFamily(style, fontFamily);
-
-                    insertString(doc.getLength(), String.valueOf(text.charAt(i)), style);
+                    if (nextEmoji != null) {
+                        insertString(doc.getLength(), text.substring(i, nextEmoji.getCharIndex()), style);
+                        i = nextEmoji.getCharIndex() - 1;
+                    } else {
+                        insertString(doc.getLength(), text.substring(i), style);
+                        break;
+                    }
 
                 }
             }
             StyleConstants.setFontFamily(style, fontFamily);
         } else {
+
             insertString(start, text, style);
         }
 
@@ -2236,6 +2249,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private final static StringBuilder sb = new StringBuilder();
+
     private static String unescapeUnicode(String input) { // not thread safe only use on EDT
         sb.setLength(0);
         for (int i = 0; i < input.length();) {
