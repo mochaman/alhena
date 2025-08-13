@@ -932,7 +932,7 @@ public class GeminiTextPane extends JTextPane {
         // that doesn't cause the horizontal scrollbar to appear
         int width = (int) contentWidth - 50;
 
-        BufferedImage image = Util.getImage(imageBytes, width, width * 2);
+        BufferedImage image = Util.getImage(imageBytes, width, width * 2, null);
 
         ImageIcon icon = new ImageIcon(image);
 
@@ -2413,7 +2413,8 @@ public class GeminiTextPane extends JTextPane {
         int y = (sheetY * (sheetSize + 2)) + 1;
 
         BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
-        Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        //Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        Image scaledImg = Util.getImage(null, width, height, bi);
 
         return new BaselineShiftedIcon(scaledImg, fontSize / 10);
     }
@@ -2424,7 +2425,8 @@ public class GeminiTextPane extends JTextPane {
         int y = (sheetY * (sheetSize + 2)) + 1;
 
         BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
-        Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        Image scaledImg = Util.getImage(null, width, height, bi);
+        //Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
 
         return scaledImg;
     }

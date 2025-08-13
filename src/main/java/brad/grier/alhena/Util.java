@@ -494,14 +494,18 @@ public class Util {
         return selectedFile[0];
     }
 
-    public static BufferedImage getImage(byte[] imageBytes, int previewWidth, int previewHeight) {
+    public static BufferedImage getImage(byte[] imageBytes, int previewWidth, int previewHeight, BufferedImage bi) {
 
         BufferedImage img = null;
 
         try {
-            ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
-            img = ImageIO.read(bis);
-            if (img.getWidth() < previewWidth) {
+            if (bi == null) {
+                ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
+                img = ImageIO.read(bis);
+            } else {
+                img = bi;
+            }
+            if (bi == null && img.getWidth() < previewWidth) {
                 previewWidth = img.getWidth();
             }
 
@@ -524,6 +528,7 @@ public class Util {
             if (scaledWidth <= 0) {
                 scaledWidth = 1;
             }
+            
             if (img.getWidth() > scaledWidth || img.getHeight() > scaledHeight) {
                 img = getScaledInstance(img, scaledWidth, scaledHeight, RenderingHints.VALUE_INTERPOLATION_BILINEAR, true, false);
             } else {
