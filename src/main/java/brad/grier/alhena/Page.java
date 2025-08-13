@@ -21,6 +21,8 @@ import javax.swing.plaf.LayerUI;
 
 import com.formdev.flatlaf.util.SystemInfo;
 
+import brad.grier.alhena.Alhena.FavIconInfo;
+
 /**
  * A class that encapsulates the JTextPane and JScrollPane used in the main view
  * and tabs
@@ -68,14 +70,8 @@ public class Page extends JPanel {
         String ss = DB.getPref("scrollspeed", null);
 
         overlayLabel = new JLabel("");
-        String fontFamily = "Noto Emoji";
-        if (SystemInfo.isMacOS) {
-            boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
-            if (!macUseNoto) {
-                fontFamily = "SansSerif";
-            }
-        }
-        overlayLabel.setFont(new Font(fontFamily, Font.PLAIN, ICON_SIZE));
+        updateFont(overlayLabel);
+
         overlayLabel.setBounds(50, 10, 50, 50); 
 
         JLayer<JComponent> layer = new JLayer<>(scrollPane, new LayerUI<>() {
@@ -102,17 +98,37 @@ public class Page extends JPanel {
         }
     }
 
-    public void setFavIcon(Object icon) {
+    private void updateFont(JLabel l){
+        String fontFamily = "Noto Emoji";
+        if (SystemInfo.isMacOS) {
+            boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
+            if (!macUseNoto) {
+                fontFamily = "SansSerif";
+            }
+        }
+        l.setFont(new Font(fontFamily, Font.PLAIN, ICON_SIZE));
+    }
 
-        if (icon instanceof ImageIcon imageIcon) {
+    private String favIconKey;
+    public void setFavIcon(String favIconKey, FavIconInfo favIconInfo) {
+        this.favIconKey = favIconKey;
+        if (favIconInfo.icon() instanceof ImageIcon imageIcon) {
             overlayLabel.setIcon(imageIcon);
+            overlayLabel.setText(null);
         } else {
             //System.out.println(((String) icon).length());
-            if (((String) icon).length() < 5) {
-                overlayLabel.setText((String) icon);
+            if (((String) favIconInfo.icon()).length() < 5) {
+                updateFont(overlayLabel);
+                overlayLabel.setText((String) favIconInfo.icon());
+                overlayLabel.setIcon(null);
             }
         }
     }
+
+    public String getFavIconKey(){
+        return favIconKey;
+    }
+
 
     private String editedText;
 

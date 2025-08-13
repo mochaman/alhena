@@ -159,7 +159,7 @@ public class Alhena {
     public static boolean favIcon;
     public static boolean dataUrl;
     public static boolean linkIcons;
-    private static final HashMap<String, Object> favMap = new HashMap<>();
+    private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
 
     private static final List<String> allowedSchemes = List.of(
             "gemini://", "file:/", "spartan://", "nex://",
@@ -496,15 +496,28 @@ public class Alhena {
 
             }
             jf.recolorIcons();
+            // update the image icons in place
+            favMap.forEach((s, fi) -> {
+                if (s != null && fi != null) {
+                    FavIconInfo fiInfo = new FavIconInfo(fi.favicon, GeminiTextPane.getFavIcon(fi.favicon()));
 
+                    favMap.put(s, fiInfo);
+                }
+            });
             jf.forEachPage(page -> {
                 page.ignoreStart();
+                String key = page.getFavIconKey();
+                if (key != null) {
+                    page.setFavIcon(key, favMap.get(key));
+                }
             });
+
             jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
             jf.refreshFromCache(jf.visiblePage());
 
             SwingUtilities.updateComponentTreeUI(jf);
             jf.initComboBox(); // combo box loses key listener & mouse listener when theme changes
+
         }
     }
 
@@ -528,6 +541,10 @@ public class Alhena {
                 }
             }
         }
+
+    }
+
+    static public record FavIconInfo(String favicon, Object icon) {
 
     }
 
@@ -634,27 +651,25 @@ public class Alhena {
         if (favIcon && punyURI.getScheme().equals("gemini")) {
             String fiAuthority = punyURI.getAuthority();
             if (favMap.containsKey(fiAuthority)) {
-                Object o = favMap.get(fiAuthority);
-                if (o != null) {
-                    p.setFavIcon(o);
+                FavIconInfo fiInfo = favMap.get(fiAuthority);
+                if (fiInfo != null) {
+                    p.setFavIcon(fiAuthority, fiInfo);
                 }
             } else {
-                //System.out.println("favicon check");
                 String favUrl = "gemini://" + fiAuthority + "/favicon.txt";
 
                 getNetClient(URI.create("gemini://" + fiAuthority));
                 fetchGeminiPage(favUrl).onSuccess(content -> {
-
-                    //System.out.println("favicon: " + content.trim());
-                    Object o = GeminiTextPane.getFavIcon(content.trim());
-                    favMap.put(fiAuthority, o);
+                    String fi = content.trim();
+                    FavIconInfo fiInfo = new FavIconInfo(fi, GeminiTextPane.getFavIcon(fi));
+                    //Object o = GeminiTextPane.getFavIcon(fi);
+                    favMap.put(fiAuthority, fiInfo);
                     bg(() -> {
-                        p.setFavIcon(o);
+                        p.setFavIcon(fiAuthority, fiInfo);
                     });
 
                 }).onFailure(error -> {
                     favMap.put(fiAuthority, null);
-                    //error.printStackTrace();
                 });
             }
         }
