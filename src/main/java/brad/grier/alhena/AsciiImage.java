@@ -119,7 +119,6 @@ public class AsciiImage {
         int y = 0;
         int lineNum = 0;
         for (String line : lines) {
-
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(line);
             IndexedEmoji emoji;
             int pad = 0;
@@ -209,7 +208,7 @@ public class AsciiImage {
 
                         g2.drawString(em, x1, y1);
                         g2.dispose();
-                        
+
                         int eci = emoji.getEndCharIndex();
 
                         if (i == eci - 1) {
@@ -253,7 +252,16 @@ public class AsciiImage {
                         g2.drawRect(0, 0, CELL_WIDTH, CELL_HEIGHT);
                         g2.setColor(fgColor);
                     }
-                    g2.drawString(String.valueOf(c), x1, y1);
+
+                    if (font.canDisplay(c)) {
+
+                        g2.drawString(String.valueOf(c), x1, y1);
+                    } else if (font.canDisplay(line.codePointAt(i))) {
+
+                        int cp = line.codePointAt(i);
+                        g2.drawString(new String(Character.toChars(cp)), x1, y1);
+                        i += Character.charCount(cp) - 1;
+                     }
                     g2.dispose();
                 }
 
