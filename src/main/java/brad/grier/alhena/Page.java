@@ -17,6 +17,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.plaf.LayerUI;
 
 import com.formdev.flatlaf.util.SystemInfo;
@@ -116,9 +117,9 @@ public class Page extends JPanel {
             overlayLabel.setIcon(imageIcon);
             overlayLabel.setText(null);
         } else {
-            //System.out.println(((String) icon).length());
             if (((String) favIconInfo.icon()).length() < 5) {
                 updateFont(overlayLabel);
+                overlayLabel.setForeground(UIManager.getColor("TextField.foreground"));
                 overlayLabel.setText((String) favIconInfo.icon());
                 overlayLabel.setIcon(null);
             }
