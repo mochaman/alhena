@@ -23,6 +23,7 @@ import javax.swing.plaf.LayerUI;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.Alhena.FavIconInfo;
+import net.fellbaum.jemoji.EmojiManager;
 
 /**
  * A class that encapsulates the JTextPane and JScrollPane used in the main view
@@ -71,9 +72,9 @@ public class Page extends JPanel {
         String ss = DB.getPref("scrollspeed", null);
 
         overlayLabel = new JLabel("");
-        updateFont(overlayLabel);
+        updateFavIconFont();
 
-        overlayLabel.setBounds(50, 10, 50, 50); 
+        overlayLabel.setBounds(50, 10, 50, 50);
 
         JLayer<JComponent> layer = new JLayer<>(scrollPane, new LayerUI<>() {
 
@@ -99,18 +100,21 @@ public class Page extends JPanel {
         }
     }
 
-    private void updateFont(JLabel l){
+    public final void updateFavIconFont() {
+        if(favIconLocked){
+            return;
+        }
         String fontFamily = "Noto Emoji";
         if (SystemInfo.isMacOS) {
-            boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
-            if (!macUseNoto) {
+            if (!Alhena.macUseNoto) {
                 fontFamily = "SansSerif";
             }
         }
-        l.setFont(new Font(fontFamily, Font.PLAIN, ICON_SIZE));
+        overlayLabel.setFont(new Font(fontFamily, Font.PLAIN, ICON_SIZE));
     }
 
     private String favIconKey;
+    private boolean favIconLocked;
     public void setFavIcon(String favIconKey, FavIconInfo favIconInfo) {
         this.favIconKey = favIconKey;
         if (favIconInfo.icon() instanceof ImageIcon imageIcon) {
@@ -118,18 +122,26 @@ public class Page extends JPanel {
             overlayLabel.setText(null);
         } else {
             if (((String) favIconInfo.icon()).length() < 5) {
-                updateFont(overlayLabel);
+
                 overlayLabel.setForeground(UIManager.getColor("TextField.foreground"));
-                overlayLabel.setText((String) favIconInfo.icon());
+                String s = (String) favIconInfo.icon();
+
+                boolean isPrintable = overlayLabel.getFont().canDisplay(s.charAt(0));
+                if(!EmojiManager.isEmoji(s) && !isPrintable){
+                    favIconLocked = true;
+                    overlayLabel.setFont(new Font("SanSerif", Font.PLAIN, ICON_SIZE));
+                }
+
+                overlayLabel.setText(s);
+
                 overlayLabel.setIcon(null);
             }
         }
     }
 
-    public String getFavIconKey(){
+    public String getFavIconKey() {
         return favIconKey;
     }
-
 
     private String editedText;
 

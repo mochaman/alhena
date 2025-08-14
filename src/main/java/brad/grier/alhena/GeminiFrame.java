@@ -906,7 +906,7 @@ public final class GeminiFrame extends JFrame {
         emojiPref = emojiPref == null ? "google" : emojiPref;
         boolean macUseNoto = false;
         if (SystemInfo.isMacOS && emojiPref.equals("font")) {
-            macUseNoto = DB.getPref("macusenoto", "false").equals("true");
+            macUseNoto = Alhena.macUseNoto;
         }
 
         JMenu emojiMenu = new JMenu("Emoji");
@@ -1201,17 +1201,22 @@ public final class GeminiFrame extends JFrame {
         JRadioButtonMenuItem selected = (JRadioButtonMenuItem) ae.getSource();
         String savedSet = DB.getPref("emoji", null);
         // why not a "noto" value for "emoji" pref? Backwards compatibility with previous versions (also other operating systems on restore)
-        boolean savedMacNotoPref = DB.getPref("macusenoto", "false").equals("true");
+
+        boolean savedMacNotoPref = Alhena.macUseNoto;
         if (!setName.equals(savedSet) || macUseNoto != savedMacNotoPref) {
+
             if (setName.equals("font")) {
 
                 // use font
                 GeminiTextPane.setSheetImage(null);
                 DB.insertPref("emoji", setName);
                 DB.insertPref("macusenoto", String.valueOf(macUseNoto));
-
+                Alhena.macUseNoto = macUseNoto;
                 Alhena.updateFrames(false, false);
                 lastSelectedItem = selected;
+            } else if (macUseNoto != savedMacNotoPref && setName.equals(savedSet)) {
+
+                Alhena.updateFrames(false, false);
             } else {
                 String url = emojiNameMap.get(setName);
 

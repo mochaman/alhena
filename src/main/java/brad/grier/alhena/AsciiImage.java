@@ -108,8 +108,7 @@ public class AsciiImage {
         if (!override) {
             //emojiProportional = "Noto Emoji";
             if (SystemInfo.isMacOS) {
-                boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
-                if (!macUseNoto) {
+                if (!Alhena.macUseNoto) {
                     emojiProportional = "SansSerif";
                 }
             }

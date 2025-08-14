@@ -159,6 +159,7 @@ public class Alhena {
     public static boolean favIcon;
     public static boolean dataUrl;
     public static boolean linkIcons;
+    public static boolean macUseNoto;
     private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
 
     private static final List<String> allowedSchemes = List.of(
@@ -391,6 +392,7 @@ public class Alhena {
         httpProxy = map.getOrDefault("httpproxy", null);
         gopherProxy = map.getOrDefault("gopherproxy", null);
         searchUrl = map.getOrDefault("searchurl", null);
+        macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
 
         EventQueue.invokeLater(() -> {
             //HashMap<String, String> map = DB.getPrefs("contentwidth", "linewrappf", "asciipf", "embedpf", "showsb", "shadepf", "theme");
@@ -508,6 +510,7 @@ public class Alhena {
                 page.ignoreStart();
                 String key = page.getFavIconKey();
                 if (key != null) {
+                    page.updateFavIconFont();
                     page.setFavIcon(key, favMap.get(key));
                 }
             });
@@ -662,7 +665,7 @@ public class Alhena {
                 fetchGeminiPage(favUrl).onSuccess(content -> {
                     String fi = content.trim();
                     FavIconInfo fiInfo = new FavIconInfo(fi, GeminiTextPane.getFavIcon(fi));
-                    //Object o = GeminiTextPane.getFavIcon(fi);
+
                     favMap.put(fiAuthority, fiInfo);
                     bg(() -> {
                         p.setFavIcon(fiAuthority, fiInfo);

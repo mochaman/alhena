@@ -66,8 +66,7 @@ public class PreformattedTextPane extends JTextPane {
     private void buildStyle(Color bgColor) {
         emojiProportional = "Noto Emoji";
         if (SystemInfo.isMacOS) {
-            boolean macUseNoto = DB.getPref("macusenoto", "false").equals("true");
-            if (!macUseNoto) {
+            if (!Alhena.macUseNoto) {
                 emojiProportional = "SansSerif";
             }
         }
