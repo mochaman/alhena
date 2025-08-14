@@ -1,3 +1,4 @@
+
 package brad.grier.alhena;
 
 import java.awt.Component;
@@ -129,6 +130,7 @@ import io.vertx.core.streams.Pump;
  * Static main class to manage frame creation and connectivity
  *
  */
+
 public class Alhena {
 
     private static Vertx vertx;
@@ -571,13 +573,14 @@ public class Alhena {
             return;
         }
         int idx = url.indexOf(":/"); // only one / due to file url
-        if (idx != -1) {
+        int qIdx = url.indexOf("?");
+        if (idx != -1 && (qIdx == -1 || qIdx > idx)) {
 
             String lcScheme = url.substring(0, idx).toLowerCase();
             url = lcScheme + url.substring(idx);
             boolean isGopher = gopherProxy != null && url.startsWith("gopher");
             if (allowedSchemes.stream().noneMatch(url::startsWith) && !isGopher) {
-                p.textPane.end("## Bad scheme\n", false, url, true);
+                p.textPane.end("## Unrecognized protocol\n", false, url, true);
                 return;
 
             }
@@ -586,7 +589,15 @@ public class Alhena {
             }
         } else if (userInput && searchUrl != null) {
             // submit to search engine
-            url = searchUrl + "?" + Util.uEncode(url);
+            if (url.contains(" ")) {
+                url = searchUrl + "?" + Util.uEncode(url);
+            }else if(url.contains("/") && !url.startsWith("/")){
+                url = "gemini://" + url;
+            }else if(qIdx != -1 && !url.startsWith("?")){
+                url = "gemini://" + url;
+            }else{
+                url = searchUrl + "?" + Util.uEncode(url);
+            }
 
         }
 
