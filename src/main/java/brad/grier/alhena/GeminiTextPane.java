@@ -1664,11 +1664,24 @@ public class GeminiTextPane extends JTextPane {
         visitedStyle = new SimpleAttributeSet();
         StyleConstants.setForeground(visitedStyle, visitColor);
 
-        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, getBackground(), linkColor);
-        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
-        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, getBackground(), linkColor);
-        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, getBackground(), linkColor);
+        if(dataIcon == null){
+            rebuildLinkIcons(gfFontSize, getBackground(), linkColor);
+        }
     }
+
+    // only call on EDT
+    private static void rebuildLinkIcons(int gfFontSize, Color bgColor, Color linkColor){
+        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        titanIcon = getLinkIcon("✏️", "Noto Emoji", gfFontSize, bgColor, linkColor);
+    }
+
+    public static void clearLinkIcons(){
+        dataIcon = mailIcon = geminiIcon = titanIcon = null;
+    }
+
 
     private boolean checkScrollingNeeded(JScrollPane sp) {
         JViewport viewport = sp.getViewport();
@@ -1825,7 +1838,7 @@ public class GeminiTextPane extends JTextPane {
             String sfx = "";
 
             if (Alhena.linkIcons) {
-                int gfFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.fontSize;
+                //int gfFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.fontSize;
                 if (finalUrl.indexOf("://") == -1) {
                     if (finalUrl.startsWith("data")) {
                         sfx = "📎";
@@ -1835,7 +1848,11 @@ public class GeminiTextPane extends JTextPane {
                         sfx = !docURL.startsWith("gemini") ? "🌐" : "🔗";
                     }
                 } else {
-                    sfx = !finalUrl.startsWith("gemini") ? "🌐" : "🔗";
+                    if (finalUrl.startsWith("titan")) {
+                        sfx = "✏️";
+                    } else {
+                        sfx = !finalUrl.startsWith("gemini") ? "🌐" : "🔗";
+                    }
                 }
             }
             label = ll.substring(i).trim();
@@ -2116,6 +2133,8 @@ public class GeminiTextPane extends JTextPane {
                                 dataIcon;
                             case "✉️" ->
                                 mailIcon;
+                            case "✏️" ->
+                                titanIcon;
                             default ->
                                 geminiIcon;
                         };
@@ -2624,7 +2643,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon;
+    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon;
 
     private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color bgColor, Color fgColor) {
         BufferedImage bi = AsciiImage.renderTextToImage(txt, fontName, fontSize, bgColor, fgColor, true);

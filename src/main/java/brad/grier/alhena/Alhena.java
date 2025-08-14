@@ -468,6 +468,7 @@ public class Alhena {
 
     public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu) {
         String dbTheme = DB.getPref("theme", null);
+        GeminiTextPane.clearLinkIcons();
         if (!theme.equals(dbTheme)) {
             theme = dbTheme;
             try {
@@ -478,7 +479,14 @@ public class Alhena {
                 ex.printStackTrace();
             }
         }
+        // update the image icons in place
+        favMap.forEach((s, fi) -> {
+            if (s != null && fi != null) {
+                FavIconInfo fiInfo = new FavIconInfo(fi.favicon, GeminiTextPane.getFavIcon(fi.favicon()));
 
+                favMap.put(s, fiInfo);
+            }
+        });
         GeminiFrame.currentThemeId++; // rename - encompasses more than theme...font, etc
         for (GeminiFrame jf : frameList) {
             if (updateBookmarks) {
@@ -498,14 +506,7 @@ public class Alhena {
 
             }
             jf.recolorIcons();
-            // update the image icons in place
-            favMap.forEach((s, fi) -> {
-                if (s != null && fi != null) {
-                    FavIconInfo fiInfo = new FavIconInfo(fi.favicon, GeminiTextPane.getFavIcon(fi.favicon()));
 
-                    favMap.put(s, fiInfo);
-                }
-            });
             jf.forEachPage(page -> {
                 page.ignoreStart();
                 String key = page.getFavIconKey();
