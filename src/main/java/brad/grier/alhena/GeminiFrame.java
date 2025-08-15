@@ -32,6 +32,7 @@ import java.net.URL;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -110,11 +111,11 @@ public final class GeminiFrame extends JFrame {
     private JMenu bookmarkMenu, settingsMenu;
     private String lastSearch;
     private JLabel titleLabel;
-    public static final String HISTORY_LABEL = "History";
-    public static final String BOOKMARK_LABEL = "Bookmarks";
-    public static final String CERT_LABEL = "Certs";
-    public static final String INFO_LABEL = "Info";
-    public static final String SERVERS_LABEL = "Servers";
+    public static final String HISTORY_LABEL = I18n.t("historyItem");
+    public static final String BOOKMARK_LABEL = I18n.t("bookmarksItem");
+    public static final String CERT_LABEL = I18n.t("certsItem");
+    public static final String INFO_LABEL = I18n.t("infoLabel");
+    public static final String SERVERS_LABEL = I18n.t("serversItem");
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL); // make immutable
     public static String proportionalFamily = "SansSerif";
     public static final int DEFAULT_FONT_SIZE = 20;
@@ -241,7 +242,7 @@ public final class GeminiFrame extends JFrame {
                 int histIdx = rootPage.incAndGetArrayIndex();
                 if (histIdx < histList.size()) {
                     List<Page> sl = histList.subList(histIdx, histList.size());
-                    System.out.println("sl size: " + sl.size());
+
                     for (Page p : sl) {
                         //System.out.println("removing: " + p);
                         p.textPane.closePlayers();
@@ -389,10 +390,12 @@ public final class GeminiFrame extends JFrame {
         ImageIcon leftIcon = Util.recolorIcon("/left.png", UIManager.getColor("Button.foreground"), 21, 21);
         Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
         backButton = new JButton(leftIcon);
-        backButton.setToolTipText("Click to go back");
+
+        //I18n.t("certsItem")
+        backButton.setToolTipText(I18n.t("backButtonTip"));
         ImageIcon rightIcon = Util.recolorIcon("/right.png", UIManager.getColor("Button.foreground"), 21, 21);
         forwardButton = new JButton(rightIcon);
-        forwardButton.setToolTipText("Click to go forward");
+        forwardButton.setToolTipText(I18n.t("forwardButtonTip"));
 
         backButton.setEnabled(false);
         backButton.addActionListener(al -> {
@@ -476,7 +479,7 @@ public final class GeminiFrame extends JFrame {
 
         ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", UIManager.getColor("Button.foreground"), 21, 21);
         refreshButton = new JButton(refreshIcon);
-        refreshButton.setToolTipText("Reload this page");
+        refreshButton.setToolTipText(I18n.t("refreshButtonTip"));
         refreshButton.setEnabled(false);
 
         Action refreshAction = new AbstractAction() {
@@ -491,7 +494,7 @@ public final class GeminiFrame extends JFrame {
         refreshButton.getActionMap().put("refresh", refreshAction);
 
         JButton homeButton = new JButton("🏠");
-        homeButton.setToolTipText("Go to home page");
+        homeButton.setToolTipText(I18n.t("homeButtonTip"));
         homeButton.addActionListener(al -> {
 
             String homePage = Util.getHome();
@@ -504,7 +507,7 @@ public final class GeminiFrame extends JFrame {
         homeButton.setFont(buttonFont);
 
         favButton = new JButton("🔖");
-        favButton.setToolTipText("Bookmark this page");
+        favButton.setToolTipText(I18n.t("bookmarkButtonTip"));
         favButton.addActionListener(al -> {
             bookmarkPage(false);
 
@@ -545,9 +548,9 @@ public final class GeminiFrame extends JFrame {
 
             return items;
         };
-        PopupMenuButton hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, "No History");
+        PopupMenuButton hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, I18n.t("noHistoryPopupLabel"));
         hotButton.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
-        hotButton.setToolTipText("Display top bookmarks");
+        hotButton.setToolTipText(I18n.t("hotButtonTip"));
         hotButton.setFont(buttonFont);
 
         navPanel.add(hotButton, c);
@@ -579,15 +582,15 @@ public final class GeminiFrame extends JFrame {
 
         menuBar = new JMenuBar();
 
-        JMenu fileMenu = new JMenu("File");
+        JMenu fileMenu = new JMenu(I18n.t("fileMenu"));
 
-        fileMenu.add(createMenuItem("Open File", KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
+        fileMenu.add(createMenuItem(I18n.t("openFileItem"), KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
             openFile(null);
         }));
 
-        fileMenu.add(createMenuItem("Print", KeyStroke.getKeyStroke(KeyEvent.VK_P, mod), () -> {
+        fileMenu.add(createMenuItem(I18n.t("printItem"), KeyStroke.getKeyStroke(KeyEvent.VK_P, mod), () -> {
             if (!Util.isPrintingAvailable()) {
-                Util.infoDialog(GeminiFrame.this, "Status", "No printers available");
+                Util.infoDialog(GeminiFrame.this, I18n.t("printDialog"), I18n.t("printDialogMsg"));
                 return;
             }
             GeminiTextPane gtp = visiblePage().textPane;
@@ -614,20 +617,20 @@ public final class GeminiFrame extends JFrame {
         }));
         fileMenu.add(new JSeparator());
 
-        fileMenu.add(createMenuItem("New Tab", KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
+        fileMenu.add(createMenuItem(I18n.t("newTabItem"), KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
             newTab("alhena:art");
 
         }));
 
-        fileMenu.add(createMenuItem("New Window", KeyStroke.getKeyStroke(KeyEvent.VK_N, mod), () -> {
+        fileMenu.add(createMenuItem(I18n.t("newWindowItem"), KeyStroke.getKeyStroke(KeyEvent.VK_N, mod), () -> {
             String home = Util.getHome();
             Alhena.newWindow(home, home);
         }));
 
         fileMenu.add(new JSeparator());
-        JMenu userMenu = new JMenu("User Data");
+        JMenu userMenu = new JMenu(I18n.t("userDataItem"));
 
-        userMenu.add(createMenuItem("Export Data", null, () -> {
+        userMenu.add(createMenuItem(I18n.t("exportDataItem"), null, () -> {
 
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
             LocalDateTime now = LocalDateTime.now();
@@ -639,7 +642,7 @@ public final class GeminiFrame extends JFrame {
                 try {
 
                     DB.dumpDB(f);
-                    Util.infoDialog(GeminiFrame.this, "Complete", "Data successfully exported.");
+                    Util.infoDialog(GeminiFrame.this, I18n.t("exportDialog"), I18n.t("exportDialogMsg"));
 
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -649,9 +652,9 @@ public final class GeminiFrame extends JFrame {
 
         }));
 
-        userMenu.add(createMenuItem("Import Data", null, () -> {
+        userMenu.add(createMenuItem(I18n.t("importDataItem"), null, () -> {
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
-            File f = Util.getFile(GeminiFrame.this, null, true, "Open", filter);
+            File f = Util.getFile(GeminiFrame.this, null, true, I18n.t("importFileDialog"), filter);
             if (f != null) {
                 Util.importData(GeminiFrame.this, f, false);
             }
@@ -659,11 +662,13 @@ public final class GeminiFrame extends JFrame {
 
         userMenu.add(new JSeparator());
 
-        userMenu.add(createMenuItem("Sync Upload", null, () -> {
+        userMenu.add(createMenuItem(I18n.t("syncUploadItem"), null, () -> {
             try {
                 ClientCertInfo ci = DB.getClientCertInfo(SYNC_SERVER);
                 if (ci == null) {
-                    Object r = Util.confirmDialog(GeminiFrame.this, "Missing Cert", "You do not have an active certificate for " + SYNC_SERVER + "\nDo you want to create one?", JOptionPane.YES_NO_OPTION, null, null);
+
+                    String message = MessageFormat.format(I18n.t("syncMissingCertDialogMsg"), SYNC_SERVER);
+                    Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("syncMissingCertDialog"), message, JOptionPane.YES_NO_OPTION, null, null);
                     if (r instanceof Integer result) {
                         if (result == JOptionPane.YES_OPTION) {
                             try {
@@ -672,7 +677,7 @@ public final class GeminiFrame extends JFrame {
                                 ex.printStackTrace();
                             }
                         } else {
-                            Util.infoDialog(GeminiFrame.this, "Canceled", "Sync upload canceled.");
+                            Util.infoDialog(GeminiFrame.this, I18n.t("syncCanceledDialog"), I18n.t("syncCanceledDialogMsg"));
                             return;
                         }
                     }
@@ -680,7 +685,7 @@ public final class GeminiFrame extends JFrame {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-            Object r = Util.confirmDialog(GeminiFrame.this, "Sync", "This will overwrite any previously saved information on the server.\nAre you sure you want to upload your encrypted data?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+            Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("syncConfirmDialog"), I18n.t("syncConfirmDialogMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (r instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     ClientCertInfo certInfo;
@@ -702,7 +707,7 @@ public final class GeminiFrame extends JFrame {
                         fetchURL(titanUrl, encFile, false);
 
                     } catch (Exception ex) {
-                        Util.infoDialog(GeminiFrame.this, "Error", "Sync failed.\n" + ex.getMessage());
+                        Util.infoDialog(GeminiFrame.this, I18n.t("syncFailedDialog"), I18n.t("syncFailedDialogMsg") + "\n" + ex.getMessage());
                         ex.printStackTrace();
                     }
                 }
@@ -710,7 +715,7 @@ public final class GeminiFrame extends JFrame {
 
         }));
 
-        userMenu.add(createMenuItem("Sync Download", null, () -> {
+        userMenu.add(createMenuItem(I18n.t("syncDownloadItem"), null, () -> {
             try {
                 File file = File.createTempFile("alhenadb", ".enc");
 
@@ -726,31 +731,30 @@ public final class GeminiFrame extends JFrame {
 
         if (!SystemInfo.isMacOS) {
             fileMenu.add(new JSeparator());
-            fileMenu.add(createMenuItem("Quit", KeyStroke.getKeyStroke(KeyEvent.VK_Q, mod), () -> {
+            fileMenu.add(createMenuItem(I18n.t("quitItem"), KeyStroke.getKeyStroke(KeyEvent.VK_Q, mod), () -> {
                 Alhena.exit(GeminiFrame.this);
             }));
         }
         fileMenu.setMnemonic('F');
         menuBar.add(fileMenu);
 
-        JMenu viewMenu = new JMenu("View");
+        JMenu viewMenu = new JMenu(I18n.t("viewMenu"));
         viewMenu.setMnemonic('V');
 
         for (String label : CUSTOM_LABELS) {
             KeyStroke ks = null;
             if (!label.equals(INFO_LABEL)) {
-                switch (label) {
-                    case HISTORY_LABEL ->
-                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_Y, mod);
-                    case BOOKMARK_LABEL ->
-                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_B, mod);
-                    case CERT_LABEL ->
-                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, (mod | KeyEvent.ALT_DOWN_MASK));
-                    case SERVERS_LABEL ->
-                        ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, (mod | KeyEvent.ALT_DOWN_MASK));
-                    default -> {
-                    }
+
+                if (label.equals(HISTORY_LABEL)) {
+                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_Y, mod);
+                } else if (label.equals(BOOKMARK_LABEL)) {
+                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_B, mod);
+                } else if (label.equals(CERT_LABEL)) {
+                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, (mod | KeyEvent.ALT_DOWN_MASK));
+                } else if (label.equals(SERVERS_LABEL)) {
+                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, (mod | KeyEvent.ALT_DOWN_MASK));
                 }
+
 
                 viewMenu.add(createMenuItem(label, ks, () -> {
 
@@ -763,9 +767,9 @@ public final class GeminiFrame extends JFrame {
 
         viewMenu.add(new JSeparator());
 
-        viewMenu.add(createMenuItem("Find", KeyStroke.getKeyStroke(KeyEvent.VK_F, mod), () -> {
+        viewMenu.add(createMenuItem(I18n.t("findItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F, mod), () -> {
 
-            String input = Util.inputDialog(this, "Find In Page", "Enter search term", false, "", null);
+            String input = Util.inputDialog(this, I18n.t("findDialog"), I18n.t("findDialogMsg"), false, "", null);
             if (input != null) {
                 visiblePage().textPane.resetSearch();
                 lastSearch = input;
@@ -774,7 +778,7 @@ public final class GeminiFrame extends JFrame {
             }
         }));
 
-        viewMenu.add(createMenuItem("Find Again", KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0), () -> {
+        viewMenu.add(createMenuItem(I18n.t("findAgainItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0), () -> {
             findAgain();
         }));
 
@@ -784,7 +788,7 @@ public final class GeminiFrame extends JFrame {
 
         addWindowsMenu();
 
-        JMenu aboutMenu = new JMenu("Help");
+        JMenu aboutMenu = new JMenu(I18n.t("helpMenu"));
         aboutMenu.setMnemonic('H');
         if (!SystemInfo.isMacOS) {
             aboutMenu.add(createMenuItem("About", null, () -> {
@@ -843,14 +847,14 @@ public final class GeminiFrame extends JFrame {
         if (settingsMenu != null) {
             settingsMenu.removeAll();
         } else {
-            settingsMenu = new JMenu("Settings");
+            settingsMenu = new JMenu(I18n.t("settingsMenu"));
             settingsMenu.setMnemonic('S');
             menuBar.add(settingsMenu);
         }
 
-        JMenu darkThemeMenu = new JMenu("Dark Themes");
+        JMenu darkThemeMenu = new JMenu(I18n.t("darkThemesItem"));
 
-        JMenu lightThemeMenu = new JMenu("Light Themes");
+        JMenu lightThemeMenu = new JMenu(I18n.t("lightThemesItem"));
         ButtonGroup themeGroup = new ButtonGroup();
         String theme = UIManager.getLookAndFeel().getClass().toString();
         theme = theme.substring(theme.lastIndexOf('.') + 1);
@@ -885,7 +889,7 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(lightThemeMenu);
         settingsMenu.add(darkThemeMenu);
 
-        settingsMenu.add(createMenuItem("Font", KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
+        settingsMenu.add(createMenuItem(I18n.t("fontItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
             Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, DEFAULT_FONT_SIZE);
             Font font = Util.getFont(GeminiFrame.this, defFont);
             if (font != null) {
@@ -909,7 +913,7 @@ public final class GeminiFrame extends JFrame {
             macUseNoto = Alhena.macUseNoto;
         }
 
-        JMenu emojiMenu = new JMenu("Emoji");
+        JMenu emojiMenu = new JMenu(I18n.t("emojiItem"));
         JRadioButtonMenuItem appleItem = new JRadioButtonMenuItem("Apple", emojiPref.equals("apple"));
         if (appleItem.isSelected()) {
             lastSelectedItem = appleItem;
@@ -934,7 +938,7 @@ public final class GeminiFrame extends JFrame {
         }
         twitterItem.addActionListener(al -> setEmoji("twitter", al, false));
         emojiMenu.add(twitterItem);
-        JRadioButtonMenuItem fontItem = new JRadioButtonMenuItem("Font", emojiPref.equals("font") && !macUseNoto);
+        JRadioButtonMenuItem fontItem = new JRadioButtonMenuItem(I18n.t("fontItem"), emojiPref.equals("font") && !macUseNoto);
         if (fontItem.isSelected()) {
             lastSelectedItem = fontItem;
         }
@@ -963,7 +967,7 @@ public final class GeminiFrame extends JFrame {
 
         settingsMenu.add(emojiMenu);
 
-        settingsMenu.add(createMenuItem("Layout", null, () -> {
+        settingsMenu.add(createMenuItem(I18n.t("layoutItem"), null, () -> {
             JSlider slider = new JSlider(50, 100, (int) (GeminiTextPane.contentPercentage * 100f));
 
             slider.setMajorTickSpacing(10);
@@ -973,24 +977,24 @@ public final class GeminiFrame extends JFrame {
 
             slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
 
-            JCheckBox lineWrapCB = new JCheckBox("Line wrap pre-formatted text (Non-Standard)");
+            JCheckBox lineWrapCB = new JCheckBox(I18n.t("lineWrapCB"));
             // lineWrapCB.setToolTipText("Non-standard.");
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
 
-            JCheckBox imagePFCB = new JCheckBox("Render pre-formatted text blocks as images");
+            JCheckBox imagePFCB = new JCheckBox(I18n.t("pfRenderCB"));
             imagePFCB.setSelected(GeminiTextPane.asciiImage);
             imagePFCB.addActionListener(al -> {
                 lineWrapCB.setEnabled(!imagePFCB.isSelected());
             });
 
-            JCheckBox showsbCB = new JCheckBox("Show horizontal scrollbar for pre-formatted text");
+            JCheckBox showsbCB = new JCheckBox(I18n.t("scrollBarCB"));
             // showsbCB.setToolTipText("Display scrollbar when using scrollable pre-formatted text.");
             showsbCB.setSelected(GeminiTextPane.showSB);
 
-            JCheckBox shadeCB = new JCheckBox("Shade pre-formatted text background");
+            JCheckBox shadeCB = new JCheckBox(I18n.t("shadeCB"));
             shadeCB.setSelected(GeminiTextPane.shadePF);
 
-            JCheckBox embedPFCB = new JCheckBox("Scrollable pre-formatted text");
+            JCheckBox embedPFCB = new JCheckBox(I18n.t("scrollableCB"));
             // embedPFCB.setToolTipText("If enabled, hold down 's' to horizontally sroll pre-formatted text.\nDisabling (legacy) can affect where gemtext wraps.");
             embedPFCB.setSelected(GeminiTextPane.embedPF);
             embedPFCB.addActionListener(e -> {
@@ -1002,7 +1006,7 @@ public final class GeminiFrame extends JFrame {
             showsbCB.setEnabled(embedPFCB.isSelected());
             shadeCB.setEnabled(embedPFCB.isSelected());
 
-            Object[] comps = {new JLabel("Select content width percentage."), slider, new JLabel(" "), lineWrapCB, imagePFCB, embedPFCB, showsbCB, shadeCB};
+            Object[] comps = {new JLabel(I18n.t("contentWidthLabel")), slider, new JLabel(" "), lineWrapCB, imagePFCB, embedPFCB, showsbCB, shadeCB};
             Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null, false);
 
             if (res != null) {
@@ -1024,7 +1028,7 @@ public final class GeminiFrame extends JFrame {
         }));
 
         settingsMenu.add(new JSeparator());
-        JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem("Smooth Scrolling", DB.getPref("smoothscrolling", "true").equals("true"));
+        JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem(I18n.t("smoothScrollingItem"), DB.getPref("smoothscrolling", "true").equals("true"));
         smoothItem.addItemListener(ae -> {
 
             boolean smoothScrolling = !DB.getPref("smoothscrolling", "true").equals("true"); // toggle
@@ -1041,7 +1045,7 @@ public final class GeminiFrame extends JFrame {
         });
         settingsMenu.add(smoothItem);
 
-        JCheckBoxMenuItem vlcItem = new JCheckBoxMenuItem("Embedded VLC", Alhena.allowVLC);
+        JCheckBoxMenuItem vlcItem = new JCheckBoxMenuItem(I18n.t("vlcItem"), Alhena.allowVLC);
         vlcItem.addItemListener(ae -> {
 
             Alhena.allowVLC = !Alhena.allowVLC;
@@ -1049,12 +1053,12 @@ public final class GeminiFrame extends JFrame {
             DB.insertPref("allowvlc", String.valueOf(Alhena.allowVLC));
 
             if (Alhena.allowVLC) {
-                Util.infoDialog(GeminiFrame.this, "Update", "Embedded VLC media player activated. VLC must be installed on your system.\nSee FAQ for details.");
+                Util.infoDialog(GeminiFrame.this, I18n.t("vlcUpdateDialog"), I18n.t("vlcUpdateDialogMsg"));
             }
 
         });
 
-        JCheckBoxMenuItem favIconItem = new JCheckBoxMenuItem("Display Favicon", Alhena.favIcon);
+        JCheckBoxMenuItem favIconItem = new JCheckBoxMenuItem(I18n.t("favIconItem"), Alhena.favIcon);
         favIconItem.addItemListener(ae -> {
 
             Alhena.favIcon = !Alhena.favIcon;
@@ -1065,7 +1069,7 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        JCheckBoxMenuItem dataUrlItem = new JCheckBoxMenuItem("Open Data URLs", Alhena.dataUrl);
+        JCheckBoxMenuItem dataUrlItem = new JCheckBoxMenuItem(I18n.t("openDataUrlsItem"), Alhena.dataUrl);
         dataUrlItem.addItemListener(ae -> {
 
             Alhena.dataUrl = !Alhena.dataUrl;
@@ -1076,7 +1080,7 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        JCheckBoxMenuItem linkIconItem = new JCheckBoxMenuItem("Link Icons", Alhena.linkIcons);
+        JCheckBoxMenuItem linkIconItem = new JCheckBoxMenuItem(I18n.t("linkIconsItem"), Alhena.linkIcons);
         linkIconItem.addItemListener(ae -> {
 
             Alhena.linkIcons = !Alhena.linkIcons;
@@ -1093,10 +1097,10 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(linkIconItem);
 
         settingsMenu.add(new JSeparator());
-        JMenuItem proxyItem = new JMenuItem("HTTP Proxy");
+        JMenuItem proxyItem = new JMenuItem(I18n.t("httpProxyItem"));
         proxyItem.addActionListener(ae -> {
 
-            String proxy = Util.inputDialog(GeminiFrame.this, "HTTP Proxy", "Enter \"host:port\" for HTTP proxy.\nClear to use default HTTP link handling.",
+            String proxy = Util.inputDialog(GeminiFrame.this, I18n.t("httpProxyDialog"), I18n.t("httpProxyDialogMsg"),
                     false, Alhena.httpProxy == null ? "" : Alhena.httpProxy, null);
             if (proxy != null) {
                 if (proxy.isBlank()) {
@@ -1109,10 +1113,10 @@ public final class GeminiFrame extends JFrame {
         });
         settingsMenu.add(proxyItem);
 
-        JMenuItem gopherItem = new JMenuItem("Gopher Proxy");
+        JMenuItem gopherItem = new JMenuItem(I18n.t("gopherProxyItem"));
         gopherItem.addActionListener(ae -> {
 
-            String proxy = Util.inputDialog(GeminiFrame.this, "Gopher Proxy", "Enter \"host:port\" for Gopher proxy.\nClear to use default Gopher link handling.",
+            String proxy = Util.inputDialog(GeminiFrame.this, I18n.t("gopherProxyDialog"), I18n.t("gopherProxyDialogMsg"),
                     false, Alhena.gopherProxy == null ? "" : Alhena.gopherProxy, null);
             if (proxy != null) {
                 if (proxy.isBlank()) {
@@ -1126,10 +1130,10 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(gopherItem);
 
         settingsMenu.add(new JSeparator());
-        JMenuItem searchItem = new JMenuItem("Search URL");
+        JMenuItem searchItem = new JMenuItem(I18n.t("searchUrlItem"));
         searchItem.addActionListener(ae -> {
 
-            String sUrl = Util.inputDialog(GeminiFrame.this, "Search URL", "Enter search URL.",
+            String sUrl = Util.inputDialog(GeminiFrame.this, I18n.t("searchUrlDialog"), I18n.t("searchUrlDialogMsg"),
                     false, Alhena.searchUrl == null ? "" : Alhena.searchUrl, null);
             if (sUrl != null) {
                 if (sUrl.isBlank()) {
@@ -1275,7 +1279,7 @@ public final class GeminiFrame extends JFrame {
                 lastSelectedItem.setSelected(true);
                 EventQueue.invokeLater(() -> {
                     visiblePage().setBusy(false);
-                    Util.infoDialog(GeminiFrame.this, "Error", "Error downloading emoji file.", JOptionPane.ERROR_MESSAGE);
+                    Util.infoDialog(GeminiFrame.this, I18n.t("spriteErrorDialog"), I18n.t("spriteErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
                 });
 
             }
@@ -1330,7 +1334,7 @@ public final class GeminiFrame extends JFrame {
     private void bookmarkPage(boolean newBookmark) {
 
         if (!newBookmark && visiblePage().textPane.getDocMode() == GeminiTextPane.INFO_MODE) {
-            Util.infoDialog(this, "Invalid", "This page can't be bookmarked");
+            Util.infoDialog(this, I18n.t("invalidBookmarkDialog"), I18n.t("invalidBookmarkDialogMsg"));
             return;
         }
 
@@ -1368,17 +1372,17 @@ public final class GeminiFrame extends JFrame {
         bmComboBox.getEditor().getEditorComponent().addMouseListener(new ContextMenuMouseListener());
 
         Object[] comps = new Object[6];
-        comps[0] = "Label:";
+        comps[0] = I18n.t("bookmarkDialogLabel");
         comps[1] = labelField;
-        comps[2] = "URL:";
+        comps[2] = I18n.t("bookmarkDialogUrl");
         comps[3] = urlField;
-        comps[4] = "Bookmark Folder:";
+        comps[4] = I18n.t("bookmarkDialogFolder");
         comps[5] = bmComboBox;
-        Object res = Util.inputDialog2(this, "New", comps, null, false);
+        Object res = Util.inputDialog2(this, I18n.t("bookmarkDialog"), comps, null, false);
         if (res != null) {
 
             if (labelField.getText().trim().isEmpty() || ((String) bmComboBox.getSelectedItem()).trim().isEmpty() || urlField.getText().trim().isEmpty()) {
-                Util.infoDialog(this, "Required", "Bookmark label, url and folder required.");
+                Util.infoDialog(this, I18n.t("bookmarkRequiredDialog"), I18n.t("bookmarkRequiredDialogMsg"));
             } else {
                 try {
                     DB.insertBookmark(labelField.getText().trim(), urlField.getText().trim(), ((String) bmComboBox.getSelectedItem()).trim(), null);
@@ -1399,14 +1403,14 @@ public final class GeminiFrame extends JFrame {
             if (bookmarkMenu != null) {
                 bookmarkMenu.removeAll();
             } else {
-                bookmarkMenu = new JMenu("Bookmarks");
+                bookmarkMenu = new JMenu(I18n.t("bookmarksMenu"));
                 bookmarkMenu.setMnemonic('B');
                 menuBar.add(bookmarkMenu);
             }
-            bookmarkMenu.add(createMenuItem("New Bookmark", KeyStroke.getKeyStroke(KeyEvent.VK_W, mod), () -> {
+            bookmarkMenu.add(createMenuItem(I18n.t("newBookmarkItem"), KeyStroke.getKeyStroke(KeyEvent.VK_W, mod), () -> {
                 bookmarkPage(true);
             }));
-            bookmarkMenu.add(createMenuItem("Bookmark Page", KeyStroke.getKeyStroke(KeyEvent.VK_D, mod), () -> {
+            bookmarkMenu.add(createMenuItem(I18n.t("bookmarkPageItem"), KeyStroke.getKeyStroke(KeyEvent.VK_D, mod), () -> {
                 bookmarkPage(false);
             }));
             if (!bookmarks.isEmpty()) {
@@ -1676,20 +1680,18 @@ public final class GeminiFrame extends JFrame {
 
                 };
                 pb.runWhenLoading(r);
-                switch (label) {
-                    case HISTORY_LABEL ->
-                        loadHistory(pb.textPane, pb);
-                    case BOOKMARK_LABEL ->
-                        loadBookmarks(pb.textPane, pb);
-                    case CERT_LABEL ->
-                        loadCerts(pb.textPane, pb);
-                    case INFO_LABEL ->
-                        loadInfo(pb.textPane, info);
-                    case SERVERS_LABEL ->
-                        loadServers(pb.textPane, pb);
-                    default -> {
-                    }
+                if (label.equals(HISTORY_LABEL)) {
+                    loadHistory(pb.textPane, pb);
+                } else if (label.equals(BOOKMARK_LABEL)) {
+                    loadBookmarks(pb.textPane, pb);
+                } else if (label.equals(CERT_LABEL)) {
+                    loadCerts(pb.textPane, pb);
+                } else if (label.equals(INFO_LABEL)) {
+                    loadInfo(pb.textPane, info);
+                } else if (label.equals(SERVERS_LABEL)) {
+                    loadServers(pb.textPane, pb);
                 }
+
 
             } else {
                 int currentTabIdx = tabbedPane.getSelectedIndex();
@@ -1731,19 +1733,17 @@ public final class GeminiFrame extends JFrame {
                     }
                 };
                 pb.runWhenLoading(r);
-                switch (label) {
-                    case HISTORY_LABEL ->
-                        loadHistory(pb.textPane, pb);
-                    case BOOKMARK_LABEL ->
-                        loadBookmarks(pb.textPane, pb);
-                    case CERT_LABEL ->
-                        loadCerts(pb.textPane, pb);
-                    case INFO_LABEL ->
-                        loadInfo(pb.textPane, info);
-                    case SERVERS_LABEL ->
-                        loadServers(pb.textPane, pb);
-                    default -> {
-                    }
+
+                if (label.equals(HISTORY_LABEL)) {
+                    loadHistory(pb.textPane, pb);
+                } else if (label.equals(BOOKMARK_LABEL)) {
+                    loadBookmarks(pb.textPane, pb);
+                } else if (label.equals(CERT_LABEL)) {
+                    loadCerts(pb.textPane, pb);
+                } else if (label.equals(INFO_LABEL)) {
+                    loadInfo(pb.textPane, info);
+                } else if (label.equals(SERVERS_LABEL)) {
+                    loadServers(pb.textPane, pb);
                 }
 
             }
@@ -1752,19 +1752,16 @@ public final class GeminiFrame extends JFrame {
             visiblePB.ignoreStart();
             Page nPage = !inPlace ? addPageToHistory(null, visiblePB, true) : visiblePB;
 
-            switch (label) {
-                case HISTORY_LABEL ->
-                    loadHistory(nPage.textPane, null);
-                case BOOKMARK_LABEL ->
-                    loadBookmarks(nPage.textPane, null);
-                case CERT_LABEL ->
-                    loadCerts(nPage.textPane, null);
-                case INFO_LABEL ->
-                    loadInfo(nPage.textPane, info);
-                case SERVERS_LABEL ->
-                    loadServers(nPage.textPane, null);
-                default -> {
-                }
+            if (label.equals(HISTORY_LABEL)) {
+                loadHistory(nPage.textPane, null);
+            } else if (label.equals(BOOKMARK_LABEL)) {
+                loadBookmarks(nPage.textPane, null);
+            } else if (label.equals(CERT_LABEL)) {
+                loadCerts(nPage.textPane, null);
+            } else if (label.equals(INFO_LABEL)) {
+                loadInfo(nPage.textPane, info);
+            } else if (label.equals(SERVERS_LABEL)) {
+                loadServers(nPage.textPane, null);
             }
             setTitle(label);
 
@@ -1815,7 +1812,7 @@ public final class GeminiFrame extends JFrame {
             }
             List<Bookmark> bookmarks = DB.loadBookmarks();
             if (!bookmarks.isEmpty()) {
-                textPane.updatePage("#Bookmarks 🔖\nRight click to edit or delete a bookmark.\n\n", false, BOOKMARK_LABEL, true);
+                textPane.updatePage(I18n.t("bookmarksHeading"), false, BOOKMARK_LABEL, true);
 
                 LinkedHashMap<String, ArrayList<Bookmark>> folders = new LinkedHashMap<>();
                 bookmarks.forEach(bm -> {
@@ -1841,7 +1838,7 @@ public final class GeminiFrame extends JFrame {
 
                 //updateComboBox(BOOKMARK_LABEL);
             } else {
-                textPane.end("#Bookmarks🔖\n", false, BOOKMARK_LABEL, true);
+                textPane.end(I18n.t("emptyBookmarksHeading"), false, BOOKMARK_LABEL, true);
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -1856,7 +1853,7 @@ public final class GeminiFrame extends JFrame {
             }
             List<DBClientCertInfo> certs = DB.loadCerts();
             if (!certs.isEmpty()) {
-                textPane.updatePage("#Client Certificates 🔑\nClick to toggle active state. Right click to activate, inactivate or delete a cert.\n", false, CERT_LABEL, true);
+                textPane.updatePage(I18n.t("clientCertsHeading"), false, CERT_LABEL, true);
 
                 LinkedHashMap<Boolean, ArrayList<DBClientCertInfo>> types = new LinkedHashMap<>();
                 certs.forEach(c -> {
@@ -1870,7 +1867,7 @@ public final class GeminiFrame extends JFrame {
                 Stream.of(true, false) // process in order
                         .filter(types::containsKey) // Ensure key exists
                         .forEach(active -> {
-                            String label = active ? "Active" : "Inactive";
+                            String label = active ? I18n.t("clientCertsActiveLabel") : I18n.t("clientCertsInactiveLabel");
                             textPane.addPage("\n## " + label + " Certs\n\n");
 
                             types.get(active).forEach(cert -> {
@@ -1888,7 +1885,7 @@ public final class GeminiFrame extends JFrame {
                 textPane.end();
 
             } else {
-                textPane.end("#Client Certificates 🔑\n", false, CERT_LABEL, true);
+                textPane.end(I18n.t("emptyClientCertsHeading"), false, CERT_LABEL, true);
 
             }
         } catch (SQLException ex) {
@@ -1922,7 +1919,7 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), HISTORY_LABEL);
         }
 
-        textPane.updatePage("# History 🏛\n", false, HISTORY_LABEL, true);
+        textPane.updatePage(I18n.t("historyHeading"), false, HISTORY_LABEL, true);
         new Thread(() -> {
             int[] count = {0};
             try {
@@ -1934,7 +1931,7 @@ public final class GeminiFrame extends JFrame {
 
             EventQueue.invokeLater(() -> {
                 if (count[0] == 0) {
-                    textPane.addPage("\n### Nothing to see\n");
+                    textPane.addPage(I18n.t("nothingToSeeLabel"));
                 } else {
                     setTmpStatus(count[0] + " links");
                 }
@@ -1976,7 +1973,7 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), SERVERS_LABEL);
         }
 
-        textPane.updatePage("# Servers 🖥\nDomain, Expiration Date and SHA-256 Hash\n", false, SERVERS_LABEL, true);
+        textPane.updatePage(I18n.t("serversHeading"), false, SERVERS_LABEL, true);
         new Thread(() -> {
             int[] count = {0};
             try {
@@ -1988,7 +1985,7 @@ public final class GeminiFrame extends JFrame {
 
             EventQueue.invokeLater(() -> {
                 if (count[0] == 0) {
-                    textPane.addPage("\n### Nothing to see\n");
+                    textPane.addPage(I18n.t("nothingToSeeLabel"));
                 } else {
                     setTmpStatus(count[0] + " servers");
                 }
@@ -2007,7 +2004,7 @@ public final class GeminiFrame extends JFrame {
         int bmId = Integer.parseInt(id);
         try {
             Bookmark bm = DB.getBookmark(bmId);
-            Object res = Util.confirmDialog(f, "Delete?", "Are you sure you want to delete this bookmark?\n" + bm.label(), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+            Object res = Util.confirmDialog(f, I18n.t("deleteBookmarkDialog"), I18n.t("deleteBookmarkDialogMsg") + bm.label(), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     DB.deleteBookmark(bmId);
@@ -2044,7 +2041,7 @@ public final class GeminiFrame extends JFrame {
             ClientCertInfo certInfo = DB.getClientCertInfo(id);
             X509Certificate xc = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
             X500Principal principal = xc.getSubjectX500Principal();
-            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete this certificate?\n" + certInfo.domain() + " [" + principal.getName() + "]", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+            Object res = Util.confirmDialog(this, I18n.t("deleteCertDialog"), I18n.t("deleteCertDialogMsg") + certInfo.domain() + " [" + principal.getName() + "]", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
 
@@ -2081,12 +2078,13 @@ public final class GeminiFrame extends JFrame {
     public void deleteFromHistory(String url, boolean prompt) {
         String match = null;
         if (prompt) {
-            match = Util.inputDialog(this, "Delete History", "Enter a string. All links containing the string will be removed from history.", false);
+            match = Util.inputDialog(this, I18n.t("deleteHistoryDialog"), I18n.t("deleteHistoryDialogMsg"), false);
             if (match == null || match.isBlank()) {
                 return;
 
             } else {
-                Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history containing:\n\"" + match + "\"", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                String message = MessageFormat.format(I18n.t("deleteHistoryConfirmDialogMsg"), match);
+                Object res = Util.confirmDialog(this, I18n.t("deleteHistoryConfirmDialog"), message, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                 if (res instanceof Integer result) {
                     if (result == JOptionPane.NO_OPTION) {
                         return;
@@ -2098,8 +2096,8 @@ public final class GeminiFrame extends JFrame {
         try {
             int rowCount = DB.deleteHistory(url, match);
             refresh();
-            String verbiage = rowCount == 1 ? "1 link " : rowCount + " links ";
-            Util.infoDialog(this, "Update", verbiage + "removed from history");
+            String verbiage = rowCount == 1 ? I18n.t("linkLabel") + " " : " " + rowCount + " " + I18n.t("linksLabel") + " ";
+            Util.infoDialog(this, I18n.t("linksDeleteDialog"), verbiage + I18n.t("linksDeleteDialogMsg"));
 
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -2109,13 +2107,13 @@ public final class GeminiFrame extends JFrame {
 
     public void clearHistory() {
         try {
-            Object res = Util.confirmDialog(this, "Confirm", "Are you sure you want to delete all history?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+            Object res = Util.confirmDialog(this, I18n.t("clearHistoryDialog"), I18n.t("clearHistoryDialogMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     int rowCount = DB.deleteHistory();
                     refresh();
-                    String verbiage = rowCount == 0 ? "No links " : rowCount == 1 ? "1 link " : rowCount + " links ";
-                    Util.infoDialog(this, "Update", verbiage + "removed from history");
+                    String verbiage = rowCount == 0 ? I18n.t("noLinksLabel") + " ": rowCount == 1 ?  I18n.t("linkLabel") + " " : rowCount + " " + I18n.t("linksLabel") + " ";
+                    Util.infoDialog(this, I18n.t("clearHistoryResultDialog"), verbiage + I18n.t("clearHistoryResultDialogMsg"));
 
                 }
             }
@@ -2163,13 +2161,13 @@ public final class GeminiFrame extends JFrame {
             bmComboBox.getEditor().getEditorComponent().addMouseListener(new ContextMenuMouseListener());
 
             Object[] comps = new Object[6];
-            comps[0] = "Label:";
+            comps[0] = I18n.t("bookmarkDialogLabel");
             comps[1] = labelField;
-            comps[2] = "URL";
+            comps[2] = I18n.t("bookmarkDialogUrl");
             comps[3] = urlField;
-            comps[4] = "Bookmark Folder:";
+            comps[4] = I18n.t("bookmarkDialogFolder");
             comps[5] = bmComboBox;
-            Object res = Util.inputDialog2(this, "New", comps, null, false);
+            Object res = Util.inputDialog2(this, I18n.t("newLabel"), comps, null, false);
             if (res != null) {
                 if (!labelField.getText().trim().isEmpty() && !((String) bmComboBox.getSelectedItem()).trim().isEmpty() && !urlField.getText().trim().isEmpty()) {
                     DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem(), urlField.getText());
@@ -2193,12 +2191,10 @@ public final class GeminiFrame extends JFrame {
         if (success) {
             try {
                 ClientCertInfo ci = DB.getClientCertInfo(prunedUrl);
-                // if (ci != null) {
-                //     DB.toggleCert(ci.id(), false, prunedUrl, false); // set existing for host to inactive
 
-                // }
                 Alhena.closeNetClient(DB.getClientCertInfo(prunedUrl)); //lazy
-                Util.infoDialog(this, "Added", "New client certificate added for : " + uri + ".");
+                String message = MessageFormat.format(I18n.t("createCertDialogMsg"), uri);
+                Util.infoDialog(this, I18n.t("createCertDialog"), message);
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
@@ -2209,26 +2205,26 @@ public final class GeminiFrame extends JFrame {
     public void importPem(URI uri, File f) {
         String host = uri.getHost();
         if (host == null || !uri.getScheme().equals("gemini")) {
-            Util.infoDialog(this, "Invalid", "Invalid scheme. Can't import PEM file.");
+            Util.infoDialog(this, I18n.t("invalidLabel"), I18n.t("invalidSchemeDialogMsg"));
             return;
         }
         if (f == null) {
             FileNameExtensionFilter filter = new FileNameExtensionFilter("PEM files (*.pem)", "pem");
-            f = Util.getFile(this, null, true, "Select PEM File", filter);
+            f = Util.getFile(this, null, true, I18n.t("selectPEMDialog"), filter);
         }
 
         if (f != null) {
             try {
                 PemData pemData = Util.extractPemParts(f.getAbsolutePath());
                 if (pemData.cert() == null || pemData.key() == null) {
-                    Util.infoDialog(this, "Format", "Not a recognized PEM format");
+                    Util.infoDialog(this, I18n.t("pemFormatDialog"), I18n.t("pemFormatDialogMsg"));
                 } else {
                     int port = uri.getPort() == -1 ? 1965 : uri.getPort();
                     String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
 
                     boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(pemData.cert()) && c.domain().equals(prunedUrl));
                     if (exists) {
-                        Util.infoDialog(this, "Duplicate", "This cert already exists for: " + uri, JOptionPane.WARNING_MESSAGE);
+                        Util.infoDialog(this, I18n.t("duplicatePEMDialog"), I18n.t("duplicatePEMDialogMsg") + " " + uri, JOptionPane.WARNING_MESSAGE);
                     } else {
                         ClientCertInfo ci = DB.getClientCertInfo(prunedUrl);
                         if (ci != null) {
@@ -2240,7 +2236,8 @@ public final class GeminiFrame extends JFrame {
                         Alhena.addCertToTrustStore(uri, visiblePage().getCert(), false);
 
                         Alhena.closeNetClient(DB.getClientCertInfo(prunedUrl)); //lazy
-                        Util.infoDialog(this, "Added", "PEM added for : " + uri);
+                        String message = MessageFormat.format(I18n.t("pemAddedDialogMsg"), uri);
+                        Util.infoDialog(this, I18n.t("pemAddedDialog"), message);
                         refresh();
                     }
                 }
@@ -2254,7 +2251,7 @@ public final class GeminiFrame extends JFrame {
     public void openFile(File file) {
 
         if (file == null) {
-            file = Util.getFile(this, null, true, "Select File", null);
+            file = Util.getFile(this, null, true, I18n.t("selectFileDialog"), null);
         }
 
         if (file != null && file.exists()) {
@@ -2289,7 +2286,7 @@ public final class GeminiFrame extends JFrame {
             }
         }
         FileNameExtensionFilter filter = new FileNameExtensionFilter("gemini files (*.gmi, *.pem)", "gmi", "pem");
-        File saveFile = Util.getFile(this, suggestedName, false, "Save File", filter);
+        File saveFile = Util.getFile(this, suggestedName, false, I18n.t("saveFileDialog"), filter);
         if (saveFile != null) {
             setBusy(true, textPane);
 
@@ -2333,7 +2330,7 @@ public final class GeminiFrame extends JFrame {
                 .map(component -> (Page) component);
         X509Certificate pageCert = page.get().getCert();
         if (pageCert == null) {
-            Util.infoDialog(GeminiFrame.this, "No Cert", "No certificate found");
+            Util.infoDialog(GeminiFrame.this, I18n.t("noCertDialog"), I18n.t("noCertDialogMsg"));
         } else {
             InfoPageInfo pageInfo = new InfoPageInfo("servercert: " + host, pageCert.toString());
             showCustomPage(INFO_LABEL, pageInfo);
@@ -2382,7 +2379,7 @@ public final class GeminiFrame extends JFrame {
                                 setTitle(frameTitle);
                                 selectComboBoxItem(page.textPane.getDocURLString());
                             } else {
-                                setTitle("New Tab");
+                                setTitle(I18n.t("newTabLabel"));
                                 selectComboBoxItem("");
                             }
 

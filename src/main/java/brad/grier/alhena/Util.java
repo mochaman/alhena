@@ -166,7 +166,7 @@ public class Util {
         ptp.addText(colorize(GeminiFrame.getArt()));
 
         Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "© 2025 Brad Grier", ptp};
-        Util.fancyInfoDialog(c, "About", comps);
+        Util.fancyInfoDialog(c, I18n.t("aboutLabel"), comps);
     }
 
     public static Object confirmDialog(Component parent, String title, String question, int optionType, Object[] options, Integer msgType) {
@@ -264,7 +264,7 @@ public class Util {
 
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
-        textArea.setToolTipText("shift+return for line break");
+        textArea.setToolTipText(I18n.t("inputTip"));
         //Dimension ps = textArea.getPreferredSize();
 
         JTextComponent textField = pswd ? new JPasswordField() : textArea;
@@ -403,10 +403,10 @@ public class Util {
         Object[] message = {
             fontChooser,
             new JLabel(" "),
-            new JLabel("Preformatted Text Size"),
+            new JLabel(I18n.t("fontDialogPFLabel")),
             slider
         };
-        Object[] options = {"OK", "Cancel", "Reset"};
+        Object[] options = {I18n.t("okLabel"), I18n.t("cancelLabel"), I18n.t("resetLabel")};
         JOptionPane optionPane = new JOptionPane(
                 message, // Message
                 JOptionPane.PLAIN_MESSAGE, // Message type
@@ -417,7 +417,7 @@ public class Util {
         );
 
         optionPane.setWantsInput(false);
-        JDialog dialog = optionPane.createDialog(f, "Choose Font");
+        JDialog dialog = optionPane.createDialog(f, I18n.t("fontDialogTitle"));
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
@@ -430,10 +430,10 @@ public class Util {
         dialog.setVisible(true);
         Object selectedValue = optionPane.getValue();
         if (selectedValue instanceof String val) {
-            if (val.equals("OK")) {
+            if (val.equals(I18n.t("okLabel"))) {
                 GeminiFrame.monoFontSize = slider.getValue();
                 return fontChooser.getSelectedFont();
-            } else if (val.equals("Reset")) {
+            } else if (val.equals(I18n.t("resetLabel"))) {
                 GeminiFrame.monoFontSize = GeminiFrame.DEFAULT_FONT_SIZE;
                 return new Font("SansSerif", Font.PLAIN, GeminiFrame.DEFAULT_FONT_SIZE);
             }
@@ -457,7 +457,7 @@ public class Util {
             fileChooser.setFileFilter(filter);
         }
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        fileChooser.setApproveButtonText(isOpenMode ? "Open" : "Save");
+        fileChooser.setApproveButtonText(isOpenMode ? I18n.t("importFileDialog") : I18n.t("saveLabel"));
 
         if (fileName != null && !fileName.trim().isEmpty()) {
 
@@ -474,7 +474,7 @@ public class Util {
             if (JFileChooser.APPROVE_SELECTION.equals(event.getActionCommand())) {
                 File returnedFile = fileChooser.getSelectedFile();
                 if (!isOpenMode && returnedFile.exists()) {
-                    Object res = Util.confirmDialog(dialog, "Exists", "File already exists. Continue?", JOptionPane.YES_NO_OPTION, null, null);
+                    Object res = Util.confirmDialog(dialog, I18n.t("fileExistsDialog"), I18n.t("fileExistsDialogMsg"), JOptionPane.YES_NO_OPTION, null, null);
                     if (res instanceof Integer result) {
                         if (result == JOptionPane.YES_OPTION) {
                             selectedFile[0] = returnedFile;
@@ -786,22 +786,22 @@ public class Util {
                 origFile.delete();
                 f.deleteOnExit();
             } catch (Exception ex) {
-                Util.infoDialog(frame, "Error", "Error decrypting file.", JOptionPane.ERROR_MESSAGE);
+                Util.infoDialog(frame, I18n.t("errorDecryptingDialog"), I18n.t("errorDecryptingDialogMsg"), JOptionPane.ERROR_MESSAGE);
                 ex.printStackTrace();
                 return;
             }
 
         }
-        Object[] options = {"Merge", "Replace", "Cancel"};
-        Object res = confirmDialog(frame, "Confirm", "'Replace' will completely overwrite your existing configuration.\n'Merge' will safely combine the data.", JOptionPane.YES_NO_OPTION, options, JOptionPane.WARNING_MESSAGE);
+        Object[] options = {I18n.t("mergeLabel"), I18n.t("replaceLabel"), I18n.t("cancelLabel")};
+        Object res = confirmDialog(frame, I18n.t("confirmReplaceDialog"), I18n.t("confirmReplaceDialogMsg"), JOptionPane.YES_NO_OPTION, options, JOptionPane.WARNING_MESSAGE);
         if (res instanceof String result) {
 
-            if (result.equals("Replace")) {
+            if (result.equals(I18n.t("replaceLabel"))) {
                 try {
                     String prevEmo = DB.getPref("emoji", null);
 
                     if (DB.restoreDB(f) != 0) {
-                        infoDialog(frame, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
+                        infoDialog(frame, I18n.t("versionErrorDialog"), I18n.t("versionErrorDialogMsg"));
                     } else {
                         String postEmo = DB.getPref("emoji", null);
                         if ("facebook".equals(postEmo) || "apple".equals(postEmo) || "twitter".equals(postEmo)) {
@@ -815,25 +815,25 @@ public class Util {
 
                         }
                         frame.resetFont();
-                        infoDialog(frame, "Complete", "Data successfully imported.");
+                        infoDialog(frame, I18n.t("importSuccessDialog"), I18n.t("importSuccessDialogMsg"));
                         Alhena.clearCnList();
                         Alhena.updateFrames(true, true);
                     }
                 } catch (Exception ex) {
-                    infoDialog(frame, "Error", "Unable to replace data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
+                    infoDialog(frame, I18n.t("importErrorDialog"), I18n.t("importErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
                     ex.printStackTrace();
                 }
-            } else if (result.equals("Merge")) {
+            } else if (result.equals(I18n.t("mergeLabel"))) {
                 try {
                     DBBackup.init();
                     if (DBBackup.mergeDB(f) != 0) {
-                        infoDialog(frame, "Error", "Data is from a newer version of Alhena.\nYou must update to import this file.");
+                        infoDialog(frame, I18n.t("versionErrorDialog"), I18n.t("versionErrorDialogMsg"));
                     } else {
-                        infoDialog(frame, "Complete", "Data successfully merged.");
+                        infoDialog(frame, I18n.t("mergeCompleteDialog"), I18n.t("mergeCompleteDialogMsg"));
                         Alhena.updateFrames(true, false);
                     }
                 } catch (Exception ex) {
-                    infoDialog(frame, "Error", "Unable to merge data.\nInvalid file.", JOptionPane.ERROR_MESSAGE);
+                    infoDialog(frame, I18n.t("mergeErrorDialog"), I18n.t("mergeErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
                     ex.printStackTrace();
                 }
             }
@@ -993,38 +993,4 @@ public class Util {
         PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
         return printServices.length > 0;
     }
-
-    // public static boolean isMonospaced(Font font) {
-    //     BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-    //     Graphics g = img.getGraphics();
-    //     g.setFont(font);
-    //     FontMetrics fm = g.getFontMetrics();
-    //     // Try a few different characters
-    //     int[] widths = {
-    //         fm.charWidth('i'),
-    //         fm.charWidth('W'),
-    //         fm.charWidth(' '),
-    //         fm.charWidth('1'),
-    //         fm.charWidth('m')
-    //     };
-    //     for (int i = 1; i < widths.length; i++) {
-    //         if (widths[i] != widths[0]) {
-    //             return false;  // not monospaced
-    //         }
-    //     }
-    //     g.dispose();
-    //     return true;  // monospaced
-    // }
-    // public static boolean findMonospacedFonts() {
-    //     Font[] fonts = GraphicsEnvironment
-    //             .getLocalGraphicsEnvironment().getAllFonts();
-    //             //.getAvailableFontFamilyNames();
-    //     for (Font f : fonts) {
-    //         //Font f = new Font(font, Font.PLAIN, 12);
-    //         if(isMonospaced(f)){
-    //             System.out.println(f.getName());
-    //         }
-    //     }
-    //     return false;
-    // }
 }

@@ -147,7 +147,7 @@ public class TextEditor extends JPanel implements ActionListener {
 
         JPanel tokenPanel = new JPanel();
         tokenPanel.setLayout(new BorderLayout(5, 0));
-        tokenPanel.add(new JLabel("Token:"), BorderLayout.WEST);
+        tokenPanel.add(new JLabel(I18n.t("titanTokenLabel")), BorderLayout.WEST);
         tokenPanel.add(tokenField = new JTextField(), BorderLayout.CENTER);
         tokenField.addMouseListener(new ContextMenuMouseListener());
         add(tokenPanel, BorderLayout.SOUTH);
@@ -156,13 +156,13 @@ public class TextEditor extends JPanel implements ActionListener {
         setPreferredSize(new Dimension(800, 440));
 
         List<JComponent> items = new ArrayList<>();
-        findItem = new JMenuItem("Find");
+        findItem = new JMenuItem(I18n.t("titanFind"));
         KeyStroke ks = KeyStroke.getKeyStroke(KeyEvent.VK_F, mod);
         findItem.setAccelerator(ks);
-        findNextItem = new JMenuItem("Find Next");
+        findNextItem = new JMenuItem(I18n.t("titanFindNext"));
         findItem.addActionListener(al -> {
             GeminiFrame gf = (GeminiFrame) SwingUtilities.getAncestorOfClass(GeminiFrame.class, TextEditor.this);
-            String input = Util.inputDialog(gf, "Find In Page", "Enter search term", false, "", null);
+            String input = Util.inputDialog(gf, I18n.t("titanSearchDialog"), I18n.t("titanSearchDialogMsg"), false, "", null);
             if (input != null) {
                 searchField = input;
                 forward = true;
@@ -172,14 +172,14 @@ public class TextEditor extends JPanel implements ActionListener {
 
         findNextItem.addActionListener(TextEditor.this);
         findNextItem.setAccelerator(KeyStroke.getKeyStroke("F3"));
-        JMenuItem findPrevItem = new JMenuItem("Find Previous");
+        JMenuItem findPrevItem = new JMenuItem(I18n.t("titanFindPrevious"));
         findPrevItem.setAccelerator(KeyStroke.getKeyStroke("shift F3"));
         findPrevItem.addActionListener(al -> {
             forward = false;
             findNextItem.doClick(0);
         });
-        regexCB = new JCheckBoxMenuItem("Regex");
-        matchCaseCB = new JCheckBoxMenuItem("Match Case");
+        regexCB = new JCheckBoxMenuItem(I18n.t("titanRegex"));
+        matchCaseCB = new JCheckBoxMenuItem(I18n.t("titanMatchCase"));
         Supplier<List<JComponent>> supplier = () -> {
 
             if (items.isEmpty()) {
@@ -202,12 +202,12 @@ public class TextEditor extends JPanel implements ActionListener {
         JPanel tb = new JPanel(new BorderLayout(0, 0));
         PopupMenuButton pmb = new PopupMenuButton("🔎", supplier, "");
         pmb.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
-        tb.add(new JLabel("Edit text and press 'OK' to update. Use 'File' tab to upload file. Clear all text to delete file."), BorderLayout.WEST);
+        tb.add(new JLabel(I18n.t("titanEditorMsg")), BorderLayout.WEST);
         tb.add(pmb, BorderLayout.EAST);
         editorPanel.add(tb, BorderLayout.NORTH);
 
-        tabbedPane.addTab("Text", editorPanel);
-        tabbedPane.addTab("File", fileChooser);
+        tabbedPane.addTab(I18n.t("titanTextTab"), editorPanel);
+        tabbedPane.addTab(I18n.t("titanFileTab"), fileChooser);
         add(tabbedPane, BorderLayout.CENTER);
 
         // Can't get this to work with custom token maker at this time
@@ -294,7 +294,7 @@ public class TextEditor extends JPanel implements ActionListener {
 
         boolean found = SearchEngine.find(advTextArea, context).wasFound();
         if (!found) {
-            Util.infoDialog(this, "Not Found", "Text not found");
+            Util.infoDialog(this, I18n.t("titanNotFoundDialog"), I18n.t("titanNotFoundDialogMsg"));
 
             advTextArea.select(0, 0);
         }

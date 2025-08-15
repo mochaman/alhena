@@ -60,7 +60,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
             @Override
             public void error(MediaPlayer mediaPlayer) {
                 EventQueue.invokeLater(() -> {
-                    Util.infoDialog(AudioPlayer.this, "Error", "Error playing file", JOptionPane.ERROR_MESSAGE);
+                    Util.infoDialog(AudioPlayer.this, I18n.t("playErrorDialog"), I18n.t("playErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
                 });
             }
         });

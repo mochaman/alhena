@@ -81,7 +81,7 @@ public class VideoPlayer extends JPanel implements MediaComponent {
             @Override
             public void error(MediaPlayer mediaPlayer) {
                 EventQueue.invokeLater(() -> {
-                    Util.infoDialog(VideoPlayer.this, "Error", "Error playing file", JOptionPane.ERROR_MESSAGE);
+                    Util.infoDialog(VideoPlayer.this, I18n.t("playErrorDialog"), I18n.t("playErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
                 });
             }
         });

@@ -29,7 +29,7 @@ public class ContextMenuMouseListener extends MouseAdapter {
     private enum Actions { UNDO, CUT, COPY, PASTE, SELECT_ALL };
 
     public ContextMenuMouseListener() {
-        undoAction = new AbstractAction("Undo") {
+        undoAction = new AbstractAction(I18n.t("textPopupUndo")) {
 
             @Override
             public void actionPerformed(ActionEvent ae) {
@@ -43,7 +43,7 @@ public class ContextMenuMouseListener extends MouseAdapter {
         popup.add(undoAction);
         popup.addSeparator();
 
-        cutAction = new AbstractAction("Cut") {
+        cutAction = new AbstractAction(I18n.t("textPopupCut")) {
 
             @Override
             public void actionPerformed(ActionEvent ae) {
@@ -55,7 +55,7 @@ public class ContextMenuMouseListener extends MouseAdapter {
 
         popup.add(cutAction);
 
-        copyAction = new AbstractAction("Copy") {
+        copyAction = new AbstractAction(I18n.t("textPopupCopy")) {
 
             @Override
             public void actionPerformed(ActionEvent ae) {
@@ -66,7 +66,7 @@ public class ContextMenuMouseListener extends MouseAdapter {
 
         popup.add(copyAction);
 
-        pasteAction = new AbstractAction("Paste") {
+        pasteAction = new AbstractAction(I18n.t("textPopupPaste")) {
 
             @Override
             public void actionPerformed(ActionEvent ae) {
@@ -79,7 +79,7 @@ public class ContextMenuMouseListener extends MouseAdapter {
         popup.add(pasteAction);
         popup.addSeparator();
 
-        selectAllAction = new AbstractAction("Select All") {
+        selectAllAction = new AbstractAction(I18n.t("textPopupSelectAll")) {
 
             @Override
             public void actionPerformed(ActionEvent ae) {

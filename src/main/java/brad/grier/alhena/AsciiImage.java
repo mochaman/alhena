@@ -477,7 +477,6 @@ public class AsciiImage {
                         // setting the forground on blank strings causes a layout change that breaks
                         // the no line wrap on preformatted text
                         if (!line.isBlank()) {
-                            //StyleConstants.setForeground(bStyle, getForeground());
                             ansiFG = fgColor1;
                         } else {
                             foregroundHandling = true;
@@ -485,20 +484,15 @@ public class AsciiImage {
                         }
                         ansiBG = bgColor1;
                         ansiBold = false;
-                        //StyleConstants.setBackground(bStyle, getBackground());
-                        //StyleConstants.setBold(bStyle, false);
 
                     }
                     case "1" -> {
                         ansiBold = true;
-                        //StyleConstants.setBold(bStyle, true);
                     }
-                    // default ->
-                    //     System.out.println("unknown: " + txt);
+
                 }
             }
             if (foregroundHandling && !line.isBlank()) {
-                //StyleConstants.setForeground(bStyle, getForeground());
                 ansiFG = fgColor1;
             }
             return line;

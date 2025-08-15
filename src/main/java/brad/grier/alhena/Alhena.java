@@ -1,4 +1,3 @@
-
 package brad.grier.alhena;
 
 import java.awt.Component;
@@ -48,6 +47,7 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
@@ -55,7 +55,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.function.BooleanSupplier;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -130,7 +132,6 @@ import io.vertx.core.streams.Pump;
  * Static main class to manage frame creation and connectivity
  *
  */
-
 public class Alhena {
 
     private static Vertx vertx;
@@ -139,7 +140,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
-    public final static String VERSION = "5.2.7";
+    public final static String VERSION = "5.2.8";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp");
@@ -163,7 +164,8 @@ public class Alhena {
     public static boolean linkIcons;
     public static boolean macUseNoto;
     private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
-
+    private static final ResourceBundle bundle
+            = ResourceBundle.getBundle("MessagesBundle", Locale.getDefault());
     private static final List<String> allowedSchemes = List.of(
             "gemini://", "file:/", "spartan://", "nex://",
             "https://", "http://", "titan://"
@@ -171,6 +173,11 @@ public class Alhena {
     public static boolean sDown;
 
     public static void main(String[] args) throws Exception {
+        String alhenaLocale = System.getenv("ALHENA_LOCALE");
+
+        if (alhenaLocale != null) {
+            I18n.setForcedLocale(Locale.forLanguageTag(alhenaLocale));
+        }
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher((KeyEvent e) -> {
             Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
@@ -433,7 +440,7 @@ public class Alhena {
     private static PopupMenu createPopupMenu() {
         PopupMenu popupMenu = new PopupMenu();
 
-        MenuItem frameItem = new MenuItem("New Window");
+        MenuItem frameItem = new MenuItem(I18n.t("newWindowItem"));
         frameItem.addActionListener(al -> {
             String home = Util.getHome();
             newWindow(home, home);
@@ -442,7 +449,7 @@ public class Alhena {
         for (GeminiFrame gf : frameList) {
             MenuItem mi = gf.getMenuItem();
             if (mi == null) {
-                mi = new MenuItem("Window: " + idx++);
+                mi = new MenuItem(I18n.t("newWindowPopup") + " " + idx++);
                 gf.setMenuItem(mi);
                 mi.addActionListener(al -> {
                     gf.toFront();
@@ -580,7 +587,7 @@ public class Alhena {
             url = lcScheme + url.substring(idx);
             boolean isGopher = gopherProxy != null && url.startsWith("gopher");
             if (allowedSchemes.stream().noneMatch(url::startsWith) && !isGopher) {
-                p.textPane.end("## Unrecognized protocol\n", false, url, true);
+                p.textPane.end("## " + I18n.t("protocolMessage") + "\n", false, url, true);
                 return;
 
             }
@@ -591,11 +598,11 @@ public class Alhena {
             // submit to search engine
             if (url.contains(" ")) {
                 url = searchUrl + "?" + Util.uEncode(url);
-            }else if(url.contains("/") && !url.startsWith("/")){
+            } else if (url.contains("/") && !url.startsWith("/")) {
                 url = "gemini://" + url;
-            }else if(qIdx != -1 && !url.startsWith("?")){
+            } else if (qIdx != -1 && !url.startsWith("?")) {
                 url = "gemini://" + url;
-            }else{
+            } else {
                 url = searchUrl + "?" + Util.uEncode(url);
             }
 
@@ -636,7 +643,7 @@ public class Alhena {
         }
 
         if (!url.contains(":/")) {
-            p.textPane.end("Invalid address: " + url + "\n", true, url, true);
+            p.textPane.end(I18n.t("invalidAddressMsg") + ": " + url + "\n", true, url, true);
             return;
         }
 
@@ -991,7 +998,7 @@ public class Alhena {
                                     p.redirectCount = 0;
                                     connection.result().close();
                                     bg(() -> {
-                                        p.textPane.end("## Too many redirects", false, origURL, true);
+                                        p.textPane.end("## " + I18n.t("redirectMsg"), false, origURL, true);
 
                                     });
                                     return;
@@ -1010,7 +1017,7 @@ public class Alhena {
                                 String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
                                 bg(() -> {
-                                    p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
+                                    p.textPane.end("## " + I18n.t("serverResponseMsg") + ": " + errorMsg, false, origURL, true);
                                 });
                             }
 
@@ -1020,7 +1027,7 @@ public class Alhena {
                                 }
                                 connection.result().close();
                                 bg(() -> {
-                                    p.textPane.end("## Invalid response", false, origURL, true);
+                                    p.textPane.end("## " + I18n.t("invalidResponseMsg"), false, origURL, true);
 
                                 });
                                 return;
@@ -1174,7 +1181,7 @@ public class Alhena {
 
                                 EventQueue.invokeAndWait(() -> {
                                     String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
-                                    file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+                                    file[0] = Util.getFile(p.frame(), fileName, false, I18n.t("saveFileDialog"), null);
 
                                 });
                             } catch (Exception ex) {
@@ -1242,7 +1249,7 @@ public class Alhena {
                         p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                     });
                     //connection.cause().printStackTrace();
-                    System.out.println("Failed to connect: " + connection.cause().getMessage());
+                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
                 }
             }
         });
@@ -1267,7 +1274,7 @@ public class Alhena {
                     asyncFile.close();
                     socket.close();
                     bg(() -> {
-                        p.textPane.end("## Error sending file", false, origURL, true);
+                        p.textPane.end("## " + I18n.t("errorSendingMsg"), false, origURL, true);
                     });
 
                 });
@@ -1275,7 +1282,7 @@ public class Alhena {
                 fileResult.cause().printStackTrace();
                 socket.close();
                 bg(() -> {
-                    p.textPane.end("## Error opening file", false, origURL, true);
+                    p.textPane.end("## " + I18n.t("errorOpeningMsg"), false, origURL, true);
                 });
                 //System.err.println("Failed to open file: " + fileResult.cause().getMessage());
             }
@@ -1329,10 +1336,10 @@ public class Alhena {
                     if (res.msg != null || res.host != null) {
                         try {
                             String resMsg = res.msg == null ? "" : res.msg + "\n";
-                            String resHost = res.host == null ? "" : "The server certificate is from the wrong domain: " + res.cn + "\n";
+                            String resHost = res.host == null ? "" : I18n.t("wrongDomainMsg") + ": " + res.cn + "\n";
                             // this blocks vertx event loop
                             EventQueue.invokeAndWait(() -> {
-                                Object diagRes = Util.confirmDialog(p.frame(), "Certificate Issue", resMsg + resHost + "Do you want to continue?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                Object diagRes = Util.confirmDialog(p.frame(), I18n.t("certIssueDialog"), resMsg + resHost + I18n.t("continueMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                                 if (diagRes instanceof Integer result) {
                                     proceed[0] = result == JOptionPane.YES_OPTION;
                                 } else {
@@ -1393,7 +1400,7 @@ public class Alhena {
                     } else {
                         connection.result().close();
                         bg(() -> {
-                            p.textPane.end("## Nothing to send", false, origURL, true);
+                            p.textPane.end("## " + I18n.t("nothingToSendMsg"), false, origURL, true);
                         });
 
                         return;
@@ -1437,7 +1444,7 @@ public class Alhena {
                                 char respType = (char) saveBuffer.getByte(1);
                                 bg(() -> {
 
-                                    String input = Util.inputDialog(p.frame(), "Server Request", reqMsg, respType == '1');
+                                    String input = Util.inputDialog(p.frame(), I18n.t("serverRequestMsg"), reqMsg, respType == '1');
 
                                     if (input != null) {
                                         String nUrl = uri.toString();
@@ -1566,7 +1573,7 @@ public class Alhena {
                                     p.redirectCount = 0;
                                     connection.result().close();
                                     bg(() -> {
-                                        p.textPane.end("## Too many redirects", false, origURL, true);
+                                        p.textPane.end("## " + I18n.t("redirectMsg"), false, origURL, true);
 
                                     });
                                     return;
@@ -1589,7 +1596,7 @@ public class Alhena {
                                     titanEdit[0] = false;
 
                                     bg(() -> {
-                                        p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
+                                        p.textPane.end("## " + I18n.t("serverResponseMsg") + ": " + errorMsg, false, origURL, true);
                                     });
                                 }
 
@@ -1605,7 +1612,7 @@ public class Alhena {
                                         try {
                                             EventQueue.invokeAndWait(() -> {
 
-                                                Object res = Util.confirmDialog(p.frame(), "Warning", "A TLSv1.2 server is requesting a client certificate.\nDo you want to continue?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                                Object res = Util.confirmDialog(p.frame(), I18n.t("tlsWarningDialog"), I18n.t("tlsWarningDialogMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                                                 if (res instanceof Integer result) {
                                                     proceed[0] = result == JOptionPane.YES_OPTION;
                                                 } else {
@@ -1637,7 +1644,7 @@ public class Alhena {
                                     String errorMsg = saveBuffer.getString(0, i - 1).trim();
 
                                     bg(() -> {
-                                        p.textPane.end("## Server Response: " + errorMsg, false, origURL, true);
+                                        p.textPane.end("## " + I18n.t("serverResponseMsg") + ": " + errorMsg, false, origURL, true);
                                     });
                                 }
                             }
@@ -1647,7 +1654,7 @@ public class Alhena {
                                 }
                                 connection.result().close();
                                 bg(() -> {
-                                    p.textPane.end("## Invalid response", false, origURL, true);
+                                    p.textPane.end("## " + I18n.t("invalidResponseMsg"), false, origURL, true);
 
                                 });
                                 return;
@@ -1760,13 +1767,13 @@ public class Alhena {
                             cause = findCauseMessage(connection.cause(), SSLHandshakeException.class);
 
                             if (cause != null) {
-                                String msg = "The server certificate may need to be revalidated. Deactivate any client certs for this site before re-connecting. Once connected, re-activate the client cert.";
-                                Util.infoDialog(p.frame(), "SSLHandshake Error", msg, JOptionPane.ERROR_MESSAGE);
+                                String msg = I18n.t("sslErrorDialogMsg");
+                                Util.infoDialog(p.frame(), I18n.t("sslErrorDialog"), msg, JOptionPane.ERROR_MESSAGE);
                             }
                         }
                     });
                     //connection.cause().printStackTrace();
-                    System.out.println("Failed to connect: " + connection.cause().getMessage());
+                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
                 }
             }
         });
@@ -1842,13 +1849,13 @@ public class Alhena {
                 if (certInfo.lastModified() != null) {
                     java.sql.Timestamp certExpires = new java.sql.Timestamp(cert.getNotAfter().getTime());
                     if (certInfo.lastModified().before(certExpires)) {
-                        return new CertTest("Server certificate has expired.", badHost, cn);
+                        return new CertTest(I18n.t("serverExpiredMsg"), badHost, cn);
                     }
                 } else {
-                    return new CertTest("Server certificate has expired.", badHost, cn);
+                    return new CertTest(I18n.t("serverExpiredMsg"), badHost, cn);
                 }
             } catch (CertificateNotYetValidException cex) {
-                return new CertTest("Server certificate is not yet valid.", badHost, cn);
+                return new CertTest(I18n.t("serverInvalidMsg"), badHost, cn);
             }
 
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -1884,7 +1891,7 @@ public class Alhena {
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            return new CertTest("Unable to validate certificate.", badHost, cn);
+            return new CertTest(I18n.t("unableToValidateMsg"), badHost, cn);
         }
 
         return new CertTest(null, badHost, cn);
@@ -1936,7 +1943,8 @@ public class Alhena {
                                 }
                                 p.frame().showGlassPane(false);
                                 if (p.getDataFile() == null) {
-                                    Util.infoDialog(p.frame(), "Success", outFile.getName() + " saved");
+                                    String message = MessageFormat.format(I18n.t("fileSavedDialogMsg"), outFile.getName());
+                                    Util.infoDialog(p.frame(), I18n.t("fileSavedDialog"), message);
                                 } else {
                                     // restore downloaded file
                                     Util.importData(p.frame(), outFile, true);
@@ -1959,7 +1967,7 @@ public class Alhena {
                 });
                 CountingWriteStream stream = new CountingWriteStream(file)
                         .progressHandler(count -> {
-                            p.frame().setTmpStatus(count + " bytes");
+                            p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
                         });
                 // socket.handler(null);
                 socket.resume();
@@ -1969,7 +1977,7 @@ public class Alhena {
 
             } else {
                 bg(() -> {
-                    p.textPane.end("# Failed to open file: " + outFile, false, url, true);
+                    p.textPane.end("# " + I18n.t("fileOpenFailedMsg") + ": " + outFile, false, url, true);
                 });
 
                 fileRes.cause().printStackTrace();
@@ -2087,34 +2095,35 @@ public class Alhena {
     public static boolean certRequired(String msg, URI uri, Page p, X509Certificate cert, Page cPage) {
 
         String reqURL = uri.toString();
-        String serverMsg = msg == null ? "" : "Server: '" + msg + "'\n";
+        String serverMsg = msg == null ? "" : MessageFormat.format(I18n.t("certReqServerMsg"), msg) + "'\n";
 
         BooleanSupplier bs = () -> {
             JTextField cnField = new JTextField(PROG_NAME);
 
             cnField.addMouseListener(new ContextMenuMouseListener());
-            JRadioButton dcButton = new JRadioButton("Domain Certificate");
+            JRadioButton dcButton = new JRadioButton(I18n.t("domainCertRadio"));
             dcButton.setSelected(true);
-            JRadioButton pcButton = new JRadioButton("Page Certificate");
+            JRadioButton pcButton = new JRadioButton(I18n.t("pageCertRadio"));
             ButtonGroup bg = new ButtonGroup();
             bg.add(dcButton);
             bg.add(pcButton);
 
             Object[] comps = new Object[5];
-            comps[0] = serverMsg + "Do you want to create a new client certificate for " + uri + "?\n\nCertificate Name:";
+            String sMsg = MessageFormat.format(I18n.t("certReqDialogServerMsg"), uri);
+            comps[0] = serverMsg + sMsg;
             comps[1] = cnField;
             comps[2] = new JLabel(" ");
             comps[3] = dcButton;
             comps[4] = pcButton;
-            Object[] options = {"OK", "Cancel"};
+            Object[] options = {I18n.t("okLabel"), I18n.t("cancelLabel")};
             if (msg != null) {
-                Object[] newOptions = {"OK", "Cancel", "Import PEM"};
+                Object[] newOptions = {I18n.t("okLabel"), I18n.t("cancelLabel"), I18n.t("importPEMLabel")};
                 options = newOptions;
             }
 
-            Object cn = Util.inputDialog2(p.frame(), "New Client Certificate", comps, options, false);
+            Object cn = Util.inputDialog2(p.frame(), I18n.t("certReqDialog"), comps, options, false);
 
-            if ("OK".equals(cn)) {
+            if (I18n.t("okLabel").equals(cn)) {
                 String cnString = cnField.getText();
                 cnString = cnString.isEmpty() ? PROG_NAME : cnString;
                 addCertToTrustStore(uri, cert, false);
@@ -2137,7 +2146,7 @@ public class Alhena {
                 }
                 return true;
 
-            } else if ("Import PEM".equals(cn)) { // never happen when msg == null
+            } else if (I18n.t("importPEMLabel").equals(cn)) { // never happen when msg == null
                 if (dcButton.isSelected()) {
                     String port = uri.getPort() == -1 ? ":1965" : ":" + uri.getPort();
                     URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + port + "/");
@@ -2614,7 +2623,7 @@ public class Alhena {
                                 sb.append(alt).append(" ");
                             }
                             if (!src.isEmpty()) {
-                                links.add("=> " + src + " " + (alt.isEmpty() ? "🖼️ [Image]" : "🖼️ " + alt));
+                                links.add("=> " + src + " " + (alt.isEmpty() ? "🖼️ " + I18n.t("htmlImageLabel") : "🖼️ " + alt));
                             }
 
                         }
@@ -2635,7 +2644,7 @@ public class Alhena {
                             }
 
                             if (!href.isEmpty()) {
-                                links.add("=> " + href + " " + (text.isEmpty() ? "🔗 [Link]" : "🔗 " + text));
+                                links.add("=> " + href + " " + (text.isEmpty() ? "🔗 " + I18n.t("htmlLinkLabel") : "🔗 " + text));
                             }
                         }
                     }
@@ -2679,13 +2688,13 @@ public class Alhena {
         boolean plainText = false;
         boolean embedArt = false;
         String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
-        String message = "# Commands:\n\n* ansialert\n* scrollspeed\n* info\n* art\n\nType 'alhena:[command]' for details.\n";
+        String message = "# " + I18n.t("commandsHeading");
         if (cmd.length == 1) {
 
             if (cmd[0].equals("ansialert")) {
-                message = "# ansialert\n###Display alert when ANSI color codes detected\nalhena:ansialert=true";
+                message = "# ansialert\n### " + I18n.t("ansiAlertHeading");
             } else if (cmd[0].equals("scrollspeed")) {
-                message = "# scrollspeed\n###Set the mouse wheel speed\nalhena:scrollspeed=10\nalhena:scrollspeed=default resets. Negative numbers reverse scroll direction.";
+                message = "# scrollspeed\n### " + I18n.t("scrollSpeedHeading");
 
             } else if (cmd[0].equals("info")) {
                 plainText = true;
@@ -2702,7 +2711,7 @@ public class Alhena {
                 try {
                     if (cmd[1].equals("default")) {
                         DB.insertPref("scrollspeed", null);
-                        message = "## scrollspeed reset\n";
+                        message = "## scrollspeed " + I18n.t("resetLabel") + "\n";
                     } else {
                         int val = Integer.parseInt(cmd[1]);
                         DB.insertPref("scrollspeed", cmd[1]);
@@ -2710,13 +2719,13 @@ public class Alhena {
                             gf.forEachPage(page -> {
                                 page.setScrollIncrement(val);
                             });
-                            //gf.setScrollIncrement(val);
                         }
-                        message = "## " + cmd[0] + " set to " + cmd[1] + "\n";
+                        String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
+                        message = "## " + m + "\n";
                     }
 
                 } catch (NumberFormatException ex) {
-                    message = "## Value must be a number\n";
+                    message = "## " + I18n.t("numberError") + "\n";
                 }
 
             } else if (cmd[0].equals("ansialert")) {
@@ -2724,9 +2733,10 @@ public class Alhena {
                 if (cmd[1].equals("true") || cmd[1].equals("false")) {
                     DB.insertPref("ansialert", cmd[1]);
                     GeminiFrame.ansiAlert = cmd[1].equals("true");
-                    message = "## ansialert set to " + cmd[1] + "\n";
+                    String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]);
+                    message = "## ansialert " + m + "\n";
                 } else {
-                    message = "## Value must be 'true' or 'false'\n";
+                    message = "## " + I18n.t("ansiError") + "\n";
                 }
             }
         }
@@ -2742,11 +2752,11 @@ public class Alhena {
         StringBuilder sb = new StringBuilder();
 
         sb.append(PROG_NAME + " " + VERSION + "\n\n");
-        sb.append("Java version: ").append(System.getProperty("java.version")).append("\n");
-        sb.append("Vendor: ").append(System.getProperty("java.vendor")).append("\n");
-        sb.append("OS name: ").append(System.getProperty("os.name")).append("\n");
-        sb.append("Architecture: ").append(System.getProperty("os.arch")).append("\n");
-        sb.append("OS version: ").append(System.getProperty("os.version")).append("\n\n");
+        sb.append(I18n.t("javaVersionLabel")).append(": ").append(System.getProperty("java.version")).append("\n");
+        sb.append(I18n.t("vendorLabel")).append(": ").append(System.getProperty("java.vendor")).append("\n");
+        sb.append(I18n.t("osLabel")).append(": ").append(System.getProperty("os.name")).append("\n");
+        sb.append(I18n.t("archLabel")).append(": ").append(System.getProperty("os.arch")).append("\n");
+        sb.append(I18n.t("osVerLabel")).append(": ").append(System.getProperty("os.version")).append("\n\n");
 
         Runtime runtime = Runtime.getRuntime();
 
@@ -2754,12 +2764,12 @@ public class Alhena {
         long totalMemory = runtime.totalMemory();
         long allocatedMemory = totalMemory - runtime.freeMemory();
         long freeMemory = runtime.freeMemory();
-        sb.append("Max memory: " + maxMemory / (1024 * 1024) + " MB\n");
-        sb.append("Total memory: " + totalMemory / (1024 * 1024) + " MB\n");
-        sb.append("Allocated memory: " + allocatedMemory / (1024 * 1024) + " MB\n");
-        sb.append("Free memory: " + freeMemory / (1024 * 1024) + " MB\n\n");
+        sb.append(I18n.t("maxMemLabel")).append(": ").append(maxMemory / (1024 * 1024)).append(" MB\n");
+        sb.append(I18n.t("totalMemLabel")).append(": ").append(totalMemory / (1024 * 1024)).append(" MB\n");
+        sb.append(I18n.t("allocMemLabel")).append(": ").append(allocatedMemory / (1024 * 1024)).append(" MB\n");
+        sb.append(I18n.t("freeMemLabel")).append(": ").append(freeMemory / (1024 * 1024)).append(" MB\n\n");
 
-        sb.append("Documents: \n");
+        sb.append(I18n.t("docLabel")).append(": \n");
         for (GeminiFrame gf : frameList) {
 
             gf.forEachPage(page -> {
@@ -2871,25 +2881,25 @@ public class Alhena {
                                 asyncFile.exceptionHandler(throwable -> {
 
                                     bg(() -> {
-                                        p.textPane.end("## Error reading file\n", false, fUrl, true);
+                                        p.textPane.end("## " + I18n.t("errorReadingMsg") + "\n", false, fUrl, true);
                                     });
                                 });
                             } else {
 
                                 bg(() -> {
-                                    p.textPane.end("## Error opening file\n", false, fUrl, true);
+                                    p.textPane.end("## " + I18n.t("errorOpeningMsg") + "\n", false, fUrl, true);
                                 });
                             }
                         });
                     }
                 } else {
-                    p.textPane.end("## Unrecognized file type\n", false, url, true);
+                    p.textPane.end("## " + I18n.t("unrecognizedFileMsg") + "\n", false, url, true);
                 }
             } else {
-                p.textPane.end("## File not found\n", false, url, true);
+                p.textPane.end("## " + I18n.t("fileNotFoundMsg") + "\n", false, url, true);
             }
         } catch (Exception ex) {
-            p.textPane.end("## Error reading file\n" + ex.getMessage() + "\n", false, url, true);
+            p.textPane.end("## " + I18n.t("errorReadingMsg") + "\n" + ex.getMessage() + "\n", false, url, true);
             ex.printStackTrace();
 
         }
@@ -2912,7 +2922,7 @@ public class Alhena {
         String finalURL = url;
 
         if (redirectCount > 4) {
-            p.textPane.end("too many redirects\n", true, finalURL, true);
+            p.textPane.end(I18n.t("redirectMsg") + "\n", true, finalURL, true);
             return;
         }
 
@@ -2971,7 +2981,7 @@ public class Alhena {
                             handleHttp(redirectURI.toString(), prevURI, p, cPage, redirectCount + 1);
                         } else {
                             bg(() -> {
-                                p.textPane.end("redirect without location\n", true, finalURL, true);
+                                p.textPane.end(I18n.t("httpRedirectMsg") + "\n", true, finalURL, true);
                             });
                         }
                         return;
@@ -3000,7 +3010,7 @@ public class Alhena {
                         }).onFailure(ex -> {
                             ex.printStackTrace();
                             bg(() -> {
-                                p.textPane.end("error getting web page\n", true, finalURL, true);
+                                p.textPane.end(I18n.t("webPageErrorMsg") + "\n", true, finalURL, true);
                             });
                             req.end();
                         });
@@ -3093,7 +3103,7 @@ public class Alhena {
                             File[] file = new File[1];
                             resp.pause();
                             EventQueue.invokeAndWait(() -> {
-                                file[0] = Util.getFile(p.frame(), finalName, false, "Save File", null);
+                                file[0] = Util.getFile(p.frame(), finalName, false, I18n.t("saveFileDialog"), null);
                             });
                             if (file[0] != null) {
                                 vertx.fileSystem().open(file[0].getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
@@ -3106,7 +3116,8 @@ public class Alhena {
                                             af.close();
                                             req.end();
                                             bg(() -> {
-                                                Util.infoDialog(p.frame(), "Complete", file[0].getName() + " downloaded");
+                                                String message = MessageFormat.format(I18n.t("saveCompleteDialogMsg"), file[0].getName());
+                                                Util.infoDialog(p.frame(), I18n.t("saveCompleteDialog"), message);
                                                 p.frame().showGlassPane(false);
                                             });
                                         });
@@ -3125,7 +3136,7 @@ public class Alhena {
                 } else {
                     ar2.cause().printStackTrace();
                     bg(() -> {
-                        p.textPane.end("broke\n", true, finalURL, true);
+                        p.textPane.end(I18n.t("httpBrokeMsg") + "\n", true, finalURL, true);
                     });
                 }
             }
@@ -3309,7 +3320,8 @@ public class Alhena {
                 if (responseBuffer.length() > MAX_SIZE) {
                     // Close the socket to stop receiving more data
                     socket.close();
-                    promise.tryFail("Document exceeds: " + MAX_SIZE + " bytes");
+                    String message = MessageFormat.format(I18n.t("docExceedsMsg"), MAX_SIZE);
+                    promise.tryFail(message);
                     //logger.info("scriptonite file exceeds max size");
                 }
             });
@@ -3321,7 +3333,7 @@ public class Alhena {
                 // Response ends — parse header + body
                 int headerEnd = responseBuffer.toString().indexOf("\r\n");
                 if (headerEnd == -1) {
-                    promise.fail("Malformed Gemini response (missing header)");
+                    promise.fail(I18n.t("malformedRespMsg"));
                     return;
                 }
 
@@ -3329,7 +3341,7 @@ public class Alhena {
                 String body = responseBuffer.getString(headerEnd + 2, responseBuffer.length());
 
                 if (!header.startsWith("20 text/gemini") && !header.startsWith("20 text/plain")) {
-                    promise.tryFail("Bad header: " + header);
+                    promise.tryFail(I18n.t("badHeaderMsg") + ": " + header);
                 } else {
                     promise.tryComplete(body);
                 }
@@ -3337,6 +3349,10 @@ public class Alhena {
         });
 
         return promise.future();
+    }
+
+    public static String t(String key) {
+        return bundle.getString(key);
     }
 
 }
