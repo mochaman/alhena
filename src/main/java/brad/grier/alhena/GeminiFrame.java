@@ -577,7 +577,7 @@ public final class GeminiFrame extends JFrame {
 
         add(pb, BorderLayout.CENTER);
         statusField = new JLabel(" ");
-        setTmpStatus(Alhena.WELCOME_MESSAGE);
+        setTmpStatus(Alhena.welcomeMessage);
         statusField.setBorder(new EmptyBorder(5, 5, 5, 5)); // Add padding
 
         menuBar = new JMenuBar();

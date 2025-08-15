@@ -107,7 +107,7 @@ public class GeminiTextPane extends JTextPane {
     private List<ClickableRange> clickableRegions = new ArrayList<>();
     private int currentCursor = Cursor.DEFAULT_CURSOR;
     private boolean preformattedMode;
-    private String currentStatus = Alhena.WELCOME_MESSAGE;
+    private String currentStatus = Alhena.welcomeMessage;
     public static String monospacedFamily;
     private final GeminiFrame f;
     // use StringBuilder instead of StringBuffer as only updated in EventDispatch at creation
@@ -350,7 +350,7 @@ public class GeminiTextPane extends JTextPane {
                 }
 
                 // fix this
-                if (!entered && !" ".equals(currentStatus) && currentStatus != null && !currentStatus.equals(Alhena.WELCOME_MESSAGE)) {
+                if (!entered && !" ".equals(currentStatus) && currentStatus != null && !currentStatus.equals(Alhena.welcomeMessage)) {
 
                     f.setStatus(" ");
 
