@@ -139,7 +139,7 @@ public class Alhena {
 
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
-    public final static String WELCOME_MESSAGE = "Welcome To " + PROG_NAME;
+    public static String welcomeMessage;
     public final static String VERSION = "5.2.8";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
@@ -178,6 +178,7 @@ public class Alhena {
         if (alhenaLocale != null) {
             I18n.setForcedLocale(Locale.forLanguageTag(alhenaLocale));
         }
+        welcomeMessage = I18n.t("welcomeLabel")+ " " + PROG_NAME;
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher((KeyEvent e) -> {
             Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
