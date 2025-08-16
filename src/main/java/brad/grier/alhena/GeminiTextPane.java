@@ -40,6 +40,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -534,7 +535,7 @@ public class GeminiTextPane extends JTextPane {
                                             f.exportCert(id, GeminiTextPane.this);
                                         });
                                         popupMenu.add(exportItem);
-                                        String command = active ? I18n.t("deactivatePopupItem"): I18n.t("activatePopupItem");
+                                        String command = active ? I18n.t("deactivatePopupItem") : I18n.t("activatePopupItem");
                                         JMenuItem actionItem = new JMenuItem(command);
                                         actionItem.addActionListener(al -> {
 
@@ -839,6 +840,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
+    // should only use this when inserting at the end since no code to offset links that follow
     private void insertComp(Component c, int pos) {
         SimpleAttributeSet apStyle = new SimpleAttributeSet();
         StyleConstants.setComponent(apStyle, c);
@@ -1440,7 +1442,6 @@ public class GeminiTextPane extends JTextPane {
             }
         }
 
-
         if (docURL.equals(GeminiFrame.HISTORY_LABEL)) {
             currentMode = HISTORY_MODE;
         } else if (docURL.equals(GeminiFrame.BOOKMARK_LABEL)) {
@@ -1882,7 +1883,6 @@ public class GeminiTextPane extends JTextPane {
             if (Alhena.dataUrl && dataUrl) { // auto view
                 dataURL(url, true);
                 cr.imageIndex = cr.end;
-
             }
             cr.dataUrl = dataUrl;
             cr.url = url;
@@ -1946,7 +1946,35 @@ public class GeminiTextPane extends JTextPane {
 
         }
         String cs = charset == null ? "UTF-8" : charset.substring(charset.indexOf('=') + 1);
-        if (mime.startsWith("image")) {
+        if (mime.startsWith("audio") || mime.startsWith("video")) {
+            if(!Alhena.allowVLC && !curPos){
+                Util.infoDialog(f, I18n.t("vlcRequiredDialog"), I18n.t("vlcRequiredDialogMsg"));
+                return;
+            }
+            Alhena.pauseMedia();
+            File af;
+            try {
+                af = File.createTempFile("alhena", "media");
+                af.deleteOnExit();
+                Files.write(af.toPath(), byteData);  // overwrite or create
+                
+                MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
+
+                playerList.add(ap);
+
+                if (curPos) {
+                    insertComp((Component) ap, doc.getLength());
+                    addStyledText("", "```", null);
+                } else {
+                    insertComp((Component) ap);
+                }
+
+                ap.start(af.getAbsolutePath());
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+
+        } else if (mime.startsWith("image")) {
             insertImage(byteData, curPos);
         } else if (mime.startsWith("text")) {
             String s;
@@ -1976,6 +2004,11 @@ public class GeminiTextPane extends JTextPane {
             }
 
         }
+        EventQueue.invokeLater(() -> {
+            updateUI();
+            //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
+        });
+
     }
 
     private PreformattedTextPane createTextComponent(boolean curPos) {
