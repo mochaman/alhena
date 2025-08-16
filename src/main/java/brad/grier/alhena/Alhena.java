@@ -2804,7 +2804,7 @@ public class Alhena {
             File file = new File(fileUrl.toURI());
             if (file.exists()) {
                 String mimeExt = MimeMapping.getMimeTypeForFilename(url);
-                boolean vlcType = url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video")));
+                boolean vlcType = allowVLC && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 if (matches || vlcType) {
