@@ -1813,7 +1813,8 @@ public class GeminiTextPane extends JTextPane {
             String sfx = "";
 
             if (Alhena.linkIcons) {
-                boolean isImage = Alhena.imageExtensions.stream().anyMatch(ext -> finalUrl.endsWith(ext));
+
+                boolean isImage = Alhena.imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isMedia = false;
                 if (!isImage) {
                     String mimeExt = MimeMapping.getMimeTypeForFilename(finalUrl);
