@@ -252,14 +252,20 @@ public class AsciiImage {
                         g2.setColor(fgColor);
                     }
 
+                    Font saveFont = font;
+                    if(!saveFont.canDisplay(line.codePointAt(i))){
+                        // on windows, source code pro might not support symbols - fallback in a safe way
+                        saveFont = new Font("SansSerif", Font.PLAIN, fontSize);
+                    }
                     if (font.canDisplay(c)) {
 
                         g2.drawString(String.valueOf(c), x1, y1);
-                    } else if (font.canDisplay(line.codePointAt(i))) {
-
+                    } else if (saveFont.canDisplay(line.codePointAt(i))) {
+                        g2.setFont(saveFont);
                         int cp = line.codePointAt(i);
                         g2.drawString(new String(Character.toChars(cp)), x1, y1);
                         i += Character.charCount(cp) - 1;
+                        g2.setFont(font);
                      }
                     g2.dispose();
                 }
