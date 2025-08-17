@@ -1650,6 +1650,8 @@ public class GeminiTextPane extends JTextPane {
         geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, bgColor, linkColor);
         otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, bgColor, linkColor);
         titanIcon = getLinkIcon("✏️", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        picIcon = getLinkIcon("📸", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        mediaIcon = getLinkIcon("🎥", "Noto Emoji", gfFontSize, bgColor, linkColor);
     }
 
     public static void clearLinkIcons() {
@@ -1811,8 +1813,19 @@ public class GeminiTextPane extends JTextPane {
             String sfx = "";
 
             if (Alhena.linkIcons) {
-                //int gfFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.fontSize;
-                if (finalUrl.indexOf("://") == -1) {
+                boolean isImage = Alhena.imageExtensions.stream().anyMatch(ext -> finalUrl.endsWith(ext));
+                boolean isMedia = false;
+                if (!isImage) {
+                    String mimeExt = MimeMapping.getMimeTypeForFilename(finalUrl);
+                    isMedia = (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
+                }
+
+                if (isImage) {
+                    sfx = "🌠";
+                } else if (isMedia) {
+                    sfx = "🎥";
+
+                } else if (finalUrl.indexOf("://") == -1) {
                     if (finalUrl.startsWith("data")) {
                         sfx = "📎";
                     } else if (finalUrl.startsWith("mailto")) {
@@ -1947,7 +1960,7 @@ public class GeminiTextPane extends JTextPane {
         }
         String cs = charset == null ? "UTF-8" : charset.substring(charset.indexOf('=') + 1);
         if (mime.startsWith("audio") || mime.startsWith("video")) {
-            if(!Alhena.allowVLC && !curPos){
+            if (!Alhena.allowVLC && !curPos) {
                 Util.infoDialog(f, I18n.t("vlcRequiredDialog"), I18n.t("vlcRequiredDialogMsg"));
                 return;
             }
@@ -1957,7 +1970,7 @@ public class GeminiTextPane extends JTextPane {
                 af = File.createTempFile("alhena", "media");
                 af.deleteOnExit();
                 Files.write(af.toPath(), byteData);  // overwrite or create
-                
+
                 MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
 
                 playerList.add(ap);
@@ -2140,6 +2153,10 @@ public class GeminiTextPane extends JTextPane {
                                 mailIcon;
                             case "✏️" ->
                                 titanIcon;
+                            case "🌠" ->
+                                picIcon;
+                            case "🎥" ->
+                                mediaIcon;
                             default ->
                                 geminiIcon;
                         };
@@ -2606,7 +2623,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon;
+    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, mediaIcon;
 
     private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color bgColor, Color fgColor) {
         BufferedImage bi = AsciiImage.renderTextToImage(txt, fontName, fontSize, bgColor, fgColor, true);
