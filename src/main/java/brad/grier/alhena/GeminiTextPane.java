@@ -1638,7 +1638,7 @@ public class GeminiTextPane extends JTextPane {
         visitedStyle = new SimpleAttributeSet();
         StyleConstants.setForeground(visitedStyle, visitColor);
 
-        if (dataIcon == null) {
+        if (Alhena.linkIcons && dataIcon == null) {
             rebuildLinkIcons(gfFontSize, getBackground(), linkColor);
         }
     }
@@ -1652,6 +1652,7 @@ public class GeminiTextPane extends JTextPane {
         titanIcon = getLinkIcon("✏️", "Noto Emoji", gfFontSize, bgColor, linkColor);
         picIcon = getLinkIcon("📸", "Noto Emoji", gfFontSize, bgColor, linkColor);
         mediaIcon = getLinkIcon("🎥", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        gopherIcon = getLinkIcon("🐹", "Noto Emoji", gfFontSize, bgColor, linkColor);
     }
 
     public static void clearLinkIcons() {
@@ -1832,13 +1833,27 @@ public class GeminiTextPane extends JTextPane {
                     } else if (finalUrl.startsWith("mailto")) {
                         sfx = "✉️";
                     } else {
-                        sfx = !docURL.startsWith("gemini") ? "🌐" : "🔗";
+                        if(docURL.startsWith("gemini")){
+                            sfx = "🔗";
+                        }else if(docURL.startsWith("gopher")){
+                            sfx = "🐭";
+                        }else{
+                            sfx = "🌐";
+                        }
+                        //sfx = !docURL.startsWith("gemini") ? "🌐" : "🔗";
                     }
                 } else {
                     if (finalUrl.startsWith("titan")) {
                         sfx = "✏️";
                     } else {
-                        sfx = !finalUrl.startsWith("gemini") ? "🌐" : "🔗";
+                        if(finalUrl.startsWith("gemini")){
+                            sfx = "🔗";
+                        }else if(finalUrl.startsWith("gopher")){
+                            sfx = "🐭";
+                        }else{
+                            sfx = "🌐";
+                        }
+                        //sfx = !finalUrl.startsWith("gemini") ? "🌐" : "🔗";
                     }
                 }
             }
@@ -2158,6 +2173,8 @@ public class GeminiTextPane extends JTextPane {
                                 picIcon;
                             case "🎥" ->
                                 mediaIcon;
+                            case "🐭" ->
+                                gopherIcon;
                             default ->
                                 geminiIcon;
                         };
@@ -2624,7 +2641,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, mediaIcon;
+    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, mediaIcon, gopherIcon;
 
     private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color bgColor, Color fgColor) {
         BufferedImage bi = AsciiImage.renderTextToImage(txt, fontName, fontSize, bgColor, fgColor, true);
