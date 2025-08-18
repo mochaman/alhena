@@ -178,7 +178,7 @@ public class Alhena {
         if (alhenaLocale != null) {
             I18n.setForcedLocale(Locale.forLanguageTag(alhenaLocale));
         }
-        welcomeMessage = I18n.t("welcomeLabel")+ " " + PROG_NAME;
+        welcomeMessage = I18n.t("welcomeLabel") + " " + PROG_NAME;
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher((KeyEvent e) -> {
             Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
@@ -671,31 +671,6 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
-        if (favIcon && punyURI.getScheme().equals("gemini")) {
-            String fiAuthority = punyURI.getAuthority();
-            if (favMap.containsKey(fiAuthority)) {
-                FavIconInfo fiInfo = favMap.get(fiAuthority);
-                if (fiInfo != null) {
-                    p.setFavIcon(fiAuthority, fiInfo);
-                }
-            } else {
-                String favUrl = "gemini://" + fiAuthority + "/favicon.txt";
-
-                getNetClient(URI.create("gemini://" + fiAuthority));
-                fetchGeminiPage(favUrl).onSuccess(content -> {
-                    String fi = content.trim();
-                    FavIconInfo fiInfo = new FavIconInfo(fi, GeminiTextPane.getFavIcon(fi));
-
-                    favMap.put(fiAuthority, fiInfo);
-                    bg(() -> {
-                        p.setFavIcon(fiAuthority, fiInfo);
-                    });
-
-                }).onFailure(error -> {
-                    favMap.put(fiAuthority, null);
-                });
-            }
-        }
 
         if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("https://")
                 || ((!url.startsWith("gemini://") && !url.startsWith("spartan://") && !url.startsWith("nex://")) && (prevURI != null && "https".equalsIgnoreCase(prevURI.getScheme()))))) {
@@ -780,8 +755,47 @@ public class Alhena {
         }
 
         switch (punyURI.getScheme()) {
-            case "gemini", "titan" ->
-                gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
+            case "gemini", "titan" -> {
+                if (favIcon && punyURI.getScheme().equals("gemini")) {
+                    String fiAuthority = punyURI.getAuthority();
+                    if (favMap.containsKey(fiAuthority)) {
+                        FavIconInfo fiInfo = favMap.get(fiAuthority);
+                        if (fiInfo != null) {
+                            p.setFavIcon(fiAuthority, fiInfo);
+                        }
+                        gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
+                    } else {
+                        if (p.redirectCount == 0) {
+                            p.frame().setBusy(true, cPage);
+                        }
+                        String favUrl = "gemini://" + fiAuthority + "/favicon.txt";
+
+                        getNetClient(URI.create("gemini://" + fiAuthority));
+                        URI finalPunyURI = punyURI;
+                        String finalOrigURL = origURL;
+                        String finalProxyUR = proxyURL;
+                        fetchGeminiPage(favUrl).onSuccess(content -> {
+                            String fi = content.trim();
+                            FavIconInfo fiInfo = new FavIconInfo(fi, GeminiTextPane.getFavIcon(fi));
+
+                            favMap.put(fiAuthority, fiInfo);
+                            bg(() -> {
+                                gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
+                                p.setFavIcon(fiAuthority, fiInfo);
+                            });
+
+                        }).onFailure(error -> {
+                            bg(() -> {
+                                gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
+                            });
+                            favMap.put(fiAuthority, null);
+                        });
+                    }
+                } else {
+                    gemini(getNetClient(punyURI), punyURI, p, origURL, cPage, proxyURL);
+                }
+
+            }
             case "spartan" ->
                 spartan(punyURI, p, origURL, cPage);
             default ->
