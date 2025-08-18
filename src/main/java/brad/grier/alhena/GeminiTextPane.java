@@ -988,7 +988,7 @@ public class GeminiTextPane extends JTextPane {
         lastSearchDoc = -1;
     }
 
-    public void find(String word) {
+    public void find(String word, boolean recurse) {
         if (word.isBlank()) {
             getHighlighter().removeAllHighlights();
             for (PreformattedTextPane p : ptpList) {
@@ -1067,10 +1067,10 @@ public class GeminiTextPane extends JTextPane {
             e.printStackTrace();
 
         }
-        if (!found) {
+        if (!found && !recurse) {
             lastSearchDoc = -1;
             lastSearchIdx = 0;
-            find(word);
+            find(word, true);
         }
     }
 
@@ -1407,11 +1407,11 @@ public class GeminiTextPane extends JTextPane {
                     case "1" -> {
                         StyleConstants.setBold(bStyle, true);
                     }
-                    case "2" ->{
+                    case "2" -> {
                         // not really faint - could lighten or darken depending on theme but then would have to track for reset w/22
                         StyleConstants.setBold(bStyle, false);
                     }
-                    case "22" ->{ //normal intensity
+                    case "22" -> { //normal intensity
                         StyleConstants.setBold(bStyle, false);
                     }
                     // default ->
@@ -1845,11 +1845,11 @@ public class GeminiTextPane extends JTextPane {
                     } else if (finalUrl.startsWith("mailto")) {
                         sfx = "✉️";
                     } else {
-                        if(docURL.startsWith("gemini")){
+                        if (docURL.startsWith("gemini")) {
                             sfx = "🔗";
-                        }else if(docURL.startsWith("gopher")){
+                        } else if (docURL.startsWith("gopher")) {
                             sfx = "🐭";
-                        }else{
+                        } else {
                             sfx = "🌐";
                         }
                         //sfx = !docURL.startsWith("gemini") ? "🌐" : "🔗";
@@ -1858,11 +1858,11 @@ public class GeminiTextPane extends JTextPane {
                     if (finalUrl.startsWith("titan")) {
                         sfx = "✏️";
                     } else {
-                        if(finalUrl.startsWith("gemini")){
+                        if (finalUrl.startsWith("gemini")) {
                             sfx = "🔗";
-                        }else if(finalUrl.startsWith("gopher")){
+                        } else if (finalUrl.startsWith("gopher")) {
                             sfx = "🐭";
-                        }else{
+                        } else {
                             sfx = "🌐";
                         }
                         //sfx = !finalUrl.startsWith("gemini") ? "🌐" : "🔗";

@@ -773,7 +773,7 @@ public final class GeminiFrame extends JFrame {
             if (input != null) {
                 visiblePage().textPane.resetSearch();
                 lastSearch = input;
-                visiblePage().textPane.find(input);
+                visiblePage().textPane.find(input, false);
 
             }
         }));
@@ -838,7 +838,7 @@ public final class GeminiFrame extends JFrame {
         if (lastSearch == null) {
             return;
         }
-        visiblePage().textPane.find(lastSearch);
+        visiblePage().textPane.find(lastSearch, false);
 
     }
 
