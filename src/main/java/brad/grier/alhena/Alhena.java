@@ -255,7 +255,7 @@ public class Alhena {
                     gf.backButton.doClick();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET, MOD))) {
                     gf.forwardButton.doClick();
-                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_R, MOD))) {
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_R, MOD)) || ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0))) {
                     gf.refreshButton.doClick();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0))) {
                     sDown = true;
