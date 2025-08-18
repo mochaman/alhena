@@ -40,7 +40,7 @@ public class PreformattedTextPane extends JTextPane {
     private StyledDocument doc;
     private String bufferedLine = null;
     private int fontSize;
-    private boolean isDark;
+    private final boolean isDark;
 
     public PreformattedTextPane(Color bgColor, Integer fontSize, boolean isDark) {
         if (fontSize != null) {
@@ -263,6 +263,7 @@ public class PreformattedTextPane extends JTextPane {
         if (bStyle == null) {
             // copy the preformat style
             bStyle = new SimpleAttributeSet(doc.getStyle("```"));
+            ansiFG(Color.WHITE);  // "default foreground color"
         }
 
         var parser = factory.createParser(line);
@@ -367,6 +368,8 @@ public class PreformattedTextPane extends JTextPane {
                         ansiFG(AnsiColor.CYAN);
                     case "37" ->
                         ansiFG(AnsiColor.WHITE);
+                    case "39" ->
+                        ansiFG(AnsiColor.WHITE); // "Default" fg color
                     case "40" ->
                         ansiBG(Color.BLACK);
                     case "41" ->
@@ -404,6 +407,8 @@ public class PreformattedTextPane extends JTextPane {
                         }
                         break outer;
                     }
+                    case "49" ->
+                        ansiBG(Color.BLACK); //"default" background
                     case "90" ->
                         ansiFG(AnsiColor.BRIGHT_BLACK);
                     case "91" ->
@@ -453,6 +458,13 @@ public class PreformattedTextPane extends JTextPane {
                     }
                     case "1" -> {
                         StyleConstants.setBold(bStyle, true);
+                    }
+                    case "2" -> {
+                        // not really faint - could lighten or darken depending on theme but then would have to track for reset w/22
+                        StyleConstants.setBold(bStyle, false);
+                    }
+                    case "22" -> { //normal intensity
+                        StyleConstants.setBold(bStyle, false);
                     }
                     // default ->
                     //     System.out.println("unknown: " + txt);

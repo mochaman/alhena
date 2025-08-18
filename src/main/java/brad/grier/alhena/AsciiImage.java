@@ -48,6 +48,7 @@ public class AsciiImage {
         isDark = UIManager.getBoolean("laf.dark");
         bgColor1 = bgColor;
         fgColor1 = fgColor;
+        ansiFG(Color.WHITE);  // "default foreground color" crossword site
         Font font = new Font(fontName, Font.PLAIN, fontSize);
         String[] lines = text.split("\n");
         int max_chars = 0;
@@ -409,6 +410,8 @@ public class AsciiImage {
                         ansiFG(AnsiColor.CYAN);
                     case "37" ->
                         ansiFG(AnsiColor.WHITE);
+                    case "39" ->
+                        ansiFG(AnsiColor.WHITE); // "Default" fg color
                     case "40" ->
                         ansiBG(Color.BLACK);
                     case "41" ->
@@ -446,6 +449,8 @@ public class AsciiImage {
                         }
                         break outer;
                     }
+                    case "49" ->
+                        ansiBG(Color.BLACK); //"default" background
                     case "90" ->
                         ansiFG(AnsiColor.BRIGHT_BLACK);
                     case "91" ->
@@ -494,6 +499,13 @@ public class AsciiImage {
                     }
                     case "1" -> {
                         ansiBold = true;
+                    }
+                    case "2" ->{
+                        // not really faint - could lighten or darken depending on theme but then would have to track for reset w/22
+                        ansiBold = false; 
+                    }
+                    case "22" ->{ //normal intensity
+                        ansiBold = false;
                     }
 
                 }
