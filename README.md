@@ -59,7 +59,7 @@ java -jar ./lib/alhena.jar
 ```
 ## 📽️ Inline Media With VLC
 
-Alhena supports inline video and audio playback when VLC is installed. The feature must be enabled from the 'Settings' menu. The vlcj library does a good job of detecting VLC but there may be instances where you need to specify the location. This is done by creating a vlcj.config file in the ~/.config/vlcj directory. Examples:
+Alhena supports inline video and audio playback when VLC is installed. The feature must be enabled from the 'Settings' menu and the installed VLC architecture must match the OS (64-bit on a 64-bit OS). The vlcj library does a good job of detecting VLC but there may be instances where you need to specify the location. This is done by creating a vlcj.config file in the ~/.config/vlcj directory. Examples:
 
 On MacOS, discovery works fine if building from source. If you use one of the pre-build .dmg installs, you will likely need to create the vlcj.config file with the following line (assuming VLC is installed in the default location):
 ```sh
@@ -77,13 +77,13 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT required (except for the Basic install). The platform specific installs each include a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.2.8/alhena-5.2.8_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.8/alhena-5.2.8_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.2.8/alhena-5.2.8_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.2.8/alhena-5.2.8_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.8/alhena-5.2.8_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.2.8/alhena-5.2.8_freebsd_x64.tgz) untar and run script
-- [Basic](https://github.com/mochaman/alhena/releases/download/v5.2.8/alhena-5.2.8_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.2.9/alhena-5.2.9_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.9/alhena-5.2.9_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.2.9/alhena-5.2.9_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.2.9/alhena-5.2.9_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.2.9/alhena-5.2.9_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.2.9/alhena-5.2.9_freebsd_x64.tgz) untar and run script
+- [Basic](https://github.com/mochaman/alhena/releases/download/v5.2.9/alhena-5.2.9_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
 
 ## 🐳 Docker
 
