@@ -204,18 +204,20 @@ public final class GeminiFrame extends JFrame {
             page.setRootPage(rootPage);
 
             ArrayList<Page> histList = pageHistoryMap.get(rootPage);
-            if (pageVisible) {
-                int histIdx = rootPage.incAndGetArrayIndex(); // should get same result if calling on page.
-                if (histIdx < histList.size()) {
-                    List<Page> sl = histList.subList(histIdx, histList.size());
-                    for (Page p : sl) {
+            if (histList != null) {
+                if (pageVisible) {
+                    int histIdx = rootPage.incAndGetArrayIndex(); // should get same result if calling on page.
+                    if (histIdx < histList.size()) {
+                        List<Page> sl = histList.subList(histIdx, histList.size());
+                        for (Page p : sl) {
 
-                        p.textPane.closePlayers();
+                            p.textPane.closePlayers();
+                        }
+                        sl.clear();
                     }
-                    sl.clear();
                 }
+                histList.add(page);
             }
-            histList.add(page);
         }
 
         return page;
@@ -754,7 +756,6 @@ public final class GeminiFrame extends JFrame {
                 } else if (label.equals(SERVERS_LABEL)) {
                     ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, (mod | KeyEvent.ALT_DOWN_MASK));
                 }
-
 
                 viewMenu.add(createMenuItem(label, ks, () -> {
 
@@ -1473,6 +1474,34 @@ public final class GeminiFrame extends JFrame {
                         // check to make sure user hasn't changed things in the interim
                         pb.setDataFile(null);
                         Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == visiblePage());
+
+                        if (tabbedPane != null) { // ugh - tab added in interim
+                            int idx = tabbedPane.getSelectedIndex();
+
+                            if (tabbedPane.getComponentAt(idx) == currentPB) { // make sure we're on the same tab
+                                if (currentPB == visiblePage()) {
+                                    // transfer busyness
+                                    setBusy(false, currentPB);
+                                    setBusy(true, histPage);
+                                    tabbedPane.setComponentAt(idx, histPage);
+
+                                    refreshNav(histPage);
+                                } else {
+                                    histPage.runWhenDone(() -> currentPB.setBusy(false));
+                                }
+
+                            } else { // think and refactor
+                                if (currentPB == visiblePage()) {
+                                    // transfer busyness
+                                    setBusy(false, currentPB);
+                                    setBusy(true, histPage);
+                                    tabbedPane.setComponentAt(idx, histPage);
+                                } else {
+                                    histPage.runWhenDone(() -> currentPB.setBusy(false));
+                                }
+                            }
+                            return;
+                        }
                         if (currentPB == visiblePage()) {
 
                             setBusy(false, currentPB);
@@ -1691,7 +1720,6 @@ public final class GeminiFrame extends JFrame {
                 } else if (label.equals(SERVERS_LABEL)) {
                     loadServers(pb.textPane, pb);
                 }
-
 
             } else {
                 int currentTabIdx = tabbedPane.getSelectedIndex();
@@ -2112,7 +2140,7 @@ public final class GeminiFrame extends JFrame {
                 if (result == JOptionPane.YES_OPTION) {
                     int rowCount = DB.deleteHistory();
                     refresh();
-                    String verbiage = rowCount == 0 ? I18n.t("noLinksLabel") + " ": rowCount == 1 ?  I18n.t("linkLabel") + " " : rowCount + " " + I18n.t("linksLabel") + " ";
+                    String verbiage = rowCount == 0 ? I18n.t("noLinksLabel") + " " : rowCount == 1 ? I18n.t("linkLabel") + " " : rowCount + " " + I18n.t("linksLabel") + " ";
                     Util.infoDialog(this, I18n.t("clearHistoryResultDialog"), verbiage + I18n.t("clearHistoryResultDialogMsg"));
 
                 }
@@ -2410,7 +2438,6 @@ public final class GeminiFrame extends JFrame {
             selectComboBoxItem("");
 
             tabbedPane.addChangeListener(ce -> {
-
                 Page page = (Page) tabbedPane.getSelectedComponent();
                 if (page == null) {
                     return;
@@ -2470,7 +2497,7 @@ public final class GeminiFrame extends JFrame {
         tabbedPane.setSelectedComponent(pb);
 
         Alhena.processURL(url, pb, null, currentPage, false);
-        currentPage.setBusy(false);
+
 
     }
 
