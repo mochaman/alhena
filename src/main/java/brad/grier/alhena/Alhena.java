@@ -140,7 +140,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public static String welcomeMessage;
-    public final static String VERSION = "5.2.8";
+    public final static String VERSION = "5.2.9";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp");
@@ -1113,7 +1113,7 @@ public class Alhena {
                         p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                     });
                     //connection.cause().printStackTrace();
-                    System.out.println("Failed to connect: " + connection.cause().getMessage());
+                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
                 }
             }
         });
@@ -2019,8 +2019,7 @@ public class Alhena {
         NetClient res = null;
         try {
             ClientCertInfo cci = DB.getClientCert(uri);
-            // System.out.println(uri.toString());
-            // System.out.println(cci);
+
             if (cci == null) {
                 if (!certMap.containsKey(null)) { // default connection
 
