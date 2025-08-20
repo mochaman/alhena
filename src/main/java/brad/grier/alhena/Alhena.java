@@ -775,17 +775,26 @@ public class Alhena {
                         String finalOrigURL = origURL;
                         String finalProxyUR = proxyURL;
                         fetchGeminiPage(favUrl).onSuccess(content -> {
+
                             String fi = content.trim();
                             FavIconInfo fiInfo = new FavIconInfo(fi, GeminiTextPane.getFavIcon(fi));
 
                             favMap.put(fiAuthority, fiInfo);
                             bg(() -> {
+                                if(interrupted){
+                                    interrupted = false;
+                                    return;    
+                                }
                                 gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
                                 p.setFavIcon(fiAuthority, fiInfo);
                             });
 
                         }).onFailure(error -> {
                             bg(() -> {
+                                if(interrupted){
+                                    interrupted = false;
+                                    return;    
+                                }
                                 gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
                             });
                             favMap.put(fiAuthority, null);
