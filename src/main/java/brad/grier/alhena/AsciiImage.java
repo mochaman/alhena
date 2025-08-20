@@ -39,9 +39,7 @@ public class AsciiImage {
 
     // for future reference, this class is not thread safe - only call on EDT
     public static BufferedImage renderTextToImage(String text, String fontName, int fontSize, Color bgColor, Color fgColor, boolean override) {
-        if(text.trim().isEmpty()){
-            text = " ";
-        }
+
         boolean hasAnsi = false;
         ansiBold = false;
         bgColor = GeminiTextPane.shadePF ? AnsiColor.adjustColor(bgColor, UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : bgColor;
@@ -52,11 +50,15 @@ public class AsciiImage {
         fgColor1 = fgColor;
         ansiFG(Color.WHITE);  // "default foreground color" crossword site
         Font font = new Font(fontName, Font.PLAIN, fontSize);
-        String[] lines = text.split("\n");
+        //String[] lines = text.split("\n");
+        String[] lines = text.split("\n", -1);
         int max_chars = 0;
         int idx = 0;
         List<List<PositionColor>> colorList = new ArrayList<>();
         for (String line : lines) {
+            if(line.isBlank()){
+                line = " ";
+            }
             if (!hasAnsi) {
                 hasAnsi = line.indexOf(27) >= 0;
             }
