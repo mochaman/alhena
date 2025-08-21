@@ -305,8 +305,7 @@ public class GeminiTextPane extends JTextPane {
             });
         }
 
-        boolean smoothPref = DB.getPref("smoothscrolling", "true").equals("true");
-        if (smoothPref) {
+        if (Alhena.smoothScrolling) {
             setupAdaptiveScrolling();
         }
         addMouseMotionListener(new MouseAdapter() {
@@ -1988,8 +1987,10 @@ public class GeminiTextPane extends JTextPane {
         }
         String cs = charset == null ? "UTF-8" : charset.substring(charset.indexOf('=') + 1);
         if (mime.startsWith("audio") || mime.startsWith("video")) {
-            if (!Alhena.allowVLC && !curPos) {
-                Util.infoDialog(f, I18n.t("vlcRequiredDialog"), I18n.t("vlcRequiredDialogMsg"));
+            if (!Alhena.allowVLC) {
+                if (!curPos) {
+                    Util.infoDialog(f, I18n.t("vlcRequiredDialog"), I18n.t("vlcRequiredDialogMsg"));
+                }
                 return;
             }
             Alhena.pauseMedia();
