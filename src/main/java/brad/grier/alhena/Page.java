@@ -8,6 +8,7 @@ import java.awt.Graphics2D;
 import java.io.File;
 import java.security.cert.X509Certificate;
 
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -51,6 +52,7 @@ public class Page extends JPanel {
     private boolean isNex;
     private JLabel overlayLabel;
     public static final int ICON_SIZE = 39;
+    private JLayer<JComponent> layer;
 
     private Page() {
 
@@ -67,16 +69,25 @@ public class Page extends JPanel {
         }
         setLayout(new BorderLayout());
         textPane = new GeminiTextPane(frame, this, url);
+        init();
+
+        if (Alhena.scrollSpeed != null) {
+            int scrollSpeed = Integer.parseInt(Alhena.scrollSpeed);
+
+            scrollPane.getVerticalScrollBar().setUnitIncrement(scrollSpeed);
+        }
+    }
+
+    private void init() {
         scrollPane = new JScrollPane(textPane);
         scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
-        String ss = DB.getPref("scrollspeed", null);
 
         overlayLabel = new JLabel("");
         updateFavIconFont();
 
         overlayLabel.setBounds(50, 10, 50, 50);
 
-        JLayer<JComponent> layer = new JLayer<>(scrollPane, new LayerUI<>() {
+        layer = new JLayer<>(scrollPane, new LayerUI<>() {
 
             @Override
             public void paint(Graphics g, JComponent c) {
@@ -92,16 +103,10 @@ public class Page extends JPanel {
             }
         });
         add(layer, BorderLayout.CENTER);
-
-        if (ss != null) {
-            int scrollSpeed = Integer.parseInt(ss);
-
-            scrollPane.getVerticalScrollBar().setUnitIncrement(scrollSpeed);
-        }
     }
 
     public final void updateFavIconFont() {
-        if(favIconLocked){
+        if (favIconLocked) {
             return;
         }
         String fontFamily = "Noto Emoji";
@@ -115,6 +120,7 @@ public class Page extends JPanel {
 
     private String favIconKey;
     private boolean favIconLocked;
+
     public void setFavIcon(String favIconKey, FavIconInfo favIconInfo) {
         this.favIconKey = favIconKey;
         if (favIconInfo.icon() instanceof ImageIcon imageIcon) {
@@ -127,7 +133,7 @@ public class Page extends JPanel {
                 String s = (String) favIconInfo.icon();
 
                 boolean isPrintable = overlayLabel.getFont().canDisplay(s.charAt(0));
-                if(!EmojiManager.isEmoji(s) && !isPrintable){
+                if (!EmojiManager.isEmoji(s) && !isPrintable) {
                     favIconLocked = true;
                     overlayLabel.setFont(new Font("SanSerif", Font.PLAIN, ICON_SIZE));
                 }
@@ -225,6 +231,23 @@ public class Page extends JPanel {
 
     public void setScrollIncrement(int inc) {
         scrollPane.getVerticalScrollBar().setUnitIncrement(inc);
+    }
+
+    public void resetScrollIncrement() {
+        // amazing that you can't just save off the initial scroll increment and reset it
+        invalidate();
+        remove(layer);
+        String overlayTxt = overlayLabel.getText();
+        Icon overlayIcon = overlayLabel.getIcon();
+
+        init();
+        if (overlayTxt == null) {
+            overlayLabel.setIcon(overlayIcon);
+        }else{
+            overlayLabel.setText(overlayTxt);
+        }
+        revalidate();
+        repaint();
     }
 
     public void runWhenLoading(Runnable r) {
