@@ -722,6 +722,8 @@ public class DB {
         Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
         Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
         Alhena.linkIcons = map.getOrDefault("linkicons", "false").equals("true");
+        Alhena.scrollSpeed = map.get("scrollspeed");
+        Alhena.smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
 
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes
