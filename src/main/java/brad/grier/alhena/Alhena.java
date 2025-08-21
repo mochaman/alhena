@@ -163,6 +163,7 @@ public class Alhena {
     public static boolean dataUrl;
     public static boolean linkIcons;
     public static String scrollSpeed; // null if not set
+    public static boolean smoothScrolling;
     public static boolean macUseNoto;
     private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
     private static final ResourceBundle bundle
@@ -404,23 +405,23 @@ public class Alhena {
         gopherProxy = map.getOrDefault("gopherproxy", null);
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
+        int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
+        GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
+        GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
+        GeminiTextPane.asciiImage = map.getOrDefault("asciipf", "false").equals("true");
+        GeminiTextPane.embedPF = map.getOrDefault("embedpf", "true").equals("true");
+        GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
+        GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
+        GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
+        favIcon = map.getOrDefault("favicon", "false").equals("true");
+        dataUrl = map.getOrDefault("dataurl", "true").equals("true");
+        linkIcons = map.getOrDefault("linkicons", "false").equals("true");
+        scrollSpeed = map.get("scrollspeed");
+        smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
 
+        theme = map.get("theme");
         EventQueue.invokeLater(() -> {
-            //HashMap<String, String> map = DB.getPrefs("contentwidth", "linewrappf", "asciipf", "embedpf", "showsb", "shadepf", "theme");
-            int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
-            GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
-            GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
-            GeminiTextPane.asciiImage = map.getOrDefault("asciipf", "false").equals("true");
-            GeminiTextPane.embedPF = map.getOrDefault("embedpf", "true").equals("true");
-            GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
-            GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
-            GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
-            Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
-            Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
-            Alhena.linkIcons = map.getOrDefault("linkicons", "false").equals("true");
-            Alhena.scrollSpeed = map.get("scrollspeed");
 
-            theme = map.get("theme");
             if (theme != null) {
 
                 Util.setupTheme(Util.mapTheme(theme));
@@ -508,9 +509,8 @@ public class Alhena {
             if (updateWindowsMenu) {
                 jf.updateWindowsMenu();
 
-                boolean smoothScroll = DB.getPref("smoothscrolling", "true").equals("true");
                 jf.forEachPage(page -> {
-                    if (smoothScroll) {
+                    if (smoothScrolling) {
                         page.textPane.setupAdaptiveScrolling();
                     } else {
                         page.textPane.removeAdaptiveScrolling();
@@ -784,9 +784,9 @@ public class Alhena {
 
                             favMap.put(fiAuthority, fiInfo);
                             bg(() -> {
-                                if(interrupted){
+                                if (interrupted) {
                                     interrupted = false;
-                                    return;    
+                                    return;
                                 }
                                 gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
                                 p.setFavIcon(fiAuthority, fiInfo);
@@ -794,9 +794,9 @@ public class Alhena {
 
                         }).onFailure(error -> {
                             bg(() -> {
-                                if(interrupted){
+                                if (interrupted) {
                                     interrupted = false;
-                                    return;    
+                                    return;
                                 }
                                 gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
                             });
