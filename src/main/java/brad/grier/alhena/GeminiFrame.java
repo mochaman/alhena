@@ -1029,10 +1029,10 @@ public final class GeminiFrame extends JFrame {
         }));
 
         settingsMenu.add(new JSeparator());
-        JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem(I18n.t("smoothScrollingItem"), DB.getPref("smoothscrolling", "true").equals("true"));
+        JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem(I18n.t("smoothScrollingItem"), Alhena.smoothScrolling);
         smoothItem.addItemListener(ae -> {
 
-            boolean smoothScrolling = !DB.getPref("smoothscrolling", "true").equals("true"); // toggle
+            boolean smoothScrolling = !Alhena.smoothScrolling; // toggle
             forEachPage(page -> {
                 if (smoothScrolling) {
                     page.textPane.setupAdaptiveScrolling();
@@ -1042,6 +1042,7 @@ public final class GeminiFrame extends JFrame {
 
             });
             DB.insertPref("smoothscrolling", String.valueOf(smoothScrolling));
+            Alhena.smoothScrolling = smoothScrolling;
 
         });
         settingsMenu.add(smoothItem);
