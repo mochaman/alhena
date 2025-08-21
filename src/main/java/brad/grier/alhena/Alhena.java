@@ -162,6 +162,7 @@ public class Alhena {
     public static boolean favIcon;
     public static boolean dataUrl;
     public static boolean linkIcons;
+    public static String scrollSpeed; // null if not set
     public static boolean macUseNoto;
     private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
     private static final ResourceBundle bundle
@@ -417,6 +418,8 @@ public class Alhena {
             Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
             Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
             Alhena.linkIcons = map.getOrDefault("linkicons", "false").equals("true");
+            Alhena.scrollSpeed = map.get("scrollspeed");
+
             theme = map.get("theme");
             if (theme != null) {
 
@@ -2734,10 +2737,17 @@ public class Alhena {
                 try {
                     if (cmd[1].equals("default")) {
                         DB.insertPref("scrollspeed", null);
+                        scrollSpeed = null;
+                        for (GeminiFrame gf : frameList) {
+                            gf.forEachPage(page -> {
+                                page.resetScrollIncrement();
+                            });
+                        }
                         message = "## scrollspeed " + I18n.t("resetLabel") + "\n";
                     } else {
                         int val = Integer.parseInt(cmd[1]);
                         DB.insertPref("scrollspeed", cmd[1]);
+                        scrollSpeed = cmd[1];
                         for (GeminiFrame gf : frameList) {
                             gf.forEachPage(page -> {
                                 page.setScrollIncrement(val);
