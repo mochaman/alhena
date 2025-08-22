@@ -145,7 +145,7 @@ public class Alhena {
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif");
-    public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json");
+    public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
     private static String theme;
@@ -1162,11 +1162,11 @@ public class Alhena {
 
                 String path = uri.getPath();
 
-                if (imageExtensions.stream().anyMatch(ext -> origURL.endsWith(ext))) {
+                if (imageExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext))) {
                     imageStartIdx[0] = 0;
                 }
 
-                boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.endsWith(ext));
+                boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext));
                 String mimeFromExt = MimeMapping.getMimeTypeForFilename(origURL);
                 boolean isMedia = mimeFromExt != null && (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video"));
                 connection.result().write(path.equals("/") ? "\n" : path + "\n");
