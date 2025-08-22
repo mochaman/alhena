@@ -1167,7 +1167,8 @@ public class Alhena {
                 }
 
                 boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.endsWith(ext));
-
+                String mimeFromExt = MimeMapping.getMimeTypeForFilename(origURL);
+                boolean isMedia = mimeFromExt != null && (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video"));
                 connection.result().write(path.equals("/") ? "\n" : path + "\n");
 
                 Buffer saveBuffer = Buffer.buffer();
@@ -1196,6 +1197,36 @@ public class Alhena {
                                 p.textPane.addPage(buffer.toString());
                             });
                         }
+
+                    } else if (allowVLC && isMedia) {
+                        try {
+                            connection.result().pause();
+                            connection.result().handler(null);
+                            try {
+                                DB.insertHistory(origURL, null);
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                            File af = File.createTempFile("alhena", "media");
+                            
+                            af.deleteOnExit();
+                            String finalMime = mimeFromExt;
+                            Runnable r = () -> {
+                                p.frame().showGlassPane(false);
+                                GeminiTextPane tPane = cPage.textPane;
+                                if (tPane.awatingImage()) {
+                                    tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
+                                } else {
+                                    p.textPane.end(" ", false, origURL, true);
+                                    p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
+                                }
+                            };
+                            streamToFile(connection.result(), af, buffer, p, origURL, r);
+
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+
                     } else {
                         rcvdData[0] = true;
                         File[] file = new File[1];
