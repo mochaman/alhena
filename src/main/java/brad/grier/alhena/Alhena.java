@@ -143,8 +143,8 @@ public class Alhena {
     public final static String VERSION = "5.2.9";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md");
-    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp");
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif");
+    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif");
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
