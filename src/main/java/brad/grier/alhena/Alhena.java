@@ -140,7 +140,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public static String welcomeMessage;
-    public final static String VERSION = "5.2.9";
+    public final static String VERSION = "5.3.0";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif");
@@ -2152,7 +2152,7 @@ public class Alhena {
     public static boolean certRequired(String msg, URI uri, Page p, X509Certificate cert, Page cPage) {
 
         String reqURL = uri.toString();
-        String serverMsg = msg == null ? "" : MessageFormat.format(I18n.t("certReqServerMsg"), msg) + "'\n";
+        String serverMsg = msg == null ? "" : MessageFormat.format(I18n.t("certReqServerMsg"), msg) + "\n";
 
         BooleanSupplier bs = () -> {
             JTextField cnField = new JTextField(PROG_NAME);
@@ -2166,7 +2166,8 @@ public class Alhena {
             bg.add(pcButton);
 
             Object[] comps = new Object[5];
-            String sMsg = MessageFormat.format(I18n.t("certReqDialogServerMsg"), uri);
+            String uriText = uri.toString().length() > 70 ? uri.toString().substring(0, 70) + "..." : uri.toString();
+            String sMsg = MessageFormat.format(I18n.t("certReqDialogServerMsg"), uriText);
             comps[0] = serverMsg + sMsg;
             comps[1] = cnField;
             comps[2] = new JLabel(" ");
