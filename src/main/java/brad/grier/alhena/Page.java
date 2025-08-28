@@ -131,8 +131,7 @@ public class Page extends JPanel {
 
                 overlayLabel.setForeground(UIManager.getColor("TextField.foreground"));
                 String s = (String) favIconInfo.icon();
-
-                boolean isPrintable = overlayLabel.getFont().canDisplay(s.charAt(0));
+                boolean isPrintable = s.length() > 0 && overlayLabel.getFont().canDisplay(s.charAt(0));
                 if (!EmojiManager.isEmoji(s) && !isPrintable) {
                     favIconLocked = true;
                     overlayLabel.setFont(new Font("SanSerif", Font.PLAIN, ICON_SIZE));
