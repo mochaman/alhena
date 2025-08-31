@@ -2157,7 +2157,6 @@ public final class GeminiFrame extends JFrame {
         try {
             Bookmark bm = DB.getBookmark(bmId);
             JTextField labelField = new JTextField();
-            // replace with common clase
 
             labelField.addMouseListener(new ContextMenuMouseListener());
             labelField.setText(bm.label());
@@ -2202,10 +2201,10 @@ public final class GeminiFrame extends JFrame {
                     DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem(), urlField.getText());
                 }
                 refresh();
+                Alhena.updateFrames(true, false);
+                //EventQueue.invokeLater(() -> refresh());
             }
 
-            Alhena.updateFrames(true, false);
-            EventQueue.invokeLater(() -> refresh());
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -2498,7 +2497,6 @@ public final class GeminiFrame extends JFrame {
         tabbedPane.setSelectedComponent(pb);
 
         Alhena.processURL(url, pb, null, currentPage, false);
-
 
     }
 
