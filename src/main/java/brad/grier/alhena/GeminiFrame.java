@@ -128,6 +128,7 @@ public final class GeminiFrame extends JFrame {
     private MenuItem mi;
     private Color saveButtonFG = null;
     private static JRadioButtonMenuItem lastSelectedItem;
+    public static int tabPosition = 0;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatArcIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme", "Arc", false)),
@@ -978,8 +979,15 @@ public final class GeminiFrame extends JFrame {
 
             slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
 
+            JPanel tabPosPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            tabPosPanel.add(new JLabel(I18n.t("tabPosLabel")));
+            String[] items = { I18n.t("tabPosTop"), I18n.t("tabPosBottom"), I18n.t("tabPosLeft"), I18n.t("tabPosRight")};
+            JComboBox<String> tabPosCombo = new JComboBox<>(items);
+            tabPosCombo.setEditable(false);
+            tabPosCombo.setSelectedIndex(tabPosition);
+            tabPosPanel.add(tabPosCombo);
+
             JCheckBox lineWrapCB = new JCheckBox(I18n.t("lineWrapCB"));
-            // lineWrapCB.setToolTipText("Non-standard.");
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
 
             JCheckBox imagePFCB = new JCheckBox(I18n.t("pfRenderCB"));
@@ -1007,10 +1015,12 @@ public final class GeminiFrame extends JFrame {
             showsbCB.setEnabled(embedPFCB.isSelected());
             shadeCB.setEnabled(embedPFCB.isSelected());
 
-            Object[] comps = {new JLabel(I18n.t("contentWidthLabel")), slider, new JLabel(" "), lineWrapCB, imagePFCB, embedPFCB, showsbCB, shadeCB};
+            Object[] comps = {new JLabel(I18n.t("contentWidthLabel")), slider, new JLabel(" "), tabPosPanel, lineWrapCB, imagePFCB, embedPFCB, showsbCB, shadeCB};
             Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null, false);
 
             if (res != null) {
+                tabPosition = tabPosCombo.getSelectedIndex();
+                DB.insertPref("tabpos", String.valueOf(tabPosition));
                 GeminiTextPane.asciiImage = imagePFCB.isSelected();
                 DB.insertPref("asciipf", String.valueOf(GeminiTextPane.asciiImage));
                 GeminiTextPane.wrapPF = lineWrapCB.isSelected();
@@ -1148,6 +1158,18 @@ public final class GeminiFrame extends JFrame {
         });
         settingsMenu.add(searchItem);
 
+    }
+
+    public void setTabPos(int pos){
+        if(tabbedPane != null){
+            int newPos = switch (pos) {
+                case 0 -> JTabbedPane.TOP;
+                case 1 -> JTabbedPane.BOTTOM;
+                case 2 -> JTabbedPane.LEFT;
+                default -> JTabbedPane.RIGHT;
+            };
+            tabbedPane.setTabPlacement(newPos);
+        }
     }
 
     public void editPage() {
@@ -2379,6 +2401,13 @@ public final class GeminiFrame extends JFrame {
         if (tabbedPane == null) {
             invalidate();
             tabbedPane = new JTabbedPane();
+            int newPos = switch (tabPosition) {
+                case 0 -> JTabbedPane.TOP;
+                case 1 -> JTabbedPane.BOTTOM;
+                case 2 -> JTabbedPane.LEFT;
+                default -> JTabbedPane.RIGHT;
+            };
+            tabbedPane.setTabPlacement(newPos);
 
             tabbedPane.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSABLE, true);
 

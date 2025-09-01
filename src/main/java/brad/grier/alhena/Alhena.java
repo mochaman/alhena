@@ -418,6 +418,7 @@ public class Alhena {
         linkIcons = map.getOrDefault("linkicons", "false").equals("true");
         scrollSpeed = map.get("scrollspeed");
         smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
+        GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
 
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
@@ -518,6 +519,7 @@ public class Alhena {
                 });
 
             }
+            jf.setTabPos(GeminiFrame.tabPosition);
             jf.recolorIcons();
 
             jf.forEachPage(page -> {
