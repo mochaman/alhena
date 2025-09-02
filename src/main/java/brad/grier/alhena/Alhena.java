@@ -1592,6 +1592,7 @@ public class Alhena {
                                             if (tPane.awatingImage()) {
                                                 tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
                                             } else {
+                                                cPage.setBusy(false);
                                                 p.textPane.end(" ", false, origURL, true);
                                                 p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
                                             }
