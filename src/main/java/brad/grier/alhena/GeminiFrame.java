@@ -1103,10 +1103,22 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem scrollSizeItem = new JCheckBoxMenuItem(I18n.t("bigScrollBarItem"), Alhena.bigScrollBar);
+        scrollSizeItem.addItemListener(ae -> {
+
+            Alhena.bigScrollBar = !Alhena.bigScrollBar;
+            
+            DB.insertPref("bigscrollbar", String.valueOf(Alhena.bigScrollBar));
+
+            Alhena.updateFrames(false, false);
+
+        });
+
         settingsMenu.add(vlcItem);
         settingsMenu.add(favIconItem);
         settingsMenu.add(dataUrlItem);
         settingsMenu.add(linkIconItem);
+        settingsMenu.add(scrollSizeItem);
 
         settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem(I18n.t("httpProxyItem"));

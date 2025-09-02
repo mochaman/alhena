@@ -76,6 +76,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -162,6 +163,7 @@ public class Alhena {
     public static boolean favIcon;
     public static boolean dataUrl;
     public static boolean linkIcons;
+    public static boolean bigScrollBar;
     public static String scrollSpeed; // null if not set
     public static boolean smoothScrolling;
     public static boolean macUseNoto;
@@ -419,10 +421,12 @@ public class Alhena {
         scrollSpeed = map.get("scrollspeed");
         smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
+        bigScrollBar = map.getOrDefault("bigscrollbar", "false").equals("true");
 
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
-
+            
+            UIManager.put( "ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10));
             if (theme != null) {
 
                 Util.setupTheme(Util.mapTheme(theme));
@@ -483,6 +487,7 @@ public class Alhena {
 
     public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu) {
         String dbTheme = DB.getPref("theme", null);
+        UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10) );
         GeminiTextPane.clearLinkIcons();
         if (!theme.equals(dbTheme)) {
             theme = dbTheme;

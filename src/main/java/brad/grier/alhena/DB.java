@@ -722,6 +722,7 @@ public class DB {
         Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
         Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
         Alhena.linkIcons = map.getOrDefault("linkicons", "false").equals("true");
+        Alhena.bigScrollBar = map.getOrDefault("bigscrollbar", "false").equals("true");
         Alhena.scrollSpeed = map.get("scrollspeed");
         Alhena.smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
