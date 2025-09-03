@@ -487,7 +487,7 @@ public class Alhena {
 
     public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu) {
         String dbTheme = DB.getPref("theme", null);
-        UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10) );
+        UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10));
         GeminiTextPane.clearLinkIcons();
         if (!theme.equals(dbTheme)) {
             theme = dbTheme;
@@ -642,6 +642,9 @@ public class Alhena {
 
                         } else {
                             url = prevURI.resolve(checkURI).toString();
+                            if(url.endsWith("..")){
+                                url = url.substring(0, url.indexOf(".."));
+                            }
                         }
                     } else {
                         //  corner case - no host but there's a scheme - is this legal?
@@ -914,7 +917,7 @@ public class Alhena {
                         // this is for a popular spartan server that sends the wrong mime type for text files
                         // (probably based on their extension rather than content)
                         // Since it often only sends the first response line in the first buffer, we need to wait for more
-                        if (lineEnd[0] == saveBuffer.length() - 1) {
+                        if (respCode == '2' && lineEnd[0] == saveBuffer.length() - 1) {
                             return;
                         }
                         int i = lineEnd[0];
@@ -983,6 +986,7 @@ public class Alhena {
                                             if (tPane.awatingImage()) {
                                                 tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
                                             } else {
+                                                cPage.setBusy(false);
                                                 p.textPane.end(" ", false, origURL, true);
                                                 p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
                                             }
@@ -1108,6 +1112,7 @@ public class Alhena {
                                 tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
 
                             } else {
+                                cPage.setBusy(false);
                                 p.textPane.end(" ", false, origURL, true);
                                 p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
                             }
