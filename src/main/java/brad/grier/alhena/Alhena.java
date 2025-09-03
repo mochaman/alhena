@@ -1771,6 +1771,7 @@ public class Alhena {
                                 tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
 
                             } else {
+                                cPage.setBusy(false);
                                 p.textPane.end(" ", false, origURL, true);
                                 p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
                             }
