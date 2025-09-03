@@ -150,6 +150,10 @@ public class GeminiTextPane extends JTextPane {
     public static boolean shadePF;
     private PreformattedTextPane ptp;
     private StringBuilder asciiSB;
+    private Point lastScreen;
+    private long pressTime;
+    private boolean dragging;
+    public static boolean dragToScroll;
 
     static {
         String userDefined = System.getenv("ALHENA_MONOFONT");
@@ -384,6 +388,23 @@ public class GeminiTextPane extends JTextPane {
                 showPopup(e);
 
             }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (dragToScroll) {
+                    lastScreen = e.getLocationOnScreen();
+                    pressTime = System.currentTimeMillis();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (dragToScroll) {
+                    lastScreen = null;
+                    pressTime = 0;
+                    dragging = false;
+                }
+            }
         });
 
         setDropTarget(new DropTarget() {
@@ -444,6 +465,31 @@ public class GeminiTextPane extends JTextPane {
             }
         });
 
+    }
+
+    @Override
+    protected void processMouseMotionEvent(MouseEvent e) {
+        if (dragToScroll && e.getID() == MouseEvent.MOUSE_DRAGGED && (dragging || System.currentTimeMillis() - pressTime < 500)) {
+            if (lastScreen == null) {
+                return;
+            }
+            dragging = true;
+            Point current = e.getLocationOnScreen();
+            int dx = current.x - lastScreen.x;  // flipped
+            int dy = current.y - lastScreen.y;  // flipped
+
+            JScrollBar hbar = scrollPane.getHorizontalScrollBar();
+            JScrollBar vbar = scrollPane.getVerticalScrollBar();
+
+            hbar.setValue(hbar.getValue() - dx);
+            vbar.setValue(vbar.getValue() - dy);
+
+            lastScreen = current;
+
+        } else {
+            super.processMouseMotionEvent(e);
+            pressTime = 0;
+        }
     }
 
     private boolean inserting;
@@ -1860,7 +1906,7 @@ public class GeminiTextPane extends JTextPane {
                 } else {
                     if (finalUrl.startsWith("titan")) {
                         sfx = "✏️";
-                    }else if (finalUrl.startsWith("spartan")){
+                    } else if (finalUrl.startsWith("spartan")) {
                         sfx = "💪";
                     } else if (finalUrl.startsWith("gemini")) {
                         sfx = "🔗";

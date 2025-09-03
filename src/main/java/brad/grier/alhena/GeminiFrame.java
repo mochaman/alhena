@@ -1114,11 +1114,21 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem dragScrollItem = new JCheckBoxMenuItem(I18n.t("dragToScrollItem"), GeminiTextPane.dragToScroll);
+        dragScrollItem.addItemListener(ae -> {
+
+            GeminiTextPane.dragToScroll = !GeminiTextPane.dragToScroll;
+            
+            DB.insertPref("dragscroll", String.valueOf(GeminiTextPane.dragToScroll));
+
+        });
+
         settingsMenu.add(vlcItem);
         settingsMenu.add(favIconItem);
         settingsMenu.add(dataUrlItem);
         settingsMenu.add(linkIconItem);
         settingsMenu.add(scrollSizeItem);
+        settingsMenu.add(dragScrollItem);
 
         settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem(I18n.t("httpProxyItem"));

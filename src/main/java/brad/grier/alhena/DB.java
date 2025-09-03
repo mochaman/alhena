@@ -726,6 +726,7 @@ public class DB {
         Alhena.scrollSpeed = map.get("scrollspeed");
         Alhena.smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
+        GeminiTextPane.dragToScroll = map.getOrDefault("dragscroll", "false").equals("true");
 
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes

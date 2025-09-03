@@ -422,6 +422,7 @@ public class Alhena {
         smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
         bigScrollBar = map.getOrDefault("bigscrollbar", "false").equals("true");
+        GeminiTextPane.dragToScroll = map.getOrDefault("dragscroll", "false").equals("true");
 
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
