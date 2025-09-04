@@ -6,6 +6,7 @@ import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.event.MouseEvent;
 import java.util.List;
 
 import javax.swing.ImageIcon;
@@ -42,7 +43,7 @@ public class PreformattedTextPane extends JTextPane {
     private int fontSize;
     private final boolean isDark;
 
-    public PreformattedTextPane(Color bgColor, Integer fontSize, boolean isDark) {
+    public PreformattedTextPane(Color bgColor, Integer fontSize, boolean isDark, GeminiTextPane parentPane) {
         if (fontSize != null) {
             this.fontSize = fontSize;
         }
@@ -60,7 +61,24 @@ public class PreformattedTextPane extends JTextPane {
 
         setEditorKit(new GeminiEditorKit());
         init(bgColor);
+        this.parentPane = parentPane;
 
+    }
+    private final GeminiTextPane parentPane;
+
+    @Override
+    protected void processMouseMotionEvent(MouseEvent e) {
+
+        if (e.getID() == MouseEvent.MOUSE_DRAGGED && parentPane != null) {
+            if (GeminiTextPane.dragToScroll && (parentPane.dragging || System.currentTimeMillis() - parentPane.pressTime < 500)) {
+                parentPane.dispatchEvent(SwingUtilities.convertMouseEvent(this, e, parentPane));
+            }else{
+                super.processMouseMotionEvent(e);
+            }
+
+        }else{
+            super.processMouseMotionEvent(e);
+        }
     }
 
     private void buildStyle(Color bgColor) {

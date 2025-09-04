@@ -151,8 +151,8 @@ public class GeminiTextPane extends JTextPane {
     private PreformattedTextPane ptp;
     private StringBuilder asciiSB;
     private Point lastScreen;
-    private long pressTime;
-    private boolean dragging;
+    public long pressTime;
+    public boolean dragging;
     public static boolean dragToScroll;
 
     static {
@@ -2107,7 +2107,7 @@ public class GeminiTextPane extends JTextPane {
     private PreformattedTextPane createTextComponent(boolean curPos) {
 
         Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
-        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize, isDark);
+        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize, isDark, GeminiTextPane.this);
 
         JScrollPane sp = new JScrollPane(pfTextPane);
         pfTextPane.setFocusTraversalKeysEnabled(false);
@@ -2139,7 +2139,24 @@ public class GeminiTextPane extends JTextPane {
             }
 
         });
+
         pfTextPane.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (dragToScroll) {
+                    lastScreen = e.getLocationOnScreen();
+                    pressTime = System.currentTimeMillis();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (dragToScroll) {
+                    lastScreen = null;
+                    pressTime = 0;
+                    dragging = false;
+                }
+            }
 
             @Override
             public void mouseEntered(MouseEvent e) {
