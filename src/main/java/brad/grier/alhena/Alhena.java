@@ -1652,6 +1652,7 @@ public class Alhena {
                                 }
                                 p.setTitanEdited(false);
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
+                                p.frame().setTmpStatus("redirect: " + redirectURI);
                                 p.redirectCount++;
                                 processURL(redirectURI, p, origURL, cPage, false);
                             }
