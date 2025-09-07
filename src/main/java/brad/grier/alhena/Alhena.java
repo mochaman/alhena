@@ -1047,6 +1047,7 @@ public class Alhena {
                                 String prt = port[0] == 300 ? "" : (":" + port[0]);
                                 // can redirect return full path?
                                 String redirect = "spartan://" + uri.getHost() + prt + redirectPath;
+                                p.frame().setTmpStatus("redirect: " + redirect);
                                 processURL(redirect, p, origURL, cPage, false);
                             }
                             case '4', '5' -> {
