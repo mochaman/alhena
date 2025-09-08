@@ -2,7 +2,7 @@
 
 **Alhena** is an easy-to-use, multi-platform Gemini/Spartan/Nex browser sporting an uncluttered, modern interface. Browse the small web in style!
 
-[![Alhena Screenshot](https://metaloupe.com/alhena/images/alhena_main2.png)](https://metaloupe.com/alhena/alhena.html)
+[![Alhena Screenshot](assets/alhena.png)](https://metaloupe.com/alhena/alhena.html)
 
 🔗 **[Official Website](https://metaloupe.com/alhena/alhena.html)**
 
@@ -104,15 +104,15 @@ The password is `alhena`
 
 Titan Text Editor: 
 
-![Editor](https://metaloupe.com/alhena/images/titan_editor_windows2.png)
+![Editor](assets/titan.png)
 
 Embedded Video (VLC Required):
 
-![Light Theme](https://metaloupe.com/alhena/images/alhenavideo.png)
+![Light Theme](assets/video.png)
 
 ANSI Color:  
 
-![ANSI](https://metaloupe.com/alhena/images/windowsansi.png)
+![ANSI](assets/ansi.png)
 
 ## 🛠 License
 Alhena is licensed under the **GNU General Public License v3.0 (GPLv3)**. See [LICENSE](LICENSE) for details.
