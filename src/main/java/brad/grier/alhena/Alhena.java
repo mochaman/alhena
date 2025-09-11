@@ -142,7 +142,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public static String welcomeMessage;
-    public final static String VERSION = "5.3.1";
+    public final static String VERSION = "5.3.2";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif");
