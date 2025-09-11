@@ -62,7 +62,6 @@ public class PreformattedTextPane extends JTextPane {
 
         setEditorKit(new GeminiEditorKit());
         init(bgColor);
-        
 
     }
     private final GeminiTextPane parentPane;
@@ -73,11 +72,11 @@ public class PreformattedTextPane extends JTextPane {
         if (e.getID() == MouseEvent.MOUSE_DRAGGED && parentPane != null) {
             if (GeminiTextPane.dragToScroll && (parentPane.dragging || System.currentTimeMillis() - parentPane.pressTime < 500)) {
                 parentPane.dispatchEvent(SwingUtilities.convertMouseEvent(this, e, parentPane));
-            }else{
+            } else {
                 super.processMouseMotionEvent(e);
             }
 
-        }else{
+        } else {
             super.processMouseMotionEvent(e);
         }
     }
@@ -90,10 +89,16 @@ public class PreformattedTextPane extends JTextPane {
             }
         }
         Style pfStyle = doc.addStyle("```", null);
-        StyleConstants.setFontFamily(pfStyle, parentPane.pageStyle.getMonoFontFamily());
-        StyleConstants.setBackground(pfStyle, bgColor);
-        StyleConstants.setForeground(pfStyle, parentPane.pageStyle.getMonoFontColor());
-        StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : parentPane.pageStyle.getMonoFontSize());
+        if (parentPane == null) {
+            StyleConstants.setFontFamily(pfStyle, GeminiTextPane.monospacedFamily);
+            StyleConstants.setBackground(pfStyle, bgColor);
+            StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : GeminiFrame.monoFontSize);
+        } else {
+            StyleConstants.setFontFamily(pfStyle, parentPane.pageStyle.getMonoFontFamily());
+            StyleConstants.setBackground(pfStyle, bgColor);
+            StyleConstants.setForeground(pfStyle, parentPane.pageStyle.getMonoFontColor());
+            StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : parentPane.pageStyle.getMonoFontSize());
+        }
 
     }
 
