@@ -391,22 +391,39 @@ public class Util {
         }
     }
 
-    public static Font getFont(Component f, Font font) {
+    public static Font getFont(Component f, Font font, boolean showSlider, boolean showReset) {
         FontChooser fontChooser = new FontChooser(font);
         fontChooser.setPreferredSize(new Dimension(700, 350));
-
-        JSlider slider = new JSlider(JSlider.HORIZONTAL, 5, 35, GeminiFrame.monoFontSize);
-        slider.setMajorTickSpacing(5);
-        slider.setMinorTickSpacing(5);
-        slider.setPaintTicks(true);
-        slider.setPaintLabels(true);
-        Object[] message = {
-            fontChooser,
-            new JLabel(" "),
-            new JLabel(I18n.t("fontDialogPFLabel")),
-            slider
-        };
-        Object[] options = {I18n.t("okLabel"), I18n.t("cancelLabel"), I18n.t("resetLabel")};
+        Object[] message;
+        JSlider slider = null;
+        if (showSlider) {
+            slider = new JSlider(JSlider.HORIZONTAL, 5, 35, GeminiFrame.monoFontSize);
+            slider.setMajorTickSpacing(5);
+            slider.setMinorTickSpacing(5);
+            slider.setPaintTicks(true);
+            slider.setPaintLabels(true);
+            Object[] msg = {
+                fontChooser,
+                new JLabel(" "),
+                new JLabel(I18n.t("fontDialogPFLabel")),
+                slider
+            };
+            message = msg;
+        } else {
+            Object[] msg = {
+                fontChooser
+            };
+            message = msg;
+        }
+        Object[] options;
+        if(showReset){
+            Object[] opt = {I18n.t("okLabel"), I18n.t("cancelLabel"), I18n.t("resetLabel")};
+            options = opt;
+        }else{
+            Object[] opt = {I18n.t("okLabel"), I18n.t("cancelLabel")};
+            options = opt;
+        }
+        //Object[] options = {I18n.t("okLabel"), I18n.t("cancelLabel"), I18n.t("resetLabel")};
         JOptionPane optionPane = new JOptionPane(
                 message, // Message
                 JOptionPane.PLAIN_MESSAGE, // Message type
@@ -431,7 +448,9 @@ public class Util {
         Object selectedValue = optionPane.getValue();
         if (selectedValue instanceof String val) {
             if (val.equals(I18n.t("okLabel"))) {
-                GeminiFrame.monoFontSize = slider.getValue();
+                if (slider != null) {
+                    GeminiFrame.monoFontSize = slider.getValue();
+                }
                 return fontChooser.getSelectedFont();
             } else if (val.equals(I18n.t("resetLabel"))) {
                 GeminiFrame.monoFontSize = GeminiFrame.DEFAULT_FONT_SIZE;
@@ -528,7 +547,7 @@ public class Util {
             if (scaledWidth <= 0) {
                 scaledWidth = 1;
             }
-            
+
             if (img.getWidth() > scaledWidth || img.getHeight() > scaledHeight) {
                 img = getScaledInstance(img, scaledWidth, scaledHeight, RenderingHints.VALUE_INTERPOLATION_BILINEAR, true, false);
             } else {

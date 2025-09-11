@@ -885,7 +885,7 @@ public final class GeminiFrame extends JFrame {
 
         settingsMenu.add(createMenuItem(I18n.t("fontItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
             Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, DEFAULT_FONT_SIZE);
-            Font font = Util.getFont(GeminiFrame.this, defFont);
+            Font font = Util.getFont(GeminiFrame.this, defFont, true, true);
             if (font != null) {
                 saveFont = font;
 

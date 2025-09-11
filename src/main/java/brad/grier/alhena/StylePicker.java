@@ -140,7 +140,7 @@ public class StylePicker extends JPanel {
                     null;
 
             };
-            Font chosenFont = Util.getFont(StylePicker.this, f);
+            Font chosenFont = Util.getFont(StylePicker.this, f, false, false);
             if (chosenFont != null) {
 
                 switch (selectedLine) {
