@@ -1030,21 +1030,21 @@ public final class GeminiFrame extends JFrame {
 
         }));
 
-        settingsMenu.add(createMenuItem("Styles", null, () -> {
-            String[] scopeItems = {"Global", "Current Domain", "Current URL"};
+        settingsMenu.add(createMenuItem(I18n.t("stylesItem"), null, () -> {
+            String[] scopeItems = {I18n.t("scope1Label"), I18n.t("scope2Label"), I18n.t("scope3Label")};
             JComboBox<String> scopeCombo = new JComboBox(scopeItems);
             scopeCombo.setEditable(false);
 
-            String[] themeItems = {"All", "Light", "Dark", "Current"};
+            String[] themeItems = {I18n.t("styleTheme1"), I18n.t("styleTheme2"), I18n.t("styleTheme3"), I18n.t("styleTheme4")};
             JComboBox<String> themeCombo = new JComboBox(themeItems);
 
             themeCombo.setEditable(false);
-            Object[] comps = {new JLabel("Pick the scope and theme. The edited style will only apply to matching pages."),
-                new JLabel(" "), new JLabel("Scope:"), scopeCombo, new JLabel("Theme:"), themeCombo};
-            Object[] opts = {"OK", "Current", "Cancel"};
-            Object res = Util.inputDialog2(this, "Style", comps, opts, false);
+            Object[] comps = {new JLabel(I18n.t("scopeText")),
+                new JLabel(" "), new JLabel(I18n.t("styleScopeLabel")), scopeCombo, new JLabel(I18n.t("styleThemeLabel")), themeCombo};
+            Object[] opts = {I18n.t("okLabel"), I18n.t("currentLabel"), I18n.t("cancelLabel")};
+            Object res = Util.inputDialog2(this, I18n.t("stylesItem"), comps, opts, false);
 
-            if ("OK".equals(res)) {
+            if (I18n.t("okLabel").equals(res)) {
 
                 int idx = scopeCombo.getSelectedIndex();
                 String scope = null, scopeValue = null, th = null;
@@ -1093,14 +1093,14 @@ public final class GeminiFrame extends JFrame {
                     }
                     StylePicker sp = new StylePicker(pt, apt);
                     Object[] cmps = {sp};
-                    Object[] options = {"OK", "Delete", "Cancel"};
-                    Object result = Util.inputDialog2(GeminiFrame.this, "Style", cmps, options, false);
-                    if ("OK".equals(result)) {
+                    Object[] options = {I18n.t("okLabel"), I18n.t("deleteLabel"), I18n.t("cancelLabel")};
+                    Object result = Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false);
+                    if (I18n.t("okLabel").equals(result)) {
 
                         // theme - name, LIGHT, DARK or ALL
                         DB.insertStyle(scope, scopeValue, th, sp.getAlteredPageTheme().getJson());
                         Alhena.updateFrames(false, false, false);
-                    } else if ("Delete".equals(result)) {
+                    } else if (I18n.t("deleteLabel").equals(result)) {
                         DB.deleteStyle(scope, scopeValue, th);
                         Alhena.updateFrames(false, false, false);
                     }
@@ -1109,7 +1109,7 @@ public final class GeminiFrame extends JFrame {
                     ex.printStackTrace();
                 }
 
-            } else if ("Current".equals(res)) {
+            } else if (I18n.t("currentLabel").equals(res)) {
                 Integer styleId = visiblePage().textPane.styleId;
                 if (styleId != null) {
                     try {
@@ -1126,13 +1126,13 @@ public final class GeminiFrame extends JFrame {
                         }
                         StylePicker sp = new StylePicker(pt, apt);
                         Object[] cmps = {sp};
-                        Object[] options = {"OK", "Delete", "Cancel"};
-                        Object result = Util.inputDialog2(GeminiFrame.this, "Style", cmps, options, false);
-                        if ("OK".equals(result)) {
+                        Object[] options = {I18n.t("okLabel"), I18n.t("deleteLabel"), I18n.t("cancelLabel")};
+                        Object result = Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false);
+                        if (I18n.t("okLabel").equals(result)) {
 
                             DB.updateStyle(styleId, sp.getAlteredPageTheme().getJson());
                             Alhena.updateFrames(false, false, false);
-                        } else if ("Delete".equals(result)) {
+                        } else if (I18n.t("deleteLabel").equals(result)) {
                             DB.deleteStyle(styleId);
                             Alhena.updateFrames(false, false, false);
                         }
@@ -1141,7 +1141,7 @@ public final class GeminiFrame extends JFrame {
                         ex.printStackTrace();
                     }
                 }else{
-                    Util.infoDialog(GeminiFrame.this, "No Style", "No style defined for this page.");
+                    Util.infoDialog(GeminiFrame.this, I18n.t("noStyleDialog"), I18n.t("noStyleText"));
                 }
             }
 
