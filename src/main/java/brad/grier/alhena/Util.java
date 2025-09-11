@@ -84,6 +84,7 @@ import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.drjekyll.fontchooser.FontChooser;
 
+import com.bric.colorpicker.ColorPicker;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 
@@ -416,10 +417,10 @@ public class Util {
             message = msg;
         }
         Object[] options;
-        if(showReset){
+        if (showReset) {
             Object[] opt = {I18n.t("okLabel"), I18n.t("cancelLabel"), I18n.t("resetLabel")};
             options = opt;
-        }else{
+        } else {
             Object[] opt = {I18n.t("okLabel"), I18n.t("cancelLabel")};
             options = opt;
         }
@@ -455,6 +456,54 @@ public class Util {
             } else if (val.equals(I18n.t("resetLabel"))) {
                 GeminiFrame.monoFontSize = GeminiFrame.DEFAULT_FONT_SIZE;
                 return new Font("SansSerif", Font.PLAIN, GeminiFrame.DEFAULT_FONT_SIZE);
+            }
+        }
+        return null;
+
+    }
+
+    public static Color getColor(Component f, Color color) {
+        //FontChooser fontChooser = new FontChooser(font);
+        ColorPicker cp = new ColorPicker(true, false);
+        cp.setPreferredSize(new Dimension(700, 350));
+        cp.setColor(color);
+        Object[] msg = {
+            cp
+        };
+
+
+        Object[] options;
+
+        Object[] opt = {I18n.t("okLabel"), I18n.t("cancelLabel")};
+        options = opt;
+
+        //Object[] options = {I18n.t("okLabel"), I18n.t("cancelLabel"), I18n.t("resetLabel")};
+        JOptionPane optionPane = new JOptionPane(
+                msg, // Message
+                JOptionPane.PLAIN_MESSAGE, // Message type
+                JOptionPane.DEFAULT_OPTION, // Option type
+                null, // Icon (null for default)
+                options, // Options (null for default buttons)
+                options[0] // Initial value
+        );
+
+        optionPane.setWantsInput(false);
+        JDialog dialog = optionPane.createDialog(f, I18n.t("pageBgColorDialog"));
+        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+        if (SystemInfo.isMacOS) {
+
+            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+            //dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+
+        }
+        dialog.setVisible(true);
+        Object selectedValue = optionPane.getValue();
+        if (selectedValue instanceof String val) {
+            if (val.equals(I18n.t("okLabel"))) {
+
+                return cp.getColor();
             }
         }
         return null;
