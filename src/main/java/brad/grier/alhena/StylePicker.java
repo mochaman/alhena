@@ -33,7 +33,6 @@ public class StylePicker extends JPanel {
     private JPanel textPanel;
 
     private String selectedLine = "#";
-    private Color saveBgColor;
     private PageTheme alteredPageTheme;
     private JCheckBoxMenuItem applyAllCB;
     private PageTheme saveAlteredPageTheme;
@@ -46,14 +45,12 @@ public class StylePicker extends JPanel {
         pageTheme = pTheme;
         List<JComponent> mItems = new ArrayList<>();
         JMenuItem pageColorItem = new JMenuItem("Page Background Color");
-        saveBgColor = pageTheme.getPageBackground();
         pageColorItem.addActionListener(al -> {
             Color chosenColor = JColorChooser.showDialog(
                     StylePicker.this, // parent component
                     "Select a Color", // dialog title
-                    saveBgColor // initial color
+                    pageTheme.getPageBackground() // initial color
             );
-            saveBgColor = chosenColor;
             textPanel.setBackground(chosenColor);
             pageTheme.setPageBackground(chosenColor);
             alteredPageTheme.setPageBackground(chosenColor);
@@ -73,7 +70,7 @@ public class StylePicker extends JPanel {
         });
 
         JMenuItem resetItem = new JMenuItem("Reset All To Defaults");
-        //saveBgColor = pageTheme.getPageBackground();
+
         resetItem.addActionListener(al -> {
             pageTheme = GeminiTextPane.getDefaultTheme();
             alteredPageTheme = new PageTheme();
@@ -265,6 +262,9 @@ public class StylePicker extends JPanel {
                     "Select a Color", // dialog title
                     c // initial color
             );
+            if(chosenColor == null){
+                return;
+            }
 
             switch (selectedLine) {
                 case "#" -> {
