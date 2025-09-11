@@ -17,7 +17,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -44,39 +43,36 @@ public class StylePicker extends JPanel {
         alteredPageTheme = apTheme;
         pageTheme = pTheme;
         List<JComponent> mItems = new ArrayList<>();
-        JMenuItem pageColorItem = new JMenuItem("Page Background Color");
+        JMenuItem pageColorItem = new JMenuItem(I18n.t("pageBackgroundItem"));
         pageColorItem.addActionListener(al -> {
-            Color chosenColor = JColorChooser.showDialog(
-                    StylePicker.this, // parent component
-                    "Select a Color", // dialog title
-                    pageTheme.getPageBackground() // initial color
-            );
+
+            Color chosenColor = Util.getColor(StylePicker.this, pageTheme.getPageBackground());
             textPanel.setBackground(chosenColor);
             pageTheme.setPageBackground(chosenColor);
             alteredPageTheme.setPageBackground(chosenColor);
         });
-        applyAllCB = new JCheckBoxMenuItem("Apply All Theme Attributes");
+        applyAllCB = new JCheckBoxMenuItem(I18n.t("applyAllCBItem"));
         applyAllCB.addItemListener(il -> {
             if (il.getStateChange() == ItemEvent.SELECTED) {
-                Util.infoDialog(StylePicker.this, "Applied", "All attributes from the current theme have been applied to this style.");
+                Util.infoDialog(StylePicker.this, I18n.t("attrDialog"), I18n.t("attrDialogTxt"));
                 saveAlteredPageTheme = new PageTheme();
                 saveAlteredPageTheme.fromJson(new JsonObject(alteredPageTheme.getJson()));
                 alteredPageTheme = pageTheme;
             } else {
-                Util.infoDialog(StylePicker.this, "Applied", "Only changed attributes have been applied to this style.");
+                Util.infoDialog(StylePicker.this, I18n.t("attrDialog"), I18n.t("changedAttrDialogTxt"));
                 alteredPageTheme = saveAlteredPageTheme;
 
             }
         });
 
-        JMenuItem resetItem = new JMenuItem("Reset All To Defaults");
+        JMenuItem resetItem = new JMenuItem(I18n.t("resetAttrItem"));
 
         resetItem.addActionListener(al -> {
             pageTheme = GeminiTextPane.getDefaultTheme();
             alteredPageTheme = new PageTheme();
             saveAlteredPageTheme = null;
             setPanelAttributes();
-            Util.infoDialog(StylePicker.this, "Reset", "All attributes have been reset.");
+            Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
 
         });
         Supplier<List<JComponent>> supplier = () -> {
@@ -93,7 +89,7 @@ public class StylePicker extends JPanel {
         JPanel tb = new JPanel(new BorderLayout(0, 0));
         PopupMenuButton pmb = new PopupMenuButton("⚙️", supplier, "");
         pmb.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
-        tb.add(new JLabel("Unedited attributes will be inherited from the current theme when displayed."), BorderLayout.WEST);
+        tb.add(new JLabel(I18n.t("styleEditorTxt")), BorderLayout.WEST);
         tb.add(pmb, BorderLayout.EAST);
         add(tb, BorderLayout.NORTH);
 
@@ -103,7 +99,7 @@ public class StylePicker extends JPanel {
         contentPanel.add(Box.createVerticalStrut(5));
         String[] items = {"#", "##", "###", "=>", "=> Hover", "=> Visited", ">", "Text", "PF Text"};
         JPanel linePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        linePanel.add(new JLabel("Line Type: "));
+        linePanel.add(new JLabel(I18n.t("lineLabel")));
         JComboBox<String> lineCombo = new JComboBox<>(items);
         lineCombo.addActionListener(al -> {
             selectedLine = (String) lineCombo.getSelectedItem();
@@ -230,7 +226,7 @@ public class StylePicker extends JPanel {
             }
         });
         buttonPanel.add(fontButton);
-        JButton colorButton = new JButton("Color");
+        JButton colorButton = new JButton(I18n.t("colorButton"));
         //saveColor = pageTheme.getHeader3Color();
 
         colorButton.addActionListener(al -> {
@@ -257,12 +253,9 @@ public class StylePicker extends JPanel {
                     null;
 
             };
-            Color chosenColor = JColorChooser.showDialog(
-                    StylePicker.this, // parent component
-                    "Select a Color", // dialog title
-                    c // initial color
-            );
-            if(chosenColor == null){
+
+            Color chosenColor = Util.getColor(StylePicker.this, c);
+            if (chosenColor == null) {
                 return;
             }
 
@@ -344,7 +337,7 @@ public class StylePicker extends JPanel {
             }
         });
         buttonPanel.add(colorButton);
-        JButton styleButton = new JButton("Style");
+        JButton styleButton = new JButton(I18n.t("styleButton"));
         styleButton.addActionListener(al -> {
             Integer st = switch (selectedLine) {
                 case "#" ->
@@ -395,14 +388,14 @@ public class StylePicker extends JPanel {
 
             };
             if (st == null) {
-                Util.infoDialog(StylePicker.this, "Unsupported", "Style not supported for pre-formatted text.", JOptionPane.WARNING_MESSAGE);
+                Util.infoDialog(StylePicker.this, I18n.t("unsupportedDialog"), I18n.t("unsupportedText"), JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            JCheckBox italicCB = new JCheckBox("Italic");
+            JCheckBox italicCB = new JCheckBox(I18n.t("italicStyle"));
             italicCB.setSelected((st & Font.ITALIC) != 0);
-            JCheckBox boldCB = new JCheckBox("Bold");
+            JCheckBox boldCB = new JCheckBox(I18n.t("boldStyle"));
             boldCB.setSelected((st & Font.BOLD) != 0);
-            JCheckBox underlineCB = new JCheckBox("Underline");
+            JCheckBox underlineCB = new JCheckBox(I18n.t("underlineStyle"));
             underlineCB.setSelected(ul);
             Object[] comps = new Object[3];
 
@@ -410,7 +403,7 @@ public class StylePicker extends JPanel {
             comps[1] = italicCB;
             comps[2] = underlineCB;
 
-            Object res = Util.inputDialog2(this, "Font Style", comps, null, false);
+            Object res = Util.inputDialog2(this, I18n.t("fontStyleDialog"), comps, null, false);
             if (res != null) {
                 boolean isBold = boldCB.isSelected();
                 boolean isItalic = italicCB.isSelected();
@@ -519,7 +512,6 @@ public class StylePicker extends JPanel {
                             f = underlineFont(f);
                         }
                         textLabel.setFont(f);
-                        //textLabel.setFont(new Font(pageTheme.getFontFamily(), style, pageTheme.getFontSize()));
                     }
                     case "PF Text" -> {
 
@@ -535,31 +527,31 @@ public class StylePicker extends JPanel {
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
         textPanel.setOpaque(true);
 
-        h3Label = new JLabel("# Heading");
+        h3Label = new JLabel(I18n.t("h3Label"));
         textPanel.add(wrap(h3Label));
-        h2Label = new JLabel("## Heading");
+        h2Label = new JLabel(I18n.t("h2Label"));
         textPanel.add(wrap(h2Label));
-        h1Label = new JLabel("### Heading");
+        h1Label = new JLabel(I18n.t("h1Label"));
         textPanel.add(wrap(h1Label));
 
-        linkLabel = new JLabel("=> Link");
+        linkLabel = new JLabel(I18n.t("linkLabel"));
 
         textPanel.add(wrap(linkLabel));
 
-        hoverLabel = new JLabel("=> Link (Hover)");
+        hoverLabel = new JLabel(I18n.t("linkHoverLabel"));
         textPanel.add(wrap(hoverLabel));
 
-        visitedLabel = new JLabel("=> Visited Link");
+        visitedLabel = new JLabel(I18n.t("linkVisitedLabel"));
 
         textPanel.add(wrap(visitedLabel));
 
-        quoteLabel = new JLabel("> Quote");
+        quoteLabel = new JLabel(I18n.t("quoteLabel"));
         textPanel.add(wrap(quoteLabel));
 
-        textLabel = new JLabel("Text");
+        textLabel = new JLabel(I18n.t("styleTextLabel"));
         textPanel.add(wrap(textLabel));
 
-        monoFontLabel = new JLabel("Pre-formatted Text");
+        monoFontLabel = new JLabel(I18n.t("pfTextLabel"));
         setPanelAttributes();
         textPanel.add(wrap(monoFontLabel));
 
