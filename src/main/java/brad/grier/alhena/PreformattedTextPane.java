@@ -44,6 +44,7 @@ public class PreformattedTextPane extends JTextPane {
     private final boolean isDark;
 
     public PreformattedTextPane(Color bgColor, Integer fontSize, boolean isDark, GeminiTextPane parentPane) {
+        this.parentPane = parentPane;
         if (fontSize != null) {
             this.fontSize = fontSize;
         }
@@ -61,7 +62,7 @@ public class PreformattedTextPane extends JTextPane {
 
         setEditorKit(new GeminiEditorKit());
         init(bgColor);
-        this.parentPane = parentPane;
+        
 
     }
     private final GeminiTextPane parentPane;
@@ -89,12 +90,11 @@ public class PreformattedTextPane extends JTextPane {
             }
         }
         Style pfStyle = doc.addStyle("```", null);
-        StyleConstants.setFontFamily(pfStyle, GeminiTextPane.monospacedFamily);
+        StyleConstants.setFontFamily(pfStyle, parentPane.pageStyle.getMonoFontFamily());
         StyleConstants.setBackground(pfStyle, bgColor);
-        StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : GeminiFrame.monoFontSize);
-        StyleConstants.setBold(pfStyle, false);
-        StyleConstants.setItalic(pfStyle, false);
-        StyleConstants.setUnderline(pfStyle, false);
+        StyleConstants.setForeground(pfStyle, parentPane.pageStyle.getMonoFontColor());
+        StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : parentPane.pageStyle.getMonoFontSize());
+
     }
 
     public final void init(Color bgColor) {

@@ -138,6 +138,7 @@ public class DB {
     }
 
     public static void initV2(JdbcConnectionPool conPool) throws Exception {
+
         try (Connection con = conPool.getConnection()) {
             String checkSql = "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CLIENTCERTS' AND COLUMN_NAME = 'DOMAIN'";
             try (var stmt = con.createStatement(); ResultSet rs = stmt.executeQuery(checkSql)) {
@@ -146,7 +147,28 @@ public class DB {
                     stmt.executeUpdate("UPDATE CLIENTCERTS SET DOMAIN = DOMAIN || ':1965/'");
                     stmt.executeUpdate("CREATE INDEX idx_url ON CLIENTCERTS(DOMAIN)");
                 }
+
+                // okay for initV2 because older Alhena versions don't query this table
+                if (!tableExists(con, "STYLES")) {
+                    // styletype 0 - all pages, 1 - domain, 2 - page
+                    // themetype 0 - all themes, 1 - light, 2 - dark
+                    // URL null (for all), url
+                    String sql = """
+                        CREATE TABLE STYLES (
+                            ID INT AUTO_INCREMENT PRIMARY KEY,
+                            SCOPE VARCHAR(10) NOT NULL,
+                            SCOPE_VALUE VARCHAR(1024),
+                            THEME VARCHAR(256) NOT NULL,
+                            STYLE TEXT NOT NULL,
+                            TIME_STAMP TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                        );
+                    """;
+                    runStatement(con, sql);
+                    runStatement(con, "CREATE INDEX idx_styles ON STYLES(SCOPE, SCOPE_VALUE, THEME);");
+                    runStatement(con, "ALTER TABLE STYLES ADD CONSTRAINT uq_styles UNIQUE (SCOPE, SCOPE_VALUE, THEME);");
+                }
             }
+
         }
     }
 
@@ -727,6 +749,7 @@ public class DB {
         Alhena.smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
         GeminiTextPane.dragToScroll = map.getOrDefault("dragscroll", "false").equals("true");
+        Alhena.theme = map.get("theme");
 
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes
@@ -777,6 +800,142 @@ public class DB {
 
         }
         return certMap;
+    }
+    public record StyleInfo(int id, String style){}
+
+    public static StyleInfo getStyle(String url, String domain, String theme, boolean isLight) throws SQLException {
+        String sql = """
+            SELECT ID, STYLE
+            FROM STYLES
+            WHERE 
+            (
+                (SCOPE = 'URL' AND SCOPE_VALUE = ?)
+                OR (SCOPE = 'DOMAIN' AND SCOPE_VALUE = ?)
+                OR (SCOPE = 'GLOBAL' AND SCOPE_VALUE = 'GLOBAL')
+            )
+            AND (
+                THEME = ?
+                OR (THEME = 'LIGHT' AND ?)
+                OR (THEME = 'DARK'  AND ?)
+                OR THEME = 'ALL'
+            )
+            ORDER BY
+            CASE SCOPE
+                WHEN 'URL' THEN 1
+                WHEN 'DOMAIN' THEN 2
+                WHEN 'GLOBAL' THEN 3
+            END,
+            CASE
+                WHEN THEME = ? THEN 1
+                WHEN THEME IN ('LIGHT','DARK') THEN 2
+                ELSE 3
+            END
+            LIMIT 1;
+
+        """;
+        StyleInfo result = null;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement(sql)) {
+            ps.setString(1, url);          // #1 full URL
+            ps.setString(2, domain);       // #2 domain only
+            ps.setString(3, theme); // #3 theme name
+            ps.setBoolean(4, isLight);     // #4
+            ps.setBoolean(5, !isLight);      // #5
+            ps.setString(6, theme); // #6 again
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    result = new StyleInfo(rs.getInt(1), rs.getString(2));
+                    //result = rs.getString(1);
+                }
+            }
+        }
+        return result;
+    }
+
+    public static void insertStyle(String scope, String scopeValue, String theme, String style) throws SQLException {
+        String sql = """
+            MERGE INTO STYLES (SCOPE, SCOPE_VALUE, THEME, STYLE)
+            KEY (SCOPE, SCOPE_VALUE, THEME)
+            VALUES (?, ?, ?, ?);
+        """;
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement(sql)) {
+                ps.setString(1, scope);
+                ps.setString(2, scopeValue);
+                ps.setString(3, theme);
+                ps.setString(4, style);
+                ps.execute();
+            }
+        }
+    }
+
+    public static void updateStyle(int id, String style) throws SQLException {
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement("UPDATE STYLES SET STYLE = ? WHERE ID = ?")) {
+                ps.setString(1, style);
+                ps.setInt(2, id);
+                ps.execute();
+            }
+        }
+    }
+
+    public static void deleteStyle(String scope, String scopeValue, String theme) throws SQLException {
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement("DELETE FROM STYLES WHERE SCOPE = ? AND SCOPE_VALUE = ? AND THEME = ?")) {
+                ps.setString(1, scope);
+                ps.setString(2, scopeValue);
+                ps.setString(3, theme);
+                ps.execute();
+            }
+        }
+    }
+
+    public static void deleteStyle(int id) throws SQLException {
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement("DELETE FROM STYLES WHERE ID = ?")) {
+                ps.setInt(1, id);
+                ps.execute();
+            }
+        }
+    }
+
+    public static String getStyle(String scope, String scopeValue, String theme) throws SQLException{
+        String style = null;
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement("SELECT STYLE FROM STYLES WHERE SCOPE = ? AND SCOPE_VALUE = ? AND THEME = ?")) {
+                ps.setString(1, scope);
+                ps.setString(2, scopeValue);
+                ps.setString(3, theme);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        style = rs.getString(1);
+                    }
+                }
+            }
+        }
+
+        return style;
+    }
+
+    public static String getStyle(int id) throws SQLException{
+        String style = null;
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement("SELECT STYLE FROM STYLES WHERE ID = ?")) {
+                ps.setInt(1, id);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        style = rs.getString(1);
+                    }
+                }
+            }
+        }
+
+        return style;
     }
 
 }

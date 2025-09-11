@@ -89,6 +89,7 @@ import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.DBClientCertInfo;
 import brad.grier.alhena.GeminiTextPane.CurrentPage;
 import brad.grier.alhena.Util.PemData;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Alhena frame
@@ -122,7 +123,7 @@ public final class GeminiFrame extends JFrame {
     public static int fontSize = DEFAULT_FONT_SIZE;
     public static int monoFontSize = DEFAULT_FONT_SIZE;
     public static boolean ansiAlert;
-    private static Font saveFont;
+    public static Font saveFont;
     public final static String SYNC_SERVER = "ultimatumlabs.com:1965/";
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private MenuItem mi;
@@ -323,15 +324,6 @@ public final class GeminiFrame extends JFrame {
             getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
             //getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
         }
-
-        proportionalFamily = DB.getPref("fontfamily", "SansSerif");
-        String fs = DB.getPref("fontsize", String.valueOf(DEFAULT_FONT_SIZE));
-        fontSize = Integer.parseInt(fs);
-        String mfs = DB.getPref("monofontsize", String.valueOf(DEFAULT_FONT_SIZE));
-        monoFontSize = Integer.parseInt(mfs);
-
-        String dbFont = DB.getPref("font", "SansSerif");
-        saveFont = new Font(dbFont, Font.PLAIN, fontSize);
 
         // test to see if db font exists - maybe deleted from system or db moved to another os
         // fonts created with invalid names are created anyway with Dialog font family
@@ -879,8 +871,8 @@ public final class GeminiFrame extends JFrame {
                         try {
 
                             DB.insertPref("theme", value.className());
-
-                            Alhena.updateFrames(false, false);
+                            Alhena.theme = value.className();
+                            Alhena.updateFrames(false, false, true);
 
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -899,7 +891,7 @@ public final class GeminiFrame extends JFrame {
 
                 proportionalFamily = font.getName();
                 fontSize = font.getSize();
-                Alhena.updateFrames(false, false);
+                Alhena.updateFrames(false, false, false);
 
                 DB.insertPref("font", font.getName());
                 DB.insertPref("fontfamily", proportionalFamily);
@@ -981,7 +973,7 @@ public final class GeminiFrame extends JFrame {
 
             JPanel tabPosPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
             tabPosPanel.add(new JLabel(I18n.t("tabPosLabel")));
-            String[] items = { I18n.t("tabPosTop"), I18n.t("tabPosBottom"), I18n.t("tabPosLeft"), I18n.t("tabPosRight")};
+            String[] items = {I18n.t("tabPosTop"), I18n.t("tabPosBottom"), I18n.t("tabPosLeft"), I18n.t("tabPosRight")};
             JComboBox<String> tabPosCombo = new JComboBox<>(items);
             tabPosCombo.setEditable(false);
             tabPosCombo.setSelectedIndex(tabPosition);
@@ -1033,11 +1025,127 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("showsb", String.valueOf(GeminiTextPane.showSB));
                 GeminiTextPane.shadePF = shadeCB.isSelected();
                 DB.insertPref("shadepf", String.valueOf(GeminiTextPane.shadePF));
-                Alhena.updateFrames(false, false);
+                Alhena.updateFrames(false, false, false);
             }
 
         }));
 
+        settingsMenu.add(createMenuItem("Styles", null, () -> {
+            String[] scopeItems = {"Global", "Current Domain", "Current URL"};
+            JComboBox<String> scopeCombo = new JComboBox(scopeItems);
+            scopeCombo.setEditable(false);
+
+            String[] themeItems = {"All", "Light", "Dark", "Current"};
+            JComboBox<String> themeCombo = new JComboBox(themeItems);
+
+            themeCombo.setEditable(false);
+            Object[] comps = {new JLabel("Pick the scope and theme. The edited style will only apply to matching pages."),
+                new JLabel(" "), new JLabel("Scope:"), scopeCombo, new JLabel("Theme:"), themeCombo};
+            Object[] opts = {"OK", "Current", "Cancel"};
+            Object res = Util.inputDialog2(this, "Style", comps, opts, false);
+
+            if ("OK".equals(res)) {
+
+                int idx = scopeCombo.getSelectedIndex();
+                String scope = null, scopeValue = null, th = null;
+                switch (idx) {
+                    case 0 ->
+                        scope = scopeValue = "GLOBAL";
+                    case 1 -> {
+                        scope = "DOMAIN";
+                        scopeValue = visiblePage().textPane.getURI().getAuthority();
+                        if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
+                            scope = "URL";
+                            scopeValue = visiblePage().textPane.getDocURLString();
+                        }
+
+                    }
+                    case 2 -> {
+                        scope = "URL";
+                        scopeValue = visiblePage().textPane.getDocURLString();
+                    }
+                    default -> {
+                    }
+                }
+                idx = themeCombo.getSelectedIndex();
+                switch (idx) {
+                    case 0 ->
+                        th = "ALL";
+                    case 1 ->
+                        th = "LIGHT";
+                    case 2 ->
+                        th = "DARK";
+                    case 3 ->
+                        th = Alhena.theme;
+                }
+
+                try {
+                    String jstring = DB.getStyle(scope, scopeValue, th);
+                    PageTheme pt;
+                    PageTheme apt = new PageTheme();
+                    if (jstring != null) {
+                        pt = visiblePage().textPane.getDefaultTheme();
+                        JsonObject apJo = new JsonObject(jstring);
+                        pt.fromJson(apJo); // merge in changes
+                        apt.fromJson(apJo);
+                    } else {
+                        pt = visiblePage().textPane.getDefaultTheme();
+                    }
+                    StylePicker sp = new StylePicker(pt, apt);
+                    Object[] cmps = {sp};
+                    Object[] options = {"OK", "Delete", "Cancel"};
+                    Object result = Util.inputDialog2(GeminiFrame.this, "Style", cmps, options, false);
+                    if ("OK".equals(result)) {
+
+                        // theme - name, LIGHT, DARK or ALL
+                        DB.insertStyle(scope, scopeValue, th, sp.getAlteredPageTheme().getJson());
+                        Alhena.updateFrames(false, false, false);
+                    } else if ("Delete".equals(result)) {
+                        DB.deleteStyle(scope, scopeValue, th);
+                        Alhena.updateFrames(false, false, false);
+                    }
+
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+
+            } else if ("Current".equals(res)) {
+                Integer styleId = visiblePage().textPane.styleId;
+                if (styleId != null) {
+                    try {
+                        String jstring = DB.getStyle(styleId);
+                        PageTheme pt;
+                        PageTheme apt = new PageTheme();
+                        if (jstring != null) {
+                            pt = visiblePage().textPane.getDefaultTheme();
+                            JsonObject apJo = new JsonObject(jstring);
+                            pt.fromJson(apJo); // merge in changes
+                            apt.fromJson(apJo);
+                        } else {
+                            pt = visiblePage().textPane.getDefaultTheme();
+                        }
+                        StylePicker sp = new StylePicker(pt, apt);
+                        Object[] cmps = {sp};
+                        Object[] options = {"OK", "Delete", "Cancel"};
+                        Object result = Util.inputDialog2(GeminiFrame.this, "Style", cmps, options, false);
+                        if ("OK".equals(result)) {
+
+                            DB.updateStyle(styleId, sp.getAlteredPageTheme().getJson());
+                            Alhena.updateFrames(false, false, false);
+                        } else if ("Delete".equals(result)) {
+                            DB.deleteStyle(styleId);
+                            Alhena.updateFrames(false, false, false);
+                        }
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                }else{
+                    Util.infoDialog(GeminiFrame.this, "No Style", "No style defined for this page.");
+                }
+            }
+
+        }));
         settingsMenu.add(new JSeparator());
         JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem(I18n.t("smoothScrollingItem"), Alhena.smoothScrolling);
         smoothItem.addItemListener(ae -> {
@@ -1088,7 +1196,7 @@ public final class GeminiFrame extends JFrame {
 
             DB.insertPref("dataurl", String.valueOf(Alhena.dataUrl));
 
-            Alhena.updateFrames(false, false);
+            Alhena.updateFrames(false, false, false);
 
         });
 
@@ -1099,7 +1207,7 @@ public final class GeminiFrame extends JFrame {
 
             DB.insertPref("linkicons", String.valueOf(Alhena.linkIcons));
 
-            Alhena.updateFrames(false, false);
+            Alhena.updateFrames(false, false, false);
 
         });
 
@@ -1107,10 +1215,10 @@ public final class GeminiFrame extends JFrame {
         scrollSizeItem.addItemListener(ae -> {
 
             Alhena.bigScrollBar = !Alhena.bigScrollBar;
-            
+
             DB.insertPref("bigscrollbar", String.valueOf(Alhena.bigScrollBar));
 
-            Alhena.updateFrames(false, false);
+            Alhena.updateFrames(false, false, false);
 
         });
 
@@ -1118,7 +1226,7 @@ public final class GeminiFrame extends JFrame {
         dragScrollItem.addItemListener(ae -> {
 
             GeminiTextPane.dragToScroll = !GeminiTextPane.dragToScroll;
-            
+
             DB.insertPref("dragscroll", String.valueOf(GeminiTextPane.dragToScroll));
 
         });
@@ -1182,13 +1290,17 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    public void setTabPos(int pos){
-        if(tabbedPane != null){
+    public void setTabPos(int pos) {
+        if (tabbedPane != null) {
             int newPos = switch (pos) {
-                case 0 -> JTabbedPane.TOP;
-                case 1 -> JTabbedPane.BOTTOM;
-                case 2 -> JTabbedPane.LEFT;
-                default -> JTabbedPane.RIGHT;
+                case 0 ->
+                    JTabbedPane.TOP;
+                case 1 ->
+                    JTabbedPane.BOTTOM;
+                case 2 ->
+                    JTabbedPane.LEFT;
+                default ->
+                    JTabbedPane.RIGHT;
             };
             tabbedPane.setTabPlacement(newPos);
         }
@@ -1262,18 +1374,18 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("emoji", setName);
                 DB.insertPref("macusenoto", String.valueOf(macUseNoto));
                 Alhena.macUseNoto = macUseNoto;
-                Alhena.updateFrames(false, false);
+                Alhena.updateFrames(false, false, false);
                 lastSelectedItem = selected;
             } else if (macUseNoto != savedMacNotoPref && setName.equals(savedSet)) {
 
-                Alhena.updateFrames(false, false);
+                Alhena.updateFrames(false, false, false);
             } else {
                 String url = emojiNameMap.get(setName);
 
                 if (setName.equals("google")) {
                     GeminiTextPane.setSheetImage(Util.loadImage(url));
                     DB.insertPref("emoji", "google");
-                    Alhena.updateFrames(false, false);
+                    Alhena.updateFrames(false, false, false);
                     lastSelectedItem = selected;
                 } else {
                     String fn = url.substring(url.lastIndexOf('/'));
@@ -1285,7 +1397,7 @@ public final class GeminiFrame extends JFrame {
                         try {
                             GeminiTextPane.setSheetImage(ImageIO.read(emojiFile));
                             DB.insertPref("emoji", setName);
-                            Alhena.updateFrames(false, false);
+                            Alhena.updateFrames(false, false, false);
                             lastSelectedItem = selected;
                         } catch (IOException ex) {
                             lastSelectedItem.setSelected(true);
@@ -1313,7 +1425,7 @@ public final class GeminiFrame extends JFrame {
                         DB.insertPref("emoji", setName);
 
                         GeminiTextPane.setSheetImage(setImage);
-                        Alhena.updateFrames(false, false);
+                        Alhena.updateFrames(false, false, false);
                         lastSelectedItem = selected;
 
                     });
@@ -2081,7 +2193,7 @@ public final class GeminiFrame extends JFrame {
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     DB.deleteBookmark(bmId);
-                    Alhena.updateFrames(true, false);
+                    Alhena.updateFrames(true, false, false);
                     EventQueue.invokeLater(() -> refresh());
 
                 }
@@ -2245,7 +2357,7 @@ public final class GeminiFrame extends JFrame {
                     DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem(), urlField.getText());
                 }
                 refresh();
-                Alhena.updateFrames(true, false);
+                Alhena.updateFrames(true, false, false);
                 //EventQueue.invokeLater(() -> refresh());
             }
 
@@ -2424,10 +2536,14 @@ public final class GeminiFrame extends JFrame {
             invalidate();
             tabbedPane = new JTabbedPane();
             int newPos = switch (tabPosition) {
-                case 0 -> JTabbedPane.TOP;
-                case 1 -> JTabbedPane.BOTTOM;
-                case 2 -> JTabbedPane.LEFT;
-                default -> JTabbedPane.RIGHT;
+                case 0 ->
+                    JTabbedPane.TOP;
+                case 1 ->
+                    JTabbedPane.BOTTOM;
+                case 2 ->
+                    JTabbedPane.LEFT;
+                default ->
+                    JTabbedPane.RIGHT;
             };
             tabbedPane.setTabPlacement(newPos);
 

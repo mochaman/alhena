@@ -92,6 +92,7 @@ import com.techsenger.ansi4j.core.api.spi.ParserFactoryConfig;
 import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
 import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
+import brad.grier.alhena.DB.StyleInfo;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -329,10 +330,9 @@ public class GeminiTextPane extends JTextPane {
 
                             if (!range.url.equals(currentStatus)) {
                                 // +1 needed since using png for emoji
-                                AttributeSet originalStyle = doc.getCharacterElement(range.start + 1).getAttributes();
-                                Color hoverC = StyleConstants.getForeground(originalStyle).brighter();
+
                                 SimpleAttributeSet sa = new SimpleAttributeSet();
-                                StyleConstants.setForeground(sa, hoverC);
+                                StyleConstants.setForeground(sa, hoverColor);
 
                                 f.setStatus(range.url);
                                 currentStatus = range.url;
@@ -1609,7 +1609,84 @@ public class GeminiTextPane extends JTextPane {
         customFontSize = fs;
     }
 
+    public static PageTheme getDefaultTheme() {
+        PageTheme pageTheme = new PageTheme();
+        boolean isDark = UIManager.getBoolean("laf.dark");
+        Color lc = UIManager.getColor("Component.linkColor");
+        pageTheme.setLinkColor(lc);
+        pageTheme.setLinkStyle(Font.PLAIN);
+        pageTheme.setVisitedLinkColor(isDark ? lc.darker() : lc.brighter());
+        pageTheme.setHoverColor(pageTheme.getLinkColor().brighter());
+        pageTheme.setMonoFontSize(GeminiFrame.monoFontSize);
+        pageTheme.setMonoFontFamily(monospacedFamily);
+        pageTheme.setMonoFontColor(UIManager.getColor("TextPane.foreground"));
+        pageTheme.setTextForeground(UIManager.getColor("TextPane.foreground"));
+        pageTheme.setFontStyle(Font.PLAIN);
+        pageTheme.setQuoteForeground(pageTheme.getTextForeground());
+        pageTheme.setQuoteStyle(Font.ITALIC);
+        pageTheme.setFontSize(GeminiFrame.fontSize);
+        pageTheme.setFontFamily(GeminiFrame.proportionalFamily);
+        pageTheme.setHeader1Color(AnsiColor.adjustColor(isDark ? lc.brighter() : lc.darker(), isDark, .1, .9, .2));
+        pageTheme.setHeader1Style(Font.PLAIN);
+        pageTheme.setHeader2Color(pageTheme.getHeader1Color());
+        pageTheme.setHeader2Style(Font.PLAIN);
+        pageTheme.setHeader3Color(pageTheme.getHeader1Color());
+        pageTheme.setHeader3Style(Font.PLAIN);
+        pageTheme.setHeader1Size(pageTheme.getFontSize() + 3);
+        pageTheme.setHeader2Size(pageTheme.getFontSize() + 9);
+        pageTheme.setHeader3Size(pageTheme.getFontSize() + 17);
+        pageTheme.setLinkSize(pageTheme.getFontSize());
+        pageTheme.setQuoteSize(pageTheme.getFontSize());
+        pageTheme.setHeader1FontFamily(GeminiFrame.proportionalFamily);
+        pageTheme.setHeader2FontFamily(GeminiFrame.proportionalFamily);
+        pageTheme.setHeader3FontFamily(GeminiFrame.proportionalFamily);
+        pageTheme.setLinkFontFamily(GeminiFrame.proportionalFamily);
+        pageTheme.setQuoteFontFamily(GeminiFrame.proportionalFamily);
+        pageTheme.setPageBackground(UIManager.getColor("TextPane.inactiveBackground"));
+        pageTheme.setLinkUnderline(false);
+        pageTheme.setQuoteUnderline(false);
+        pageTheme.setFontUnderline(false);
+        pageTheme.setHeader1Underline(false);
+        pageTheme.setHeader2Underline(false);
+        pageTheme.setHeader3Underline(false);
+
+        return pageTheme;
+    }
+
+    public Integer styleId;
+
+    public PageTheme getPageStyle() {
+        String dbTheme = Alhena.theme;
+
+        //String jstring = null;
+        StyleInfo dbStyle = null;
+        try {
+            dbStyle = DB.getStyle(docURL, getURI().getAuthority(), dbTheme, !isDark);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        JsonObject customTheme;
+        if (dbStyle != null) {
+            customTheme = new JsonObject(dbStyle.style());
+            styleId = dbStyle.id();
+        }else{
+            customTheme = new JsonObject();
+            styleId = null;
+        }
+        PageTheme pageTheme = getDefaultTheme();
+        pageTheme.fromJson(customTheme);
+        return pageTheme;
+
+    }
+
+    protected PageTheme pageStyle;
+
     private void buildStyles() {
+        isDark = UIManager.getBoolean("laf.dark");
+
+        pageStyle = getPageStyle();
+
+        setBackground(pageStyle.getPageBackground());
 
         for (MediaComponent ap : playerList) {
             ap.dispose();
@@ -1623,38 +1700,40 @@ public class GeminiTextPane extends JTextPane {
             }
         }
 
-        isDark = UIManager.getBoolean("laf.dark");
+        linkColor = pageStyle.getLinkColor();
+        hoverColor = pageStyle.getHoverColor();
 
-        linkColor = UIManager.getColor("Component.linkColor");
-        hoverColor = linkColor.brighter();
-
-        int gfMonoFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.monoFontSize;
+        int gfMonoFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getMonoFontSize();
         Style pfStyle = doc.addStyle("```", null);
-        StyleConstants.setFontFamily(pfStyle, monospacedFamily);
+        StyleConstants.setFontFamily(pfStyle, pageStyle.getMonoFontFamily());
         StyleConstants.setFontSize(pfStyle, gfMonoFontSize);
-        StyleConstants.setBold(pfStyle, false);
-        StyleConstants.setItalic(pfStyle, false);
-        StyleConstants.setUnderline(pfStyle, false);
+        StyleConstants.setForeground(pfStyle, pageStyle.getMonoFontColor());
 
-        Color foreground = UIManager.getColor("TextField.foreground");
-        int gfFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : GeminiFrame.fontSize;
         Style h1Style = doc.addStyle("###", null);
-        StyleConstants.setFontFamily(h1Style, GeminiFrame.proportionalFamily);
-        StyleConstants.setFontSize(h1Style, gfFontSize + 3); // 18
+        StyleConstants.setFontFamily(h1Style, pageStyle.getHeader1FontFamily());
+        StyleConstants.setFontSize(h1Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getHeader1Size());
 
-        StyleConstants.setBold(h1Style, false);
-        StyleConstants.setItalic(h1Style, false);
-        StyleConstants.setUnderline(h1Style, false);
-        //Color hColor = UIManager.getColor("TextField.selectionBackground");
-        Color hColor = AnsiColor.adjustColor(isDark ? linkColor.brighter() : linkColor.darker(), isDark, .1, .9, .2);
-        //hColor = isDark ? hColor.brighter() : hColor.darker();
-        StyleConstants.setForeground(h1Style, hColor);
+        StyleConstants.setBold(h1Style, (pageStyle.getHeader1Style() & Font.BOLD) != 0);
+        StyleConstants.setItalic(h1Style, (pageStyle.getHeader1Style() & Font.ITALIC) != 0);
+        StyleConstants.setUnderline(h1Style, pageStyle.getHeader1Underline());
+
+        StyleConstants.setForeground(h1Style, pageStyle.getHeader1Color());
 
         Style h2Style = doc.addStyle("##", h1Style);
-        StyleConstants.setFontSize(h2Style, gfFontSize + 9); // 24
+        StyleConstants.setUnderline(h2Style, pageStyle.getHeader2Underline());
+        StyleConstants.setFontFamily(h2Style, pageStyle.getHeader2FontFamily());
+        StyleConstants.setForeground(h2Style, pageStyle.getHeader2Color());
+        StyleConstants.setBold(h2Style, (pageStyle.getHeader2Style() & Font.BOLD) != 0);
+        StyleConstants.setItalic(h2Style, (pageStyle.getHeader2Style() & Font.ITALIC) != 0);
+        StyleConstants.setFontSize(h2Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getHeader2Size()); // 24
 
         Style h3Style = doc.addStyle("#", h1Style);
-        StyleConstants.setFontSize(h3Style, gfFontSize + 17); // 32
+        StyleConstants.setUnderline(h3Style, pageStyle.getHeader3Underline());
+        StyleConstants.setForeground(h3Style, pageStyle.getHeader3Color());
+        StyleConstants.setFontFamily(h3Style, pageStyle.getHeader3FontFamily());
+        StyleConstants.setBold(h3Style, (pageStyle.getHeader3Style() & Font.BOLD) != 0);
+        StyleConstants.setItalic(h3Style, (pageStyle.getHeader3Style() & Font.ITALIC) != 0);
+        StyleConstants.setFontSize(h3Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getHeader3Size()); // 32
 
         Style linkStyle;
         if (page.isNex()) {
@@ -1663,26 +1742,37 @@ public class GeminiTextPane extends JTextPane {
             StyleConstants.setFontSize(linkStyle, gfMonoFontSize);
         } else {
             linkStyle = doc.addStyle("=>", h1Style);
-            StyleConstants.setFontSize(linkStyle, gfFontSize);
+            StyleConstants.setUnderline(linkStyle, pageStyle.getLinkUnderline());
+            StyleConstants.setFontFamily(linkStyle, pageStyle.getLinkFontFamily());
+            StyleConstants.setBold(linkStyle, (pageStyle.getLinkStyle() & Font.BOLD) != 0);
+            StyleConstants.setItalic(linkStyle, (pageStyle.getLinkStyle() & Font.ITALIC) != 0);
+            StyleConstants.setFontSize(linkStyle, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getLinkSize());
 
         }
         StyleConstants.setForeground(linkStyle, linkColor);
-        //StyleConstants.setBold(linkStyle, true);
 
         Style clickedStyle = doc.addStyle("visited", linkStyle);
-        Color visitColor = isDark ? linkColor.darker() : linkColor.brighter();
+        Color visitColor = pageStyle.getVisitedLinkColor();
         StyleConstants.setForeground(clickedStyle, visitColor);
 
         Style quoteStyle = doc.addStyle(">", h1Style);
-        StyleConstants.setFontSize(quoteStyle, gfFontSize);
+        StyleConstants.setUnderline(quoteStyle, pageStyle.getQuoteUnderline());
+        StyleConstants.setFontFamily(quoteStyle, pageStyle.getQuoteFontFamily());
+        StyleConstants.setFontSize(quoteStyle, pageStyle.getQuoteSize());
+        StyleConstants.setBold(quoteStyle, (pageStyle.getQuoteStyle() & Font.BOLD) != 0);
+        StyleConstants.setItalic(quoteStyle, (pageStyle.getQuoteStyle() & Font.ITALIC) != 0);
         StyleConstants.setItalic(quoteStyle, true);
-        //StyleConstants.setBold(quoteStyle, false);
-        StyleConstants.setForeground(quoteStyle, foreground);
+
+        StyleConstants.setForeground(quoteStyle, pageStyle.getQuoteForeground());
 
         Style textStyle = doc.addStyle("text", h1Style);
-        StyleConstants.setFontSize(textStyle, gfFontSize);
+        StyleConstants.setUnderline(textStyle, pageStyle.getFontUnderline());
+        StyleConstants.setFontFamily(textStyle, pageStyle.getFontFamily());
+        StyleConstants.setFontSize(textStyle, pageStyle.getFontSize());
+        StyleConstants.setBold(textStyle, (pageStyle.getFontStyle() & Font.BOLD) != 0);
+        StyleConstants.setItalic(textStyle, (pageStyle.getFontStyle() & Font.ITALIC) != 0);
         //StyleConstants.setBold(textStyle, false);
-        StyleConstants.setForeground(textStyle, foreground);
+        StyleConstants.setForeground(textStyle, pageStyle.getTextForeground());
 
         doc.addStyle("*", textStyle);
 
@@ -1694,11 +1784,14 @@ public class GeminiTextPane extends JTextPane {
 
         visitedStyle = new SimpleAttributeSet();
         StyleConstants.setForeground(visitedStyle, visitColor);
-
-        if (Alhena.linkIcons && dataIcon == null) {
-            rebuildLinkIcons(gfFontSize, getBackground(), linkColor);
+        Color liColor = pageStyle.getPageBackground();
+        if (Alhena.linkIcons && (!liColor.equals(linkIconBG) || dataIcon == null)) {
+            linkIconBG = liColor;
+            rebuildLinkIcons(pageStyle.getFontSize(), liColor, linkColor);
         }
     }
+
+    private static Color linkIconBG;
 
     // only call on EDT
     private static void rebuildLinkIcons(int gfFontSize, Color bgColor, Color linkColor) {
@@ -1784,7 +1877,7 @@ public class GeminiTextPane extends JTextPane {
                 if (asciiSB != null && !asciiSB.isEmpty()) {
                     asciiSB.deleteCharAt(asciiSB.length() - 1);
 
-                    BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground(), false);
+                    BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), getBackground(), pageStyle.getMonoFontColor(), false);
                     ImageIcon icon = new ImageIcon(bi);
                     if (ptp == null) {
                         insertComp(new JLabel(icon), doc.getLength());
@@ -2076,7 +2169,7 @@ public class GeminiTextPane extends JTextPane {
 
                 PreformattedTextPane ptpText = createTextComponent(curPos);
                 if (asciiImage && !printing) {
-                    BufferedImage bi = AsciiImage.renderTextToImage(s, monospacedFamily, GeminiFrame.monoFontSize, getBackground(), getForeground(), false);
+                    BufferedImage bi = AsciiImage.renderTextToImage(s, pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), getBackground(), pageStyle.getMonoFontColor(), false);
                     ImageIcon icon = new ImageIcon(bi);
                     ptpText.insertComp(new JLabel(icon));
                     ptpText.scrollLeft();

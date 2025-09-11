@@ -1,0 +1,647 @@
+package brad.grier.alhena;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ItemEvent;
+import java.awt.font.TextAttribute;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
+
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JColorChooser;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+
+import io.vertx.core.json.JsonObject;
+
+public class StylePicker extends JPanel {
+
+    private JLabel h3Label, h2Label, h1Label, linkLabel, quoteLabel, textLabel, hoverLabel, monoFontLabel, visitedLabel;
+    private JPanel textPanel;
+
+    private String selectedLine = "#";
+    private Color saveBgColor;
+    private PageTheme alteredPageTheme;
+    private JCheckBoxMenuItem applyAllCB;
+    private PageTheme saveAlteredPageTheme;
+    private PageTheme pageTheme;
+
+    public StylePicker(PageTheme pTheme, PageTheme apTheme) {
+
+        super(new BorderLayout(0, 0));
+        alteredPageTheme = apTheme;
+        pageTheme = pTheme;
+        List<JComponent> mItems = new ArrayList<>();
+        JMenuItem pageColorItem = new JMenuItem("Page Background Color");
+        saveBgColor = pageTheme.getPageBackground();
+        pageColorItem.addActionListener(al -> {
+            Color chosenColor = JColorChooser.showDialog(
+                    StylePicker.this, // parent component
+                    "Select a Color", // dialog title
+                    saveBgColor // initial color
+            );
+            saveBgColor = chosenColor;
+            textPanel.setBackground(chosenColor);
+            pageTheme.setPageBackground(chosenColor);
+            alteredPageTheme.setPageBackground(chosenColor);
+        });
+        applyAllCB = new JCheckBoxMenuItem("Apply All Theme Attributes");
+        applyAllCB.addItemListener(il -> {
+            if (il.getStateChange() == ItemEvent.SELECTED) {
+                Util.infoDialog(StylePicker.this, "Applied", "All attributes from the current theme have been applied to this style.");
+                saveAlteredPageTheme = new PageTheme();
+                saveAlteredPageTheme.fromJson(new JsonObject(alteredPageTheme.getJson()));
+                alteredPageTheme = pageTheme;
+            } else {
+                Util.infoDialog(StylePicker.this, "Applied", "Only changed attributes have been applied to this style.");
+                alteredPageTheme = saveAlteredPageTheme;
+
+            }
+        });
+
+        JMenuItem resetItem = new JMenuItem("Reset All To Defaults");
+        //saveBgColor = pageTheme.getPageBackground();
+        resetItem.addActionListener(al -> {
+            pageTheme = GeminiTextPane.getDefaultTheme();
+            alteredPageTheme = new PageTheme();
+            saveAlteredPageTheme = null;
+            setPanelAttributes();
+            Util.infoDialog(StylePicker.this, "Reset", "All attributes have been reset.");
+
+        });
+        Supplier<List<JComponent>> supplier = () -> {
+
+            if (mItems.isEmpty()) {
+                mItems.add(pageColorItem);
+                mItems.add(applyAllCB);
+                mItems.add(resetItem);
+            }
+
+            return mItems;
+        };
+
+        JPanel tb = new JPanel(new BorderLayout(0, 0));
+        PopupMenuButton pmb = new PopupMenuButton("⚙️", supplier, "");
+        pmb.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
+        tb.add(new JLabel("Unedited attributes will be inherited from the current theme when displayed."), BorderLayout.WEST);
+        tb.add(pmb, BorderLayout.EAST);
+        add(tb, BorderLayout.NORTH);
+
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+
+        contentPanel.add(Box.createVerticalStrut(5));
+        String[] items = {"#", "##", "###", "=>", "=> Hover", "=> Visited", ">", "Text", "PF Text"};
+        JPanel linePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        linePanel.add(new JLabel("Line Type: "));
+        JComboBox<String> lineCombo = new JComboBox<>(items);
+        lineCombo.addActionListener(al -> {
+            selectedLine = (String) lineCombo.getSelectedItem();
+        });
+
+        lineCombo.setEditable(false);
+        linePanel.add(lineCombo);
+        contentPanel.add(linePanel);
+        contentPanel.add(Box.createVerticalStrut(5));
+        //saveFont = new Font(pageTheme.getHeader3FontFamily(), Font.PLAIN, pageTheme.getHeader3Size());
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JButton fontButton = new JButton("Font");
+        fontButton.addActionListener(al -> {
+            Font f = switch (selectedLine) {
+                case "#" ->
+                    new Font(pageTheme.getHeader3FontFamily(), Font.PLAIN, pageTheme.getHeader3Size());
+                case "##" ->
+                    new Font(pageTheme.getHeader2FontFamily(), Font.PLAIN, pageTheme.getHeader2Size());
+                case "###" ->
+                    new Font(pageTheme.getHeader1FontFamily(), Font.PLAIN, pageTheme.getHeader1Size());
+                case "=>" ->
+                    new Font(pageTheme.getLinkFontFamily(), Font.PLAIN, pageTheme.getLinkSize());
+                case "=> Hover" ->
+                    new Font(pageTheme.getLinkFontFamily(), Font.PLAIN, pageTheme.getLinkSize());
+                case "=> Visited" ->
+                    new Font(pageTheme.getLinkFontFamily(), Font.PLAIN, pageTheme.getLinkSize());
+                case ">" ->
+                    new Font(pageTheme.getQuoteFontFamily(), Font.PLAIN, pageTheme.getQuoteSize());
+                case "Text" ->
+                    new Font(pageTheme.getFontFamily(), Font.PLAIN, pageTheme.getFontSize());
+                case "PF Text" ->
+                    new Font(pageTheme.getMonoFontFamily(), Font.PLAIN, pageTheme.getMonoFontSize());
+                default ->
+                    null;
+
+            };
+            Font chosenFont = Util.getFont(StylePicker.this, f);
+            if (chosenFont != null) {
+
+                switch (selectedLine) {
+                    case "#" -> {
+                        pageTheme.setHeader3FontFamily(chosenFont.getFontName());
+                        pageTheme.setHeader3Size(chosenFont.getSize());
+                        alteredPageTheme.setHeader3FontFamily(chosenFont.getFontName());
+                        alteredPageTheme.setHeader3Size(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setHeader3FontFamily(chosenFont.getFontName());
+                            saveAlteredPageTheme.setHeader3Size(chosenFont.getSize());
+                        }
+                        h3Label.setFont(chosenFont);
+                    }
+                    case "##" -> {
+                        pageTheme.setHeader2FontFamily(chosenFont.getFontName());
+                        pageTheme.setHeader2Size(chosenFont.getSize());
+                        alteredPageTheme.setHeader2FontFamily(chosenFont.getFontName());
+                        alteredPageTheme.setHeader2Size(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setHeader2FontFamily(chosenFont.getFontName());
+                            saveAlteredPageTheme.setHeader2Size(chosenFont.getSize());
+                        }
+                        h2Label.setFont(chosenFont);
+                    }
+                    case "###" -> {
+                        pageTheme.setHeader1FontFamily(chosenFont.getFontName());
+                        pageTheme.setHeader1Size(chosenFont.getSize());
+                        alteredPageTheme.setHeader1FontFamily(chosenFont.getFontName());
+                        alteredPageTheme.setHeader1Size(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setHeader1FontFamily(chosenFont.getFontName());
+                            saveAlteredPageTheme.setHeader1Size(chosenFont.getSize());
+                        }
+                        h1Label.setFont(chosenFont);
+                    }
+                    case "=>", "=> Hover", "=> Visited" -> {
+                        pageTheme.setLinkFontFamily(chosenFont.getFontName());
+                        pageTheme.setLinkSize(chosenFont.getSize());
+                        alteredPageTheme.setLinkFontFamily(chosenFont.getFontName());
+                        alteredPageTheme.setLinkSize(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setLinkFontFamily(chosenFont.getFontName());
+                            saveAlteredPageTheme.setLinkSize(chosenFont.getSize());
+                        }
+                        linkLabel.setFont(chosenFont);
+                        hoverLabel.setFont(chosenFont);
+                        visitedLabel.setFont(chosenFont);
+                    }
+                    case ">" -> {
+                        pageTheme.setQuoteFontFamily(chosenFont.getFontName());
+                        pageTheme.setQuoteSize(chosenFont.getSize());
+                        alteredPageTheme.setQuoteFontFamily(chosenFont.getFontName());
+                        alteredPageTheme.setQuoteSize(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setQuoteFontFamily(chosenFont.getFontName());
+                            saveAlteredPageTheme.setQuoteSize(chosenFont.getSize());
+                        }
+                        quoteLabel.setFont(chosenFont);
+                    }
+                    case "Text" -> {
+                        pageTheme.setFontFamily(chosenFont.getFontName());
+                        pageTheme.setFontSize(chosenFont.getSize());
+                        alteredPageTheme.setFontFamily(chosenFont.getFontName());
+                        alteredPageTheme.setFontSize(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setFontFamily(chosenFont.getFontName());
+                            saveAlteredPageTheme.setFontSize(chosenFont.getSize());
+                        }
+                        textLabel.setFont(chosenFont);
+                    }
+                    case "PF Text" -> {
+                        pageTheme.setMonoFontFamily(chosenFont.getFontName());
+                        pageTheme.setMonoFontSize(chosenFont.getSize());
+                        alteredPageTheme.setMonoFontFamily(chosenFont.getFontName());
+                        alteredPageTheme.setMonoFontSize(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setMonoFontFamily(chosenFont.getFontName());
+                            saveAlteredPageTheme.setMonoFontSize(chosenFont.getSize());
+                        }
+                        monoFontLabel.setFont(chosenFont);
+                    }
+                    default -> {
+                    }
+                }
+
+            }
+        });
+        buttonPanel.add(fontButton);
+        JButton colorButton = new JButton("Color");
+        //saveColor = pageTheme.getHeader3Color();
+
+        colorButton.addActionListener(al -> {
+            Color c = switch (selectedLine) {
+                case "#" ->
+                    pageTheme.getHeader3Color();
+                case "##" ->
+                    pageTheme.getHeader2Color();
+                case "###" ->
+                    pageTheme.getHeader1Color();
+                case "=>" ->
+                    pageTheme.getLinkColor();
+                case "=> Hover" ->
+                    pageTheme.getHoverColor();
+                case "=> Visited" ->
+                    pageTheme.getVisitedLinkColor();
+                case ">" ->
+                    pageTheme.getQuoteForeground();
+                case "Text" ->
+                    pageTheme.getTextForeground();
+                case "PF Text" ->
+                    pageTheme.getMonoFontColor();
+                default ->
+                    null;
+
+            };
+            Color chosenColor = JColorChooser.showDialog(
+                    StylePicker.this, // parent component
+                    "Select a Color", // dialog title
+                    c // initial color
+            );
+
+            switch (selectedLine) {
+                case "#" -> {
+                    pageTheme.setHeader3Color(chosenColor);
+                    alteredPageTheme.setHeader3Color(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setHeader3Color(chosenColor);
+                    }
+                    h3Label.setForeground(chosenColor);
+                }
+                case "##" -> {
+                    pageTheme.setHeader2Color(chosenColor);
+                    alteredPageTheme.setHeader2Color(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setHeader2Color(chosenColor);
+                    }
+                    h2Label.setForeground(chosenColor);
+                }
+                case "###" -> {
+                    pageTheme.setHeader1Color(chosenColor);
+                    alteredPageTheme.setHeader1Color(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setHeader1Color(chosenColor);
+                    }
+                    h1Label.setForeground(chosenColor);
+                }
+                case "=>" -> {
+                    pageTheme.setLinkColor(chosenColor);
+                    alteredPageTheme.setLinkColor(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setLinkColor(chosenColor);
+                    }
+                    linkLabel.setForeground(chosenColor);
+                }
+                case "=> Hover" -> {
+                    pageTheme.setHoverColor(chosenColor);
+                    alteredPageTheme.setHoverColor(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setHoverColor(chosenColor);
+                    }
+                    hoverLabel.setForeground(chosenColor);
+                }
+                case "=> Visited" -> {
+                    pageTheme.setVisitedLinkColor(chosenColor);
+                    alteredPageTheme.setVisitedLinkColor(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setVisitedLinkColor(chosenColor);
+                    }
+                    visitedLabel.setForeground(chosenColor);
+                }
+                case ">" -> {
+                    pageTheme.setQuoteForeground(chosenColor);
+                    alteredPageTheme.setQuoteForeground(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setQuoteForeground(chosenColor);
+                    }
+                    quoteLabel.setForeground(chosenColor);
+                }
+                case "Text" -> {
+                    pageTheme.setTextForeground(chosenColor);
+                    alteredPageTheme.setTextForeground(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setTextForeground(chosenColor);
+                    }
+                    textLabel.setForeground(chosenColor);
+                }
+                case "PF Text" -> {
+                    pageTheme.setMonoFontColor(chosenColor);
+                    alteredPageTheme.setMonoFontColor(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setMonoFontColor(chosenColor);
+                    }
+                    monoFontLabel.setForeground(chosenColor);
+                }
+                default -> {
+                }
+            }
+        });
+        buttonPanel.add(colorButton);
+        JButton styleButton = new JButton("Style");
+        styleButton.addActionListener(al -> {
+            Integer st = switch (selectedLine) {
+                case "#" ->
+                    pageTheme.getHeader3Style();
+                case "##" ->
+                    pageTheme.getHeader2Style();
+                case "###" ->
+                    pageTheme.getHeader1Style();
+                case "=>" ->
+                    pageTheme.getLinkStyle();
+                case "=> Hover" ->
+                    pageTheme.getLinkStyle();
+                case "=> Visited" ->
+                    pageTheme.getLinkStyle();
+                case ">" ->
+                    pageTheme.getQuoteStyle();
+                case "Text" ->
+                    pageTheme.getFontStyle();
+                case "PF Text" ->
+                    null;
+                //pageTheme.getMonoFontColor();
+                default ->
+                    null;
+
+            };
+            Boolean ul = switch (selectedLine) {
+                case "#" ->
+                    pageTheme.getHeader3Underline();
+                case "##" ->
+                    pageTheme.getHeader2Underline();
+                case "###" ->
+                    pageTheme.getHeader1Underline();
+                case "=>" ->
+                    pageTheme.getLinkUnderline();
+                case "=> Hover" ->
+                    pageTheme.getLinkUnderline();
+                case "=> Visited" ->
+                    pageTheme.getLinkUnderline();
+                case ">" ->
+                    pageTheme.getQuoteUnderline();
+                case "Text" ->
+                    pageTheme.getFontUnderline();
+                case "PF Text" ->
+                    null;
+                //pageTheme.getMonoFontColor();
+                default ->
+                    null;
+
+            };
+            if (st == null) {
+                Util.infoDialog(StylePicker.this, "Unsupported", "Style not supported for pre-formatted text.", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            JCheckBox italicCB = new JCheckBox("Italic");
+            italicCB.setSelected((st & Font.ITALIC) != 0);
+            JCheckBox boldCB = new JCheckBox("Bold");
+            boldCB.setSelected((st & Font.BOLD) != 0);
+            JCheckBox underlineCB = new JCheckBox("Underline");
+            underlineCB.setSelected(ul);
+            Object[] comps = new Object[3];
+
+            comps[0] = boldCB;
+            comps[1] = italicCB;
+            comps[2] = underlineCB;
+
+            Object res = Util.inputDialog2(this, "Font Style", comps, null, false);
+            if (res != null) {
+                boolean isBold = boldCB.isSelected();
+                boolean isItalic = italicCB.isSelected();
+                boolean underline = underlineCB.isSelected();
+                int style = Font.PLAIN;  // start plain
+
+                if (isBold) {
+                    style |= Font.BOLD;
+                }
+                if (isItalic) {
+                    style |= Font.ITALIC;
+                }
+                switch (selectedLine) {
+                    case "#" -> {
+                        pageTheme.setHeader3Style(style);
+                        pageTheme.setHeader3Underline(underline);
+                        alteredPageTheme.setHeader3Style(style);
+                        alteredPageTheme.setHeader3Underline(underline);
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setHeader3Style(style);
+                            saveAlteredPageTheme.setHeader3Underline(underline);
+                        }
+                        Font f = new Font(pageTheme.getHeader3FontFamily(), style, pageTheme.getHeader3Size());
+                        if (underline) {
+                            f = underlineFont(f);
+                        }
+                        h3Label.setFont(f);
+
+                    }
+                    case "##" -> {
+                        pageTheme.setHeader2Style(style);
+                        pageTheme.setHeader2Underline(underline);
+                        alteredPageTheme.setHeader2Style(style);
+                        alteredPageTheme.setHeader2Underline(underline);
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setHeader2Style(style);
+                            saveAlteredPageTheme.setHeader2Underline(underline);
+                        }
+                        Font f = new Font(pageTheme.getHeader2FontFamily(), style, pageTheme.getHeader2Size());
+                        if (underline) {
+                            f = underlineFont(f);
+                        }
+                        h2Label.setFont(f);
+                    }
+                    case "###" -> {
+                        pageTheme.setHeader1Style(style);
+                        pageTheme.setHeader1Underline(underline);
+                        alteredPageTheme.setHeader1Style(style);
+                        alteredPageTheme.setHeader1Underline(underline);
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setHeader1Style(style);
+                            saveAlteredPageTheme.setHeader1Underline(underline);
+                        }
+                        Font f = new Font(pageTheme.getHeader1FontFamily(), style, pageTheme.getHeader1Size());
+                        if (underline) {
+                            f = underlineFont(f);
+                        }
+                        h1Label.setFont(f);
+                        //h1Label.setFont(new Font(pageTheme.getHeader1FontFamily(), style, pageTheme.getHeader1Size()));
+                    }
+                    case "=>", "=> Hover", "=> Visited" -> {
+                        pageTheme.setLinkStyle(style);
+                        pageTheme.setLinkUnderline(underline);
+                        alteredPageTheme.setLinkStyle(style);
+                        alteredPageTheme.setLinkUnderline(underline);
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setLinkStyle(style);
+                            saveAlteredPageTheme.setLinkUnderline(underline);
+                        }
+                        Font f = new Font(pageTheme.getLinkFontFamily(), style, pageTheme.getLinkSize());
+                        if (underline) {
+                            f = underlineFont(f);
+                        }
+                        linkLabel.setFont(f);
+                        hoverLabel.setFont(f);
+                        visitedLabel.setFont(f);
+                    }
+                    case ">" -> {
+                        pageTheme.setQuoteStyle(style);
+                        pageTheme.setQuoteUnderline(underline);
+
+                        alteredPageTheme.setQuoteStyle(style);
+                        alteredPageTheme.setQuoteUnderline(underline);
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setQuoteStyle(style);
+                            saveAlteredPageTheme.setQuoteUnderline(underline);
+                        }
+                        Font f = new Font(pageTheme.getQuoteFontFamily(), style, pageTheme.getQuoteSize());
+                        if (underline) {
+                            f = underlineFont(f);
+                        }
+                        quoteLabel.setFont(f);
+                        //quoteLabel.setFont(new Font(pageTheme.getQuoteFontFamily(), style, pageTheme.getQuoteSize()));
+                    }
+                    case "Text" -> {
+                        pageTheme.setFontStyle(style);
+                        pageTheme.setFontUnderline(underline);
+                        alteredPageTheme.setFontStyle(style);
+                        alteredPageTheme.setFontUnderline(underline);
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setFontStyle(style);
+                            saveAlteredPageTheme.setFontUnderline(underline);
+                        }
+                        Font f = new Font(pageTheme.getFontFamily(), style, pageTheme.getFontSize());
+                        if (underline) {
+                            f = underlineFont(f);
+                        }
+                        textLabel.setFont(f);
+                        //textLabel.setFont(new Font(pageTheme.getFontFamily(), style, pageTheme.getFontSize()));
+                    }
+                    case "PF Text" -> {
+
+                    }
+                    default -> {
+                    }
+                }
+            }
+        });
+        buttonPanel.add(styleButton);
+        textPanel = new JPanel();
+        textPanel.setPreferredSize(new Dimension(800, 390));
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+        textPanel.setOpaque(true);
+
+        h3Label = new JLabel("# Heading");
+        textPanel.add(wrap(h3Label));
+        h2Label = new JLabel("## Heading");
+        textPanel.add(wrap(h2Label));
+        h1Label = new JLabel("### Heading");
+        textPanel.add(wrap(h1Label));
+
+        linkLabel = new JLabel("=> Link");
+
+        textPanel.add(wrap(linkLabel));
+
+        hoverLabel = new JLabel("=> Link (Hover)");
+        textPanel.add(wrap(hoverLabel));
+
+        visitedLabel = new JLabel("=> Visited Link");
+
+        textPanel.add(wrap(visitedLabel));
+
+        quoteLabel = new JLabel("> Quote");
+        textPanel.add(wrap(quoteLabel));
+
+        textLabel = new JLabel("Text");
+        textPanel.add(wrap(textLabel));
+
+        monoFontLabel = new JLabel("Pre-formatted Text");
+        setPanelAttributes();
+        textPanel.add(wrap(monoFontLabel));
+
+        linePanel.add(buttonPanel);
+
+        contentPanel.add(Box.createVerticalStrut(10));
+        contentPanel.add(textPanel);
+
+        add(contentPanel, BorderLayout.CENTER);
+
+    }
+
+    private Font underlineFont(Font f) {
+        Map<TextAttribute, Object> attributes = (Map<TextAttribute, Object>) f.getAttributes();
+        attributes.put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON);
+        return f.deriveFont(attributes);
+    }
+
+    private void setPanelAttributes() {
+        textPanel.setBackground(pageTheme.getPageBackground());
+        Font f = new Font(pageTheme.getHeader3FontFamily(), pageTheme.getHeader3Style(), pageTheme.getHeader3Size());
+        if (pageTheme.getHeader3Underline()) {
+            f = underlineFont(f);
+        }
+        h3Label.setFont(f);
+
+        h3Label.setForeground(pageTheme.getHeader3Color());
+        f = new Font(pageTheme.getHeader2FontFamily(), pageTheme.getHeader2Style(), pageTheme.getHeader2Size());
+        if (pageTheme.getHeader2Underline()) {
+            f = underlineFont(f);
+        }
+        h2Label.setFont(f);
+
+        h2Label.setForeground(pageTheme.getHeader2Color());
+        f = new Font(pageTheme.getHeader1FontFamily(), pageTheme.getHeader1Style(), pageTheme.getHeader1Size());
+        if (pageTheme.getHeader1Underline()) {
+            f = underlineFont(f);
+        }
+        h1Label.setFont(f);
+
+        h1Label.setForeground(pageTheme.getHeader1Color());
+        f = new Font(pageTheme.getLinkFontFamily(), pageTheme.getLinkStyle(), pageTheme.getLinkSize());
+        if (pageTheme.getLinkUnderline()) {
+            f = underlineFont(f);
+        }
+        linkLabel.setFont(f);
+
+        linkLabel.setForeground(pageTheme.getLinkColor());
+
+        hoverLabel.setFont(f);
+        hoverLabel.setForeground(pageTheme.getHoverColor());
+
+        visitedLabel.setFont(f);
+        visitedLabel.setForeground(pageTheme.getVisitedLinkColor());
+        f = new Font(pageTheme.getQuoteFontFamily(), pageTheme.getQuoteStyle(), pageTheme.getQuoteSize());
+        if (pageTheme.getQuoteUnderline()) {
+            f = underlineFont(f);
+        }
+        quoteLabel.setFont(f);
+
+        quoteLabel.setForeground(pageTheme.getQuoteForeground());
+        f = new Font(pageTheme.getFontFamily(), pageTheme.getFontStyle(), pageTheme.getFontSize());
+        if (pageTheme.getFontUnderline()) {
+            f = underlineFont(f);
+        }
+        textLabel.setFont(f);
+
+        textLabel.setForeground(pageTheme.getTextForeground());
+        monoFontLabel.setFont(new Font(pageTheme.getMonoFontFamily(), Font.PLAIN, pageTheme.getMonoFontSize()));
+        monoFontLabel.setForeground(pageTheme.getMonoFontColor());
+
+    }
+
+    private final JPanel wrap(JLabel l) {
+        JPanel jp = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        jp.setOpaque(false);
+        jp.add(l);
+        return jp;
+    }
+
+    public PageTheme getAlteredPageTheme() {
+        return alteredPageTheme;
+    }
+
+}

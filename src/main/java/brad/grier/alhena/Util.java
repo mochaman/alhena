@@ -391,7 +391,7 @@ public class Util {
         }
     }
 
-    public static Font getFont(GeminiFrame f, Font font) {
+    public static Font getFont(Component f, Font font) {
         FontChooser fontChooser = new FontChooser(font);
         fontChooser.setPreferredSize(new Dimension(700, 350));
 
@@ -817,7 +817,7 @@ public class Util {
                         frame.resetFont();
                         infoDialog(frame, I18n.t("importSuccessDialog"), I18n.t("importSuccessDialogMsg"));
                         Alhena.clearCnList();
-                        Alhena.updateFrames(true, true);
+                        Alhena.updateFrames(true, true, true);
                     }
                 } catch (Exception ex) {
                     infoDialog(frame, I18n.t("importErrorDialog"), I18n.t("importErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
@@ -830,7 +830,7 @@ public class Util {
                         infoDialog(frame, I18n.t("versionErrorDialog"), I18n.t("versionErrorDialogMsg"));
                     } else {
                         infoDialog(frame, I18n.t("mergeCompleteDialog"), I18n.t("mergeCompleteDialogMsg"));
-                        Alhena.updateFrames(true, false);
+                        Alhena.updateFrames(true, false, false);
                     }
                 } catch (Exception ex) {
                     infoDialog(frame, I18n.t("mergeErrorDialog"), I18n.t("mergeErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);

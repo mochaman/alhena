@@ -3,6 +3,7 @@ package brad.grier.alhena;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.EventQueue;
+import java.awt.Font;
 import java.awt.KeyboardFocusManager;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
@@ -149,7 +150,7 @@ public class Alhena {
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
-    private static String theme;
+    public static String theme;
     public static String httpProxy;
     public static String gopherProxy;
     public static String searchUrl;
@@ -423,7 +424,10 @@ public class Alhena {
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
         bigScrollBar = map.getOrDefault("bigscrollbar", "false").equals("true");
         GeminiTextPane.dragToScroll = map.getOrDefault("dragscroll", "false").equals("true");
-
+        GeminiFrame.proportionalFamily = map.getOrDefault("fontfamily", "SansSerif");
+        GeminiFrame.fontSize = Integer.parseInt(map.getOrDefault("fontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
+        GeminiFrame.monoFontSize = Integer.parseInt(map.getOrDefault("monofontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
+        GeminiFrame.saveFont = new Font(DB.getPref("font", "SansSerif"), Font.PLAIN, GeminiFrame.fontSize);
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
             
@@ -486,14 +490,14 @@ public class Alhena {
         }
     }
 
-    public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu) {
-        String dbTheme = DB.getPref("theme", null);
+    public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu, boolean newTheme) {
+
         UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10));
         GeminiTextPane.clearLinkIcons();
-        if (!theme.equals(dbTheme)) {
-            theme = dbTheme;
+        if (newTheme) {
+
             try {
-                Class<?> themeClass = Class.forName(dbTheme);
+                Class<?> themeClass = Class.forName(theme);
                 FlatLaf lafTheme = (FlatLaf) themeClass.getDeclaredConstructor().newInstance();
                 FlatLaf.setup(lafTheme);
             } catch (Exception ex) {
