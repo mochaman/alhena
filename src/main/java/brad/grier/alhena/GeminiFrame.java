@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
@@ -1084,26 +1085,53 @@ public final class GeminiFrame extends JFrame {
                     PageTheme pt;
                     PageTheme apt = new PageTheme();
                     if (jstring != null) {
-                        pt = visiblePage().textPane.getDefaultTheme();
+                        pt = GeminiTextPane.getDefaultTheme();
                         JsonObject apJo = new JsonObject(jstring);
                         pt.fromJson(apJo); // merge in changes
                         apt.fromJson(apJo);
                     } else {
-                        pt = visiblePage().textPane.getDefaultTheme();
+                        pt = GeminiTextPane.getDefaultTheme();
                     }
                     StylePicker sp = new StylePicker(pt, apt);
                     Object[] cmps = {sp};
-                    Object[] options = {I18n.t("okLabel"), I18n.t("deleteLabel"), I18n.t("cancelLabel")};
-                    Object result = Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false);
-                    if (I18n.t("okLabel").equals(result)) {
+                    JButton okButton = new JButton(I18n.t("okLabel"));
+                    JButton delButton = new JButton(I18n.t("deleteLabel"));
+                    JButton cancelButton = new JButton(I18n.t("cancelLabel"));
 
-                        // theme - name, LIGHT, DARK or ALL
-                        DB.insertStyle(scope, scopeValue, th, sp.getAlteredPageTheme().getJson());
-                        Alhena.updateFrames(false, false, false);
-                    } else if (I18n.t("deleteLabel").equals(result)) {
-                        DB.deleteStyle(scope, scopeValue, th);
-                        Alhena.updateFrames(false, false, false);
-                    }
+                    String fScope = scope;
+                    String fScopeVal = scopeValue;
+                    String fTheme = th;
+                    BooleanSupplier okRunnable = () -> {
+                        try {
+                            DB.insertStyle(fScope, fScopeVal, fTheme, sp.getAlteredPageTheme().getJson());
+                            Alhena.updateFrames(false, false, false);
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                        }
+                        return true;
+
+                    };
+
+                    BooleanSupplier delRunnable = () -> {
+                        Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                        if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
+                            try {
+                                DB.deleteStyle(fScope, fScopeVal, fTheme);
+                                Alhena.updateFrames(false, false, false);
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                            return true;
+                        }
+                        return false;
+                    };
+
+                    BooleanSupplier cancelRunnable = () -> {
+                        return true;
+                    };
+                    Object[] options = {okButton, delButton, cancelButton};
+                    BooleanSupplier[] suppliers = {okRunnable, delRunnable, cancelRunnable};
+                    Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false, suppliers);
 
                 } catch (SQLException ex) {
                     ex.printStackTrace();
@@ -1126,21 +1154,46 @@ public final class GeminiFrame extends JFrame {
                         }
                         StylePicker sp = new StylePicker(pt, apt);
                         Object[] cmps = {sp};
-                        Object[] options = {I18n.t("okLabel"), I18n.t("deleteLabel"), I18n.t("cancelLabel")};
-                        Object result = Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false);
-                        if (I18n.t("okLabel").equals(result)) {
+                        JButton okButton = new JButton(I18n.t("okLabel"));
+                        JButton delButton = new JButton(I18n.t("deleteLabel"));
+                        JButton cancelButton = new JButton(I18n.t("cancelLabel"));
+                        BooleanSupplier okRunnable = () -> {
+                            try {
+                                DB.updateStyle(styleId, sp.getAlteredPageTheme().getJson());
+                                Alhena.updateFrames(false, false, false);
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                            return true;
 
-                            DB.updateStyle(styleId, sp.getAlteredPageTheme().getJson());
-                            Alhena.updateFrames(false, false, false);
-                        } else if (I18n.t("deleteLabel").equals(result)) {
-                            DB.deleteStyle(styleId);
-                            Alhena.updateFrames(false, false, false);
-                        }
+                        };
+
+                        BooleanSupplier delRunnable = () -> {
+                            Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                            if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
+                                try {
+                                    DB.deleteStyle(styleId);
+                                } catch (SQLException ex) {
+                                    ex.printStackTrace();
+                                }
+                                Alhena.updateFrames(false, false, false);
+                                return true;
+                            }
+                            return false;
+                        };
+
+                        BooleanSupplier cancelRunnable = () -> {
+                            return true;
+                        };
+
+                        Object[] options = {okButton, delButton, cancelButton};
+                        BooleanSupplier[] suppliers = {okRunnable, delRunnable, cancelRunnable};
+                        Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false, suppliers);
 
                     } catch (SQLException ex) {
                         ex.printStackTrace();
                     }
-                }else{
+                } else {
                     Util.infoDialog(GeminiFrame.this, I18n.t("noStyleDialog"), I18n.t("noStyleText"));
                 }
             }
