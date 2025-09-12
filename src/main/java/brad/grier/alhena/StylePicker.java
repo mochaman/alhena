@@ -42,14 +42,18 @@ public class StylePicker extends JPanel {
         super(new BorderLayout(0, 0));
         alteredPageTheme = apTheme;
         pageTheme = pTheme;
+        // pageThemeBackup = new PageTheme();
+        // pageThemeBackup.fromJson(new JsonObject(pTheme.getJson()));
         List<JComponent> mItems = new ArrayList<>();
         JMenuItem pageColorItem = new JMenuItem(I18n.t("pageBackgroundItem"));
         pageColorItem.addActionListener(al -> {
 
             Color chosenColor = Util.getColor(StylePicker.this, pageTheme.getPageBackground());
-            textPanel.setBackground(chosenColor);
-            pageTheme.setPageBackground(chosenColor);
-            alteredPageTheme.setPageBackground(chosenColor);
+            if (chosenColor != null) {
+                textPanel.setBackground(chosenColor);
+                pageTheme.setPageBackground(chosenColor);
+                alteredPageTheme.setPageBackground(chosenColor);
+            }
         });
         applyAllCB = new JCheckBoxMenuItem(I18n.t("applyAllCBItem"));
         applyAllCB.addItemListener(il -> {
