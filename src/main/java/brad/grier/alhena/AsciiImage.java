@@ -360,7 +360,6 @@ public class AsciiImage {
         } else {
             int mIdx = txt.indexOf('m');
             if (mIdx == -1) {
-                System.out.println("here");
                 if (foregroundHandling) {
                     ansiFG = fgColor1;
                 }
