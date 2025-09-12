@@ -51,6 +51,7 @@ import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,6 +60,7 @@ import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
@@ -202,6 +204,10 @@ public class Util {
     }
 
     public static Object inputDialog2(Component c, String title, Object[] components, Object[] options, boolean resizable) {
+        return inputDialog2(c, title, components, options, resizable, null);
+    }
+
+    public static Object inputDialog2(Component c, String title, Object[] components, Object[] options, boolean resizable, BooleanSupplier[] suppliers) {
 
         JOptionPane optionPane = new JOptionPane(
                 components, // Message
@@ -236,6 +242,19 @@ public class Util {
             }
 
         });
+        if (suppliers != null) {
+            for (int i = 0; i < suppliers.length; i++) {
+                if (options[i] instanceof JButton button) {
+                    int j = i; // annoying
+                    button.addActionListener(al -> {
+                        if (suppliers[j].getAsBoolean()) {
+                            dialog.dispose();
+                        }
+
+                    });
+                }
+            }
+        }
         dialog.setVisible(true);
 
         // return null for cancel as a shortcut
@@ -470,7 +489,6 @@ public class Util {
         Object[] msg = {
             cp
         };
-
 
         Object[] options;
 
