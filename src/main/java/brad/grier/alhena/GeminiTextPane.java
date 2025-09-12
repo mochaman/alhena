@@ -1658,10 +1658,12 @@ public class GeminiTextPane extends JTextPane {
     public PageTheme getPageStyle() {
         String dbTheme = Alhena.theme;
 
-        //String jstring = null;
         StyleInfo dbStyle = null;
         try {
-            dbStyle = DB.getStyle(docURL, getURI().getAuthority(), dbTheme, !isDark);
+            URI u = getURI();
+            if (u != null) {
+                dbStyle = DB.getStyle(docURL, u.getAuthority(), dbTheme, !isDark);
+            }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -1669,12 +1671,13 @@ public class GeminiTextPane extends JTextPane {
         if (dbStyle != null) {
             customTheme = new JsonObject(dbStyle.style());
             styleId = dbStyle.id();
-        }else{
+        } else {
             customTheme = new JsonObject();
             styleId = null;
         }
         PageTheme pageTheme = getDefaultTheme();
         pageTheme.fromJson(customTheme);
+
         return pageTheme;
 
     }
