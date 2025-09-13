@@ -1611,7 +1611,9 @@ public class GeminiTextPane extends JTextPane {
 
     public static PageTheme getDefaultTheme() {
         PageTheme pageTheme = new PageTheme();
-        boolean isDark = UIManager.getBoolean("laf.dark");
+        Color bg = UIManager.getColor("TextPane.inactiveBackground");
+        pageTheme.setPageBackground(bg);
+        boolean isDark = !Util.isLight(bg);
         Color lc = UIManager.getColor("Component.linkColor");
         pageTheme.setLinkColor(lc);
         pageTheme.setLinkStyle(Font.PLAIN);
@@ -1642,7 +1644,6 @@ public class GeminiTextPane extends JTextPane {
         pageTheme.setHeader3FontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setLinkFontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setQuoteFontFamily(GeminiFrame.proportionalFamily);
-        pageTheme.setPageBackground(UIManager.getColor("TextPane.inactiveBackground"));
         pageTheme.setLinkUnderline(false);
         pageTheme.setQuoteUnderline(false);
         pageTheme.setFontUnderline(false);
@@ -1662,7 +1663,7 @@ public class GeminiTextPane extends JTextPane {
         try {
             URI u = getURI();
             if (u != null) {
-                dbStyle = DB.getStyle(docURL, u.getAuthority(), dbTheme, !isDark);
+                dbStyle = DB.getStyle(docURL, u.getAuthority(), dbTheme, !UIManager.getBoolean("laf.dark"));
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -1685,11 +1686,11 @@ public class GeminiTextPane extends JTextPane {
     protected PageTheme pageStyle;
 
     private void buildStyles() {
-        isDark = UIManager.getBoolean("laf.dark");
-
         pageStyle = getPageStyle();
+        isDark = !Util.isLight(pageStyle.getPageBackground());
 
         setBackground(pageStyle.getPageBackground());
+        setForeground(pageStyle.getMonoFontColor());
 
         for (MediaComponent ap : playerList) {
             ap.dispose();
@@ -2202,7 +2203,7 @@ public class GeminiTextPane extends JTextPane {
 
     private PreformattedTextPane createTextComponent(boolean curPos) {
 
-        Color background = shadePF ? AnsiColor.adjustColor(getBackground(), UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : getBackground();
+        Color background = shadePF ? AnsiColor.adjustColor(getBackground(), isDark, .2d, .8d, .05d) : getBackground();
         PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize, isDark, GeminiTextPane.this);
 
         JScrollPane sp = new JScrollPane(pfTextPane);
@@ -2522,7 +2523,7 @@ public class GeminiTextPane extends JTextPane {
 
     private void insertString(int length, String txt, AttributeSet style) {
         try {
-            if (hasAnsi && preformattedMode) {
+            if (hasAnsi && preformattedMode && txt.indexOf(27) >= 0) {
                 handleAnsi(txt);
             } else {
                 doc.insertString(length, txt, style);
