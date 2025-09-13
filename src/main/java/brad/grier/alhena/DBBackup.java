@@ -60,6 +60,10 @@ public class DBBackup {
             mergeServerCerts();
             mergeClientCerts();
 
+            if(DB.tableExists(cp.getConnection(), "STYLES")){
+                mergeStyles();
+            }
+
             if (DB.tableExists(cp.getConnection(), "CACERTS")) { // for some backward compatibility
                 HashMap<String, X509Certificate> certMap = DB.getSavedCerts(cp);
                 Alhena.setServerCerts(certMap);
@@ -153,6 +157,27 @@ public class DBBackup {
                         DB.insertClientCert(domain, cert, pkey, active, ts);
                     }
 
+                }
+            }
+        }
+    }
+
+    public static void mergeStyles() throws SQLException {
+
+        try (Connection con = cp.getConnection(); var ps = con.createStatement()) {
+
+            try (ResultSet rs = ps.executeQuery("SELECT SCOPE, SCOPE_VALUE, THEME, STYLE, TIME_STAMP FROM STYLES")) {
+                while (rs.next()) {
+                    String scope = rs.getString(1);
+                    String scopeValue = rs.getString(2);
+                    String theme = rs.getString(3);
+                    String style = rs.getString(4);
+                    Timestamp ts = rs.getTimestamp(5);
+
+                    // only insert if domain not present in current db
+                    if (DB.getStyle(scope, scopeValue, theme) == null) {
+                        DB.insertStyle(scope, scopeValue, theme, style, ts);
+                    }
                 }
             }
         }
