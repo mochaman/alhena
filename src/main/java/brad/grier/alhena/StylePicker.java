@@ -8,8 +8,10 @@ import java.awt.Font;
 import java.awt.event.ItemEvent;
 import java.awt.font.TextAttribute;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import javax.swing.Box;
@@ -53,7 +55,21 @@ public class StylePicker extends JPanel {
                 textPanel.setBackground(chosenColor);
                 pageTheme.setPageBackground(chosenColor);
                 alteredPageTheme.setPageBackground(chosenColor);
+                if (saveAlteredPageTheme != null) {
+                    saveAlteredPageTheme.setPageBackground(chosenColor);
+                }
             }
+        });
+        JMenuItem resetPageBGItem = new JMenuItem(I18n.t("backgroundResetLabel"));
+        resetPageBGItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            textPanel.setBackground(defaultTheme.getPageBackground());
+            pageTheme.setPageBackground(defaultTheme.getPageBackground());
+            alteredPageTheme.clearPageBackground();
+            if (saveAlteredPageTheme != null) {
+                saveAlteredPageTheme.clearPageBackground();
+            }
+
         });
         applyAllCB = new JCheckBoxMenuItem(I18n.t("applyAllCBItem"));
         applyAllCB.addItemListener(il -> {
@@ -83,6 +99,7 @@ public class StylePicker extends JPanel {
 
             if (mItems.isEmpty()) {
                 mItems.add(pageColorItem);
+                mItems.add(resetPageBGItem);
                 mItems.add(applyAllCB);
                 mItems.add(resetItem);
             }
@@ -526,6 +543,156 @@ public class StylePicker extends JPanel {
             }
         });
         buttonPanel.add(styleButton);
+
+        JMenuItem resetFItem = new JMenuItem(I18n.t("fontNameLabel"));
+        Map<String, BiConsumer<PageTheme, PageTheme>> nameResetters = new HashMap<>();
+        nameResetters.put("#", (page, def) -> page.setHeader3FontFamily(def.getHeader3FontFamily()));
+        nameResetters.put("##", (page, def) -> page.setHeader2FontFamily(def.getHeader2FontFamily()));
+        nameResetters.put("###", (page, def) -> page.setHeader1FontFamily(def.getHeader1FontFamily()));
+        nameResetters.put("=>", (page, def) -> page.setLinkFontFamily(def.getLinkFontFamily()));
+        nameResetters.put("=> Hover", (page, def) -> page.setLinkFontFamily(def.getLinkFontFamily()));
+        nameResetters.put("=> Visited", (page, def) -> page.setLinkFontFamily(def.getLinkFontFamily()));
+        nameResetters.put(">", (page, def) -> page.setQuoteFontFamily(def.getQuoteFontFamily()));
+        nameResetters.put("Text", (page, def) -> page.setFontFamily(def.getFontFamily()));
+        nameResetters.put("PF Text", (page, def) -> page.setMonoFontFamily(def.getMonoFontFamily()));
+        resetFItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            BiConsumer<PageTheme, PageTheme> resetter = nameResetters.get(selectedLine);
+            if (resetter != null) {
+                resetter.accept(pageTheme, defaultTheme);
+
+                alteredPageTheme.clearFont(selectedLine);
+                if (saveAlteredPageTheme != null) {
+                    saveAlteredPageTheme.clearFont(selectedLine);
+                }
+                setPanelAttributes();
+            }
+            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
+
+        });
+
+        JMenuItem resetFSItem = new JMenuItem(I18n.t("fontSizeLabel"));
+        Map<String, BiConsumer<PageTheme, PageTheme>> sizeResetters = new HashMap<>();
+        sizeResetters.put("#", (page, def) -> page.setHeader3Size(def.getHeader3Size()));
+        sizeResetters.put("##", (page, def) -> page.setHeader2Size(def.getHeader2Size()));
+        sizeResetters.put("###", (page, def) -> page.setHeader1Size(def.getHeader1Size()));
+        sizeResetters.put("=>", (page, def) -> page.setLinkSize(def.getLinkSize()));
+        sizeResetters.put("=> Hover", (page, def) -> page.setLinkSize(def.getLinkSize()));
+        sizeResetters.put("=> Visited", (page, def) -> page.setLinkSize(def.getLinkSize()));
+        sizeResetters.put(">", (page, def) -> page.setQuoteSize(def.getQuoteSize()));
+        sizeResetters.put("Text", (page, def) -> page.setFontSize(def.getFontSize()));
+        sizeResetters.put("PF Text", (page, def) -> page.setMonoFontSize(def.getMonoFontSize()));
+        resetFSItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            BiConsumer<PageTheme, PageTheme> resetter = sizeResetters.get(selectedLine);
+            if (resetter != null) {
+                resetter.accept(pageTheme, defaultTheme);
+
+                alteredPageTheme.clearFontSize(selectedLine);
+                if (saveAlteredPageTheme != null) {
+                    saveAlteredPageTheme.clearFontSize(selectedLine);
+                }
+                setPanelAttributes();
+            }
+            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
+
+        });
+
+        JMenuItem resetFCItem = new JMenuItem(I18n.t("fontColorLabel"));
+        Map<String, BiConsumer<PageTheme, PageTheme>> colorResetters = new HashMap<>();
+        colorResetters.put("#", (page, def) -> page.setHeader3Color(def.getHeader3Color()));
+        colorResetters.put("##", (page, def) -> page.setHeader2Color(def.getHeader2Color()));
+        colorResetters.put("###", (page, def) -> page.setHeader1Color(def.getHeader1Color()));
+        colorResetters.put("=>", (page, def) -> page.setLinkColor(def.getLinkColor()));
+        colorResetters.put("=> Hover", (page, def) -> page.setHoverColor(def.getHoverColor()));
+        colorResetters.put("=> Visited", (page, def) -> page.setVisitedLinkColor(def.getVisitedLinkColor()));
+        colorResetters.put(">", (page, def) -> page.setQuoteForeground(def.getQuoteForeground()));
+        colorResetters.put("Text", (page, def) -> page.setTextForeground(def.getTextForeground()));
+        colorResetters.put("PF Text", (page, def) -> page.setMonoFontColor(def.getMonoFontColor()));
+        resetFCItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            BiConsumer<PageTheme, PageTheme> resetter = colorResetters.get(selectedLine);
+            if (resetter != null) {
+                resetter.accept(pageTheme, defaultTheme);
+
+                alteredPageTheme.clearColor(selectedLine);
+                if (saveAlteredPageTheme != null) {
+                    saveAlteredPageTheme.clearColor(selectedLine);
+                }
+                setPanelAttributes();
+            }
+            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
+
+        });
+
+        JMenuItem resetStyleItem = new JMenuItem(I18n.t("fontStyleLabel"));
+        Map<String, BiConsumer<PageTheme, PageTheme>> styleResetters = new HashMap<>();
+        styleResetters.put("#", (page, def) -> {
+            page.setHeader3Style(def.getHeader3Style());
+            page.setHeader3Underline(def.getHeader3Underline());
+        });
+        styleResetters.put("##", (page, def) -> {
+            page.setHeader2Style(def.getHeader2Style());
+            page.setHeader2Underline(def.getHeader2Underline());
+        });
+        styleResetters.put("###", (page, def) -> {
+            page.setHeader1Style(def.getHeader1Style());
+            page.setHeader1Underline(def.getHeader1Underline());
+        });
+        styleResetters.put("=>", (page, def) -> {
+            page.setLinkColor(def.getLinkColor());
+            page.setLinkUnderline(def.getLinkUnderline());
+        });
+        styleResetters.put("=> Hover", (page, def) -> {
+            page.setLinkColor(def.getLinkColor());
+            page.setLinkUnderline(def.getLinkUnderline());
+        });
+        styleResetters.put("=> Visited", (page, def) -> {
+            page.setLinkColor(def.getLinkColor());
+            page.setLinkUnderline(def.getLinkUnderline());
+        });
+        styleResetters.put(">", (page, def) -> {
+            page.setQuoteStyle(def.getQuoteStyle());
+            page.setQuoteUnderline(def.getQuoteUnderline());
+        });
+        styleResetters.put("Text", (page, def) -> {
+            page.setFontStyle(def.getFontStyle());
+            page.setFontUnderline(def.getFontUnderline());
+        });
+        // styleResetters.put("PF Text", (page, def) -> {
+        //     page.setMonoFontColor(def.getMonoFontColor());
+        // });
+        resetStyleItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            BiConsumer<PageTheme, PageTheme> resetter = styleResetters.get(selectedLine);
+            if (resetter != null) {
+                resetter.accept(pageTheme, defaultTheme);
+
+                alteredPageTheme.clearFontStyle(selectedLine);
+                if (saveAlteredPageTheme != null) {
+                    saveAlteredPageTheme.clearFontStyle(selectedLine);
+                }
+                setPanelAttributes();
+            }
+            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
+
+        });
+
+        List<JComponent> resetItems = new ArrayList<>();
+        Supplier<List<JComponent>> resetSupplier = () -> {
+
+            if (resetItems.isEmpty()) {
+                resetItems.add(resetFItem);
+                resetItems.add(resetFSItem);
+                resetItems.add(resetFCItem);
+                resetItems.add(resetStyleItem);
+
+            }
+
+            return resetItems;
+        };
+        PopupMenuButton resetButton = new PopupMenuButton("Reset", resetSupplier, "");
+        buttonPanel.add(resetButton);
         textPanel = new JPanel();
         textPanel.setPreferredSize(new Dimension(800, 390));
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
