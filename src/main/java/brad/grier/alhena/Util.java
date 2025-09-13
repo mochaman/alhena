@@ -162,6 +162,14 @@ public class Util {
         return sb.toString();
     }
 
+    public static boolean isLight(Color color) {
+
+        double luminance = (0.299 * color.getRed()
+                + 0.587 * color.getGreen()
+                + 0.114 * color.getBlue()) / 255;
+        return luminance > 0.5; // threshold, tweak if needed
+    }
+
     public static void showAbout(Component c) {
         PreformattedTextPane ptp = new PreformattedTextPane(UIManager.getColor("Panel.background"), 14, UIManager.getBoolean("laf.dark"), null);
 
