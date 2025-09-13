@@ -962,7 +962,7 @@ public final class GeminiFrame extends JFrame {
 
         settingsMenu.add(emojiMenu);
 
-        settingsMenu.add(createMenuItem(I18n.t("layoutItem"), null, () -> {
+        settingsMenu.add(createMenuItem(I18n.t("layoutItem"), KeyStroke.getKeyStroke(KeyEvent.VK_L, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
             JSlider slider = new JSlider(50, 100, (int) (GeminiTextPane.contentPercentage * 100f));
 
             slider.setMajorTickSpacing(10);
@@ -1031,7 +1031,7 @@ public final class GeminiFrame extends JFrame {
 
         }));
 
-        settingsMenu.add(createMenuItem(I18n.t("stylesItem"), null, () -> {
+        settingsMenu.add(createMenuItem(I18n.t("stylesItem"), KeyStroke.getKeyStroke(KeyEvent.VK_S, mod), () -> {
             String[] scopeItems = {I18n.t("scope1Label"), I18n.t("scope2Label"), I18n.t("scope3Label")};
             JComboBox<String> scopeCombo = new JComboBox(scopeItems);
             scopeCombo.setEditable(false);
