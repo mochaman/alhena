@@ -1103,7 +1103,7 @@ public final class GeminiFrame extends JFrame {
                     String fTheme = th;
                     BooleanSupplier okRunnable = () -> {
                         try {
-                            DB.insertStyle(fScope, fScopeVal, fTheme, sp.getAlteredPageTheme().getJson());
+                            DB.insertStyle(fScope, fScopeVal, fTheme, sp.getAlteredPageTheme().getJson(), null);
                             Alhena.updateFrames(false, false, false);
                         } catch (SQLException ex) {
                             ex.printStackTrace();
