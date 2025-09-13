@@ -97,6 +97,7 @@ public class PreformattedTextPane extends JTextPane {
             StyleConstants.setFontFamily(pfStyle, parentPane.pageStyle.getMonoFontFamily());
             StyleConstants.setBackground(pfStyle, bgColor);
             StyleConstants.setForeground(pfStyle, parentPane.pageStyle.getMonoFontColor());
+            setForeground(parentPane.pageStyle.getMonoFontColor());
             StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : parentPane.pageStyle.getMonoFontSize());
         }
 
