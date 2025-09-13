@@ -494,6 +494,10 @@ public class PageTheme {
         this.monoFontColor = monoFontColor;
     }
 
+    public void clearPageBackground() {
+        pageBackground = null;
+    }
+
     public void setMonoFontColor(Integer monoFontColor) {
         if (monoFontColor != null) {
             this.monoFontColor = new Color(monoFontColor);
@@ -617,6 +621,122 @@ public class PageTheme {
     public void setQuoteUnderline(Boolean quoteUnderline) {
         if (quoteUnderline != null) {
             this.quoteUnderline = quoteUnderline;
+        }
+    }
+
+    public void clearColor(String lineType) {
+        switch (lineType) {
+            case "#" ->
+                header3Color = null;
+            case "##" ->
+                header2Color = null;
+            case "###" ->
+                header1Color = null;
+            case "=>" ->
+                linkColor = null;
+            case "=> Hover" ->
+                hoverColor = null;
+            case "=> Visited" ->
+                visitedLinkColor = null;
+            case ">" ->
+                quoteForeground = null;
+            case "Text" ->
+                textForeground = null;
+            case "PF Text" ->
+                monoFontColor = null;
+            default ->
+                throw new IllegalArgumentException("Unknown type: " + lineType);
+        }
+    }
+
+    public void clearFont(String lineType) {
+        switch (lineType) {
+            case "#" ->
+                header3FontFamily = null;
+            case "##" ->
+                header2FontFamily = null;
+            case "###" ->
+                header1FontFamily = null;
+            case "=>" ->
+                linkFontFamily = null;
+            case "=> Hover" ->
+                linkFontFamily = null;
+            case "=> Visited" ->
+                linkFontFamily = null;
+            case ">" ->
+                quoteFontFamily = null;
+            case "Text" ->
+                fontFamily = null;
+            case "PF Text" ->
+                monoFontFamily = null;
+            default ->
+                throw new IllegalArgumentException("Unknown type: " + lineType);
+        }
+    }
+
+    public void clearFontSize(String lineType) {
+        switch (lineType) {
+            case "#" ->
+                header3Size = null;
+            case "##" ->
+                header2Size = null;
+            case "###" ->
+                header1Size = null;
+            case "=>" ->
+                linkSize = null;
+            case "=> Hover" ->
+                linkSize = null;
+            case "=> Visited" ->
+                linkSize = null;
+            case ">" ->
+                quoteSize = null;
+            case "Text" ->
+                fontSize = null;
+            case "PF Text" ->
+                monoFontSize = null;
+            default ->
+                throw new IllegalArgumentException("Unknown type: " + lineType);
+        }
+    }
+
+    public void clearFontStyle(String lineType) {
+        switch (lineType) {
+            case "#" -> {
+                header3Style = null;
+                header3Underline = null;
+            }
+            case "##" -> {
+                header2Style = null;
+                header2Underline = null;
+            }
+            case "###" -> {
+                header1Style = null;
+                header1Underline = null;
+            }
+            case "=>" -> {
+                linkStyle = null;
+                linkUnderline = null;
+            }
+            case "=> Hover" -> {
+                linkStyle = null;
+                linkUnderline = null;
+            }
+            case "=> Visited" -> {
+                linkStyle = null;
+                linkUnderline = null;
+            }
+            case ">" -> {
+                quoteStyle = null;
+                quoteUnderline = null;
+            }
+            case "Text" -> {
+                fontStyle = null;
+                fontUnderline = null;
+            }
+            // case "PF Text" ->
+            //     mono = null;
+            default ->
+                throw new IllegalArgumentException("Unknown type: " + lineType);
         }
     }
 }
