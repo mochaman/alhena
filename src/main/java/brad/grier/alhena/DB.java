@@ -851,11 +851,11 @@ public class DB {
         return result;
     }
 
-    public static void insertStyle(String scope, String scopeValue, String theme, String style) throws SQLException {
+    public static void insertStyle(String scope, String scopeValue, String theme, String style, Timestamp ts) throws SQLException {
         String sql = """
-            MERGE INTO STYLES (SCOPE, SCOPE_VALUE, THEME, STYLE)
+            MERGE INTO STYLES (SCOPE, SCOPE_VALUE, THEME, STYLE, TIME_STAMP)
             KEY (SCOPE, SCOPE_VALUE, THEME)
-            VALUES (?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?);
         """;
         try (Connection con = cp.getConnection()) {
             try (var ps = con.prepareStatement(sql)) {
@@ -863,6 +863,7 @@ public class DB {
                 ps.setString(2, scopeValue);
                 ps.setString(3, theme);
                 ps.setString(4, style);
+                ps.setTimestamp(5, ts == null ? new Timestamp(System.currentTimeMillis()) : ts);
                 ps.execute();
             }
         }
