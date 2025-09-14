@@ -629,7 +629,7 @@ public class GeminiTextPane extends JTextPane {
 
                                 popupMenu.show(e.getComponent(), e.getX(), e.getY());
 
-                            } else {
+                            } else if (SwingUtilities.isLeftMouseButton(e)) {
 
                                 if (range.imageIndex != -1) {
                                     removeItemAtIndex(range);
@@ -644,6 +644,10 @@ public class GeminiTextPane extends JTextPane {
 
                                     }
 
+                                }
+                            } else if (SwingUtilities.isMiddleMouseButton(e)) {
+                                if (!range.dataUrl) {
+                                    f.newTab(range.url);
                                 }
                             }
                             break;
@@ -2532,6 +2536,7 @@ public class GeminiTextPane extends JTextPane {
             ex.printStackTrace();
         }
     }
+
     public void scrollLeft() {
         EventQueue.invokeLater(() -> {
             JScrollPane jsp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, this);
