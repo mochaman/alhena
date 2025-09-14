@@ -430,8 +430,8 @@ public class Alhena {
         GeminiFrame.saveFont = new Font(DB.getPref("font", "SansSerif"), Font.PLAIN, GeminiFrame.fontSize);
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
-            
-            UIManager.put( "ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10));
+
+            UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10));
             if (theme != null) {
 
                 Util.setupTheme(Util.mapTheme(theme));
@@ -625,8 +625,14 @@ public class Alhena {
         }
 
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
-
-        URI checkURI = URI.create(url);
+        URI checkURI;
+        try {
+            checkURI = URI.create(url);
+        } catch (IllegalArgumentException ex) {
+            p.textPane.end("## " + ex.getMessage() + "\n", false, url, true);
+            p.textPane.scrollLeft();
+            return;
+        }
 
         // because getHost() can return null for hosts with emoji
         String authority = checkURI.getAuthority();
@@ -647,7 +653,7 @@ public class Alhena {
 
                         } else {
                             url = prevURI.resolve(checkURI).toString();
-                            if(url.endsWith("..")){
+                            if (url.endsWith("..")) {
                                 url = url.substring(0, url.indexOf(".."));
                             }
                         }
@@ -1226,7 +1232,7 @@ public class Alhena {
                                 ex.printStackTrace();
                             }
                             File af = File.createTempFile("alhena", "media");
-                            
+
                             af.deleteOnExit();
                             String finalMime = mimeFromExt;
                             Runnable r = () -> {
