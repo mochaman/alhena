@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.net.IDN;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -625,13 +626,28 @@ public class Alhena {
         }
 
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
-        URI checkURI;
+        URI checkURI = null;
         try {
-            checkURI = URI.create(url);
-        } catch (IllegalArgumentException ex) {
-            p.textPane.end("## " + ex.getMessage() + "\n", false, url, true);
-            p.textPane.scrollLeft();
-            return;
+            checkURI = new URI(url);
+        } catch (URISyntaxException ex) {
+            String msg = ex.getMessage();
+            int badCharIdx = ex.getIndex();
+            if (badCharIdx != -1) {
+                
+                try {
+                    url = sanitize(url);
+                    checkURI = URI.create(url);
+                } catch (IllegalArgumentException e) {
+                    msg = e.getMessage();
+                }
+
+            }
+            if (checkURI == null) {
+                p.textPane.end("## " + msg + "\n", false, url, true);
+                p.textPane.scrollLeft();
+                return;
+            }
+
         }
 
         // because getHost() can return null for hosts with emoji
@@ -3445,6 +3461,28 @@ public class Alhena {
 
     public static String t(String key) {
         return bundle.getString(key);
+    }
+
+    public static String sanitize(String raw) {
+        String fixed = raw;
+        while (true) {
+            try {
+                // Try to parse
+                new URI(fixed);
+                return fixed; // Success
+            } catch (URISyntaxException e) {
+                int idx = e.getIndex();
+                if (idx < 0 || idx >= fixed.length()) {
+                    // no useful index → give up
+                    throw new IllegalArgumentException("Can't fix URI: " + raw, e);
+                }
+                char bad = fixed.charAt(idx);
+                String hex = String.format("%%%02X", (int) bad);
+
+                // Replace just that char with its %HH escape
+                fixed = fixed.substring(0, idx) + hex + fixed.substring(idx + 1);
+            }
+        }
     }
 
 }
