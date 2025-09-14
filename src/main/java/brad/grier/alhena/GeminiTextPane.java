@@ -2532,6 +2532,12 @@ public class GeminiTextPane extends JTextPane {
             ex.printStackTrace();
         }
     }
+    public void scrollLeft() {
+        EventQueue.invokeLater(() -> {
+            JScrollPane jsp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, this);
+            jsp.getHorizontalScrollBar().setValue(0);
+        });
+    }
 
     public static class ClickableRange {
 
