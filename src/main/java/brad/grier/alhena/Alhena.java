@@ -630,6 +630,7 @@ public class Alhena {
         try {
             checkURI = new URI(url);
         } catch (URISyntaxException ex) {
+            p.frame().setTmpStatus("Sanitizing URL");
             String msg = ex.getMessage();
             int badCharIdx = ex.getIndex();
             if (badCharIdx != -1) {
