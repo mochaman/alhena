@@ -1654,6 +1654,11 @@ public class GeminiTextPane extends JTextPane {
         pageTheme.setHeader1Underline(false);
         pageTheme.setHeader2Underline(false);
         pageTheme.setHeader3Underline(false);
+        pageTheme.setListFont(GeminiFrame.proportionalFamily);
+        pageTheme.setListStyle(Font.PLAIN);
+        pageTheme.setListColor(UIManager.getColor("TextPane.foreground"));
+        pageTheme.setListUnderline(false);
+        pageTheme.setListFontSize(GeminiFrame.fontSize);
 
         return pageTheme;
     }
@@ -1719,12 +1724,10 @@ public class GeminiTextPane extends JTextPane {
 
         Style h1Style = doc.addStyle("###", null);
         StyleConstants.setFontFamily(h1Style, pageStyle.getHeader1FontFamily());
-        StyleConstants.setFontSize(h1Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getHeader1Size());
-
+        StyleConstants.setFontSize(h1Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE + 3 : pageStyle.getHeader1Size());
         StyleConstants.setBold(h1Style, (pageStyle.getHeader1Style() & Font.BOLD) != 0);
         StyleConstants.setItalic(h1Style, (pageStyle.getHeader1Style() & Font.ITALIC) != 0);
         StyleConstants.setUnderline(h1Style, pageStyle.getHeader1Underline());
-
         StyleConstants.setForeground(h1Style, pageStyle.getHeader1Color());
 
         Style h2Style = doc.addStyle("##", h1Style);
@@ -1733,7 +1736,7 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setForeground(h2Style, pageStyle.getHeader2Color());
         StyleConstants.setBold(h2Style, (pageStyle.getHeader2Style() & Font.BOLD) != 0);
         StyleConstants.setItalic(h2Style, (pageStyle.getHeader2Style() & Font.ITALIC) != 0);
-        StyleConstants.setFontSize(h2Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getHeader2Size()); // 24
+        StyleConstants.setFontSize(h2Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE + 9: pageStyle.getHeader2Size()); // 24
 
         Style h3Style = doc.addStyle("#", h1Style);
         StyleConstants.setUnderline(h3Style, pageStyle.getHeader3Underline());
@@ -1741,7 +1744,7 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setFontFamily(h3Style, pageStyle.getHeader3FontFamily());
         StyleConstants.setBold(h3Style, (pageStyle.getHeader3Style() & Font.BOLD) != 0);
         StyleConstants.setItalic(h3Style, (pageStyle.getHeader3Style() & Font.ITALIC) != 0);
-        StyleConstants.setFontSize(h3Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getHeader3Size()); // 32
+        StyleConstants.setFontSize(h3Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE + 17 : pageStyle.getHeader3Size()); // 32
 
         Style linkStyle;
         if (page.isNex()) {
@@ -1766,23 +1769,29 @@ public class GeminiTextPane extends JTextPane {
         Style quoteStyle = doc.addStyle(">", h1Style);
         StyleConstants.setUnderline(quoteStyle, pageStyle.getQuoteUnderline());
         StyleConstants.setFontFamily(quoteStyle, pageStyle.getQuoteFontFamily());
-        StyleConstants.setFontSize(quoteStyle, pageStyle.getQuoteSize());
+        StyleConstants.setFontSize(quoteStyle, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getQuoteSize());
         StyleConstants.setBold(quoteStyle, (pageStyle.getQuoteStyle() & Font.BOLD) != 0);
         StyleConstants.setItalic(quoteStyle, (pageStyle.getQuoteStyle() & Font.ITALIC) != 0);
-        StyleConstants.setItalic(quoteStyle, true);
-
+        // StyleConstants.setItalic(quoteStyle, true);
         StyleConstants.setForeground(quoteStyle, pageStyle.getQuoteForeground());
-
+        //TODO: ADJUST TEXT AND LIST SIZES FOR PRINTING?
         Style textStyle = doc.addStyle("text", h1Style);
         StyleConstants.setUnderline(textStyle, pageStyle.getFontUnderline());
         StyleConstants.setFontFamily(textStyle, pageStyle.getFontFamily());
-        StyleConstants.setFontSize(textStyle, pageStyle.getFontSize());
+        StyleConstants.setFontSize(textStyle, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getFontSize());
         StyleConstants.setBold(textStyle, (pageStyle.getFontStyle() & Font.BOLD) != 0);
         StyleConstants.setItalic(textStyle, (pageStyle.getFontStyle() & Font.ITALIC) != 0);
         //StyleConstants.setBold(textStyle, false);
         StyleConstants.setForeground(textStyle, pageStyle.getTextForeground());
 
-        doc.addStyle("*", textStyle);
+        Style listStyle = doc.addStyle("*", textStyle);
+        StyleConstants.setUnderline(listStyle, pageStyle.getListUnderline());
+        StyleConstants.setFontFamily(listStyle, pageStyle.getListFont());
+        StyleConstants.setFontSize(listStyle, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getListFontSize());
+        StyleConstants.setBold(listStyle, (pageStyle.getListStyle() & Font.BOLD) != 0);
+        StyleConstants.setItalic(listStyle, (pageStyle.getListStyle() & Font.ITALIC) != 0);
+        StyleConstants.setForeground(listStyle, pageStyle.getListColor());
+        //doc.addStyle("*", textStyle);
 
         hoverStyle = new SimpleAttributeSet();
         StyleConstants.setForeground(hoverStyle, hoverColor);
