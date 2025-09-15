@@ -167,6 +167,7 @@ public class Alhena {
     public static boolean linkIcons;
     public static boolean bigScrollBar;
     public static String scrollSpeed; // null if not set
+    public static int scrollbarSize;
     public static boolean smoothScrolling;
     public static boolean macUseNoto;
     private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
@@ -424,6 +425,7 @@ public class Alhena {
         smoothScrolling = map.getOrDefault("smoothscrolling", "false").equals("true");
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
         bigScrollBar = map.getOrDefault("bigscrollbar", "false").equals("true");
+        scrollbarSize = Integer.parseInt(map.getOrDefault("scrollbarsize", "18"));
         GeminiTextPane.dragToScroll = map.getOrDefault("dragscroll", "false").equals("true");
         GeminiFrame.proportionalFamily = map.getOrDefault("fontfamily", "SansSerif");
         GeminiFrame.fontSize = Integer.parseInt(map.getOrDefault("fontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
@@ -432,7 +434,7 @@ public class Alhena {
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
 
-            UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10));
+            UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? scrollbarSize : 10));
             if (theme != null) {
 
                 Util.setupTheme(Util.mapTheme(theme));
@@ -493,7 +495,7 @@ public class Alhena {
 
     public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu, boolean newTheme) {
 
-        UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? 18 : 10));
+        UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? scrollbarSize : 10));
         GeminiTextPane.clearLinkIcons();
         if (newTheme) {
 
@@ -634,7 +636,7 @@ public class Alhena {
             String msg = ex.getMessage();
             int badCharIdx = ex.getIndex();
             if (badCharIdx != -1) {
-                
+
                 try {
                     url = sanitize(url);
                     checkURI = URI.create(url);
@@ -2793,23 +2795,50 @@ public class Alhena {
         String message = "# " + I18n.t("commandsHeading");
         if (cmd.length == 1) {
 
-            if (cmd[0].equals("ansialert")) {
-                message = "# ansialert\n### " + I18n.t("ansiAlertHeading");
-            } else if (cmd[0].equals("scrollspeed")) {
-                message = "# scrollspeed\n### " + I18n.t("scrollSpeedHeading");
-
-            } else if (cmd[0].equals("info")) {
-                plainText = true;
-                message = getAlhenaInfo().toString();
-            } else if (cmd[0].equals("art")) {
-                String art = GeminiFrame.getArt();
-                message = "```\n" + Util.colorize(art) + "```\n";
-                embedArt = true;
+            switch (cmd[0]) {
+                case "ansialert" ->
+                    message = "# ansialert\n### " + I18n.t("ansiAlertHeading");
+                case "scrollspeed" ->
+                    message = "# scrollspeed\n### " + I18n.t("scrollSpeedHeading");
+                case "info" -> {
+                    plainText = true;
+                    message = getAlhenaInfo().toString();
+                }
+                case "art" -> {
+                    String art = GeminiFrame.getArt();
+                    message = "```\n" + Util.colorize(art) + "```\n";
+                    embedArt = true;
+                }
+                case "scrollbarsize" ->
+                    message = "# scrollbarsize\n### " + I18n.t("scrollbarSizeHeading");
+                default -> {
+                }
             }
 
         } else if (cmd.length == 2) {
+            if (cmd[0].equals("scrollbarsize")) {
+                try {
+                    int val = Integer.parseInt(cmd[1]);
+                    if (val < 10 || val > 25) {
+                        message = "## " + I18n.t("sbSizeErrorLabel") + "\n";
+                    } else {
+                        DB.insertPref("scrollbarsize", cmd[1]);
+                        scrollbarSize = val;
 
-            if (cmd[0].equals("scrollspeed")) {
+                        String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
+                        message = "## " + m + "\n";
+                        if (bigScrollBar) {
+                            bg(() -> {
+                                Alhena.updateFrames(false, false, false);
+                            });
+                        }
+                    }
+
+                } catch (NumberFormatException ex) {
+                    message = "## " + I18n.t("numberError") + "\n";
+                }
+
+            } else if (cmd[0].equals("scrollspeed")) {
                 try {
                     if (cmd[1].equals("default")) {
                         DB.insertPref("scrollspeed", null);
