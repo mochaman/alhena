@@ -47,6 +47,7 @@ public class PageTheme {
     private Color listColor;
     private Integer listStyle;
     private Boolean listUnderline;
+    private Float contentPercentage;
 
     public Color getLinkColor() {
         return linkColor;
@@ -340,6 +341,7 @@ public class PageTheme {
         setLinkSize(jo.getInteger("linkSize"));
         setQuoteSize(jo.getInteger("quoteSize"));
         setPageBackground(jo.getInteger("pageBackground"));
+        setContentPercentage(jo.getFloat("contentPercentage"));
         setHeader1FontFamily(jo.getString("header1FontFamily"));
         setHeader2FontFamily(jo.getString("header2FontFamily"));
         setHeader3FontFamily(jo.getString("header3FontFamily"));
@@ -454,6 +456,10 @@ public class PageTheme {
             styleJson.put("pageBackground", pageBackground.getRGB());
         }
 
+        if(contentPercentage != null){
+            styleJson.put("contentPercentage", contentPercentage);
+        }
+
         if (header1FontFamily != null) {
             styleJson.put("header1FontFamily", header1FontFamily);
         }
@@ -502,10 +508,10 @@ public class PageTheme {
         if (listColor != null) {
             styleJson.put("listColor", listColor.getRGB());
         }
-        if(listStyle != null){
+        if (listStyle != null) {
             styleJson.put("listStyle", listStyle);
         }
-        if(listUnderline != null){
+        if (listUnderline != null) {
             styleJson.put("listUnderline", listUnderline);
         }
 
@@ -523,6 +529,9 @@ public class PageTheme {
 
     public void clearPageBackground() {
         pageBackground = null;
+    }
+    public void clearContentWidth() {
+        contentPercentage = null;
     }
 
     public void setMonoFontColor(Integer monoFontColor) {
@@ -828,6 +837,16 @@ public class PageTheme {
     public void setListUnderline(Boolean listUnderline) {
         if (listUnderline != null) {
             this.listUnderline = listUnderline;
+        }
+    }
+
+    public Float getContentPercentage() {
+        return contentPercentage;
+    }
+
+    public void setContentPercentage(Float contentPercentage) {
+        if (contentPercentage != null) {
+            this.contentPercentage = contentPercentage;
         }
     }
 }

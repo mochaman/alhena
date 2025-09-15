@@ -143,7 +143,7 @@ public class GeminiTextPane extends JTextPane {
     public static final HashMap<String, Point> emojiSheetMap = new HashMap<>();
     public static BufferedImage sheetImage = null;
     public static int indent;
-    public static float contentPercentage = .80f;
+    public static float contentPercentage;
     public static boolean wrapPF;
     public static boolean asciiImage;
     public static boolean embedPF;
@@ -1555,7 +1555,8 @@ public class GeminiTextPane extends JTextPane {
         if (totalWidth <= 0) {
             return;
         }
-        float cp = printing ? 1.0f : contentPercentage;
+        
+        float cp = printing ? 1.0f : pageStyle.getContentPercentage();
         contentWidth = totalWidth * cp;
         indent = (int) ((totalWidth - contentWidth) / 2f);
 
@@ -1617,6 +1618,7 @@ public class GeminiTextPane extends JTextPane {
         PageTheme pageTheme = new PageTheme();
         Color bg = UIManager.getColor("TextPane.inactiveBackground");
         pageTheme.setPageBackground(bg);
+        pageTheme.setContentPercentage(contentPercentage);
         boolean isDark = !Util.isLight(bg);
         Color lc = UIManager.getColor("Component.linkColor");
         pageTheme.setLinkColor(lc);

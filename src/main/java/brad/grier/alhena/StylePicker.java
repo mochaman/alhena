@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -25,6 +26,8 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 
 import io.vertx.core.json.JsonObject;
 
@@ -95,11 +98,46 @@ public class StylePicker extends JPanel {
             Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
 
         });
+
+        JMenuItem widthItem = new JMenuItem(I18n.t("styleWidthDialog"));
+        widthItem.addActionListener(al ->{
+
+            JSlider slider = new JSlider(50, 100, (int)(pageTheme.getContentPercentage() * 100));
+            slider.setMajorTickSpacing(10);
+            slider.setMinorTickSpacing(5);
+            slider.setPaintTicks(true);
+            slider.setPaintLabels(true);
+
+            slider.setPreferredSize(new Dimension(500, slider.getPreferredSize().height));
+            Object[] comps = {new JLabel(I18n.t("contentWidthLabel") + " " + I18n.t("styleWidthLabel")), slider};
+            Object res = Util.inputDialog2(StylePicker.this, "Content Width", comps, null, false);
+            if (res != null) {
+                float p = (float) slider.getValue() / 100f;
+                pageTheme.setContentPercentage(p);
+                alteredPageTheme.setContentPercentage(p);
+                if (saveAlteredPageTheme != null) { 
+                    saveAlteredPageTheme.setContentPercentage(p);
+                }
+            }
+        });
+        JMenuItem resetWidthItem = new JMenuItem(I18n.t("widthResetDialog"));
+        resetWidthItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            //textPanel.setBackground(defaultTheme.getPageBackground());
+            pageTheme.setContentPercentage(defaultTheme.getContentPercentage());
+            alteredPageTheme.clearContentWidth();
+            if (saveAlteredPageTheme != null) {
+                saveAlteredPageTheme.clearContentWidth();
+            }
+
+        });
         Supplier<List<JComponent>> supplier = () -> {
 
             if (mItems.isEmpty()) {
                 mItems.add(pageColorItem);
                 mItems.add(resetPageBGItem);
+                mItems.add(widthItem);
+                mItems.add(resetWidthItem);
                 mItems.add(applyAllCB);
                 mItems.add(resetItem);
             }
@@ -781,7 +819,8 @@ public class StylePicker extends JPanel {
         linePanel.add(buttonPanel);
 
         contentPanel.add(Box.createVerticalStrut(10));
-        contentPanel.add(textPanel);
+        textPanel.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
+        contentPanel.add(new JScrollPane(textPanel));
 
         add(contentPanel, BorderLayout.CENTER);
 
