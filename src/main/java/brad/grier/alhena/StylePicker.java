@@ -30,7 +30,7 @@ import io.vertx.core.json.JsonObject;
 
 public class StylePicker extends JPanel {
 
-    private JLabel h3Label, h2Label, h1Label, linkLabel, quoteLabel, textLabel, hoverLabel, monoFontLabel, visitedLabel;
+    private JLabel h3Label, h2Label, h1Label, linkLabel, quoteLabel, textLabel, hoverLabel, monoFontLabel, visitedLabel, listLabel;
     private JPanel textPanel;
 
     private String selectedLine = "#";
@@ -118,7 +118,7 @@ public class StylePicker extends JPanel {
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
 
         contentPanel.add(Box.createVerticalStrut(5));
-        String[] items = {"#", "##", "###", "=>", "=> Hover", "=> Visited", ">", "Text", "PF Text"};
+        String[] items = {"#", "##", "###", "=>", "=> Hover", "=> Visited", "*", ">", "Text", "PF Text"};
         JPanel linePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         linePanel.add(new JLabel(I18n.t("lineLabel")));
         JComboBox<String> lineCombo = new JComboBox<>(items);
@@ -136,23 +136,25 @@ public class StylePicker extends JPanel {
         fontButton.addActionListener(al -> {
             Font f = switch (selectedLine) {
                 case "#" ->
-                    new Font(pageTheme.getHeader3FontFamily(), Font.PLAIN, pageTheme.getHeader3Size());
+                    new Font(pageTheme.getHeader3FontFamily(),pageTheme.getHeader3Style(), pageTheme.getHeader3Size());
                 case "##" ->
-                    new Font(pageTheme.getHeader2FontFamily(), Font.PLAIN, pageTheme.getHeader2Size());
+                    new Font(pageTheme.getHeader2FontFamily(), pageTheme.getHeader2Style(), pageTheme.getHeader2Size());
                 case "###" ->
-                    new Font(pageTheme.getHeader1FontFamily(), Font.PLAIN, pageTheme.getHeader1Size());
+                    new Font(pageTheme.getHeader1FontFamily(), pageTheme.getHeader1Style(), pageTheme.getHeader1Size());
                 case "=>" ->
-                    new Font(pageTheme.getLinkFontFamily(), Font.PLAIN, pageTheme.getLinkSize());
+                    new Font(pageTheme.getLinkFontFamily(), pageTheme.getLinkStyle(), pageTheme.getLinkSize());
                 case "=> Hover" ->
-                    new Font(pageTheme.getLinkFontFamily(), Font.PLAIN, pageTheme.getLinkSize());
+                    new Font(pageTheme.getLinkFontFamily(), pageTheme.getLinkStyle(), pageTheme.getLinkSize());
                 case "=> Visited" ->
-                    new Font(pageTheme.getLinkFontFamily(), Font.PLAIN, pageTheme.getLinkSize());
+                    new Font(pageTheme.getLinkFontFamily(), pageTheme.getLinkStyle(), pageTheme.getLinkSize());
                 case ">" ->
-                    new Font(pageTheme.getQuoteFontFamily(), Font.PLAIN, pageTheme.getQuoteSize());
+                    new Font(pageTheme.getQuoteFontFamily(), pageTheme.getQuoteStyle(), pageTheme.getQuoteSize());
                 case "Text" ->
-                    new Font(pageTheme.getFontFamily(), Font.PLAIN, pageTheme.getFontSize());
+                    new Font(pageTheme.getFontFamily(), pageTheme.getFontStyle(), pageTheme.getFontSize());
                 case "PF Text" ->
                     new Font(pageTheme.getMonoFontFamily(), Font.PLAIN, pageTheme.getMonoFontSize());
+                case "*" ->
+                     new Font(pageTheme.getListFont(), pageTheme.getListStyle(), pageTheme.getListFontSize());
                 default ->
                     null;
 
@@ -240,6 +242,17 @@ public class StylePicker extends JPanel {
                         }
                         monoFontLabel.setFont(chosenFont);
                     }
+                    case "*" -> {
+                        pageTheme.setListFont(chosenFont.getFontName());
+                        pageTheme.setListFontSize(chosenFont.getSize());
+                        alteredPageTheme.setListFont(chosenFont.getFontName());
+                        alteredPageTheme.setListFontSize(chosenFont.getSize());
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setListFont(chosenFont.getFontName());
+                            saveAlteredPageTheme.setListFontSize(chosenFont.getSize());
+                        }
+                        listLabel.setFont(chosenFont);
+                    }
                     default -> {
                     }
                 }
@@ -270,6 +283,8 @@ public class StylePicker extends JPanel {
                     pageTheme.getTextForeground();
                 case "PF Text" ->
                     pageTheme.getMonoFontColor();
+                case "*" ->
+                    pageTheme.getListColor();
                 default ->
                     null;
 
@@ -353,6 +368,14 @@ public class StylePicker extends JPanel {
                     }
                     monoFontLabel.setForeground(chosenColor);
                 }
+                case "*" -> {
+                    pageTheme.setListColor(chosenColor);
+                    alteredPageTheme.setListColor(chosenColor);
+                    if (saveAlteredPageTheme != null) {
+                        saveAlteredPageTheme.setListColor(chosenColor);
+                    }
+                    listLabel.setForeground(chosenColor);
+                }
                 default -> {
                 }
             }
@@ -377,6 +400,8 @@ public class StylePicker extends JPanel {
                     pageTheme.getQuoteStyle();
                 case "Text" ->
                     pageTheme.getFontStyle();
+                case "*" ->
+                    pageTheme.getListStyle();
                 case "PF Text" ->
                     null;
                 //pageTheme.getMonoFontColor();
@@ -401,6 +426,8 @@ public class StylePicker extends JPanel {
                     pageTheme.getQuoteUnderline();
                 case "Text" ->
                     pageTheme.getFontUnderline();
+                case "*" ->
+                    pageTheme.getListUnderline();
                 case "PF Text" ->
                     null;
                 //pageTheme.getMonoFontColor();
@@ -534,6 +561,21 @@ public class StylePicker extends JPanel {
                         }
                         textLabel.setFont(f);
                     }
+                    case "*" -> {
+                        pageTheme.setListStyle(style);
+                        pageTheme.setListUnderline(underline);
+                        alteredPageTheme.setListStyle(style);
+                        alteredPageTheme.setListUnderline(underline);
+                        if (saveAlteredPageTheme != null) {
+                            saveAlteredPageTheme.setListStyle(style);
+                            saveAlteredPageTheme.setListUnderline(underline);
+                        }
+                        Font f = new Font(pageTheme.getFontFamily(), style, pageTheme.getFontSize());
+                        if (underline) {
+                            f = underlineFont(f);
+                        }
+                        listLabel.setFont(f);
+                    }
                     case "PF Text" -> {
 
                     }
@@ -554,6 +596,7 @@ public class StylePicker extends JPanel {
         nameResetters.put("=> Visited", (page, def) -> page.setLinkFontFamily(def.getLinkFontFamily()));
         nameResetters.put(">", (page, def) -> page.setQuoteFontFamily(def.getQuoteFontFamily()));
         nameResetters.put("Text", (page, def) -> page.setFontFamily(def.getFontFamily()));
+        nameResetters.put("*", (page, def) -> page.setListFont(def.getListFont()));
         nameResetters.put("PF Text", (page, def) -> page.setMonoFontFamily(def.getMonoFontFamily()));
         resetFItem.addActionListener(al -> {
             PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
@@ -580,6 +623,7 @@ public class StylePicker extends JPanel {
         sizeResetters.put("=> Hover", (page, def) -> page.setLinkSize(def.getLinkSize()));
         sizeResetters.put("=> Visited", (page, def) -> page.setLinkSize(def.getLinkSize()));
         sizeResetters.put(">", (page, def) -> page.setQuoteSize(def.getQuoteSize()));
+        sizeResetters.put("*", (page, def) -> page.setListFontSize(def.getListFontSize()));
         sizeResetters.put("Text", (page, def) -> page.setFontSize(def.getFontSize()));
         sizeResetters.put("PF Text", (page, def) -> page.setMonoFontSize(def.getMonoFontSize()));
         resetFSItem.addActionListener(al -> {
@@ -607,6 +651,7 @@ public class StylePicker extends JPanel {
         colorResetters.put("=> Hover", (page, def) -> page.setHoverColor(def.getHoverColor()));
         colorResetters.put("=> Visited", (page, def) -> page.setVisitedLinkColor(def.getVisitedLinkColor()));
         colorResetters.put(">", (page, def) -> page.setQuoteForeground(def.getQuoteForeground()));
+        colorResetters.put("*", (page, def) -> page.setListColor(def.getListColor()));
         colorResetters.put("Text", (page, def) -> page.setTextForeground(def.getTextForeground()));
         colorResetters.put("PF Text", (page, def) -> page.setMonoFontColor(def.getMonoFontColor()));
         resetFCItem.addActionListener(al -> {
@@ -654,6 +699,10 @@ public class StylePicker extends JPanel {
         styleResetters.put(">", (page, def) -> {
             page.setQuoteStyle(def.getQuoteStyle());
             page.setQuoteUnderline(def.getQuoteUnderline());
+        });
+        styleResetters.put("*", (page, def) -> {
+            page.setListStyle(def.getListStyle());
+            page.setListUnderline(def.getListUnderline());
         });
         styleResetters.put("Text", (page, def) -> {
             page.setFontStyle(def.getFontStyle());
@@ -715,6 +764,9 @@ public class StylePicker extends JPanel {
         visitedLabel = new JLabel(I18n.t("linkVisitedLabel"));
 
         textPanel.add(wrap(visitedLabel));
+
+        listLabel = new JLabel("• " + I18n.t("listLabel"));
+        textPanel.add(wrap(listLabel));
 
         quoteLabel = new JLabel(I18n.t("quoteLabel"));
         textPanel.add(wrap(quoteLabel));
@@ -788,6 +840,19 @@ public class StylePicker extends JPanel {
         if (pageTheme.getFontUnderline()) {
             f = underlineFont(f);
         }
+        f = new Font(pageTheme.getListFont(), pageTheme.getListStyle(), pageTheme.getListFontSize());
+        if (pageTheme.getListUnderline()) {
+            f = underlineFont(f);
+        }
+        listLabel.setFont(f);
+
+        listLabel.setForeground(pageTheme.getListColor());
+
+        f = new Font(pageTheme.getFontFamily(), pageTheme.getFontStyle(), pageTheme.getFontSize());
+        if (pageTheme.getFontUnderline()) {
+            f = underlineFont(f);
+        }
+
         textLabel.setFont(f);
 
         textLabel.setForeground(pageTheme.getTextForeground());
@@ -796,7 +861,7 @@ public class StylePicker extends JPanel {
 
     }
 
-    private final JPanel wrap(JLabel l) {
+    private JPanel wrap(JLabel l) {
         JPanel jp = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         jp.setOpaque(false);
         jp.add(l);
