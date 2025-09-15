@@ -42,6 +42,11 @@ public class PageTheme {
     private String header3FontFamily;
     private String linkFontFamily;
     private String quoteFontFamily;
+    private String listFont;
+    private Integer listFontSize;
+    private Color listColor;
+    private Integer listStyle;
+    private Boolean listUnderline;
 
     public Color getLinkColor() {
         return linkColor;
@@ -346,6 +351,12 @@ public class PageTheme {
         setHeader1Underline(jo.getBoolean("header1Underline"));
         setHeader2Underline(jo.getBoolean("header2Underline"));
         setHeader3Underline(jo.getBoolean("header3Underline"));
+        setListFont(jo.getString("listFont"));
+        setListFontSize(jo.getInteger("listFontSize"));
+        setListColor(jo.getInteger("listColor"));
+        setListStyle(jo.getInteger("listStyle"));
+        setListUnderline(jo.getBoolean("listUnderline"));
+
     }
 
     public String getJson() {
@@ -480,6 +491,22 @@ public class PageTheme {
         }
         if (header3Underline != null) {
             styleJson.put("header3Underline", header3Underline);
+        }
+
+        if (listFont != null) {
+            styleJson.put("listFont", listFont);
+        }
+        if (listFontSize != null) {
+            styleJson.put("listFontSize", listFontSize);
+        }
+        if (listColor != null) {
+            styleJson.put("listColor", listColor.getRGB());
+        }
+        if(listStyle != null){
+            styleJson.put("listStyle", listStyle);
+        }
+        if(listUnderline != null){
+            styleJson.put("listUnderline", listUnderline);
         }
 
         return styleJson.encode();
@@ -644,6 +671,8 @@ public class PageTheme {
                 textForeground = null;
             case "PF Text" ->
                 monoFontColor = null;
+            case "*" ->
+                listColor = null;
             default ->
                 throw new IllegalArgumentException("Unknown type: " + lineType);
         }
@@ -669,6 +698,8 @@ public class PageTheme {
                 fontFamily = null;
             case "PF Text" ->
                 monoFontFamily = null;
+            case "*" ->
+                listFont = null;
             default ->
                 throw new IllegalArgumentException("Unknown type: " + lineType);
         }
@@ -694,6 +725,8 @@ public class PageTheme {
                 fontSize = null;
             case "PF Text" ->
                 monoFontSize = null;
+            case "*" ->
+                listFontSize = null;
             default ->
                 throw new IllegalArgumentException("Unknown type: " + lineType);
         }
@@ -733,10 +766,68 @@ public class PageTheme {
                 fontStyle = null;
                 fontUnderline = null;
             }
+            case "*" -> {
+                listStyle = null;
+                listUnderline = null;
+            }
             // case "PF Text" ->
             //     mono = null;
             default ->
                 throw new IllegalArgumentException("Unknown type: " + lineType);
+        }
+    }
+
+    public String getListFont() {
+        return listFont;
+    }
+
+    public void setListFont(String listFont) {
+        if (listFont != null) {
+            this.listFont = listFont;
+        }
+    }
+
+    public Integer getListFontSize() {
+        return listFontSize;
+    }
+
+    public void setListFontSize(Integer listFontSize) {
+        if (listFontSize != null) {
+            this.listFontSize = listFontSize;
+        }
+    }
+
+    public Color getListColor() {
+        return listColor;
+    }
+
+    public void setListColor(Color listColor) {
+        this.listColor = listColor;
+    }
+
+    public void setListColor(Integer listColor) {
+        if (listColor != null) {
+            this.listColor = new Color(listColor);
+        }
+    }
+
+    public Integer getListStyle() {
+        return listStyle;
+    }
+
+    public void setListStyle(Integer listStyle) {
+        if (listStyle != null) {
+            this.listStyle = listStyle;
+        }
+    }
+
+    public Boolean getListUnderline() {
+        return listUnderline;
+    }
+
+    public void setListUnderline(Boolean listUnderline) {
+        if (listUnderline != null) {
+            this.listUnderline = listUnderline;
         }
     }
 }
