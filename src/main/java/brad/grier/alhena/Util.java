@@ -59,6 +59,7 @@ import javax.imageio.ImageIO;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -66,6 +67,7 @@ import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JSlider;
 import javax.swing.JTextArea;
@@ -123,13 +125,30 @@ public class Util {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         // Enable the transparent title bar on the dialog
+
         if (SystemInfo.isMacOS) {
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+            dressDialog(dialog);
         }
         // Display the dialog
         dialog.setVisible(true);
 
+    }
+
+    private static void dressDialog(JDialog dialog) {
+        if (SystemInfo.isMacFullWindowContentSupported) {
+            dialog.getRootPane().putClientProperty("apple.awt.fullWindowContent", true);
+            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+            Container content = dialog.getContentPane();
+            JPanel wrapper = new JPanel(new BorderLayout());
+            wrapper.setBorder(BorderFactory.createEmptyBorder(25, 0, 0, 0)); // 30px top
+            wrapper.add(content, BorderLayout.CENTER);
+
+            dialog.setContentPane(wrapper);
+        } else {
+            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+        }
     }
 
     public static void fancyInfoDialog(Component parent, String title, Object[] components) {
@@ -146,9 +165,7 @@ public class Util {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
-
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+            dressDialog(dialog);
         }
 
         dialog.setVisible(true);
@@ -196,9 +213,7 @@ public class Util {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
-
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+            dressDialog(dialog);
         }
 
         dialog.setVisible(true);
@@ -233,11 +248,9 @@ public class Util {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
-
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
-
+            dressDialog(dialog);
         }
+
         dialog.addWindowFocusListener(new WindowFocusListener() {
             @Override
             public void windowGainedFocus(WindowEvent e) {
@@ -367,10 +380,7 @@ public class Util {
         });
 
         if (SystemInfo.isMacOS) {
-
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
-
+            dressDialog(dialog);
         }
 
         dialog.addWindowFocusListener(new WindowFocusListener() {
@@ -467,10 +477,7 @@ public class Util {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
         if (SystemInfo.isMacOS) {
-
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            //dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
-
+            dressDialog(dialog);
         }
         dialog.setVisible(true);
         Object selectedValue = optionPane.getValue();
@@ -519,10 +526,7 @@ public class Util {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
         if (SystemInfo.isMacOS) {
-
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            //dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
-
+            dressDialog(dialog);
         }
         dialog.setVisible(true);
         Object selectedValue = optionPane.getValue();
@@ -541,10 +545,7 @@ public class Util {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
         if (SystemInfo.isMacOS) {
-
-            dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            //dialog.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
-
+            dressDialog(dialog);
         }
         JFileChooser fileChooser = new JFileChooser();
         if (filter != null) {
