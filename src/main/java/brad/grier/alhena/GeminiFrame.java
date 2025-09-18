@@ -12,11 +12,17 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.MenuItem;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
@@ -64,22 +70,27 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
+import javax.swing.JWindow;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.formdev.flatlaf.FlatClientProperties;
@@ -1498,9 +1509,124 @@ public final class GeminiFrame extends JFrame {
         }).start();
     }
 
-    public void initComboBox() {
-        JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
+    private DocumentListener dl;
+    private JWindow popup;
 
+    public void initComboBox() {
+        if (popup != null) {
+            popup.dispose();
+        }
+        popup = new JWindow(this);
+        JList<String> suggestionList = new JList<>();
+        suggestionList.setFocusable(false);
+        popup.setFocusableWindowState(false);
+        JScrollPane listSP = new JScrollPane(suggestionList);
+
+        popup.add(listSP);
+
+        JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
+        popup.setSize(textField.getWidth(), 400);
+        popup.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+
+                EventQueue.invokeLater(() -> {
+                    listSP.getHorizontalScrollBar().setValue(0);
+                    listSP.getVerticalScrollBar().setValue(0);
+                });
+            }
+        });
+        dl = new DocumentListener() {
+
+            private void update() {
+                if (!textField.hasFocus()) {
+                    popup.setVisible(false);
+                    return;
+                }
+                String text = textField.getText();
+                if (text.isEmpty()) {
+                    popup.setVisible(false);
+                    return;
+                }
+
+                List<String> matches = DB.loadURLs(text);
+                if (matches.isEmpty()) {
+                    popup.setVisible(false);
+                    return;
+                }
+
+                suggestionList.setListData(matches.toArray(String[]::new));
+                suggestionList.setSelectedIndex(0);
+
+                Point p = textField.getLocationOnScreen();
+                popup.setLocation(p.x, p.y + textField.getHeight());
+                popup.setSize(textField.getWidth(), 400);
+
+                popup.setVisible(true);
+                textField.requestFocusInWindow();
+
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                update();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                update();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                update();
+            }
+
+        };
+        textField.getDocument().addDocumentListener(dl);
+        suggestionList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    textField.setText(suggestionList.getSelectedValue());
+                    popup.setVisible(false);
+                    comboBox.actionPerformed(new ActionEvent(comboBox, ActionEvent.ACTION_PERFORMED, null));
+                }
+            }
+        });
+        textField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (popup.isVisible()) {
+                    switch (e.getKeyCode()) {
+                        case KeyEvent.VK_DOWN -> {
+                            int i = suggestionList.getSelectedIndex();
+                            if (i < suggestionList.getModel().getSize() - 1) {
+                                suggestionList.setSelectedIndex(i + 1);
+                                suggestionList.ensureIndexIsVisible(i + 1);
+                            }
+                            e.consume();
+                        }
+                        case KeyEvent.VK_UP -> {
+                            int i = suggestionList.getSelectedIndex();
+                            if (i > 0) {
+                                suggestionList.setSelectedIndex(i - 1);
+                                suggestionList.ensureIndexIsVisible(i - 1);
+                            }
+                            e.consume();
+                        }
+                        case KeyEvent.VK_ENTER -> {
+                            textField.setText(suggestionList.getSelectedValue());
+                            popup.setVisible(false);
+                        }
+                        case KeyEvent.VK_ESCAPE ->
+                            popup.setVisible(false);
+                        default -> {
+                        }
+                    }
+                }
+            }
+        });
         textField.addMouseListener(new ContextMenuMouseListener());
         textField.addFocusListener(new FocusAdapter() {
             @Override
@@ -2826,6 +2952,10 @@ public final class GeminiFrame extends JFrame {
     private void updateComboBox(ComboItem origURL) {
 
         EventQueue.invokeLater(() -> {
+            JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
+
+            textField.getDocument().removeDocumentListener(dl);
+
             ActionListener[] il = comboBox.getActionListeners();
 
             for (ActionListener i : il) {
@@ -2854,6 +2984,9 @@ public final class GeminiFrame extends JFrame {
             for (ActionListener j : il) {
                 comboBox.addActionListener(j);
             }
+
+            textField.getDocument().addDocumentListener(dl);
+
         });
     }
 
@@ -2862,6 +2995,9 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void selectComboBoxItem(ComboItem item) {
+        JTextField textField = (JTextField) comboBox.getEditor().getEditorComponent();
+        textField.getDocument().removeDocumentListener(dl);
+
         ActionListener[] il = comboBox.getActionListeners();
         for (ActionListener i : il) {
             comboBox.removeActionListener(i);
@@ -2871,6 +3007,8 @@ public final class GeminiFrame extends JFrame {
         for (ActionListener i : il) {
             comboBox.addActionListener(i);
         }
+
+        textField.getDocument().addDocumentListener(dl);
     }
 
     public Page visiblePage() {
