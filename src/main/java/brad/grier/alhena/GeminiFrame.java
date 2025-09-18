@@ -1540,17 +1540,20 @@ public final class GeminiFrame extends JFrame {
 
             private void update() {
                 if (!textField.hasFocus()) {
+                    suggestionList.removeAll();
                     popup.setVisible(false);
                     return;
                 }
                 String text = textField.getText();
                 if (text.isEmpty()) {
+                    suggestionList.removeAll();
                     popup.setVisible(false);
                     return;
                 }
 
                 List<String> matches = DB.loadURLs(text);
                 if (matches.isEmpty()) {
+                    suggestionList.removeAll();
                     popup.setVisible(false);
                     return;
                 }
@@ -1590,6 +1593,7 @@ public final class GeminiFrame extends JFrame {
                 if (e.getClickCount() == 2) {
                     textField.setText(suggestionList.getSelectedValue());
                     popup.setVisible(false);
+                    suggestionList.removeAll();
                     comboBox.actionPerformed(new ActionEvent(comboBox, ActionEvent.ACTION_PERFORMED, null));
                 }
             }
@@ -1617,10 +1621,15 @@ public final class GeminiFrame extends JFrame {
                         }
                         case KeyEvent.VK_ENTER -> {
                             textField.setText(suggestionList.getSelectedValue());
+                            
                             popup.setVisible(false);
+                            suggestionList.removeAll();
                         }
-                        case KeyEvent.VK_ESCAPE ->
+                        case KeyEvent.VK_ESCAPE ->{
+                            
                             popup.setVisible(false);
+                            suggestionList.removeAll();
+                        }
                         default -> {
                         }
                     }
