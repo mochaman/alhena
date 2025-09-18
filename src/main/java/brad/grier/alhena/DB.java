@@ -802,7 +802,10 @@ public class DB {
         }
         return certMap;
     }
-    public record StyleInfo(int id, String style){}
+
+    public record StyleInfo(int id, String style) {
+
+    }
 
     public static StyleInfo getStyle(String url, String domain, String theme, boolean isLight) throws SQLException {
         String sql = """
@@ -903,7 +906,7 @@ public class DB {
         }
     }
 
-    public static String getStyle(String scope, String scopeValue, String theme) throws SQLException{
+    public static String getStyle(String scope, String scopeValue, String theme) throws SQLException {
         String style = null;
 
         try (Connection con = cp.getConnection()) {
@@ -922,7 +925,7 @@ public class DB {
         return style;
     }
 
-    public static String getStyle(int id) throws SQLException{
+    public static String getStyle(int id) throws SQLException {
         String style = null;
 
         try (Connection con = cp.getConnection()) {
@@ -938,6 +941,39 @@ public class DB {
         }
 
         return style;
+    }
+
+    public static List<String> loadURLs(String start) {
+        String sql = """
+            SELECT url
+            FROM history
+            WHERE url LIKE '%' || ? || '%'
+            GROUP BY url
+            ORDER BY
+            CASE WHEN url LIKE ? THEN 0 ELSE 1 END,
+            LENGTH(url),
+            url
+        """;
+
+        ArrayList<String> urlList = new ArrayList<>();
+        try {
+            try (Connection con = cp.getConnection(); var ps = con.prepareStatement(sql)) {
+
+                ps.setString(1, start);
+                ps.setString(2, start);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        urlList.add(rs.getString(1));
+
+                    }
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+
+        return urlList;
     }
 
 }
