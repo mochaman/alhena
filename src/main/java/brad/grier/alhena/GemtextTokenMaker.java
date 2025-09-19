@@ -46,7 +46,11 @@ public class GemtextTokenMaker extends AbstractTokenMaker {
         int i = lineStart;
         int firstChar = i < lineEnd ? text.array[i] : -1;
 
-        if (firstChar == '#') {
+        if (firstChar == '#' && (i + 1 < lineEnd && text.array[i + 1] == '#' && i + 2 < lineEnd && text.array[i + 2] == '#')) { // ###
+            addToken(text.array, i, lineEnd - 1, TokenTypes.ANNOTATION, offset);
+        } else if (firstChar == '#' && (i + 1 < lineEnd && text.array[i + 1] == '#')) { // ##
+            addToken(text.array, i, lineEnd - 1, TokenTypes.COMMENT_DOCUMENTATION, offset);
+        } else if (firstChar == '#') { // #
             addToken(text.array, i, lineEnd - 1, TokenTypes.RESERVED_WORD, offset);
         } else if (firstChar == '*' && (i + 1 < lineEnd && text.array[i + 1] == ' ')) {
             addToken(text.array, i, lineEnd - 1, TokenTypes.OPERATOR, offset);

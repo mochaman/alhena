@@ -2041,7 +2041,7 @@ public class GeminiTextPane extends JTextPane {
                         boolean useBrowser = useB == null ? true : useB.equals("true");
                         if (spartanLink) {
 
-                            TextEditor textEditor = new TextEditor("", false);
+                            TextEditor textEditor = new TextEditor("", false, GeminiTextPane.this);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
                             Object res = Util.inputDialog2(f, "Edit", comps, null, true);

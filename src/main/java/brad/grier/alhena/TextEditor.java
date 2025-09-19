@@ -63,9 +63,11 @@ public class TextEditor extends JPanel implements ActionListener {
     private JCheckBoxMenuItem matchCaseCB;
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private JMenuItem findItem;
-    JMenuItem findNextItem;
+    private JMenuItem findNextItem;
+    private GeminiTextPane textPane;
 
-    public TextEditor(String text, boolean token) {
+    public TextEditor(String text, boolean token, GeminiTextPane textPane) {
+        this.textPane = textPane;
         setLayout(new BorderLayout(0, 10));
         tabbedPane = new JTabbedPane();
         JPanel editorPanel = new JPanel(new BorderLayout());
@@ -242,9 +244,11 @@ public class TextEditor extends JPanel implements ActionListener {
 
     public final void applyFlatLafColors(RSyntaxTextArea textArea) {
         SyntaxScheme scheme = textArea.getSyntaxScheme();
-
-        Color bg = UIManager.getColor("TextArea.background");
-        Color fg = UIManager.getColor("TextArea.foreground");
+        PageTheme pageStyle = textPane.pageStyle;
+        //Color bg = UIManager.getColor("TextArea.background");
+        Color bg = pageStyle.getPageBackground();
+        //Color fg = UIManager.getColor("TextArea.foreground");
+        Color fg = pageStyle.getTextForeground();
         Color selBg = UIManager.getColor("TextArea.selectionBackground");
         Color selFg = UIManager.getColor("TextArea.selectionForeground");
 
@@ -254,25 +258,41 @@ public class TextEditor extends JPanel implements ActionListener {
         textArea.setSelectionColor(selBg);
         textArea.setSelectedTextColor(selFg);
 
-        boolean isDark = UIManager.getBoolean("laf.dark");
-        Color linkColor = UIManager.getColor("Component.linkColor");
-        scheme.getStyle(TokenTypes.RESERVED_WORD).foreground = AnsiColor.adjustColor(isDark ? linkColor.brighter() : linkColor.darker(), isDark, .1, .9, .2);
+        scheme.getStyle(TokenTypes.IDENTIFIER).font = new Font(pageStyle.getFontFamily(), pageStyle.getFontStyle(), 16);
+        scheme.getStyle(TokenTypes.IDENTIFIER).foreground = pageStyle.getTextForeground();
+        //boolean isDark = UIManager.getBoolean("laf.dark");
+        //Color linkColor = UIManager.getColor("Component.linkColor");
+        //scheme.getStyle(TokenTypes.RESERVED_WORD).foreground = AnsiColor.adjustColor(isDark ? linkColor.brighter() : linkColor.darker(), isDark, .1, .9, .2);
+        scheme.getStyle(TokenTypes.RESERVED_WORD).foreground = pageStyle.getHeader3Color(); // used for all headers though
+        scheme.getStyle(TokenTypes.RESERVED_WORD).font = new Font(pageStyle.getHeader3FontFamily(), pageStyle.getHeader3Style(), 22);
+        scheme.getStyle(TokenTypes.COMMENT_DOCUMENTATION).foreground = pageStyle.getHeader2Color(); // used for all headers though
+        scheme.getStyle(TokenTypes.COMMENT_DOCUMENTATION).font = new Font(pageStyle.getHeader2FontFamily(), pageStyle.getHeader2Style(), 18);
+        scheme.getStyle(TokenTypes.ANNOTATION).foreground = pageStyle.getHeader1Color(); // used for all headers though
+        scheme.getStyle(TokenTypes.ANNOTATION).font = new Font(pageStyle.getHeader1FontFamily(), pageStyle.getHeader1Style(), 16);
+        scheme.getStyle(TokenTypes.FUNCTION).foreground = pageStyle.getLinkColor(); // link
+        scheme.getStyle(TokenTypes.FUNCTION).font = new Font(pageStyle.getLinkFontFamily(), pageStyle.getLinkStyle(), 16);
 
-        scheme.getStyle(TokenTypes.FUNCTION).foreground = linkColor;
+        scheme.getStyle(TokenTypes.COMMENT_EOL).foreground = pageStyle.getQuoteForeground();
+        Font qFont = new Font(pageStyle.getQuoteFontFamily(), pageStyle.getQuoteStyle(), 16);
+        scheme.getStyle(TokenTypes.COMMENT_EOL).font = qFont;
+        
 
-        Color pfText = AnsiColor.adjustColor(isDark ? Color.GRAY.brighter() : Color.GRAY.darker(), isDark, .1, .9, .2);
-        Font monoF = new Font(GeminiTextPane.monospacedFamily, Font.PLAIN, 16);
-        scheme.getStyle(TokenTypes.COMMENT_MULTILINE).foreground = pfText;
+
+        //Color pfText = AnsiColor.adjustColor(isDark ? Color.GRAY.brighter() : Color.GRAY.darker(), isDark, .1, .9, .2);
+        //Font monoF = new Font(GeminiTextPane.monospacedFamily, Font.PLAIN, 16);
+        Font monoF = new Font(pageStyle.getMonoFontFamily(), Font.PLAIN, 16);
+        scheme.getStyle(TokenTypes.COMMENT_MULTILINE).foreground = pageStyle.getMonoFontColor();
+        
         scheme.getStyle(TokenTypes.COMMENT_MULTILINE).font = monoF;
-        scheme.getStyle(TokenTypes.LITERAL_STRING_DOUBLE_QUOTE).foreground = pfText; // contents
+        scheme.getStyle(TokenTypes.LITERAL_STRING_DOUBLE_QUOTE).foreground = pageStyle.getMonoFontColor(); // contents
         scheme.getStyle(TokenTypes.LITERAL_STRING_DOUBLE_QUOTE).font = monoF;
 
-        scheme.getStyle(TokenTypes.OPERATOR).foreground = fg;
-
-        scheme.getStyle(TokenTypes.OPERATOR).font = new Font(GeminiFrame.proportionalFamily, Font.BOLD, 16);
+        scheme.getStyle(TokenTypes.OPERATOR).foreground = pageStyle.getListColor();
+        scheme.getStyle(TokenTypes.OPERATOR).font = new Font(pageStyle.getListFont(), pageStyle.getListStyle(), 16);
 
         textArea.repaint();
     }
+
 
     private boolean forward;
 
