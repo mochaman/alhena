@@ -1621,12 +1621,12 @@ public final class GeminiFrame extends JFrame {
                         }
                         case KeyEvent.VK_ENTER -> {
                             textField.setText(suggestionList.getSelectedValue());
-                            
+
                             popup.dispose();
                             suggestionList.removeAll();
                         }
-                        case KeyEvent.VK_ESCAPE ->{
-                            
+                        case KeyEvent.VK_ESCAPE -> {
+
                             popup.dispose();
                             suggestionList.removeAll();
                         }
@@ -1642,6 +1642,15 @@ public final class GeminiFrame extends JFrame {
             public void focusGained(FocusEvent e) {
                 SwingUtilities.invokeLater(() -> {
                     textField.selectAll();
+                });
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                SwingUtilities.invokeLater(() -> {
+                    if(popup.isVisible()){
+                        popup.dispose();
+                    }
                 });
             }
         });
