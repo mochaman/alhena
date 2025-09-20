@@ -944,15 +944,16 @@ public class DB {
     }
 
     public static List<String> loadURLs(String start) {
+
         String sql = """
-            SELECT url
+            SELECT url, COUNT(*) AS freq
             FROM history
             WHERE url LIKE '%' || ? || '%'
             GROUP BY url
             ORDER BY
             CASE WHEN url LIKE ? THEN 0 ELSE 1 END,
-            LENGTH(url),
-            url
+            freq DESC,
+            url;
         """;
 
         ArrayList<String> urlList = new ArrayList<>();
