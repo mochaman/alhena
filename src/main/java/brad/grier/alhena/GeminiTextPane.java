@@ -142,7 +142,7 @@ public class GeminiTextPane extends JTextPane {
 
     public static final HashMap<String, Point> emojiSheetMap = new HashMap<>();
     public static BufferedImage sheetImage = null;
-    public static int indent;
+    public int indent;
     public static float contentPercentage;
     public static boolean wrapPF;
     public static boolean asciiImage;

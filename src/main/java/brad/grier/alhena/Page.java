@@ -92,8 +92,8 @@ public class Page extends JPanel {
             @Override
             public void paint(Graphics g, JComponent c) {
                 super.paint(g, c);
-                if (Alhena.favIcon && GeminiTextPane.indent > ICON_SIZE + 5) {
-                    int x = GeminiTextPane.indent / 2 - (ICON_SIZE / 2);
+                if (Alhena.favIcon && textPane.indent > ICON_SIZE + 5) {
+                    int x = textPane.indent / 2 - (ICON_SIZE / 2);
                     int y = scrollPane.getViewport().getExtentSize().height / 2 - ICON_SIZE;
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.translate(x, y);
