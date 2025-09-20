@@ -1541,20 +1541,20 @@ public final class GeminiFrame extends JFrame {
             private void update() {
                 if (!textField.hasFocus()) {
                     suggestionList.removeAll();
-                    popup.setVisible(false);
+                    popup.dispose();
                     return;
                 }
                 String text = textField.getText();
                 if (text.isEmpty()) {
                     suggestionList.removeAll();
-                    popup.setVisible(false);
+                    popup.dispose();
                     return;
                 }
 
                 List<String> matches = DB.loadURLs(text);
                 if (matches.isEmpty()) {
                     suggestionList.removeAll();
-                    popup.setVisible(false);
+                    popup.dispose();
                     return;
                 }
 
@@ -1592,7 +1592,7 @@ public final class GeminiFrame extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
                     textField.setText(suggestionList.getSelectedValue());
-                    popup.setVisible(false);
+                    popup.dispose();
                     suggestionList.removeAll();
                     comboBox.actionPerformed(new ActionEvent(comboBox, ActionEvent.ACTION_PERFORMED, null));
                 }
@@ -1622,12 +1622,12 @@ public final class GeminiFrame extends JFrame {
                         case KeyEvent.VK_ENTER -> {
                             textField.setText(suggestionList.getSelectedValue());
                             
-                            popup.setVisible(false);
+                            popup.dispose();
                             suggestionList.removeAll();
                         }
                         case KeyEvent.VK_ESCAPE ->{
                             
-                            popup.setVisible(false);
+                            popup.dispose();
                             suggestionList.removeAll();
                         }
                         default -> {
