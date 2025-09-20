@@ -589,7 +589,7 @@ public class Util {
         return selectedFile[0];
     }
 
-    public static BufferedImage getImage(byte[] imageBytes, int previewWidth, int previewHeight, BufferedImage bi) {
+    public static BufferedImage getImage(byte[] imageBytes, int previewWidth, int previewHeight, BufferedImage bi, boolean allowScaleUp) {
 
         BufferedImage img = null;
 
@@ -600,7 +600,10 @@ public class Util {
             } else {
                 img = bi;
             }
-            if (bi == null && img.getWidth() < previewWidth) {
+            if(img == null){
+                return null;
+            }
+            if (!allowScaleUp && img.getWidth() < previewWidth) {
                 previewWidth = img.getWidth();
             }
 

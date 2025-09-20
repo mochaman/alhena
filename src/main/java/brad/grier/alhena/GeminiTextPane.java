@@ -10,11 +10,13 @@ import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
@@ -32,6 +34,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,6 +85,10 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 import com.formdev.flatlaf.util.SystemInfo;
+import com.github.weisj.jsvg.SVGDocument;
+import com.github.weisj.jsvg.parser.LoaderContext;
+import com.github.weisj.jsvg.parser.SVGLoader;
+import com.github.weisj.jsvg.view.FloatSize;
 import com.techsenger.ansi4j.core.api.Environment;
 import com.techsenger.ansi4j.core.api.Fragment;
 import com.techsenger.ansi4j.core.api.FragmentType;
@@ -952,13 +959,42 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    public void insertImage(byte[] imageBytes, boolean curPos) {
+    public void insertImage(byte[] imageBytes, boolean curPos, boolean isSVG) {
         inserting = true;
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
         int width = (int) contentWidth - 50;
+        BufferedImage image = null;
+        if (isSVG) {
+            SVGLoader loader = new SVGLoader();
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
+                LoaderContext ctx = LoaderContext.builder().build();
 
-        BufferedImage image = Util.getImage(imageBytes, width, width * 2, null);
+                SVGDocument svgDoc = loader.load(bais, null, ctx);
+                if (svgDoc != null) {
+                    FloatSize size = svgDoc.size();
+                    BufferedImage svgImage = new BufferedImage((int) size.width, (int) size.height, BufferedImage.TYPE_INT_ARGB);
+                    Graphics2D g = svgImage.createGraphics();
+                    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+                    svgDoc.render(null, g);
+                    g.dispose();
+                    image = Util.getImage(null, width, width * 2, svgImage, false);
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+
+        } else {
+            image = Util.getImage(imageBytes, width, width * 2, null, false);
+        }
+
+        // TODO: needed (maybe)
+        if (image == null) {
+            //System.out.println("here");
+            f.setBusy(false, page);
+            return;
+        }
 
         ImageIcon icon = new ImageIcon(image);
 
@@ -1555,7 +1591,7 @@ public class GeminiTextPane extends JTextPane {
         if (totalWidth <= 0) {
             return;
         }
-        
+
         float cp = printing ? 1.0f : pageStyle.getContentPercentage();
         contentWidth = totalWidth * cp;
         indent = (int) ((totalWidth - contentWidth) / 2f);
@@ -1738,7 +1774,7 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setForeground(h2Style, pageStyle.getHeader2Color());
         StyleConstants.setBold(h2Style, (pageStyle.getHeader2Style() & Font.BOLD) != 0);
         StyleConstants.setItalic(h2Style, (pageStyle.getHeader2Style() & Font.ITALIC) != 0);
-        StyleConstants.setFontSize(h2Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE + 9: pageStyle.getHeader2Size()); // 24
+        StyleConstants.setFontSize(h2Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE + 9 : pageStyle.getHeader2Size()); // 24
 
         Style h3Style = doc.addStyle("#", h1Style);
         StyleConstants.setUnderline(h3Style, pageStyle.getHeader3Underline());
@@ -2180,7 +2216,7 @@ public class GeminiTextPane extends JTextPane {
             }
 
         } else if (mime.startsWith("image")) {
-            insertImage(byteData, curPos);
+            insertImage(byteData, curPos, mime.contains("svg+xml"));
         } else if (mime.startsWith("text")) {
             String s;
             try {
@@ -2632,7 +2668,7 @@ public class GeminiTextPane extends JTextPane {
 
         BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
         //Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        Image scaledImg = Util.getImage(null, width, height, bi);
+        Image scaledImg = Util.getImage(null, width, height, bi, true);
 
         return new BaselineShiftedIcon(scaledImg, fontSize / 10);
     }
@@ -2643,7 +2679,7 @@ public class GeminiTextPane extends JTextPane {
         int y = (sheetY * (sheetSize + 2)) + 1;
 
         BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
-        Image scaledImg = Util.getImage(null, width, height, bi);
+        Image scaledImg = Util.getImage(null, width, height, bi, true);
         //Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
 
         return scaledImg;

@@ -146,8 +146,8 @@ public class Alhena {
     public final static String VERSION = "5.3.5";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif");
-    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif");
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg");
+    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg");
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
     public static boolean browsingSupported, mailSupported;
     private static final Map<ClientCertInfo, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
@@ -896,9 +896,11 @@ public class Alhena {
                 boolean[] firstBuffer = {true};
                 // if it turns out this is an image request we need to track where it starts
                 int[] imageStartIdx = {-1};
-
+                boolean[] isSVG = {false};
                 File uploadFile = p.getDataFile();
                 String path = uri.getPath();
+                boolean[] isSVGExt = {false};
+                isSVGExt[0] = path != null && path.toLowerCase().endsWith(".svg");
                 if (uploadFile == null) {
                     String query = uri.getQuery();
                     int length = query == null ? 0 : query.length();
@@ -907,6 +909,7 @@ public class Alhena {
                     if (query != null) {
                         urlText += query;
                     }
+                
                     connection.result().write(urlText);
                 } else {
                     String urlText = uri.getHost() + " " + (path.isEmpty() ? "/" : path) + " " + uploadFile.length() + "\r\n";
@@ -985,12 +988,13 @@ public class Alhena {
                                         charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
 
                                     });
-                                } else if (mime.startsWith("text/") || isAscii(saveBuffer.slice(i + 1, saveBuffer.length()))) {
+                                } else if (!isSVGExt[0] && (mime.startsWith("text/") || isAscii(saveBuffer.slice(i + 1, saveBuffer.length())))) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     bg(() -> {
                                         p.textPane.updatePage(chunk, true, origURL, true);
                                     });
-                                } else if (mime.startsWith("image/")) {
+                                } else if (mime.startsWith("image/") || isSVGExt[0]) {
+                                    isSVG[0] = mime.contains("svg+xml") || isSVGExt[0];
                                     imageStartIdx[0] = i + 1;
                                     hLength[0] = i + 1;
                                     try {
@@ -1140,12 +1144,12 @@ public class Alhena {
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
 
                             } else {
                                 cPage.setBusy(false);
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
                             }
                         });
                     } else {
@@ -1208,7 +1212,8 @@ public class Alhena {
                 if (imageExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext))) {
                     imageStartIdx[0] = 0;
                 }
-
+                boolean isSVG = origURL.toLowerCase().endsWith(".svg");
+                
                 boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext));
                 String mimeFromExt = MimeMapping.getMimeTypeForFilename(origURL);
                 boolean isMedia = mimeFromExt != null && (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video"));
@@ -1315,11 +1320,11 @@ public class Alhena {
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
 
                             } else {
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
                             }
                         });
                     } else {
@@ -1474,6 +1479,7 @@ public class Alhena {
                 boolean[] firstBuffer = {true};
                 // if it turns out this is an image request we need to track where it starts
                 int[] imageStartIdx = {-1};
+                boolean[] isSVG = {false};
 
                 String urlText = proxyURL == null ? uri.toString() : proxyURL;
                 connection.result().write(urlText + "\r\n");
@@ -1603,6 +1609,7 @@ public class Alhena {
                                         });
                                     }
                                 } else if (mime.startsWith("image/")) {
+                                    isSVG[0] = mime.contains("svg+xml");
                                     imageStartIdx[0] = i + 1;
                                     hLength[0] = i + 1;
                                     try {
@@ -1805,12 +1812,12 @@ public class Alhena {
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
 
                             } else {
                                 cPage.setBusy(false);
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
                             }
                         });
                     } else {
@@ -2944,6 +2951,8 @@ public class Alhena {
                 boolean vlcType = allowVLC && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+                boolean isSVG = isImage && url.toLowerCase().endsWith(".svg");
+
                 if (matches || vlcType) {
 
                     String fUrl = url;
@@ -2998,11 +3007,11 @@ public class Alhena {
                                             GeminiTextPane tPane = cPage.textPane;
 
                                             if (tPane.awatingImage()) {
-                                                tPane.insertImage(imageBuffer.getBytes(), false);
+                                                tPane.insertImage(imageBuffer.getBytes(), false, isSVG);
 
                                             } else {
                                                 p.textPane.end(" ", false, fUrl, true);
-                                                p.textPane.insertImage(imageBuffer.getBytes(), false);
+                                                p.textPane.insertImage(imageBuffer.getBytes(), false, isSVG);
                                             }
                                         });
 
@@ -3155,6 +3164,7 @@ public class Alhena {
                     } else if (contentType != null && contentType.startsWith("image/")) {
                         File file;
                         resp.pause();
+                        boolean isSVG = contentType.contains("image/svg+xml");
                         try {
                             file = File.createTempFile("alhena", "media");
                             file.deleteOnExit();
@@ -3182,11 +3192,11 @@ public class Alhena {
                                             byte[] data = Files.readAllBytes(file.toPath());
                                             file.delete();
                                             if (tPane.awatingImage()) {
-                                                tPane.insertImage(data, false);
+                                                tPane.insertImage(data, false, isSVG);
 
                                             } else {
                                                 p.textPane.end(" ", false, finalURL, true);
-                                                p.textPane.insertImage(data, false);
+                                                p.textPane.insertImage(data, false, isSVG);
                                             }
                                         } catch (IOException ex) {
                                             ex.printStackTrace();
