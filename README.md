@@ -34,6 +34,7 @@
 - Embedded text and media from data URLs
 - Custom page styles by domain, url and theme
 - Address bar autocomplete from history
+- SVG support
 
 ## 🎨 Design
 
@@ -79,13 +80,13 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT required (except for the Basic install). The platform specific installs each include a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.3.5/alhena-5.3.5_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.3.5/alhena-5.3.5_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.3.5/alhena-5.3.5_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.3.5/alhena-5.3.5_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.3.5/alhena-5.3.5_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.3.5/alhena-5.3.5_freebsd_x64.tgz) untar and run script
-- [Basic](https://github.com/mochaman/alhena/releases/download/v5.3.5/alhena-5.3.5_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.3.6/alhena-5.3.6_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.3.6/alhena-5.3.6_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.3.6/alhena-5.3.6_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.3.6/alhena-5.3.6_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.3.6/alhena-5.3.6_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.3.6/alhena-5.3.6_freebsd_x64.tgz) untar and run script
+- [Basic](https://github.com/mochaman/alhena/releases/download/v5.3.6/alhena-5.3.6_nojava.zip) JAVA_HOME must point to Java 21+ directory. Unzip and run .bat or .sh.
 
 ## 🐳 Docker
 
