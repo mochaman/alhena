@@ -11,7 +11,6 @@ import java.util.List;
 
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 import javax.swing.text.BadLocationException;
 
 import brad.grier.alhena.GeminiTextPane.ClickableRange;
@@ -30,7 +29,7 @@ public class LinkGlassPane extends JComponent {
 
     public LinkGlassPane(GeminiTextPane textPane) {
         this.textPane = textPane;
-        f = new Font(GeminiFrame.proportionalFamily, Font.BOLD, GeminiFrame.fontSize);
+        f = new Font(textPane.pageStyle.getLinkFontFamily(), textPane.pageStyle.getLinkStyle(), textPane.pageStyle.getLinkSize());
         visibleLinks = textPane.getVisibleLinks();
 
     }
@@ -67,10 +66,8 @@ public class LinkGlassPane extends JComponent {
                     label = String.valueOf((char) ('A' + (i - 9))); // A, B, C...
                 }
 
-                g2.setColor(UIManager.getColor("Button.foreground"));
+                g2.setColor(textPane.pageStyle.getLinkColor());
 
-                //Rectangle cb = SwingUtilities.convertRectangle(textPane, textPane.getCharacterBounds(textPane, range.start, range.end), this);
-                //g2.drawRect(cb.x, cb.y, cb.width, cb.height);
                 g2.drawString(label, (int) pt.x - (textWidth) - 10, (int) pt.y + metrics.getAscent() + 1);
 
             } catch (BadLocationException e) {
