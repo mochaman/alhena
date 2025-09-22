@@ -31,7 +31,9 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 * Gemtext highlighting in Titan text editor
 * Optional favicon.txt support
 * Printing and PDF support
-* Embedded image and text from data URLs
+* Embedded media and text from data URLs
+* Custom page styles
+* SVG and WEBP image support
 
 => gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
 
@@ -46,7 +48,6 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 => gemini://gemi.dev/cgi-bin/chilly.cgi/ Weather
 => gemini://gemi.dev/cgi-bin/wp.cgi/ Wikipedia
 => gemini://gemi.dev/cgi-bin/mines.cgi/ Minesweeper
-=> gemini://tilde.team/~stack/ Word Puzzles
 => gemini://astrobotany.mozz.us/ Gardening Game
 => gemini://bbs.geminispace.org/ Gemini BBS
 => gemini://geminiprotocol.net/ About Gemini
