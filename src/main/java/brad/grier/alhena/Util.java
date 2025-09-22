@@ -600,7 +600,7 @@ public class Util {
             } else {
                 img = bi;
             }
-            if(img == null){
+            if (img == null) {
                 return null;
             }
             if (!allowScaleUp && img.getWidth() < previewWidth) {
@@ -1090,5 +1090,9 @@ public class Util {
     public static boolean isPrintingAvailable() {
         PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
         return printServices.length > 0;
+    }
+
+    public static int getPort(URI uri) {
+        return uri.getPort() == -1 ? 1965 : uri.getPort();
     }
 }

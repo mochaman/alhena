@@ -2188,8 +2188,8 @@ public class Alhena {
             String certPem = "-----BEGIN CERTIFICATE-----\n"
                     + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(cert.getEncoded())
                     + "\n-----END CERTIFICATE-----";
-            int port = uri.getPort() == -1 ? 1965 : uri.getPort();
-            String url = uri.getHost() + ":" + port + uri.getPath();
+
+            String url = uri.getHost() + ":" + Util.getPort(uri) + uri.getPath();
             ClientCertInfo existingCert = DB.getClientCertInfo(url);
             if (existingCert != null) {
                 DB.toggleCert(existingCert.id(), false, url, false);
@@ -2240,8 +2240,7 @@ public class Alhena {
                 addCertToTrustStore(uri, cert, false);
 
                 if (dcButton.isSelected()) {
-                    String port = uri.getPort() == -1 ? ":1965" : ":" + uri.getPort();
-                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + port + "/");
+                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + ":" + Util.getPort(uri) + "/");
 
                     createClientCert(newURI, cnString);
 
@@ -2259,13 +2258,10 @@ public class Alhena {
 
             } else if (I18n.t("importPEMLabel").equals(cn)) { // never happen when msg == null
                 if (dcButton.isSelected()) {
-                    String port = uri.getPort() == -1 ? ":1965" : ":" + uri.getPort();
-                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + port + "/");
+                    URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + ":" + Util.getPort(uri) + "/");
                     p.frame().importPem(newURI, null);
-                    //createClientCert(newURI, cnString);
 
                 } else {
-                    //createClientCert(uri, cnString);
                     p.frame().importPem(uri, null);
 
                 }
@@ -2307,8 +2303,7 @@ public class Alhena {
                     keyStore.load(is, cacertsPassword.toCharArray());
                 }
 
-                int port = uri.getPort() == -1 ? 1965 : uri.getPort();
-                String newAlias = uri.getHost() + "." + port;
+                String newAlias = uri.getHost() + "." + Util.getPort(uri);
                 if (replaceExistingAlias) {
                     // return if alias does not exist in cacerts file
                     if (!java.util.Collections.list(keyStore.aliases()).contains(newAlias)) {
@@ -2362,8 +2357,7 @@ public class Alhena {
                 for (String host : hostList) {
                     URI uri = URI.create("gemini://" + host);
                     host = uri.getHost();
-                    int port = uri.getPort();
-                    port = port == -1 ? 1965 : port;
+                    int port = Util.getPort(uri);
 
                     X509Certificate cert = (X509Certificate) keyStore.getCertificate(host);
                     if (cert == null) {
@@ -3433,9 +3427,9 @@ public class Alhena {
 
         URI uri = URI.create(url);
         String host = uri.getHost();
-        int port = uri.getPort() == -1 ? 1965 : uri.getPort();
 
-        certMap.get(null).connect(port, host, ar -> {
+
+        certMap.get(null).connect(Util.getPort(uri), host, ar -> {
 
             if (ar.failed()) {
                 promise.fail(ar.cause());
@@ -3507,19 +3501,16 @@ public class Alhena {
         String fixed = raw;
         while (true) {
             try {
-                // Try to parse
                 new URI(fixed);
-                return fixed; // Success
+                return fixed; 
             } catch (URISyntaxException e) {
                 int idx = e.getIndex();
                 if (idx < 0 || idx >= fixed.length()) {
-                    // no useful index → give up
                     throw new IllegalArgumentException("Can't fix URI: " + raw, e);
                 }
                 char bad = fixed.charAt(idx);
                 String hex = String.format("%%%02X", (int) bad);
 
-                // Replace just that char with its %HH escape
                 fixed = fixed.substring(0, idx) + hex + fixed.substring(idx + 1);
             }
         }

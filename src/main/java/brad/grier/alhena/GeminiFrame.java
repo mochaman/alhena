@@ -2444,13 +2444,10 @@ public final class GeminiFrame extends JFrame {
     public void toggleCert(int id, boolean active, String url) {
         try {
             URI uri = URI.create(url);
-            int port = uri.getPort() == -1 ? 1965 : uri.getPort();
-            String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
+            String prunedUrl = uri.getHost() + ":" + Util.getPort(uri) + uri.getPath();
             DB.toggleCert(id, active, prunedUrl, false);
             ClientCertInfo certInfo = DB.getClientCertInfo(id);
             Alhena.closeNetClient(certInfo);
-            //Alhena.removeNetClient(host);
-            //Alhena.createNetClient();
             refresh();
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -2565,8 +2562,8 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void createCert(URI uri) {
-        int port = uri.getPort() == -1 ? 1965 : uri.getPort();
-        String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
+        //int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+        String prunedUrl = uri.getHost() + ":" + Util.getPort(uri) + uri.getPath();
         Page page = visiblePage();
         boolean success = Alhena.certRequired(null, uri, page, page.getCert(), null);
         if (success) {
@@ -2600,8 +2597,8 @@ public final class GeminiFrame extends JFrame {
                 if (pemData.cert() == null || pemData.key() == null) {
                     Util.infoDialog(this, I18n.t("pemFormatDialog"), I18n.t("pemFormatDialogMsg"));
                 } else {
-                    int port = uri.getPort() == -1 ? 1965 : uri.getPort();
-                    String prunedUrl = uri.getHost() + ":" + port + uri.getPath();
+                    //int port = uri.getPort() == -1 ? 1965 : uri.getPort();
+                    String prunedUrl = uri.getHost() + ":" + Util.getPort(uri) + uri.getPath();
 
                     boolean exists = DB.loadCerts().stream().anyMatch(c -> c.cert().equals(pemData.cert()) && c.domain().equals(prunedUrl));
                     if (exists) {

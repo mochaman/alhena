@@ -258,9 +258,7 @@ public class DB {
     }
 
     public static ClientCertInfo getClientCert(URI uri) throws SQLException {
-        int port = uri.getPort();
-        port = port == -1 ? 1965 : port;
-        String baseDomain = uri.getHost() + ":" + port;
+        String baseDomain = uri.getHost() + ":" + Util.getPort(uri);
         String prunedUrl = baseDomain + uri.getPath();
 
         List<ClientCertInfo> certList = new ArrayList<>();
