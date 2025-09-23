@@ -56,7 +56,7 @@ public class AsciiImage {
         int idx = 0;
         List<List<PositionColor>> colorList = new ArrayList<>();
         for (String line : lines) {
-            if(line.isBlank()){
+            if (line.isBlank()) {
                 line = " ";
             }
             if (!hasAnsi) {
@@ -126,7 +126,7 @@ public class AsciiImage {
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(line);
             IndexedEmoji emoji;
             int pad = 0;
-
+            int cpCount = line.codePointCount(0, line.length());
             for (int i = 0; i < line.length(); i++) {
                 char c = line.charAt(i);
 
@@ -170,7 +170,6 @@ public class AsciiImage {
                             }
                         }
                         if (icon == null) {
-
                             char[] chars = Character.toChars(text.codePointAt(i));
 
                             i = emoji.getEndCharIndex() + 1;
@@ -181,22 +180,45 @@ public class AsciiImage {
                             g2.dispose();
 
                         } else {
+                            boolean needsPadding = needsPadding(emoji.getEmoji().getEmoji());
                             // single char emoji followed by unneccessary variation selector
                             // example: snowman
-                            if (i == emoji.getEndCharIndex() - 1) {
+                            if (needsPadding || charWidth == CELL_WIDTH) {
+                                if (i == emoji.getEndCharIndex() - 1) {
 
-                                i++;
+                                    i++;
+                                } else {
+                                    i = emoji.getEndCharIndex() - 1;
+                                }
+                                int x1 = (CELL_WIDTH - charWidth) / 2;
+
+                                g2.drawImage(icon, x1, 0, null);
+                                g2.dispose();
+                                if (needsPadding(emoji.getEmoji().getEmoji())) {
+                                    pad += CELL_WIDTH;
+                                }
                             } else {
+                                int eci = emoji.getEndCharIndex();
 
-                                i = emoji.getEndCharIndex() - 1;
+                                int emojiSize = eci - emoji.getCharIndex();
 
-                            }
-                            int x1 = (CELL_WIDTH - charWidth) / 2;
+                                i += (emojiSize - 1);
+                                int charPointOfNextChar = emoji.getCodePointIndex() + 1;
 
-                            g2.drawImage(icon, x1, 0, null);
-                            g2.dispose();
-                            if (needsPadding(emoji.getEmoji().getEmoji())) {
-                                pad += CELL_WIDTH;
+                                if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                                    i++; // skip any variation selector
+                                }
+                                int fudge = charWidth <= CELL_WIDTH || needsPadding ? CELL_WIDTH : CELL_WIDTH * 2;
+                                int x1 = (fudge - charWidth) / 2;
+
+                                if (charWidth > CELL_WIDTH) {
+                                    pad += CELL_WIDTH;
+                                }
+                                g2.drawImage(icon, x1, 0, null);
+                                g2.dispose();
+                                if (needsPadding) {
+                                    pad += CELL_WIDTH;
+                                }
                             }
 
                             i--;
@@ -212,15 +234,32 @@ public class AsciiImage {
 
                         g2.drawString(em, x1, y1);
                         g2.dispose();
-
+                        boolean needsPadding = needsPadding(em);
                         int eci = emoji.getEndCharIndex();
+                        if (needsPadding || charWidth == CELL_WIDTH) {
 
-                        if (i == eci - 1) {
-                            i++;
+                            if (i == eci - 1) {
+                                i++;
+                            } else {
+                                i = eci - 1;
+                            }
                         } else {
-                            i = eci - 1;
+
+                            int emojiSize = eci - emoji.getCharIndex();
+
+                            i += (emojiSize - 1);
+                            int charPointOfNextChar = emoji.getCodePointIndex() + 1;
+
+                            if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                                i++; // skip any variation selector
+                            }
+                            if (charWidth > CELL_WIDTH) {
+                                pad += CELL_WIDTH;
+                            }
                         }
-                        if (needsPadding(em)) {
+
+                        if (needsPadding) {
+
                             pad += CELL_WIDTH;
                         }
                         i--;
@@ -258,7 +297,7 @@ public class AsciiImage {
                     }
 
                     Font saveFont = font;
-                    if(!saveFont.canDisplay(line.codePointAt(i))){
+                    if (!saveFont.canDisplay(line.codePointAt(i))) {
                         // on windows, source code pro might not support symbols - fallback in a safe way
                         saveFont = new Font("SansSerif", Font.PLAIN, fontSize);
                     }
@@ -271,7 +310,7 @@ public class AsciiImage {
                         g2.drawString(new String(Character.toChars(cp)), x1, y1);
                         i += Character.charCount(cp) - 1;
                         g2.setFont(font);
-                     }
+                    }
                     g2.dispose();
                 }
 
@@ -503,11 +542,11 @@ public class AsciiImage {
                     case "1" -> {
                         ansiBold = true;
                     }
-                    case "2" ->{
+                    case "2" -> {
                         // not really faint - could lighten or darken depending on theme but then would have to track for reset w/22
-                        ansiBold = false; 
+                        ansiBold = false;
                     }
-                    case "22" ->{ //normal intensity
+                    case "22" -> { //normal intensity
                         ansiBold = false;
                     }
 

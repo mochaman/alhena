@@ -176,6 +176,7 @@ public class PreformattedTextPane extends JTextPane {
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
 
             IndexedEmoji emoji;
+            int cpCount = text.codePointCount(0, text.length());
             // can't iterate by code point without preprocessing first to get name
             for (int i = 0; i < text.length(); i++) {
 
@@ -211,12 +212,16 @@ public class PreformattedTextPane extends JTextPane {
                         } else {
                             // single char emoji followed by unneccessary variation selector
                             // example: snowman
-                            if (i == emoji.getEndCharIndex() - 1) {
-                                i++;
-                            } else {
 
-                                i = emoji.getEndCharIndex() - 1;
+                            int eci = emoji.getEndCharIndex();
 
+                            int emojiSize = eci - emoji.getCharIndex();
+
+                            i += (emojiSize - 1);
+                            int charPointOfNextChar = emoji.getCodePointIndex() + 1;
+
+                            if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                                i++; // skip any variation selector
                             }
 
                             StyleConstants.setIcon(emojiStyle, icon);
@@ -230,7 +235,16 @@ public class PreformattedTextPane extends JTextPane {
 
                         char[] chars = Character.toChars(text.codePointAt(i));
 
-                        i++;
+                        int eci = emoji.getEndCharIndex();
+
+                        int emojiSize = eci - emoji.getCharIndex();
+
+                        i += (emojiSize - 1);
+                        int charPointOfNextChar = emoji.getCodePointIndex() + 1;
+
+                        if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                            i++; // skip any variation selector
+                        }
 
                         StyleConstants.setFontFamily(style, emojiProportional);
 

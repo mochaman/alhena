@@ -2381,10 +2381,13 @@ public class GeminiTextPane extends JTextPane {
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
 
             IndexedEmoji emoji;
+            int cpCount = text.codePointCount(0, text.length());
+
             // can't iterate by code point without preprocessing first to get name
             for (int i = 0; i < text.length(); i++) {
 
                 if ((emoji = isEmoji(emojis, i)) != null) {
+                    //emojiIdx++;
                     if (action != null && Alhena.linkIcons && i == 0) {
                         //ImageIcon icon = new ImageIcon(image);
                         String em = emoji.getEmoji().getEmoji();
@@ -2450,17 +2453,19 @@ public class GeminiTextPane extends JTextPane {
 
                         } else {
                             int eci = emoji.getEndCharIndex();
+
                             // single char emoji followed by unneccessary variation selector
                             // example: snowman
-                            int opto;
-                            if (i == eci - 1) {
-                                i++;
+                            int opto = 0;
+
+                            int emojiSize = eci - emoji.getCharIndex();
+
+                            i += (emojiSize - 1);
+                            int charPointOfNextChar = emoji.getCodePointIndex() + 1;
+
+                            if (emojiSize == 1 && charPointOfNextChar < cpCount && isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                                i++; // skip any variation selector
                                 opto = 1;
-                            } else {
-
-                                i = eci - 1;
-                                opto = 0;
-
                             }
 
                             SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
@@ -2479,10 +2484,15 @@ public class GeminiTextPane extends JTextPane {
                         StyleConstants.setFontFamily(style, emojiProportional);
                         insertString(doc.getLength(), unescapeUnicode(emoji.getEmoji().getUnicode()), style);
                         int eci = emoji.getEndCharIndex();
-                        if (i == eci - 1) {
-                            i++;
-                        } else {
-                            i = eci - 1;
+
+                        int emojiSize = eci - emoji.getCharIndex();
+
+                        i += (emojiSize - 1);
+                        int charPointOfNextChar = emoji.getCodePointIndex() + 1;
+
+                        if (emojiSize == 1 && charPointOfNextChar < cpCount && isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                            i++; // skip any variation selector
+                            eci++;
                         }
 
                         if (eci < text.length()) { // optomize common scenario
@@ -2535,6 +2545,10 @@ public class GeminiTextPane extends JTextPane {
         setCaretPosition(caretPosition); // prevent scrolling as content added
 
         return cr;
+    }
+
+    public static boolean isEmojiVariationSelector(int codePoint) {
+        return codePoint == 0xFE0E || codePoint == 0xFE0F;
     }
 
     private final static StringBuilder sb = new StringBuilder();
