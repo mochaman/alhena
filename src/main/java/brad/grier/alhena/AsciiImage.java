@@ -50,9 +50,8 @@ public class AsciiImage {
         fgColor1 = fgColor;
         ansiFG(Color.WHITE);  // "default foreground color" crossword site
         Font font = new Font(fontName, Font.PLAIN, fontSize);
-        //String[] lines = text.split("\n");
         String[] lines = text.split("\n", -1);
-        int max_chars = 0;
+
         int idx = 0;
         List<List<PositionColor>> colorList = new ArrayList<>();
         for (String line : lines) {
@@ -74,40 +73,10 @@ public class AsciiImage {
                 colorList.add(null);
             }
 
-            if (line1.length() > max_chars) {
-                max_chars = line1.length();
-            }
             lines[idx++] = line1;
 
         }
-        if (override) {
 
-            List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
-
-            if (emojis.get(0).getEndCharIndex() == 1 || text.charAt(1) == '\uFE0F') {
-                max_chars = 1;
-            }
-        }
-
-        FontMetrics metrics = new Canvas().getFontMetrics(font);
-        int lineHeight = metrics.getHeight();
-        int width = 0;
-        for (String line : lines) {
-            int w = metrics.stringWidth(line);
-            width = Math.max(width, w);
-        }
-        int height = lineHeight * lines.length;
-
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = image.createGraphics();
-        g.setFont(font);
-
-        g.setColor(bgColor);
-        g.fillRect(0, 0, width, height);
-        g.setColor(fgColor);
-
-        int CELL_HEIGHT = height / lines.length;
-        int CELL_WIDTH = width / max_chars;
         String emojiProportional = "Noto Emoji";
 
         if (!override) {
@@ -118,35 +87,67 @@ public class AsciiImage {
                 }
             }
         }
+        FontMetrics metrics = new Canvas().getFontMetrics(font);
         Font emojiFont = new Font(emojiProportional, Font.PLAIN, fontSize);
+        FontMetrics emojiMetrics = new Canvas().getFontMetrics(emojiFont);
+        int lineHeight = metrics.getHeight();
+        int width = 0;
+
+        int maxChars = 0;
+        for (String line : lines) {
+            int w = metrics.stringWidth(line);
+            width = Math.max(width, w);
+            maxChars = Math.max(maxChars, line.codePointCount(0, line.length()));
+        }
+
+        maxChars = override ? 1 : maxChars;
+        int height = lineHeight * lines.length;
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        g.setFont(font);
+
+        g.setColor(bgColor);
+        g.fillRect(0, 0, width, height);
+        g.setColor(fgColor);
+
+        int cellHeight = height / lines.length;
+        int cellWidth = override ? emojiMetrics.stringWidth(text) : width / maxChars;
+
+        
         int baseY = lineHeight;
         int y = 0;
         int lineNum = 0;
         for (String line : lines) {
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(line);
             IndexedEmoji emoji;
-            int pad = 0;
+
+            int x = 0;
             int cpCount = line.codePointCount(0, line.length());
             for (int i = 0; i < line.length(); i++) {
+                int pad = 0;
                 char c = line.charAt(i);
 
-                int x = i * CELL_WIDTH + pad;
                 BufferedImage cellImage;
-                int charWidth = metrics.charWidth(c);
 
-                if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null) {
-
-                    cellImage = new BufferedImage(CELL_WIDTH * 2, CELL_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+                // font.canDisplay test means use the font's version of this character instead of the emoji version
+                // often this fixes assumptions made by page designers about character width (weather, etc)
+                if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null  && !font.canDisplay(c)) {
+                    
+                    int charWidth = emojiMetrics.stringWidth(emoji.getEmoji().getEmoji());
+                    
+                    int superFudge = charWidth <= cellWidth ? cellWidth : cellWidth * 2;
+                    cellImage = new BufferedImage(superFudge, cellHeight, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D g2 = cellImage.createGraphics();
                     List<PositionColor> pcl = colorList.get(lineNum);
                     if (pcl != null) {
                         PositionColor pc = pcl.get(i);
                         g2.setColor(pc.bg);
-                        g2.fillRect(0, 0, CELL_WIDTH * 2, CELL_HEIGHT);
+                        g2.fillRect(0, 0, superFudge, cellHeight);
                         g2.setColor(pc.fg);
                     } else {
                         g2.setColor(bgColor);
-                        g2.fillRect(0, 0, CELL_WIDTH * 2, CELL_HEIGHT);
+                        g2.fillRect(0, 0, superFudge, cellHeight);
                         g2.setColor(fgColor);
                     }
 
@@ -170,80 +171,19 @@ public class AsciiImage {
                             }
                         }
                         if (icon == null) {
+                            
                             char[] chars = Character.toChars(text.codePointAt(i));
 
                             i = emoji.getEndCharIndex() + 1;
-                            int x1 = (CELL_WIDTH * 2 - charWidth) / 2;
-                            int y1 = (CELL_HEIGHT - metrics.getHeight()) / 2 + metrics.getAscent();
+                            int x1 = (cellWidth * 2 - charWidth) / 2;
+                            int y1 = (cellHeight - metrics.getHeight()) / 2 + metrics.getAscent();
 
                             g2.drawString(new String(chars), x1, y1);
                             g2.dispose();
 
                         } else {
-                            boolean needsPadding = needsPadding(emoji.getEmoji().getEmoji());
-                            // single char emoji followed by unneccessary variation selector
-                            // example: snowman
-                            if (needsPadding || charWidth == CELL_WIDTH) {
-                                if (i == emoji.getEndCharIndex() - 1) {
 
-                                    i++;
-                                } else {
-                                    i = emoji.getEndCharIndex() - 1;
-                                }
-                                int x1 = (CELL_WIDTH - charWidth) / 2;
-
-                                g2.drawImage(icon, x1, 0, null);
-                                g2.dispose();
-                                if (needsPadding(emoji.getEmoji().getEmoji())) {
-                                    pad += CELL_WIDTH;
-                                }
-                            } else {
-                                int eci = emoji.getEndCharIndex();
-
-                                int emojiSize = eci - emoji.getCharIndex();
-
-                                i += (emojiSize - 1);
-                                int charPointOfNextChar = emoji.getCodePointIndex() + 1;
-
-                                if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
-                                    i++; // skip any variation selector
-                                }
-                                int fudge = charWidth <= CELL_WIDTH || needsPadding ? CELL_WIDTH : CELL_WIDTH * 2;
-                                int x1 = (fudge - charWidth) / 2;
-
-                                if (charWidth > CELL_WIDTH) {
-                                    pad += CELL_WIDTH;
-                                }
-                                g2.drawImage(icon, x1, 0, null);
-                                g2.dispose();
-                                if (needsPadding) {
-                                    pad += CELL_WIDTH;
-                                }
-                            }
-
-                            i--;
-                        }
-                    } else {
-
-                        g2.setFont(emojiFont);
-                        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                        int x1 = (CELL_WIDTH - charWidth) / 2;
-                        int y1 = (CELL_HEIGHT - metrics.getHeight()) / 2 + metrics.getAscent();
-                        String em = emoji.getEmoji().getEmoji();
-
-                        g2.drawString(em, x1, y1);
-                        g2.dispose();
-                        boolean needsPadding = needsPadding(em);
-                        int eci = emoji.getEndCharIndex();
-                        if (needsPadding || charWidth == CELL_WIDTH) {
-
-                            if (i == eci - 1) {
-                                i++;
-                            } else {
-                                i = eci - 1;
-                            }
-                        } else {
+                            int eci = emoji.getEndCharIndex();
 
                             int emojiSize = eci - emoji.getCharIndex();
 
@@ -253,22 +193,56 @@ public class AsciiImage {
                             if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
                                 i++; // skip any variation selector
                             }
-                            if (charWidth > CELL_WIDTH) {
-                                pad += CELL_WIDTH;
+                            int x1 = (superFudge - charWidth) / 2;
+
+                            if (charWidth > cellWidth) {
+                                pad += cellWidth;
                             }
-                        }
+                            g2.drawImage(icon, x1, 0, null);
+                            g2.dispose();
 
-                        if (needsPadding) {
-
-                            pad += CELL_WIDTH;
+                            pad += cellWidth;
+                            i--;
                         }
+                    } else {
+
+                        g2.setFont(emojiFont);
+                        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                        int x1 = (cellWidth - charWidth) / 2;
+                        int y1 = (cellHeight - metrics.getHeight()) / 2 + metrics.getAscent();
+                        String em = emoji.getEmoji().getEmoji();
+
+                        g2.drawString(em, x1, y1);
+                        g2.dispose();
+
+                        int eci = emoji.getEndCharIndex();
+
+                        int emojiSize = eci - emoji.getCharIndex();
+
+                        i += (emojiSize - 1);
+                        int charPointOfNextChar = emoji.getCodePointIndex() + 1;
+
+                        if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                            i++; // skip any variation selector
+                        }
+                        if (charWidth > cellWidth) {
+                            pad += cellWidth;
+                        }
+                        pad += cellWidth;
+
                         i--;
                     }
+
                     i++;
 
                 } else {
 
-                    cellImage = new BufferedImage(CELL_WIDTH, CELL_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+                    int charWidth = metrics.charWidth(c);
+                    // +1 when width calculation right on the line (UK forecast site)
+                    int superFudge = charWidth <= (cellWidth + 1) ? cellWidth : cellWidth * 2;
+                    
+                    cellImage = new BufferedImage(superFudge, cellHeight, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D g2 = cellImage.createGraphics();
 
                     g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -276,15 +250,15 @@ public class AsciiImage {
 
                     g2.setFont(font);
 
-                    int x1 = (CELL_WIDTH - charWidth) / 2;
-                    int y1 = (CELL_HEIGHT - metrics.getHeight()) / 2 + metrics.getAscent();
+                    int x1 = (superFudge - charWidth) / 2;
+                    int y1 = (cellHeight - metrics.getHeight()) / 2 + metrics.getAscent();
 
                     List<PositionColor> pcl = colorList.get(lineNum);
                     if (pcl != null) {
 
                         PositionColor pc = pcl.get(i);
                         g2.setColor(pc.bg);
-                        g2.fillRect(0, 0, CELL_WIDTH, CELL_HEIGHT);
+                        g2.fillRect(0, 0, superFudge, cellHeight);
                         g2.setColor(pc.fg);
                         if (pc.bold) {
                             g2.setFont(font.deriveFont(Font.BOLD));
@@ -292,7 +266,7 @@ public class AsciiImage {
                     } else {
                         g2.setColor(bgColor);
 
-                        g2.drawRect(0, 0, CELL_WIDTH, CELL_HEIGHT);
+                        g2.drawRect(0, 0, superFudge, cellHeight);
                         g2.setColor(fgColor);
                     }
 
@@ -312,9 +286,15 @@ public class AsciiImage {
                         g2.setFont(font);
                     }
                     g2.dispose();
+                    if(charWidth > (cellWidth + 1)){ // +1 when the width calculation is right on the line - uk forecast pages
+                        pad += cellWidth;
+                    }
+                    pad += cellWidth;
+
                 }
 
                 g.drawImage(cellImage, x, y, null);
+                x += pad;
 
             }
             y += baseY;
@@ -325,26 +305,8 @@ public class AsciiImage {
         return image;
     }
 
-    public static boolean needsPadding(String emoji) {
-
-        int codepoint = emoji.codePointAt(0);
-
-        // weather and celestial symbols
-        if (codepoint >= 0x2600 && codepoint <= 0x26FF) {
-            return true; // covers ⚡☁☀
-        }
-
-        // moon phases and celestial emoji
-        if (codepoint >= 0x1F311 && codepoint <= 0x1F31E) {
-            return true;
-        }
-
-        return false;
-    }
-
     private static AnsiInfo handleAnsi(String line) {
-        //  ParserFactory factory;
-        //if (factory == null) {
+
         ParserFactoryConfig config = new ParserFactoryConfig();
         config.setEnvironment(Environment._8_BIT);
         config.setFunctionTypes(List.of(ControlFunctionType.C0_SET, ControlFunctionType.C1_SET));
