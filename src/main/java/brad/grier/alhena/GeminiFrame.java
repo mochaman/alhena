@@ -568,10 +568,13 @@ public final class GeminiFrame extends JFrame {
         navPanel.add(favButton, c1);
         if (SystemInfo.isMacOS) {
             JPanel macPanel = new JPanel(new GridLayout(2, 1));
-
-            JPanel centerPanel = new JPanel(new FlowLayout());
             titleLabel = new JLabel();
-            centerPanel.add(titleLabel);
+
+            JPanel centerPanel = new JPanel(new GridBagLayout());
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            centerPanel.add(titleLabel, gbc);
 
             macPanel.add(centerPanel);
 
@@ -1640,15 +1643,15 @@ public final class GeminiFrame extends JFrame {
         textField.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(() -> {
+                EventQueue.invokeLater(() -> {
                     textField.selectAll();
                 });
             }
 
             @Override
             public void focusLost(FocusEvent e) {
-                SwingUtilities.invokeLater(() -> {
-                    if(popup.isVisible()){
+                EventQueue.invokeLater(() -> {
+                    if (popup.isVisible()) {
                         popup.dispose();
                     }
                 });
@@ -2913,7 +2916,7 @@ public final class GeminiFrame extends JFrame {
 
         };
 
-        if (SwingUtilities.isEventDispatchThread()) {
+        if (EventQueue.isDispatchThread()) {
             r.run();
         } else {
             EventQueue.invokeLater(r);
