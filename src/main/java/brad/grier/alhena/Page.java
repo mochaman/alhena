@@ -93,6 +93,7 @@ public class Page extends JPanel {
             public void paint(Graphics g, JComponent c) {
                 super.paint(g, c);
                 if (Alhena.favIcon && textPane.indent > ICON_SIZE + 5) {
+                    overlayLabel.setForeground(textPane.pageStyle.getTextForeground());
                     int x = textPane.indent / 2 - (ICON_SIZE / 2);
                     int y = scrollPane.getViewport().getExtentSize().height / 2 - ICON_SIZE;
                     Graphics2D g2 = (Graphics2D) g.create();
@@ -128,7 +129,7 @@ public class Page extends JPanel {
             overlayLabel.setText(null);
         } else {
             if (((String) favIconInfo.icon()).length() < 5) {
-
+                // this gets overriden in paint anyway
                 overlayLabel.setForeground(UIManager.getColor("TextField.foreground"));
                 String s = (String) favIconInfo.icon();
                 boolean isPrintable = s.length() > 0 && overlayLabel.getFont().canDisplay(s.charAt(0));
