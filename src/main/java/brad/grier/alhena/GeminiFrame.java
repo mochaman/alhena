@@ -1232,6 +1232,16 @@ public final class GeminiFrame extends JFrame {
         });
         settingsMenu.add(smoothItem);
 
+        JCheckBoxMenuItem inlineItem = new JCheckBoxMenuItem(I18n.t("inlineItem"), Alhena.inlineImages);
+        inlineItem.addItemListener(ae -> {
+
+            Alhena.inlineImages = !Alhena.inlineImages;
+
+            DB.insertPref("inlineimages", String.valueOf(Alhena.inlineImages));
+
+        });
+
+
         JCheckBoxMenuItem vlcItem = new JCheckBoxMenuItem(I18n.t("vlcItem"), Alhena.allowVLC);
         vlcItem.addItemListener(ae -> {
 
@@ -1298,6 +1308,7 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        settingsMenu.add(inlineItem);
         settingsMenu.add(vlcItem);
         settingsMenu.add(favIconItem);
         settingsMenu.add(dataUrlItem);
