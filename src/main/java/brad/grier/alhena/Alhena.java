@@ -162,6 +162,7 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+    public static boolean inlineImages;
     public static boolean favIcon;
     public static boolean dataUrl;
     public static boolean linkIcons;
@@ -405,7 +406,7 @@ public class Alhena {
         DB.init();
         HashMap<String, String> map = DB.getAllPrefs();
         allowVLC = map.getOrDefault("allowvlc", "false").equals("true");
-
+        inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         gopherProxy = map.getOrDefault("gopherproxy", null);
         searchUrl = map.getOrDefault("searchurl", null);
@@ -909,7 +910,7 @@ public class Alhena {
                     if (query != null) {
                         urlText += query;
                     }
-                
+
                     connection.result().write(urlText);
                 } else {
                     String urlText = uri.getHost() + " " + (path.isEmpty() ? "/" : path) + " " + uploadFile.length() + "\r\n";
@@ -993,7 +994,7 @@ public class Alhena {
                                     bg(() -> {
                                         p.textPane.updatePage(chunk, true, origURL, true);
                                     });
-                                } else if (mime.startsWith("image/") || isSVGExt[0]) {
+                                } else if (inlineImages && (mime.startsWith("image/") || isSVGExt[0])) {
                                     isSVG[0] = mime.contains("svg+xml") || isSVGExt[0];
                                     imageStartIdx[0] = i + 1;
                                     hLength[0] = i + 1;
@@ -1209,11 +1210,11 @@ public class Alhena {
 
                 String path = uri.getPath();
 
-                if (imageExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext))) {
+                if (inlineImages && imageExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext))) {
                     imageStartIdx[0] = 0;
                 }
                 boolean isSVG = origURL.toLowerCase().endsWith(".svg");
-                
+
                 boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext));
                 String mimeFromExt = MimeMapping.getMimeTypeForFilename(origURL);
                 boolean isMedia = mimeFromExt != null && (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video"));
@@ -1225,12 +1226,17 @@ public class Alhena {
                 connection.result().handler(buffer -> {
 
                     if (imageStartIdx[0] != -1) {
-                        try {
-                            DB.insertHistory(origURL, null);
-                        } catch (SQLException ex) {
-                            ex.printStackTrace();
+                        if (!rcvdData[0]) {
+                            rcvdData[0] = true;
+                            
+                            try {
+                                DB.insertHistory(origURL, null);
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
                         }
                         saveBuffer.appendBuffer(buffer);
+                        cPage.frame().setTmpStatus((saveBuffer.length() + " bytes"));
                     } else if (isText || path.lastIndexOf('.') == -1) {
                         if (firstBuffer[0]) {
                             firstBuffer[0] = false;
@@ -1608,7 +1614,7 @@ public class Alhena {
                                             p.textPane.updatePage(chunk, true, origURL, true);
                                         });
                                     }
-                                } else if (mime.startsWith("image/")) {
+                                } else if (inlineImages && mime.startsWith("image/")) {
                                     isSVG[0] = mime.contains("svg+xml");
                                     imageStartIdx[0] = i + 1;
                                     hLength[0] = i + 1;
@@ -2044,7 +2050,6 @@ public class Alhena {
                         System.out.println("connection closed");
                         done[0] = true;
 
-                        file.close();
                         bg(() -> {
                             if (runOnDone == null) {
                                 try {
@@ -2060,8 +2065,10 @@ public class Alhena {
                                     // restore downloaded file
                                     Util.importData(p.frame(), outFile, true);
                                 }
+                                file.close();
                             } else {
                                 runOnDone.run();
+                                file.close();
                             }
                         });
                     }
@@ -2072,7 +2079,6 @@ public class Alhena {
                 });
                 // Close file when socket closes
                 socket.closeHandler(v -> {
-
                     r.run();
 
                 });
@@ -3428,7 +3434,6 @@ public class Alhena {
         URI uri = URI.create(url);
         String host = uri.getHost();
 
-
         certMap.get(null).connect(Util.getPort(uri), host, ar -> {
 
             if (ar.failed()) {
@@ -3502,7 +3507,7 @@ public class Alhena {
         while (true) {
             try {
                 new URI(fixed);
-                return fixed; 
+                return fixed;
             } catch (URISyntaxException e) {
                 int idx = e.getIndex();
                 if (idx < 0 || idx >= fixed.length()) {
