@@ -2382,7 +2382,7 @@ public class GeminiTextPane extends JTextPane {
 
             IndexedEmoji emoji;
             int cpCount = text.codePointCount(0, text.length());
-
+            int nudge = 0;
             // can't iterate by code point without preprocessing first to get name
             for (int i = 0; i < text.length(); i++) {
 
@@ -2422,7 +2422,7 @@ public class GeminiTextPane extends JTextPane {
                             insertString(doc.getLength(), text.substring(2), style);
                             break;
                         }
-
+                        nudge = 1;
                         i++;
                     } else if (sheetImage != null) {
 
@@ -2463,7 +2463,7 @@ public class GeminiTextPane extends JTextPane {
                             i += (emojiSize - 1);
                             int charPointOfNextChar = emoji.getCodePointIndex() + 1;
 
-                            if (emojiSize == 1 && charPointOfNextChar < cpCount && isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
+                            if (emojiSize == 1 && charPointOfNextChar < cpCount && isEmojiVariationSelector(text.codePointAt(charPointOfNextChar + nudge))) {
                                 i++; // skip any variation selector
                                 opto = 1;
                             }
