@@ -2937,7 +2937,7 @@ public final class GeminiFrame extends JFrame {
     // only call on EDT
     public void showGlassPane(boolean visible) {
         if (!(getGlassPane() instanceof GeminiGlassPane)) {
-            setGlassPane(new GeminiGlassPane());
+            setGlassPane(new GeminiGlassPane(this));
         }
         //validate();
         // get the existing blocking glass pane

@@ -74,6 +74,33 @@ public class StylePicker extends JPanel {
             }
 
         });
+
+
+        JMenuItem spinnerColorItem = new JMenuItem("Spinner Color");
+        spinnerColorItem.addActionListener(al -> {
+
+            Color chosenColor = Util.getColor(StylePicker.this, pageTheme.getSpinnerColor());
+            if (chosenColor != null) {
+                //textPanel.setBackground(chosenColor);
+                pageTheme.setSpinnerColor(chosenColor);
+                alteredPageTheme.setSpinnerColor(chosenColor);
+                if (saveAlteredPageTheme != null) {
+                    saveAlteredPageTheme.setSpinnerColor(chosenColor);
+                }
+            }
+        });
+        JMenuItem spinnerResetItem = new JMenuItem("Reset Spinner Color");
+        spinnerResetItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            //textPanel.setBackground(defaultTheme.getPageBackground());
+            pageTheme.setSpinnerColor(defaultTheme.getSpinnerColor());
+            alteredPageTheme.clearSpinnerColor();
+            if (saveAlteredPageTheme != null) {
+                saveAlteredPageTheme.clearSpinnerColor();
+            }
+
+        });
+
         applyAllCB = new JCheckBoxMenuItem(I18n.t("applyAllCBItem"));
         applyAllCB.addItemListener(il -> {
             if (il.getStateChange() == ItemEvent.SELECTED) {
@@ -136,6 +163,8 @@ public class StylePicker extends JPanel {
             if (mItems.isEmpty()) {
                 mItems.add(pageColorItem);
                 mItems.add(resetPageBGItem);
+                mItems.add(spinnerColorItem);
+                mItems.add(spinnerResetItem);
                 mItems.add(widthItem);
                 mItems.add(resetWidthItem);
                 mItems.add(applyAllCB);

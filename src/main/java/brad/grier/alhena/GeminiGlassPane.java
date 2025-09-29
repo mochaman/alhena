@@ -1,4 +1,3 @@
-
 package brad.grier.alhena;
 
 import java.awt.AlphaComposite;
@@ -22,12 +21,13 @@ public class GeminiGlassPane extends JComponent implements ActionListener {
     private int mAngle;
     private int mFadeCount;
     private final int mFadeLimit = 15;
+    private final GeminiFrame gf;
 
-    
-    public GeminiGlassPane() {
+    public GeminiGlassPane(GeminiFrame gf) {
         super();
         //setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         setOpaque(false);
+        this.gf = gf;
     }
 
     @Override
@@ -67,7 +67,11 @@ public class GeminiGlassPane extends JComponent implements ActionListener {
 
     public void start() {
         //spinnerColor = UIManager.getBoolean("laf.dark") ? Color.WHITE : Color.BLACK;
-        spinnerColor = UIManager.getColor("Component.linkColor");
+        if (gf.visiblePage().textPane.pageStyle != null) {
+            spinnerColor = gf.visiblePage().textPane.pageStyle.getSpinnerColor();
+        } else {
+            spinnerColor = UIManager.getColor("Component.linkColor");
+        }
         if (mIsRunning) {
             if (mIsFadingOut) {
                 mIsFadingOut = false;

@@ -1658,6 +1658,7 @@ public class GeminiTextPane extends JTextPane {
         boolean isDark = !Util.isLight(bg);
         Color lc = UIManager.getColor("Component.linkColor");
         pageTheme.setLinkColor(lc);
+        pageTheme.setSpinnerColor(lc);
         pageTheme.setLinkStyle(Font.PLAIN);
         pageTheme.setVisitedLinkColor(isDark ? lc.darker() : lc.brighter());
         pageTheme.setHoverColor(pageTheme.getLinkColor().brighter());

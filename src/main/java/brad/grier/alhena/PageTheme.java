@@ -48,6 +48,7 @@ public class PageTheme {
     private Integer listStyle;
     private Boolean listUnderline;
     private Float contentPercentage;
+    private Color spinnerColor;
 
     public Color getLinkColor() {
         return linkColor;
@@ -265,6 +266,20 @@ public class PageTheme {
         }
     }
 
+    public Color getSpinnerColor() {
+        return spinnerColor;
+    }
+
+    public void setSpinnerColor(Color spinnerColor) {
+        this.spinnerColor = spinnerColor;
+    }
+
+    public void setSpinnerColor(Integer spinnerColor) {
+        if (spinnerColor != null) {
+            this.spinnerColor = new Color(spinnerColor);
+        }
+    }
+
     public String getHeader1FontFamily() {
         return header1FontFamily;
     }
@@ -341,6 +356,7 @@ public class PageTheme {
         setLinkSize(jo.getInteger("linkSize"));
         setQuoteSize(jo.getInteger("quoteSize"));
         setPageBackground(jo.getInteger("pageBackground"));
+        setSpinnerColor(jo.getInteger("spinnerColor"));
         setContentPercentage(jo.getFloat("contentPercentage"));
         setHeader1FontFamily(jo.getString("header1FontFamily"));
         setHeader2FontFamily(jo.getString("header2FontFamily"));
@@ -456,6 +472,10 @@ public class PageTheme {
             styleJson.put("pageBackground", pageBackground.getRGB());
         }
 
+        if(spinnerColor != null){
+            styleJson.put("spinnerColor", spinnerColor.getRGB());
+        }
+
         if(contentPercentage != null){
             styleJson.put("contentPercentage", contentPercentage);
         }
@@ -529,6 +549,10 @@ public class PageTheme {
 
     public void clearPageBackground() {
         pageBackground = null;
+    }
+
+    public void clearSpinnerColor(){
+        spinnerColor = null;
     }
     public void clearContentWidth() {
         contentPercentage = null;
