@@ -959,12 +959,22 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
+    public static boolean isGif(byte[] data) {
+        if (data.length < 6) {
+            return false;
+        }
+        String sig = new String(data, 0, 6, java.nio.charset.StandardCharsets.US_ASCII);
+        return "GIF87a".equals(sig) || "GIF89a".equals(sig);
+    }
+
     public void insertImage(byte[] imageBytes, boolean curPos, boolean isSVG) {
+
         inserting = true;
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
         int width = (int) contentWidth - 50;
         BufferedImage image = null;
+        ImageIcon icon = null;
         if (isSVG) {
             SVGLoader loader = new SVGLoader();
             try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
@@ -980,23 +990,27 @@ public class GeminiTextPane extends JTextPane {
                     svgDoc.render(null, g);
                     g.dispose();
                     image = Util.getImage(null, width, width * 2, svgImage, false);
+                    // TODO: needed (maybe)
+                    if (image == null) {
+                        f.setBusy(false, page);
+                        return;
+                    }
+                    icon = new ImageIcon(image);
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-
+        } else if (isGif(imageBytes)) {
+            icon = new ImageIcon(imageBytes);
         } else {
             image = Util.getImage(imageBytes, width, width * 2, null, false);
-        }
 
-        // TODO: needed (maybe)
-        if (image == null) {
-            //System.out.println("here");
-            f.setBusy(false, page);
-            return;
+            if (image == null) {
+                f.setBusy(false, page);
+                return;
+            }
+            icon = new ImageIcon(image);
         }
-
-        ImageIcon icon = new ImageIcon(image);
 
         SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
         StyleConstants.setIcon(emojiStyle, icon);
