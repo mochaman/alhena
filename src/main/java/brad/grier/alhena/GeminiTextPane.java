@@ -197,7 +197,9 @@ public class GeminiTextPane extends JTextPane {
             String url = GeminiFrame.emojiNameMap.get(emojiPref);
             String fn = url.substring(url.lastIndexOf('/') + 1);
             File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
-            if (emojiFile.exists()) {
+
+            // if the file exists, make sure it's the right version
+            if (emojiFile.exists() && Util.getSetSize(emojiPref) == emojiFile.length()) {
                 try {
                     setSheetImage(ImageIO.read(emojiFile));
                 } catch (IOException ex) {
@@ -1725,7 +1727,7 @@ public class GeminiTextPane extends JTextPane {
         try {
             URI u = getURI();
             if (u != null) {
-                dbStyle = DB.getStyle(docURL, u.getAuthority(), dbTheme, !UIManager.getBoolean("laf.dark"));
+                dbStyle = DB.getStyle(docURL, u.getAuthority(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
