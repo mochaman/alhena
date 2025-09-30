@@ -1095,4 +1095,18 @@ public class Util {
     public static int getPort(URI uri) {
         return uri.getPort() == -1 ? 1965 : uri.getPort();
     }
+
+    // get size of the latest sprite sheet version - download new version if size mismatch
+    public static int getSetSize(String setName) {
+        return switch (setName) {
+            case "apple" ->
+                19999794;
+            case "facebook" ->
+                21171378;
+            case "twitter" ->
+                11283284;
+            default ->
+                -1;
+        };
+    }
 }
