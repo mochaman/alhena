@@ -1046,7 +1046,7 @@ public final class GeminiFrame extends JFrame {
         }));
 
         settingsMenu.add(createMenuItem(I18n.t("stylesItem"), KeyStroke.getKeyStroke(KeyEvent.VK_S, mod), () -> {
-            String[] scopeItems = {I18n.t("scope1Label"), I18n.t("scope2Label"), I18n.t("scope3Label")};
+            String[] scopeItems = {I18n.t("scope1Label"), I18n.t("scope2Label"), I18n.t("scope3Label"), I18n.t("scope4Label")};
             JComboBox<String> scopeCombo = new JComboBox(scopeItems);
             scopeCombo.setEditable(false);
 
@@ -1066,7 +1066,15 @@ public final class GeminiFrame extends JFrame {
                 switch (idx) {
                     case 0 ->
                         scope = scopeValue = "GLOBAL";
-                    case 1 -> {
+                    case 1 ->{
+                        scope = "SCHEME";
+                        scopeValue = visiblePage().textPane.getURI().getScheme();
+                        if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
+                            scope = "URL";
+                            scopeValue = visiblePage().textPane.getDocURLString();
+                        }
+                    }
+                    case 2 -> {
                         scope = "DOMAIN";
                         scopeValue = visiblePage().textPane.getURI().getAuthority();
                         if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
@@ -1075,7 +1083,7 @@ public final class GeminiFrame extends JFrame {
                         }
 
                     }
-                    case 2 -> {
+                    case 3 -> {
                         scope = "URL";
                         scopeValue = visiblePage().textPane.getDocURLString();
                     }
@@ -1418,9 +1426,9 @@ public final class GeminiFrame extends JFrame {
         saveFont = new Font(dbFont, Font.PLAIN, fontSize);
     }
 
-    public static Map<String, String> emojiNameMap = Map.of("apple", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_apple_64.png",
-            "facebook", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_facebook_64.png",
-            "twitter", "https://github.com/mochaman/alhena/releases/download/v3.4/sheet_twitter_64.png",
+    public static Map<String, String> emojiNameMap = Map.of("apple", "https://github.com/mochaman/alhena/releases/download/v5.3.5/sheet_apple_64.png",
+            "facebook", "https://github.com/mochaman/alhena/releases/download/v5.3.5/sheet_facebook_64.png",
+            "twitter", "https://github.com/mochaman/alhena/releases/download/v5.3.5/sheet_twitter_64.png",
             "google", "/sheet_google_64.png");
 
     // called on DB replace - will not be called for 'google' or 'font'
@@ -1459,7 +1467,6 @@ public final class GeminiFrame extends JFrame {
                 Alhena.updateFrames(false, false, false);
             } else {
                 String url = emojiNameMap.get(setName);
-
                 if (setName.equals("google")) {
                     GeminiTextPane.setSheetImage(Util.loadImage(url));
                     DB.insertPref("emoji", "google");
@@ -1468,7 +1475,8 @@ public final class GeminiFrame extends JFrame {
                 } else {
                     String fn = url.substring(url.lastIndexOf('/'));
                     File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
-                    if (!emojiFile.exists()) {
+
+                    if (!emojiFile.exists() || Util.getSetSize(setName) != emojiFile.length()) {
 
                         downloadSpriteSheet(url, emojiFile, setName, selected);
                     } else {
