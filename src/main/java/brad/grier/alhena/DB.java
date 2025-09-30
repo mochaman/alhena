@@ -806,7 +806,7 @@ public class DB {
 
     }
 
-    public static StyleInfo getStyle(String url, String domain, String theme, boolean isLight) throws SQLException {
+    public static StyleInfo getStyle(String url, String domain, String scheme, String theme, boolean isLight) throws SQLException {
         String sql = """
             SELECT ID, STYLE
             FROM STYLES
@@ -814,6 +814,7 @@ public class DB {
             (
                 (SCOPE = 'URL' AND SCOPE_VALUE = ?)
                 OR (SCOPE = 'DOMAIN' AND SCOPE_VALUE = ?)
+                OR (SCOPE = 'SCHEME' AND SCOPE_VALUE = ?)
                 OR (SCOPE = 'GLOBAL' AND SCOPE_VALUE = 'GLOBAL')
             )
             AND (
@@ -826,7 +827,8 @@ public class DB {
             CASE SCOPE
                 WHEN 'URL' THEN 1
                 WHEN 'DOMAIN' THEN 2
-                WHEN 'GLOBAL' THEN 3
+                WHEN 'SCHEME' THEN 3
+                WHEN 'GLOBAL' THEN 4
             END,
             CASE
                 WHEN THEME = ? THEN 1
@@ -840,14 +842,14 @@ public class DB {
         try (Connection con = cp.getConnection(); var ps = con.prepareStatement(sql)) {
             ps.setString(1, url);          // #1 full URL
             ps.setString(2, domain);       // #2 domain only
-            ps.setString(3, theme); // #3 theme name
-            ps.setBoolean(4, isLight);     // #4
-            ps.setBoolean(5, !isLight);      // #5
-            ps.setString(6, theme); // #6 again
+            ps.setString(3, scheme);       // #3 scheme only
+            ps.setString(4, theme); // #4 theme name
+            ps.setBoolean(5, isLight);     // #5
+            ps.setBoolean(6, !isLight);      // #6
+            ps.setString(7, theme); // #7 again
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     result = new StyleInfo(rs.getInt(1), rs.getString(2));
-                    //result = rs.getString(1);
                 }
             }
         }
