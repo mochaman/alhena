@@ -175,8 +175,8 @@ public class Alhena {
     private static final ResourceBundle bundle
             = ResourceBundle.getBundle("MessagesBundle", Locale.getDefault());
     private static final List<String> allowedSchemes = List.of(
-            "gemini://", "file:/", "spartan://", "nex://",
-            "https://", "http://", "titan://"
+            "gemini:/", "file:/", "spartan:/", "nex:/",
+            "https:/", "http:/", "titan:/"
     );
     public static boolean sDown;
 
@@ -628,6 +628,7 @@ public class Alhena {
 
         }
 
+        // relative link logic mostly duplicated in Util. TODO: combine
         URI prevURI = redirectUrl == null ? p.textPane.getURI() : URI.create(redirectUrl);
         URI checkURI = null;
         try {
@@ -3161,7 +3162,7 @@ public class Alhena {
                             });
                             req.end();
                         });
-                    } else if (contentType != null && contentType.startsWith("image/")) {
+                    } else if (contentType != null && inlineImages && contentType.startsWith("image/")) {
                         File file;
                         resp.pause();
                         boolean isSVG = contentType.contains("image/svg+xml");
