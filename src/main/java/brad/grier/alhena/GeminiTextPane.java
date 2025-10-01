@@ -537,7 +537,7 @@ public class GeminiTextPane extends JTextPane {
                                 JMenuItem copyLinkItem = new JMenuItem(I18n.t("copyLinkPopupItem"));
 
                                 copyLinkItem.addActionListener(ev -> {
-                                    copyText(range.url);
+                                    copyText(Util.resolveURI(getURI(), range.url));
                                 });
                                 popupMenu.add(copyLinkItem);
 
