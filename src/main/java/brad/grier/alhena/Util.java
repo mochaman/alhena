@@ -29,8 +29,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.FileNameMap;
+import java.net.IDN;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
@@ -1108,5 +1110,69 @@ public class Util {
             default ->
                 -1;
         };
+    }
+
+    // uses processURL logic (minus the sanitize) to create a fully resolved url
+    // returns the original link url if resolve fails
+    public static String resolveURI(URI prevURI, String oUrl) {
+        try {
+            String url = oUrl;
+            URI checkURI = new URI(url);
+            String authority = checkURI.getAuthority();
+            String host = authority != null ? authority.split(":")[0] : null;
+            if (url.startsWith("//")) {
+                url = prevURI.getScheme() + ":" + url;
+            } else {
+
+                if (host == null && !"file".equals(checkURI.getScheme())) {
+
+                    if (checkURI.getScheme() == null) {
+                        //URI.resolve is removing last segment of path when checkURI is only a query???
+                        if (url.startsWith("?")) {
+                            // do not preserve prevURI's query if there is one
+                            url = prevURI.getScheme() + "://" + prevURI.getHost() + prevURI.getPath() + url;
+
+                        } else {
+                            url = prevURI.resolve(checkURI).toString();
+                            if (url.endsWith("..")) {
+                                url = url.substring(0, url.indexOf(".."));
+                            }
+                        }
+                    } else {
+                        //  corner case - no host but there's a scheme - is this legal?
+                        // spartan://greatfractal.com/
+                        url = prevURI.resolve(URI.create(checkURI.getPath())).toString();
+                    }
+
+                }
+            }
+            if (!url.contains(":/")) {
+                return oUrl;
+            } else {
+                URI origURI = URI.create(url).normalize();
+                String origURL = origURI.toString();
+                if (origURI.getPath().isEmpty()) {
+
+                    //origURL += "/"; // origURL keeps the emoji
+                    url += "/";
+
+                }
+                if (origURL.startsWith("file:/")) {
+                    return origURL;
+                }
+                String hostPart = url.split("://")[1].split("/")[0];
+                for (char c : hostPart.toCharArray()) { // handle emoji
+                    if (c > 127) {
+                        String punycodeHost = IDN.toASCII(hostPart, IDN.ALLOW_UNASSIGNED);
+                        url = url.replace(hostPart, punycodeHost);
+                        break;
+                    }
+                }
+                URI punyURI = URI.create(url).normalize();
+                return punyURI.toString();
+            }
+        } catch (URISyntaxException ex) {
+            return oUrl;
+        }
     }
 }
