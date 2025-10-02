@@ -163,6 +163,7 @@ public class Alhena {
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
     public static boolean inlineImages;
+    public static boolean useBrowser;
     public static boolean favIcon;
     public static boolean dataUrl;
     public static boolean linkIcons;
@@ -388,6 +389,7 @@ public class Alhena {
             if (desktop.isSupported(Desktop.Action.BROWSE)) {
                 browsingSupported = true;
             }
+
             if (desktop.isSupported(Desktop.Action.MAIL)) {
                 mailSupported = true;
             }
@@ -407,6 +409,7 @@ public class Alhena {
         HashMap<String, String> map = DB.getAllPrefs();
         allowVLC = map.getOrDefault("allowvlc", "false").equals("true");
         inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
+        useBrowser = map.getOrDefault("browser", "false").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         gopherProxy = map.getOrDefault("gopherproxy", null);
         searchUrl = map.getOrDefault("searchurl", null);
@@ -3055,8 +3058,7 @@ public class Alhena {
 
     // only call on EDT
     private static void handleHttp(String url, URI prevURI, Page p, Page cPage, int redirectCount) {
-        String useB = DB.getPref("browser", null);
-        boolean useBrowser = useB == null ? true : useB.equals("true");
+
         if (browsingSupported && useBrowser) {
             try {
                 Desktop.getDesktop().browse(new URI(url));

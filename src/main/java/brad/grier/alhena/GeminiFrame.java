@@ -1066,7 +1066,7 @@ public final class GeminiFrame extends JFrame {
                 switch (idx) {
                     case 0 ->
                         scope = scopeValue = "GLOBAL";
-                    case 1 ->{
+                    case 1 -> {
                         scope = "SCHEME";
                         scopeValue = visiblePage().textPane.getURI().getScheme();
                         if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
@@ -1238,7 +1238,15 @@ public final class GeminiFrame extends JFrame {
             Alhena.smoothScrolling = smoothScrolling;
 
         });
-        settingsMenu.add(smoothItem);
+
+        JCheckBoxMenuItem browserItem = new JCheckBoxMenuItem(I18n.t("browserItem"), Alhena.useBrowser);
+        browserItem.addItemListener(ae -> {
+
+            Alhena.useBrowser = !Alhena.useBrowser;
+
+            DB.insertPref("browser", String.valueOf(Alhena.useBrowser));
+
+        });
 
         JCheckBoxMenuItem inlineItem = new JCheckBoxMenuItem(I18n.t("inlineItem"), Alhena.inlineImages);
         inlineItem.addItemListener(ae -> {
@@ -1248,7 +1256,6 @@ public final class GeminiFrame extends JFrame {
             DB.insertPref("inlineimages", String.valueOf(Alhena.inlineImages));
 
         });
-
 
         JCheckBoxMenuItem vlcItem = new JCheckBoxMenuItem(I18n.t("vlcItem"), Alhena.allowVLC);
         vlcItem.addItemListener(ae -> {
@@ -1321,6 +1328,11 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(favIconItem);
         settingsMenu.add(dataUrlItem);
         settingsMenu.add(linkIconItem);
+        if (Alhena.browsingSupported) {
+            settingsMenu.add(browserItem);
+        }
+        settingsMenu.add(new JSeparator());
+        settingsMenu.add(smoothItem);
         settingsMenu.add(scrollSizeItem);
         settingsMenu.add(dragScrollItem);
 

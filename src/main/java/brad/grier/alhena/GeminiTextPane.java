@@ -45,7 +45,6 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.SQLException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -545,39 +544,26 @@ public class GeminiTextPane extends JTextPane {
                                 JMenuItem menuItem1 = new JMenuItem(I18n.t("newTabPopupItem"));
 
                                 menuItem1.addActionListener(ev -> {
+                                    // open in new tab with gemtext converter regardless
+                                    boolean saveSetting = Alhena.useBrowser;
+                                    Alhena.useBrowser = false;
                                     f.newTab(range.url);
+                                    Alhena.useBrowser = saveSetting;
                                 });
                                 menuItem1.setEnabled(!range.dataUrl);
                                 popupMenu.add(menuItem1);
                                 JMenuItem menuItem2 = new JMenuItem(I18n.t("newWindowPopupItem"));
                                 menuItem2.setEnabled(!range.dataUrl);
                                 menuItem2.addActionListener(ev -> {
+                                    // open in new tab with gemtext converter regardless
+                                    boolean saveSetting = Alhena.useBrowser;
+                                    Alhena.useBrowser = false;
                                     Alhena.newWindow(range.url, docURL);
+                                    Alhena.useBrowser = saveSetting;
 
                                 });
                                 popupMenu.add(menuItem2);
 
-                                if (Alhena.httpProxy == null && Alhena.browsingSupported && range.url.startsWith("http")) {
-                                    String useB = DB.getPref("browser", null);
-                                    boolean useBrowser = useB == null ? true : useB.equals("true");
-
-                                    // show the opposite of the setting - this then becomes the default
-                                    if (useBrowser) {
-                                        // do not allow open in new window or tab if using system browser
-                                        menuItem1.setEnabled(false);
-                                        menuItem2.setEnabled(false);
-                                    }
-                                    String label = useBrowser ? "Alhena" : I18n.t("browserLabel");
-                                    String message = MessageFormat.format(I18n.t("httpOpenItem"), label);
-                                    JMenuItem httpMenuItem = new JMenuItem(message);
-                                    httpMenuItem.addActionListener(al -> {
-
-                                        DB.insertPref("browser", String.valueOf(!useBrowser));
-                                        f.fetchURL(range.url, false);
-                                    });
-
-                                    popupMenu.add(httpMenuItem);
-                                }
 
                                 switch (currentMode) {
                                     case CERT_MODE -> {
@@ -656,7 +642,10 @@ public class GeminiTextPane extends JTextPane {
                                 }
                             } else if (SwingUtilities.isMiddleMouseButton(e)) {
                                 if (!range.dataUrl) {
+                                    boolean saveSetting = Alhena.useBrowser;
+                                    Alhena.useBrowser = false;
                                     f.newTab(range.url);
+                                    Alhena.useBrowser = saveSetting;
                                 }
                             }
                             break;
@@ -1912,9 +1901,8 @@ public class GeminiTextPane extends JTextPane {
 
                 ClickableRange cr = addStyledText(label.isEmpty() ? url : label, linkStyle,
                         () -> {
-                            String useB = DB.getPref("browser", null);
-                            boolean useBrowser = useB == null ? true : useB.equals("true");
-                            if (Alhena.httpProxy == null && finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
+
+                            if (Alhena.httpProxy == null && finalUrl.startsWith("http") && Alhena.browsingSupported && Alhena.useBrowser) {
                                 try {
                                     Desktop.getDesktop().browse(new URI(finalUrl));
                                 } catch (Exception ex) {
@@ -2090,8 +2078,6 @@ public class GeminiTextPane extends JTextPane {
             ClickableRange cr = addStyledText(label.isEmpty() ? sfx + url.replace("/", "/\u200B") : sfx + label, linkStyle,
                     () -> {
 
-                        String useB = DB.getPref("browser", null);
-                        boolean useBrowser = useB == null ? true : useB.equals("true");
                         if (spartanLink) {
 
                             TextEditor textEditor = new TextEditor("", false, GeminiTextPane.this);
@@ -2111,7 +2097,7 @@ public class GeminiTextPane extends JTextPane {
                                 }
                             }
 
-                        } else if (Alhena.httpProxy == null && finalUrl.startsWith("https") && Alhena.browsingSupported && useBrowser) {
+                        } else if (Alhena.httpProxy == null && finalUrl.startsWith("http") && Alhena.browsingSupported && Alhena.useBrowser) {
                             try {
                                 Desktop.getDesktop().browse(new URI(finalUrl));
                             } catch (Exception ex) {
