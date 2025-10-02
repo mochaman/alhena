@@ -1239,7 +1239,7 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        JCheckBoxMenuItem browserItem = new JCheckBoxMenuItem(I18n.t("browserItem"), Alhena.useBrowser);
+        JCheckBoxMenuItem browserItem = new JCheckBoxMenuItem(I18n.t("browserItem"), !Alhena.useBrowser);
         browserItem.addItemListener(ae -> {
 
             Alhena.useBrowser = !Alhena.useBrowser;
