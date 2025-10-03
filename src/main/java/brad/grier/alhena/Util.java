@@ -132,12 +132,10 @@ public class Util {
         JDialog dialog = optionPane.createDialog(c, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
-        // Enable the transparent title bar on the dialog
 
         if (SystemInfo.isMacOS) {
             dressDialog(dialog);
         }
-        // Display the dialog
         dialog.setVisible(true);
 
     }
@@ -1184,6 +1182,7 @@ public class Util {
 
     public static void showStyleEditor(GeminiFrame gf, int styleId) {
         try {
+
             PageStyleInfo psi = DB.getStyle(styleId);
             String jstring = psi.style();
             PageTheme pt;
@@ -1280,7 +1279,8 @@ public class Util {
         }
     }
 
-    public static void newStyle(GeminiFrame gf, boolean refresh) {
+    public static void newStyle(GeminiFrame gf) {
+        boolean[] refresh = {gf.visiblePage().textPane.currentMode == GeminiTextPane.STYLE_MODE};
         String[] scopeItems = {I18n.t("scope1Label"), I18n.t("scope2Label"), I18n.t("scope3Label"), I18n.t("scope4Label")};
         JComboBox<String> scopeCombo = new JComboBox(scopeItems);
         scopeCombo.setEditable(false);
@@ -1291,11 +1291,19 @@ public class Util {
         themeCombo.setEditable(false);
         Object[] comps = {new JLabel(I18n.t("scopeText")),
             new JLabel(" "), new JLabel(I18n.t("styleScopeLabel")), scopeCombo, new JLabel(I18n.t("styleThemeLabel")), themeCombo};
-        Object[] opts = {I18n.t("okLabel"), I18n.t("currentLabel"), I18n.t("cancelLabel")};
-        Object res = Util.inputDialog2(gf, I18n.t("stylesItem"), comps, opts, false);
+        Object[] opts = {new JButton(I18n.t("okLabel")), new JButton(I18n.t("currentLabel")), new JButton(I18n.t("closeLabel"))};
 
-        if (I18n.t("okLabel").equals(res)) {
-
+        BooleanSupplier currentR = () ->{
+            Integer styleId = gf.visiblePage().textPane.styleId;
+            if (styleId != null) {
+                showStyleEditor(gf, styleId);
+                return false;
+            } else {
+                infoDialog(gf, I18n.t("noStyleDialog"), I18n.t("noStyleText"));
+                return false;
+            }
+        };
+        BooleanSupplier okR = () -> {
             int idx = scopeCombo.getSelectedIndex();
             String scope = null, scopeValue = null, th = null;
             switch (idx) {
@@ -1363,7 +1371,7 @@ public class Util {
                     try {
                         DB.insertStyle(fScope, fScopeVal, fTheme, sp.getAlteredPageTheme().getJson(), null);
                         Alhena.updateFrames(false, false, false);
-                        if (refresh) {
+                        if (refresh[0]) {
                             EventQueue.invokeLater(() -> gf.refresh());
                         }
                     } catch (SQLException ex) {
@@ -1374,12 +1382,12 @@ public class Util {
                 };
 
                 BooleanSupplier delRunnable = () -> {
-                    Object r = Util.confirmDialog(gf, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                    Object r = confirmDialog(gf, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
                     if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
                         try {
                             DB.deleteStyle(fScope, fScopeVal, fTheme);
                             Alhena.updateFrames(false, false, false);
-                            if (refresh) {
+                            if (refresh[0]) {
                                 EventQueue.invokeLater(() -> gf.refresh());
                             }
                         } catch (SQLException ex) {
@@ -1390,24 +1398,18 @@ public class Util {
                     return false;
                 };
 
-                BooleanSupplier cancelRunnable = () -> {
-                    return true;
-                };
                 Object[] options = {okButton, delButton, cancelButton};
-                BooleanSupplier[] suppliers = {okRunnable, delRunnable, cancelRunnable};
-                Util.inputDialog2(gf, I18n.t("styleDialog"), cmps, options, false, suppliers);
+                BooleanSupplier[] suppliers = {okRunnable, delRunnable, ()->true};
+
+                inputDialog2(gf, I18n.t("styleDialog"), cmps, options, false, suppliers);
 
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
+            return false;
 
-        } else if (I18n.t("currentLabel").equals(res)) {
-            Integer styleId = gf.visiblePage().textPane.styleId;
-            if (styleId != null) {
-                Util.showStyleEditor(gf, styleId);
-            } else {
-                Util.infoDialog(gf, I18n.t("noStyleDialog"), I18n.t("noStyleText"));
-            }
-        }
+        };
+        BooleanSupplier[] supps = {okR, currentR, ()-> true};
+        inputDialog2(gf, I18n.t("stylesItem"), comps, opts, false, supps);
     }
 }

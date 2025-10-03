@@ -786,7 +786,7 @@ public class GeminiTextPane extends JTextPane {
                         popupMenu.add(new JSeparator());
                         JMenuItem newStyleItem = new JMenuItem(I18n.t("stylesItem"));
                         newStyleItem.addActionListener(al -> {
-                            Util.newStyle(f, true);
+                            Util.newStyle(f);
                         });
                         popupMenu.add(newStyleItem);
                     } else if (currentMode == HISTORY_MODE) {

@@ -1046,7 +1046,7 @@ public final class GeminiFrame extends JFrame {
         }));
 
         settingsMenu.add(createMenuItem(I18n.t("stylesItem"), KeyStroke.getKeyStroke(KeyEvent.VK_S, mod), () -> {
-            Util.newStyle(GeminiFrame.this, false);
+            Util.newStyle(GeminiFrame.this);
 
         }));
         settingsMenu.add(new JSeparator());
