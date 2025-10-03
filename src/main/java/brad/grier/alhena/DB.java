@@ -927,16 +927,16 @@ public class DB {
         return style;
     }
 
-    public static String getStyle(int id) throws SQLException {
-        String style = null;
+    public static PageStyleInfo getStyle(int id) throws SQLException {
+        PageStyleInfo style = null;
 
         try (Connection con = cp.getConnection()) {
-            try (var ps = con.prepareStatement("SELECT STYLE FROM STYLES WHERE ID = ?")) {
+            try (var ps = con.prepareStatement("SELECT ID, SCOPE, SCOPE_VALUE, THEME, STYLE FROM STYLES WHERE ID = ?")) {
                 ps.setInt(1, id);
 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        style = rs.getString(1);
+                        style = new PageStyleInfo(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5));
                     }
                 }
             }
@@ -978,5 +978,23 @@ public class DB {
 
         return urlList;
     }
+
+    public record PageStyleInfo(int id, String scope, String scopeValue, String theme, String style) {
+
+    }
+
+    public static List<PageStyleInfo> loadStyles() throws SQLException {
+        ArrayList<PageStyleInfo> styleList = new ArrayList<>();
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+
+            try (ResultSet rs = st.executeQuery("select id, scope, scope_value, theme from styles order by scope")) {
+                while (rs.next()) {
+                    styleList.add(new PageStyleInfo(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4), null));
+                }
+            }
+        }
+        return styleList;
+    }
+
 
 }

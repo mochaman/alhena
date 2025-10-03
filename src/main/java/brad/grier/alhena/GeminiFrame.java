@@ -99,9 +99,9 @@ import com.formdev.flatlaf.util.SystemInfo;
 import brad.grier.alhena.DB.Bookmark;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.DBClientCertInfo;
+import brad.grier.alhena.DB.PageStyleInfo;
 import brad.grier.alhena.GeminiTextPane.CurrentPage;
 import brad.grier.alhena.Util.PemData;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Alhena frame
@@ -129,7 +129,8 @@ public final class GeminiFrame extends JFrame {
     public static final String CERT_LABEL = I18n.t("certsItem");
     public static final String INFO_LABEL = I18n.t("infoLabel");
     public static final String SERVERS_LABEL = I18n.t("serversItem");
-    public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL); // make immutable
+    public static final String STYLES_LABEL = I18n.t("stylesMgrItem");
+    public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL, STYLES_LABEL); // make immutable
     public static String proportionalFamily = "SansSerif";
     public static final int DEFAULT_FONT_SIZE = 20;
     public static int fontSize = DEFAULT_FONT_SIZE;
@@ -398,7 +399,6 @@ public final class GeminiFrame extends JFrame {
         Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
         backButton = new JButton(leftIcon);
 
-        //I18n.t("certsItem")
         backButton.setToolTipText(I18n.t("backButtonTip"));
         ImageIcon rightIcon = Util.recolorIcon("/right.png", UIManager.getColor("Button.foreground"), 21, 21);
         forwardButton = new JButton(rightIcon);
@@ -1046,179 +1046,7 @@ public final class GeminiFrame extends JFrame {
         }));
 
         settingsMenu.add(createMenuItem(I18n.t("stylesItem"), KeyStroke.getKeyStroke(KeyEvent.VK_S, mod), () -> {
-            String[] scopeItems = {I18n.t("scope1Label"), I18n.t("scope2Label"), I18n.t("scope3Label"), I18n.t("scope4Label")};
-            JComboBox<String> scopeCombo = new JComboBox(scopeItems);
-            scopeCombo.setEditable(false);
-
-            String[] themeItems = {I18n.t("styleTheme1"), I18n.t("styleTheme2"), I18n.t("styleTheme3"), I18n.t("styleTheme4")};
-            JComboBox<String> themeCombo = new JComboBox(themeItems);
-
-            themeCombo.setEditable(false);
-            Object[] comps = {new JLabel(I18n.t("scopeText")),
-                new JLabel(" "), new JLabel(I18n.t("styleScopeLabel")), scopeCombo, new JLabel(I18n.t("styleThemeLabel")), themeCombo};
-            Object[] opts = {I18n.t("okLabel"), I18n.t("currentLabel"), I18n.t("cancelLabel")};
-            Object res = Util.inputDialog2(this, I18n.t("stylesItem"), comps, opts, false);
-
-            if (I18n.t("okLabel").equals(res)) {
-
-                int idx = scopeCombo.getSelectedIndex();
-                String scope = null, scopeValue = null, th = null;
-                switch (idx) {
-                    case 0 ->
-                        scope = scopeValue = "GLOBAL";
-                    case 1 -> {
-                        scope = "SCHEME";
-                        scopeValue = visiblePage().textPane.getURI().getScheme();
-                        if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
-                            scope = "URL";
-                            scopeValue = visiblePage().textPane.getDocURLString();
-                        }
-                    }
-                    case 2 -> {
-                        scope = "DOMAIN";
-                        scopeValue = visiblePage().textPane.getURI().getAuthority();
-                        if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
-                            scope = "URL";
-                            scopeValue = visiblePage().textPane.getDocURLString();
-                        }
-
-                    }
-                    case 3 -> {
-                        scope = "URL";
-                        scopeValue = visiblePage().textPane.getDocURLString();
-                    }
-                    default -> {
-                    }
-                }
-                idx = themeCombo.getSelectedIndex();
-                switch (idx) {
-                    case 0 ->
-                        th = "ALL";
-                    case 1 ->
-                        th = "LIGHT";
-                    case 2 ->
-                        th = "DARK";
-                    case 3 ->
-                        th = Alhena.theme;
-                }
-
-                try {
-                    String jstring = DB.getStyle(scope, scopeValue, th);
-                    PageTheme pt;
-                    PageTheme apt = new PageTheme();
-                    if (jstring != null) {
-                        pt = GeminiTextPane.getDefaultTheme();
-                        JsonObject apJo = new JsonObject(jstring);
-                        pt.fromJson(apJo); // merge in changes
-                        apt.fromJson(apJo);
-                    } else {
-                        pt = GeminiTextPane.getDefaultTheme();
-                    }
-                    StylePicker sp = new StylePicker(pt, apt);
-                    Object[] cmps = {sp};
-                    JButton okButton = new JButton(I18n.t("okLabel"));
-                    JButton delButton = new JButton(I18n.t("deleteLabel"));
-                    JButton cancelButton = new JButton(I18n.t("cancelLabel"));
-
-                    String fScope = scope;
-                    String fScopeVal = scopeValue;
-                    String fTheme = th;
-                    BooleanSupplier okRunnable = () -> {
-                        try {
-                            DB.insertStyle(fScope, fScopeVal, fTheme, sp.getAlteredPageTheme().getJson(), null);
-                            Alhena.updateFrames(false, false, false);
-                        } catch (SQLException ex) {
-                            ex.printStackTrace();
-                        }
-                        return true;
-
-                    };
-
-                    BooleanSupplier delRunnable = () -> {
-                        Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
-                        if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
-                            try {
-                                DB.deleteStyle(fScope, fScopeVal, fTheme);
-                                Alhena.updateFrames(false, false, false);
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                            return true;
-                        }
-                        return false;
-                    };
-
-                    BooleanSupplier cancelRunnable = () -> {
-                        return true;
-                    };
-                    Object[] options = {okButton, delButton, cancelButton};
-                    BooleanSupplier[] suppliers = {okRunnable, delRunnable, cancelRunnable};
-                    Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false, suppliers);
-
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-
-            } else if (I18n.t("currentLabel").equals(res)) {
-                Integer styleId = visiblePage().textPane.styleId;
-                if (styleId != null) {
-                    try {
-                        String jstring = DB.getStyle(styleId);
-                        PageTheme pt;
-                        PageTheme apt = new PageTheme();
-                        if (jstring != null) {
-                            pt = visiblePage().textPane.getDefaultTheme();
-                            JsonObject apJo = new JsonObject(jstring);
-                            pt.fromJson(apJo); // merge in changes
-                            apt.fromJson(apJo);
-                        } else {
-                            pt = visiblePage().textPane.getDefaultTheme();
-                        }
-                        StylePicker sp = new StylePicker(pt, apt);
-                        Object[] cmps = {sp};
-                        JButton okButton = new JButton(I18n.t("okLabel"));
-                        JButton delButton = new JButton(I18n.t("deleteLabel"));
-                        JButton cancelButton = new JButton(I18n.t("cancelLabel"));
-                        BooleanSupplier okRunnable = () -> {
-                            try {
-                                DB.updateStyle(styleId, sp.getAlteredPageTheme().getJson());
-                                Alhena.updateFrames(false, false, false);
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                            return true;
-
-                        };
-
-                        BooleanSupplier delRunnable = () -> {
-                            Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
-                            if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
-                                try {
-                                    DB.deleteStyle(styleId);
-                                } catch (SQLException ex) {
-                                    ex.printStackTrace();
-                                }
-                                Alhena.updateFrames(false, false, false);
-                                return true;
-                            }
-                            return false;
-                        };
-
-                        BooleanSupplier cancelRunnable = () -> {
-                            return true;
-                        };
-
-                        Object[] options = {okButton, delButton, cancelButton};
-                        BooleanSupplier[] suppliers = {okRunnable, delRunnable, cancelRunnable};
-                        Util.inputDialog2(GeminiFrame.this, I18n.t("styleDialog"), cmps, options, false, suppliers);
-
-                    } catch (SQLException ex) {
-                        ex.printStackTrace();
-                    }
-                } else {
-                    Util.infoDialog(GeminiFrame.this, I18n.t("noStyleDialog"), I18n.t("noStyleText"));
-                }
-            }
+            Util.newStyle(GeminiFrame.this, false);
 
         }));
         settingsMenu.add(new JSeparator());
@@ -1973,7 +1801,7 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    private void refresh() {
+    public void refresh() {
         Page visiblePage = visiblePage();
 
         visiblePage.textPane.getDocURL().ifPresent(cURL -> {
@@ -1984,11 +1812,13 @@ public final class GeminiFrame extends JFrame {
                 case GeminiTextPane.BOOKMARK_MODE ->
                     loadBookmarks(visiblePage.textPane, visiblePage);
                 case GeminiTextPane.CERT_MODE ->
-                    loadCerts(visiblePage.textPane, visiblePage);
+                    loadCerts(visiblePage.textPane);
                 case GeminiTextPane.SERVER_MODE ->
                     loadServers(visiblePage.textPane, visiblePage);
                 case GeminiTextPane.INFO_MODE -> {
                 }
+                case GeminiTextPane.STYLE_MODE ->
+                    loadStyles(visiblePage.textPane);
                 case GeminiTextPane.DEFAULT_MODE -> {
                     if (!cURL.isEmpty()) {
                         visiblePage.setStart();
@@ -2102,11 +1932,13 @@ public final class GeminiFrame extends JFrame {
                 } else if (label.equals(BOOKMARK_LABEL)) {
                     loadBookmarks(pb.textPane, pb);
                 } else if (label.equals(CERT_LABEL)) {
-                    loadCerts(pb.textPane, pb);
+                    loadCerts(pb.textPane);
                 } else if (label.equals(INFO_LABEL)) {
                     loadInfo(pb.textPane, info);
                 } else if (label.equals(SERVERS_LABEL)) {
                     loadServers(pb.textPane, pb);
+                } else if (label.equals(STYLES_LABEL)) {
+                    loadStyles(pb.textPane);
                 }
 
             } else {
@@ -2155,11 +1987,13 @@ public final class GeminiFrame extends JFrame {
                 } else if (label.equals(BOOKMARK_LABEL)) {
                     loadBookmarks(pb.textPane, pb);
                 } else if (label.equals(CERT_LABEL)) {
-                    loadCerts(pb.textPane, pb);
+                    loadCerts(pb.textPane);
                 } else if (label.equals(INFO_LABEL)) {
                     loadInfo(pb.textPane, info);
                 } else if (label.equals(SERVERS_LABEL)) {
                     loadServers(pb.textPane, pb);
+                } else if (label.equals(STYLES_LABEL)) {
+                    loadStyles(pb.textPane);
                 }
 
             }
@@ -2173,11 +2007,13 @@ public final class GeminiFrame extends JFrame {
             } else if (label.equals(BOOKMARK_LABEL)) {
                 loadBookmarks(nPage.textPane, null);
             } else if (label.equals(CERT_LABEL)) {
-                loadCerts(nPage.textPane, null);
+                loadCerts(nPage.textPane);
             } else if (label.equals(INFO_LABEL)) {
                 loadInfo(nPage.textPane, info);
             } else if (label.equals(SERVERS_LABEL)) {
                 loadServers(nPage.textPane, null);
+            } else if (label.equals(STYLES_LABEL)) {
+                loadStyles(nPage.textPane);
             }
             setTitle(label);
 
@@ -2261,7 +2097,7 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void loadCerts(GeminiTextPane textPane, Page p) {
+    private void loadCerts(GeminiTextPane textPane) {
         try {
             if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
 
@@ -2302,6 +2138,50 @@ public final class GeminiFrame extends JFrame {
 
             } else {
                 textPane.end(I18n.t("emptyClientCertsHeading"), false, CERT_LABEL, true);
+
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void loadStyles(GeminiTextPane textPane) {
+        try {
+            if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
+
+                tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), STYLES_LABEL);
+            }
+            List<PageStyleInfo> styles = DB.loadStyles();
+            if (!styles.isEmpty()) {
+                textPane.updatePage(I18n.t("styleText"), false, STYLES_LABEL, true);
+
+                LinkedHashMap<String, ArrayList<PageStyleInfo>> types = new LinkedHashMap<>();
+                styles.forEach(psi -> {
+
+                    if(!types.containsKey(psi.scope())){
+                        types.put(psi.scope(), new ArrayList<>());    
+                    }
+                    types.get(psi.scope()).add(psi);
+                    
+
+                });
+
+                Stream.of("GLOBAL", "SCHEME", "DOMAIN", "URL") // process in order
+                        .filter(types::containsKey) // Ensure key exists
+                        .forEach(type -> {
+
+                            textPane.addPage("\n## " + type + "\n");
+                            types.get(type).forEach(style -> {
+                                String theme = style.theme();
+                                textPane.addPage("\n=> " + style.id() + ":" + style.id() + " [" + style.scopeValue() + "][" + theme + "]\n");
+
+                            });
+                        });
+
+                textPane.end();
+
+            } else {
+                textPane.end(I18n.t("noStylesText"), false, CERT_LABEL, true);
 
             }
         } catch (SQLException ex) {

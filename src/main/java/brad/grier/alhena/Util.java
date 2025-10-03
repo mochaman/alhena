@@ -28,6 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
 import java.net.FileNameMap;
 import java.net.IDN;
 import java.net.MalformedURLException;
@@ -50,6 +51,7 @@ import java.security.PrivateKey;
 import java.security.Security;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.sql.SQLException;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Scanner;
@@ -64,6 +66,7 @@ import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
@@ -74,6 +77,7 @@ import javax.swing.JPasswordField;
 import javax.swing.JSlider;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.UIDefaults;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -95,6 +99,8 @@ import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.DB.ClientCertInfo;
+import brad.grier.alhena.DB.PageStyleInfo;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Static utility methods
@@ -1173,6 +1179,235 @@ public class Util {
             }
         } catch (URISyntaxException ex) {
             return oUrl;
+        }
+    }
+
+    public static void showStyleEditor(GeminiFrame gf, int styleId) {
+        try {
+            PageStyleInfo psi = DB.getStyle(styleId);
+            String jstring = psi.style();
+            PageTheme pt;
+            PageTheme apt = new PageTheme();
+            UIDefaults ui = null;
+            boolean[] refreshPage = {false};
+            if (jstring != null) {
+                refreshPage[0] = true;
+                boolean isDark = UIManager.getBoolean("laf.dark");
+                if (psi.theme().startsWith("com")) {
+                    ui = loadDefaults(psi.theme());
+                    pt = GeminiTextPane.getDefaultTheme(ui);
+                } else if (psi.theme().equals("LIGHT") && isDark) {
+                    ui = loadDefaults("com.formdev.flatlaf.FlatLightLaf");
+                    pt = GeminiTextPane.getDefaultTheme(ui);
+                } else if (psi.theme().equals("DARK") && !isDark) {
+                    ui = loadDefaults("com.formdev.flatlaf.FlatDarkLaf");
+                    pt = GeminiTextPane.getDefaultTheme(ui);
+
+                } else {
+                    ui = UIManager.getDefaults();
+                    pt = GeminiTextPane.getDefaultTheme(ui);
+                }
+                JsonObject apJo = new JsonObject(jstring);
+                pt.fromJson(apJo); // merge in changes
+                apt.fromJson(apJo);
+            } else {
+                pt = GeminiTextPane.getDefaultTheme(UIManager.getDefaults());
+            }
+            StylePicker sp = new StylePicker(pt, apt, ui);
+            Object[] cmps = {sp};
+            JButton okButton = new JButton(I18n.t("okLabel"));
+            JButton delButton = new JButton(I18n.t("deleteLabel"));
+            JButton cancelButton = new JButton(I18n.t("cancelLabel"));
+            BooleanSupplier okRunnable = () -> {
+                try {
+                    DB.updateStyle(styleId, sp.getAlteredPageTheme().getJson());
+                    Alhena.updateFrames(false, false, false);
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+                return true;
+
+            };
+
+            BooleanSupplier delRunnable = () -> {
+                Object r = Util.confirmDialog(gf, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
+                    try {
+                        DB.deleteStyle(styleId);
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                    Alhena.updateFrames(false, false, false);
+                    if (refreshPage[0]) {
+                        EventQueue.invokeLater(() -> gf.refresh());
+
+                    }
+                    return true;
+                }
+                return false;
+            };
+
+            BooleanSupplier cancelRunnable = () -> {
+                return true;
+            };
+
+            Object[] options = {okButton, delButton, cancelButton};
+            BooleanSupplier[] suppliers = {okRunnable, delRunnable, cancelRunnable};
+            Util.inputDialog2(gf, I18n.t("styleDialog"), cmps, options, false, suppliers);
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static UIDefaults loadDefaults(String themeClassName) {
+
+        try {
+            Class<?> clazz = Class.forName(themeClassName);
+
+            // // Ensure it extends FlatLaf
+            // if (!FlatLaf.class.isAssignableFrom(clazz)) {
+            //     throw new IllegalArgumentException(themeClassName + " is not a FlatLaf theme");
+            // }
+            Constructor<?> ctor = clazz.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            FlatLaf laf = (FlatLaf) ctor.newInstance();
+
+            // Get the defaults WITHOUT installing the LAF
+            return laf.getDefaults();
+        } catch (Exception ex) {
+            return UIManager.getDefaults();
+        }
+    }
+
+    public static void newStyle(GeminiFrame gf, boolean refresh) {
+        String[] scopeItems = {I18n.t("scope1Label"), I18n.t("scope2Label"), I18n.t("scope3Label"), I18n.t("scope4Label")};
+        JComboBox<String> scopeCombo = new JComboBox(scopeItems);
+        scopeCombo.setEditable(false);
+
+        String[] themeItems = {I18n.t("styleTheme1"), I18n.t("styleTheme2"), I18n.t("styleTheme3"), I18n.t("styleTheme4")};
+        JComboBox<String> themeCombo = new JComboBox(themeItems);
+
+        themeCombo.setEditable(false);
+        Object[] comps = {new JLabel(I18n.t("scopeText")),
+            new JLabel(" "), new JLabel(I18n.t("styleScopeLabel")), scopeCombo, new JLabel(I18n.t("styleThemeLabel")), themeCombo};
+        Object[] opts = {I18n.t("okLabel"), I18n.t("currentLabel"), I18n.t("cancelLabel")};
+        Object res = Util.inputDialog2(gf, I18n.t("stylesItem"), comps, opts, false);
+
+        if (I18n.t("okLabel").equals(res)) {
+
+            int idx = scopeCombo.getSelectedIndex();
+            String scope = null, scopeValue = null, th = null;
+            switch (idx) {
+                case 0 ->
+                    scope = scopeValue = "GLOBAL";
+                case 1 -> {
+                    scope = "SCHEME";
+                    scopeValue = gf.visiblePage().textPane.getURI().getScheme();
+                    if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
+                        scope = "URL";
+                        scopeValue = gf.visiblePage().textPane.getDocURLString();
+                    }
+                }
+                case 2 -> {
+                    scope = "DOMAIN";
+                    scopeValue = gf.visiblePage().textPane.getURI().getAuthority();
+                    if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
+                        scope = "URL";
+                        scopeValue = gf.visiblePage().textPane.getDocURLString();
+                    }
+
+                }
+                case 3 -> {
+                    scope = "URL";
+                    scopeValue = gf.visiblePage().textPane.getDocURLString();
+                }
+                default -> {
+                }
+            }
+            idx = themeCombo.getSelectedIndex();
+            switch (idx) {
+                case 0 ->
+                    th = "ALL";
+                case 1 ->
+                    th = "LIGHT";
+                case 2 ->
+                    th = "DARK";
+                case 3 ->
+                    th = Alhena.theme;
+            }
+
+            try {
+                String jstring = DB.getStyle(scope, scopeValue, th);
+                PageTheme pt;
+                PageTheme apt = new PageTheme();
+                UIDefaults ui = UIManager.getDefaults();
+                if (jstring != null) {
+                    pt = GeminiTextPane.getDefaultTheme(ui);
+                    JsonObject apJo = new JsonObject(jstring);
+                    pt.fromJson(apJo); // merge in changes
+                    apt.fromJson(apJo);
+                } else {
+                    pt = GeminiTextPane.getDefaultTheme(ui);
+                }
+                StylePicker sp = new StylePicker(pt, apt, ui);
+                Object[] cmps = {sp};
+                JButton okButton = new JButton(I18n.t("okLabel"));
+                JButton delButton = new JButton(I18n.t("deleteLabel"));
+                JButton cancelButton = new JButton(I18n.t("cancelLabel"));
+
+                String fScope = scope;
+                String fScopeVal = scopeValue;
+                String fTheme = th;
+                BooleanSupplier okRunnable = () -> {
+                    try {
+                        DB.insertStyle(fScope, fScopeVal, fTheme, sp.getAlteredPageTheme().getJson(), null);
+                        Alhena.updateFrames(false, false, false);
+                        if (refresh) {
+                            EventQueue.invokeLater(() -> gf.refresh());
+                        }
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                    return true;
+
+                };
+
+                BooleanSupplier delRunnable = () -> {
+                    Object r = Util.confirmDialog(gf, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                    if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
+                        try {
+                            DB.deleteStyle(fScope, fScopeVal, fTheme);
+                            Alhena.updateFrames(false, false, false);
+                            if (refresh) {
+                                EventQueue.invokeLater(() -> gf.refresh());
+                            }
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                        }
+                        return true;
+                    }
+                    return false;
+                };
+
+                BooleanSupplier cancelRunnable = () -> {
+                    return true;
+                };
+                Object[] options = {okButton, delButton, cancelButton};
+                BooleanSupplier[] suppliers = {okRunnable, delRunnable, cancelRunnable};
+                Util.inputDialog2(gf, I18n.t("styleDialog"), cmps, options, false, suppliers);
+
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+
+        } else if (I18n.t("currentLabel").equals(res)) {
+            Integer styleId = gf.visiblePage().textPane.styleId;
+            if (styleId != null) {
+                Util.showStyleEditor(gf, styleId);
+            } else {
+                Util.infoDialog(gf, I18n.t("noStyleDialog"), I18n.t("noStyleText"));
+            }
         }
     }
 }

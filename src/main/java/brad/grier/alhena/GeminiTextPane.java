@@ -65,11 +65,13 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextPane;
 import javax.swing.JViewport;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.UIDefaults;
 import javax.swing.UIManager;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
@@ -98,6 +100,7 @@ import com.techsenger.ansi4j.core.api.spi.ParserFactoryConfig;
 import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
 import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
+import brad.grier.alhena.DB.PageStyleInfo;
 import brad.grier.alhena.DB.StyleInfo;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonArray;
@@ -132,6 +135,7 @@ public class GeminiTextPane extends JTextPane {
     public final static int CERT_MODE = 3;
     public final static int INFO_MODE = 4;
     public final static int SERVER_MODE = 5;
+    public final static int STYLE_MODE = 6;
     public int currentMode = DEFAULT_MODE;
 
     private String firstHeading;
@@ -533,38 +537,39 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(copyItem);
 
                                 }
-                                JMenuItem copyLinkItem = new JMenuItem(I18n.t("copyLinkPopupItem"));
+                                if (currentMode != STYLE_MODE) {
+                                    JMenuItem copyLinkItem = new JMenuItem(I18n.t("copyLinkPopupItem"));
 
-                                copyLinkItem.addActionListener(ev -> {
-                                    copyText(Util.resolveURI(getURI(), range.url));
-                                });
-                                popupMenu.add(copyLinkItem);
+                                    copyLinkItem.addActionListener(ev -> {
+                                        copyText(Util.resolveURI(getURI(), range.url));
+                                    });
+                                    popupMenu.add(copyLinkItem);
 
-                                popupMenu.add(new JSeparator());
-                                JMenuItem menuItem1 = new JMenuItem(I18n.t("newTabPopupItem"));
+                                    popupMenu.add(new JSeparator());
+                                    JMenuItem menuItem1 = new JMenuItem(I18n.t("newTabPopupItem"));
 
-                                menuItem1.addActionListener(ev -> {
-                                    // open in new tab with gemtext converter regardless
-                                    boolean saveSetting = Alhena.useBrowser;
-                                    Alhena.useBrowser = false;
-                                    f.newTab(range.url);
-                                    Alhena.useBrowser = saveSetting;
-                                });
-                                menuItem1.setEnabled(!range.dataUrl);
-                                popupMenu.add(menuItem1);
-                                JMenuItem menuItem2 = new JMenuItem(I18n.t("newWindowPopupItem"));
-                                menuItem2.setEnabled(!range.dataUrl);
-                                menuItem2.addActionListener(ev -> {
-                                    // open in new tab with gemtext converter regardless
-                                    boolean saveSetting = Alhena.useBrowser;
-                                    Alhena.useBrowser = false;
-                                    Alhena.newWindow(range.url, docURL);
-                                    Alhena.useBrowser = saveSetting;
+                                    menuItem1.addActionListener(ev -> {
+                                        // open in new tab with gemtext converter regardless
+                                        boolean saveSetting = Alhena.useBrowser;
+                                        Alhena.useBrowser = false;
+                                        f.newTab(range.url);
+                                        Alhena.useBrowser = saveSetting;
+                                    });
+                                    menuItem1.setEnabled(!range.dataUrl);
+                                    popupMenu.add(menuItem1);
+                                    JMenuItem menuItem2 = new JMenuItem(I18n.t("newWindowPopupItem"));
+                                    menuItem2.setEnabled(!range.dataUrl);
+                                    menuItem2.addActionListener(ev -> {
+                                        // open in new tab with gemtext converter regardless
+                                        boolean saveSetting = Alhena.useBrowser;
+                                        Alhena.useBrowser = false;
+                                        Alhena.newWindow(range.url, docURL);
+                                        Alhena.useBrowser = saveSetting;
 
-                                });
-                                popupMenu.add(menuItem2);
+                                    });
+                                    popupMenu.add(menuItem2);
 
-
+                                }
                                 switch (currentMode) {
                                     case CERT_MODE -> {
                                         popupMenu.add(new JSeparator());
@@ -587,6 +592,44 @@ public class GeminiTextPane extends JTextPane {
                                             f.deleteCert(id);
                                         });
                                         popupMenu.add(delItem);
+                                    }
+                                    case STYLE_MODE -> {
+                                        JMenuItem jsonItem = new JMenuItem(I18n.t("styleJsonItem"));
+                                        jsonItem.addActionListener(al -> {
+                                            try {
+                                                PageStyleInfo psi = DB.getStyle(Integer.parseInt(range.directive));
+                                                JTextArea jta = new JTextArea(new JsonObject(psi.style()).encodePrettily());
+                                                jta.setEditable(false);
+                                                jta.setLineWrap(true);
+                                                jta.setWrapStyleWord(true);
+
+                                                JScrollPane jsp = new JScrollPane(jta);
+                                                jsp.setPreferredSize(new Dimension(700, 400));
+                                                Object[] comps = {jsp};
+                                                Util.fancyInfoDialog(f, I18n.t("styleJsonDialog"), comps);
+
+                                            } catch (SQLException ex) {
+                                                ex.printStackTrace();
+                                            }
+
+                                        });
+                                        popupMenu.add(jsonItem);
+                                        JMenuItem delStyleItem = new JMenuItem(I18n.t("deleteStyleItem"));
+                                        delStyleItem.addActionListener(al -> {
+                                            Object r = Util.confirmDialog(f, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                                            if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
+                                                try {
+                                                    DB.deleteStyle(Integer.parseInt(range.directive));
+                                                } catch (SQLException ex) {
+                                                    ex.printStackTrace();
+                                                }
+                                                Alhena.updateFrames(false, false, false);
+                                                EventQueue.invokeLater(() -> f.refresh());
+                                            }
+
+                                        });
+                                        popupMenu.add(delStyleItem);
+
                                     }
                                     case HISTORY_MODE -> {
                                         popupMenu.add(new JSeparator());
@@ -716,9 +759,9 @@ public class GeminiTextPane extends JTextPane {
                     });
 
                     popupMenu.add(saveItem);
-                    popupMenu.add(titanItem);
 
                     if (currentMode == DEFAULT_MODE) {
+                        popupMenu.add(titanItem);
                         JMenuItem pemItem = new JMenuItem(I18n.t("importPEMPopup"));
                         pemItem.setEnabled(!imageOnly);
                         pemItem.addActionListener(al -> {
@@ -739,7 +782,14 @@ public class GeminiTextPane extends JTextPane {
                         }
                     }
 
-                    if (currentMode == HISTORY_MODE) {
+                    if (currentMode == STYLE_MODE) {
+                        popupMenu.add(new JSeparator());
+                        JMenuItem newStyleItem = new JMenuItem(I18n.t("stylesItem"));
+                        newStyleItem.addActionListener(al -> {
+                            Util.newStyle(f, true);
+                        });
+                        popupMenu.add(newStyleItem);
+                    } else if (currentMode == HISTORY_MODE) {
                         popupMenu.add(new JSeparator());
                         JMenuItem whereItem = new JMenuItem(I18n.t("forgetLinksPopup"));
                         whereItem.addActionListener(al -> {
@@ -1554,6 +1604,8 @@ public class GeminiTextPane extends JTextPane {
             currentMode = INFO_MODE;
         } else if (docURL.equals(GeminiFrame.SERVERS_LABEL)) {
             currentMode = SERVER_MODE;
+        } else if (docURL.equals(GeminiFrame.STYLES_LABEL)) {
+            currentMode = STYLE_MODE;
         }
 
         this.docURL = docURL;
@@ -1656,12 +1708,16 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public static PageTheme getDefaultTheme() {
+        return getDefaultTheme(UIManager.getDefaults());
+    }
+
+    public static PageTheme getDefaultTheme(UIDefaults ui) {
         PageTheme pageTheme = new PageTheme();
-        Color bg = UIManager.getColor("TextPane.inactiveBackground");
+        Color bg = ui.getColor("TextPane.inactiveBackground");
         pageTheme.setPageBackground(bg);
         pageTheme.setContentPercentage(contentPercentage);
         boolean isDark = !Util.isLight(bg);
-        Color lc = UIManager.getColor("Component.linkColor");
+        Color lc = ui.getColor("Component.linkColor");
         pageTheme.setLinkColor(lc);
         pageTheme.setSpinnerColor(lc);
         pageTheme.setLinkStyle(Font.PLAIN);
@@ -1669,8 +1725,8 @@ public class GeminiTextPane extends JTextPane {
         pageTheme.setHoverColor(pageTheme.getLinkColor().brighter());
         pageTheme.setMonoFontSize(GeminiFrame.monoFontSize);
         pageTheme.setMonoFontFamily(monospacedFamily);
-        pageTheme.setMonoFontColor(UIManager.getColor("TextPane.foreground"));
-        pageTheme.setTextForeground(UIManager.getColor("TextPane.foreground"));
+        pageTheme.setMonoFontColor(ui.getColor("TextPane.foreground"));
+        pageTheme.setTextForeground(ui.getColor("TextPane.foreground"));
         pageTheme.setFontStyle(Font.PLAIN);
         pageTheme.setQuoteForeground(pageTheme.getTextForeground());
         pageTheme.setQuoteStyle(Font.ITALIC);
@@ -1700,7 +1756,7 @@ public class GeminiTextPane extends JTextPane {
         pageTheme.setHeader3Underline(false);
         pageTheme.setListFont(GeminiFrame.proportionalFamily);
         pageTheme.setListStyle(Font.PLAIN);
-        pageTheme.setListColor(UIManager.getColor("TextPane.foreground"));
+        pageTheme.setListColor(ui.getColor("TextPane.foreground"));
         pageTheme.setListUnderline(false);
         pageTheme.setListFontSize(GeminiFrame.fontSize);
 
@@ -1729,7 +1785,7 @@ public class GeminiTextPane extends JTextPane {
             customTheme = new JsonObject();
             styleId = null;
         }
-        PageTheme pageTheme = getDefaultTheme();
+        PageTheme pageTheme = getDefaultTheme(UIManager.getDefaults());
         pageTheme.fromJson(customTheme);
 
         return pageTheme;
@@ -1977,7 +2033,8 @@ public class GeminiTextPane extends JTextPane {
             }
 
         } else if (preformattedMode) {
-            if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) && line.startsWith("=>")) {
+            // huh? Refresh yourself
+            if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE || currentMode == STYLE_MODE) && line.startsWith("=>")) {
                 line = "=> " + line.substring(line.indexOf(":") + 1);
             }
             if (ptp != null) {
@@ -2010,14 +2067,13 @@ public class GeminiTextPane extends JTextPane {
             }
             String url = ll.substring(0, i);
             String[] directive = {null};
-            if (currentMode == BOOKMARK_MODE || currentMode == CERT_MODE) {
+            if (currentMode == BOOKMARK_MODE || currentMode == CERT_MODE || currentMode == STYLE_MODE) {
                 int cIdx = url.indexOf(":");
                 directive[0] = url.substring(0, cIdx);
                 url = url.substring(cIdx + 1);
                 if (currentMode == CERT_MODE) {
                     url = "gemini://" + url;
                 }
-
             }
             boolean dataUrl = url.startsWith("data:");
 
@@ -2025,7 +2081,7 @@ public class GeminiTextPane extends JTextPane {
             String label;
             String sfx = "";
 
-            if (Alhena.linkIcons) {
+            if (Alhena.linkIcons && currentMode != CERT_MODE && currentMode != STYLE_MODE) {
 
                 boolean isImage = Alhena.imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isMedia = false;
@@ -2115,6 +2171,8 @@ public class GeminiTextPane extends JTextPane {
                             int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
                             boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
                             f.toggleCert(id, !active, finalUrl);
+                        } else if (currentMode == STYLE_MODE) {
+                            Util.showStyleEditor(f, Integer.parseInt(directive[0]));
 
                         } else {
                             f.addClickedLink(finalUrl);

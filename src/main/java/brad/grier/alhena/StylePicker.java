@@ -28,6 +28,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
+import javax.swing.UIDefaults;
 
 import io.vertx.core.json.JsonObject;
 
@@ -42,7 +43,7 @@ public class StylePicker extends JPanel {
     private PageTheme saveAlteredPageTheme;
     private PageTheme pageTheme;
 
-    public StylePicker(PageTheme pTheme, PageTheme apTheme) {
+    public StylePicker(PageTheme pTheme, PageTheme apTheme, UIDefaults ui) {
 
         super(new BorderLayout(0, 0));
         alteredPageTheme = apTheme;
@@ -65,7 +66,7 @@ public class StylePicker extends JPanel {
         });
         JMenuItem resetPageBGItem = new JMenuItem(I18n.t("backgroundResetLabel"));
         resetPageBGItem.addActionListener(al -> {
-            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             textPanel.setBackground(defaultTheme.getPageBackground());
             pageTheme.setPageBackground(defaultTheme.getPageBackground());
             alteredPageTheme.clearPageBackground();
@@ -91,7 +92,7 @@ public class StylePicker extends JPanel {
         });
         JMenuItem spinnerResetItem = new JMenuItem("Reset Spinner Color");
         spinnerResetItem.addActionListener(al -> {
-            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             //textPanel.setBackground(defaultTheme.getPageBackground());
             pageTheme.setSpinnerColor(defaultTheme.getSpinnerColor());
             alteredPageTheme.clearSpinnerColor();
@@ -118,7 +119,7 @@ public class StylePicker extends JPanel {
         JMenuItem resetItem = new JMenuItem(I18n.t("resetAttrItem"));
 
         resetItem.addActionListener(al -> {
-            pageTheme = GeminiTextPane.getDefaultTheme();
+            pageTheme = GeminiTextPane.getDefaultTheme(ui);
             alteredPageTheme = new PageTheme();
             saveAlteredPageTheme = null;
             setPanelAttributes();
@@ -149,7 +150,7 @@ public class StylePicker extends JPanel {
         });
         JMenuItem resetWidthItem = new JMenuItem(I18n.t("widthResetDialog"));
         resetWidthItem.addActionListener(al -> {
-            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             //textPanel.setBackground(defaultTheme.getPageBackground());
             pageTheme.setContentPercentage(defaultTheme.getContentPercentage());
             alteredPageTheme.clearContentWidth();
@@ -666,7 +667,7 @@ public class StylePicker extends JPanel {
         nameResetters.put("*", (page, def) -> page.setListFont(def.getListFont()));
         nameResetters.put("PF Text", (page, def) -> page.setMonoFontFamily(def.getMonoFontFamily()));
         resetFItem.addActionListener(al -> {
-            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             BiConsumer<PageTheme, PageTheme> resetter = nameResetters.get(selectedLine);
             if (resetter != null) {
                 resetter.accept(pageTheme, defaultTheme);
@@ -694,7 +695,7 @@ public class StylePicker extends JPanel {
         sizeResetters.put("Text", (page, def) -> page.setFontSize(def.getFontSize()));
         sizeResetters.put("PF Text", (page, def) -> page.setMonoFontSize(def.getMonoFontSize()));
         resetFSItem.addActionListener(al -> {
-            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             BiConsumer<PageTheme, PageTheme> resetter = sizeResetters.get(selectedLine);
             if (resetter != null) {
                 resetter.accept(pageTheme, defaultTheme);
@@ -722,7 +723,7 @@ public class StylePicker extends JPanel {
         colorResetters.put("Text", (page, def) -> page.setTextForeground(def.getTextForeground()));
         colorResetters.put("PF Text", (page, def) -> page.setMonoFontColor(def.getMonoFontColor()));
         resetFCItem.addActionListener(al -> {
-            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             BiConsumer<PageTheme, PageTheme> resetter = colorResetters.get(selectedLine);
             if (resetter != null) {
                 resetter.accept(pageTheme, defaultTheme);
@@ -779,7 +780,7 @@ public class StylePicker extends JPanel {
         //     page.setMonoFontColor(def.getMonoFontColor());
         // });
         resetStyleItem.addActionListener(al -> {
-            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme();
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             BiConsumer<PageTheme, PageTheme> resetter = styleResetters.get(selectedLine);
             if (resetter != null) {
                 resetter.accept(pageTheme, defaultTheme);
