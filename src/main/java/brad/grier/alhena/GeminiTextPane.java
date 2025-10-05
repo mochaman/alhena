@@ -2505,10 +2505,17 @@ public class GeminiTextPane extends JTextPane {
                             }
                         }
                         if (icon == null) {
-
+                            // copyright symbol for example
                             char[] chars = Character.toChars(text.codePointAt(i));
 
-                            i = emoji.getEndCharIndex() + 1;
+                            int emojiSize = emoji.getEndCharIndex() - emoji.getCharIndex();
+
+                            i += (emojiSize - 1);
+                            int charPointOfNextChar = emoji.getCodePointIndex() + 1;
+
+                            if (emojiSize == 1 && charPointOfNextChar < cpCount && isEmojiVariationSelector(text.codePointAt(charPointOfNextChar + nudge))) {
+                                i++; // skip any variation selector
+                            }
 
                             insertString(doc.getLength(), new String(chars), style);
 
