@@ -1232,7 +1232,7 @@ public class Alhena {
                     if (imageStartIdx[0] != -1) {
                         if (!rcvdData[0]) {
                             rcvdData[0] = true;
-                            
+
                             try {
                                 DB.insertHistory(origURL, null);
                             } catch (SQLException ex) {
@@ -2624,6 +2624,11 @@ public class Alhena {
                 if (href.isBlank() || href.startsWith("#") || href.startsWith("javascript")) {
                     yield "";
                 }
+                // strip fragment if present
+                int hashIndex = href.indexOf('#');
+                if (hashIndex != -1) {
+                    href = href.substring(0, hashIndex);
+                }
                 if (href.startsWith("/") && host != null) {
                     href = host + href;
                 }
@@ -3092,8 +3097,9 @@ public class Alhena {
         HttpClient httpClient = isSSL ? httpClient443 : httpClient80;
         if (httpClient == null) {
             HttpClientOptions options = new HttpClientOptions().
-                    setSsl(isSSL).
-                    setTrustAll(true)
+                    setSsl(isSSL)
+                    .setTrustAll(true)
+                    .setDecompressionSupported(true)
                     .setLogActivity(false);
             if (isSSL) {
                 httpClient443 = vertx.createHttpClient(options);
@@ -3113,13 +3119,17 @@ public class Alhena {
                 return;
             }
             HttpClientRequest req = ar.result();
-            req.putHeader("User-Agent", "Mozilla/5.0 (compatible; Alhena/" + VERSION + "; +https://github.com/mochaman/alhena)");
+            //req.putHeader("User-Agent", "Mozilla/5.0 (compatible; Alhena/" + VERSION + "; +https://github.com/mochaman/alhena)");
+            req.putHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15");
+            // req.putHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            req.putHeader("Accept-Language", "en-US,en;q=0.9");
+            req.putHeader("Accept-Encoding", "gzip, deflate, br");
+
             req.send().onComplete(ar2 -> {
                 if (ar2.succeeded()) {
                     HttpClientResponse resp = ar2.result();
 
                     String contentType = resp.getHeader("Content-Type");
-
                     if (resp.statusCode() >= 300 && resp.statusCode() < 400) {
 
                         String location = resp.getHeader("Location");
