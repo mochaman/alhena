@@ -2537,7 +2537,7 @@ public class Alhena {
 
         for (Element element : doc.body().children()) {
 
-            gemtext.append(processElement(element, host)).append("\n");
+            gemtext.append(processElement(element, host));
 
         }
 
@@ -2553,6 +2553,7 @@ public class Alhena {
 
         return switch (tagName) {
             case "table" -> {
+
                 if (containsNestedTable(element)) {
                     // fallback to old behavior: treat table like a stack of rows
                     StringBuilder sb = new StringBuilder();
@@ -2571,10 +2572,16 @@ public class Alhena {
                 } else {
                     TableResult result = processTable(element);
                     StringBuilder sb = new StringBuilder(result.asciiTable);
+                    if (result.links.size() > 0) {
+                        sb.append("Table Links\n");
+                    }
                     for (String link : result.links) {
                         sb.append(link).append("\n");
                     }
-                    yield sb.toString();
+                    if (result.links.size() > 0) {
+                        sb.append("\u200B\n");
+                    }
+                    yield sb.toString() + "\n\n";
                 }
             }
 
@@ -2583,15 +2590,18 @@ public class Alhena {
                 element.children().stream().forEach(child -> {
                     String line = processElement(child, host).trim();
                     if (!line.isBlank()) {
-
-                        gt.append(line).append("\n\n");
+                        gt.append(line).append("\n");
                     }
                 });
-                yield gt.toString();
+                yield gt.toString() + "\n";
             }
             case "h1", "h2", "h3" -> {
 
-                yield "#".repeat(tagName.charAt(1) - '0') + " " + element.text();
+                yield "#".repeat(tagName.charAt(1) - '0') + " " + element.text() + "\n\n";
+            }
+            case "h4", "h5", "h6" -> {
+
+                yield "### " + element.text() + "\n\n";
             }
             case "img" -> {
                 String src = element.attr("src");
@@ -2606,7 +2616,7 @@ public class Alhena {
                 if (!match) {
                     sb.insert(0, element.text() + "\n");
                 }
-                yield sb.toString();
+                yield sb.toString() + "\n";
 
             }
             case "pre" -> {
@@ -2640,13 +2650,13 @@ public class Alhena {
                 yield "=> " + href + " " + elemText;
             }
             case "ul", "ol" ->
-                processList(element);
+                processList(element) + "\n";
             case "li" -> {
                 if (element.ownText().isBlank()) {
                     StringBuilder sb = new StringBuilder();
 
                     element.children().stream().forEach(child -> {
-                        sb.append(processElement(child, host)).append("\n");
+                        sb.append(processElement(child, host));
                     });
                     yield sb.toString();
                 } else {
@@ -2659,9 +2669,6 @@ public class Alhena {
                 if (element.ownText().isBlank()) {
 
                     StringBuilder sb = new StringBuilder();
-                    // if (tagName.equals("tr")) {
-                    //     sb.append("-".repeat(100) + "\n");
-                    // }
 
                     element.children().stream().forEach(child -> {
                         String line = processElement(child, host);
