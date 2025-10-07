@@ -749,6 +749,7 @@ public class DB {
         GeminiFrame.tabPosition = Integer.parseInt(map.getOrDefault("tabpos", "0"));
         GeminiTextPane.dragToScroll = map.getOrDefault("dragscroll", "false").equals("true");
         Alhena.inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
+        Alhena.gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         Alhena.useBrowser = map.getOrDefault("browser", "false").equals("true");
         Alhena.theme = map.get("theme");
 

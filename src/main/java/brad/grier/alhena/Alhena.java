@@ -163,6 +163,7 @@ public class Alhena {
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
     public static boolean inlineImages;
+    public static boolean gradientBG;
     public static boolean useBrowser;
     public static boolean favIcon;
     public static boolean dataUrl;
@@ -409,6 +410,7 @@ public class Alhena {
         HashMap<String, String> map = DB.getAllPrefs();
         allowVLC = map.getOrDefault("allowvlc", "false").equals("true");
         inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
+        gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         useBrowser = map.getOrDefault("browser", "false").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         gopherProxy = map.getOrDefault("gopherproxy", null);

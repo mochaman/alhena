@@ -5,7 +5,11 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.font.TextAttribute;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,13 +47,12 @@ public class StylePicker extends JPanel {
     private PageTheme saveAlteredPageTheme;
     private PageTheme pageTheme;
 
-    public StylePicker(PageTheme pTheme, PageTheme apTheme, UIDefaults ui) {
+    public StylePicker(PageTheme pTheme, PageTheme apTheme, UIDefaults ui, String styleName) {
 
         super(new BorderLayout(0, 0));
         alteredPageTheme = apTheme;
         pageTheme = pTheme;
-        // pageThemeBackup = new PageTheme();
-        // pageThemeBackup.fromJson(new JsonObject(pTheme.getJson()));
+
         List<JComponent> mItems = new ArrayList<>();
         JMenuItem pageColorItem = new JMenuItem(I18n.t("pageBackgroundItem"));
         pageColorItem.addActionListener(al -> {
@@ -76,8 +79,7 @@ public class StylePicker extends JPanel {
 
         });
 
-
-        JMenuItem spinnerColorItem = new JMenuItem("Spinner Color");
+        JMenuItem spinnerColorItem = new JMenuItem(I18n.t("spinnerItem"));
         spinnerColorItem.addActionListener(al -> {
 
             Color chosenColor = Util.getColor(StylePicker.this, pageTheme.getSpinnerColor());
@@ -90,10 +92,10 @@ public class StylePicker extends JPanel {
                 }
             }
         });
-        JMenuItem spinnerResetItem = new JMenuItem("Reset Spinner Color");
+        JMenuItem spinnerResetItem = new JMenuItem(I18n.t("resetSpinnerItem"));
         spinnerResetItem.addActionListener(al -> {
             PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
-            //textPanel.setBackground(defaultTheme.getPageBackground());
+
             pageTheme.setSpinnerColor(defaultTheme.getSpinnerColor());
             alteredPageTheme.clearSpinnerColor();
             if (saveAlteredPageTheme != null) {
@@ -128,9 +130,9 @@ public class StylePicker extends JPanel {
         });
 
         JMenuItem widthItem = new JMenuItem(I18n.t("styleWidthDialog"));
-        widthItem.addActionListener(al ->{
+        widthItem.addActionListener(al -> {
 
-            JSlider slider = new JSlider(50, 100, (int)(pageTheme.getContentPercentage() * 100));
+            JSlider slider = new JSlider(50, 100, (int) (pageTheme.getContentPercentage() * 100));
             slider.setMajorTickSpacing(10);
             slider.setMinorTickSpacing(5);
             slider.setPaintTicks(true);
@@ -143,7 +145,7 @@ public class StylePicker extends JPanel {
                 float p = (float) slider.getValue() / 100f;
                 pageTheme.setContentPercentage(p);
                 alteredPageTheme.setContentPercentage(p);
-                if (saveAlteredPageTheme != null) { 
+                if (saveAlteredPageTheme != null) {
                     saveAlteredPageTheme.setContentPercentage(p);
                 }
             }
@@ -151,7 +153,7 @@ public class StylePicker extends JPanel {
         JMenuItem resetWidthItem = new JMenuItem(I18n.t("widthResetDialog"));
         resetWidthItem.addActionListener(al -> {
             PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
-            //textPanel.setBackground(defaultTheme.getPageBackground());
+
             pageTheme.setContentPercentage(defaultTheme.getContentPercentage());
             alteredPageTheme.clearContentWidth();
             if (saveAlteredPageTheme != null) {
@@ -159,6 +161,63 @@ public class StylePicker extends JPanel {
             }
 
         });
+
+        JMenuItem grad1Item = new JMenuItem(I18n.t("gradientTop"));
+        grad1Item.addActionListener(al -> {
+            Color defColor = pageTheme.getGradient1Color();
+            defColor = defColor == null ? pageTheme.getPageBackground() : defColor;
+            Color chosenColor = Util.getColor(StylePicker.this, defColor);
+            if (chosenColor != null) {
+                setGrad1Color(chosenColor, true);
+                setGradBG(true);
+            }
+            textPanel.repaint();
+        });
+
+        JMenuItem grad2Item = new JMenuItem(I18n.t("gradientBottom"));
+        grad2Item.addActionListener(al -> {
+            Color defColor = pageTheme.getGradient2Color();
+            defColor = defColor == null ? pageTheme.getPageBackground() : defColor;
+            Color chosenColor = Util.getColor(StylePicker.this, defColor);
+            if (chosenColor != null) {
+                setGrad2Color(chosenColor, true);
+                setGradBG(true);
+
+            }
+            textPanel.repaint();
+        });
+
+        JMenuItem gradBGItem = new JCheckBoxMenuItem(I18n.t("gradientBGItem"));
+        gradBGItem.setSelected(pageTheme.getGradientBG());
+        gradBGItem.addItemListener(il -> {
+            boolean active = il.getStateChange() == ItemEvent.SELECTED;
+            setGradBG(active);
+
+        });
+
+        JMenuItem gradResetItem = new JMenuItem(I18n.t("gradientResetItem"));
+        gradResetItem.addActionListener(al -> {
+            PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
+            ItemListener[] il = gradBGItem.getItemListeners();
+            for(ItemListener i : il){
+                gradBGItem.removeItemListener(i);
+            }
+            gradBGItem.setSelected(defaultTheme.getGradientBG());
+            for(ItemListener i : il){
+                gradBGItem.addItemListener(i);
+            }
+            
+
+            pageTheme.setGradientBG(defaultTheme.getGradientBG());
+            pageTheme.setGradient1Color(defaultTheme.getGradient1Color());
+            pageTheme.setGradient2Color(defaultTheme.getGradient2Color());
+            alteredPageTheme.clearGradientSettings();
+            if (saveAlteredPageTheme != null) {
+                saveAlteredPageTheme.clearGradientSettings();
+            }
+            textPanel.repaint();
+        });
+
         Supplier<List<JComponent>> supplier = () -> {
 
             if (mItems.isEmpty()) {
@@ -168,6 +227,10 @@ public class StylePicker extends JPanel {
                 mItems.add(spinnerResetItem);
                 mItems.add(widthItem);
                 mItems.add(resetWidthItem);
+                mItems.add(gradBGItem);
+                mItems.add(grad1Item);
+                mItems.add(grad2Item);
+                mItems.add(gradResetItem);
                 mItems.add(applyAllCB);
                 mItems.add(resetItem);
             }
@@ -178,7 +241,7 @@ public class StylePicker extends JPanel {
         JPanel tb = new JPanel(new BorderLayout(0, 0));
         PopupMenuButton pmb = new PopupMenuButton("⚙️", supplier, "");
         pmb.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
-        tb.add(new JLabel(I18n.t("styleEditorTxt")), BorderLayout.WEST);
+        tb.add(new JLabel(styleName), BorderLayout.WEST);
         tb.add(pmb, BorderLayout.EAST);
         add(tb, BorderLayout.NORTH);
 
@@ -204,7 +267,7 @@ public class StylePicker extends JPanel {
         fontButton.addActionListener(al -> {
             Font f = switch (selectedLine) {
                 case "#" ->
-                    new Font(pageTheme.getHeader3FontFamily(),pageTheme.getHeader3Style(), pageTheme.getHeader3Size());
+                    new Font(pageTheme.getHeader3FontFamily(), pageTheme.getHeader3Style(), pageTheme.getHeader3Size());
                 case "##" ->
                     new Font(pageTheme.getHeader2FontFamily(), pageTheme.getHeader2Style(), pageTheme.getHeader2Size());
                 case "###" ->
@@ -222,7 +285,7 @@ public class StylePicker extends JPanel {
                 case "PF Text" ->
                     new Font(pageTheme.getMonoFontFamily(), Font.PLAIN, pageTheme.getMonoFontSize());
                 case "*" ->
-                     new Font(pageTheme.getListFont(), pageTheme.getListStyle(), pageTheme.getListFontSize());
+                    new Font(pageTheme.getListFont(), pageTheme.getListStyle(), pageTheme.getListFontSize());
                 default ->
                     null;
 
@@ -678,7 +741,6 @@ public class StylePicker extends JPanel {
                 }
                 setPanelAttributes();
             }
-            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
 
         });
 
@@ -706,7 +768,6 @@ public class StylePicker extends JPanel {
                 }
                 setPanelAttributes();
             }
-            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
 
         });
 
@@ -734,8 +795,6 @@ public class StylePicker extends JPanel {
                 }
                 setPanelAttributes();
             }
-            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
-
         });
 
         JMenuItem resetStyleItem = new JMenuItem(I18n.t("fontStyleLabel"));
@@ -776,9 +835,7 @@ public class StylePicker extends JPanel {
             page.setFontStyle(def.getFontStyle());
             page.setFontUnderline(def.getFontUnderline());
         });
-        // styleResetters.put("PF Text", (page, def) -> {
-        //     page.setMonoFontColor(def.getMonoFontColor());
-        // });
+
         resetStyleItem.addActionListener(al -> {
             PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             BiConsumer<PageTheme, PageTheme> resetter = styleResetters.get(selectedLine);
@@ -791,7 +848,6 @@ public class StylePicker extends JPanel {
                 }
                 setPanelAttributes();
             }
-            //Util.infoDialog(StylePicker.this, I18n.t("resetAttrDialog"), I18n.t("resetAttrDialogTxt"));
 
         });
 
@@ -810,7 +866,54 @@ public class StylePicker extends JPanel {
         };
         PopupMenuButton resetButton = new PopupMenuButton("Reset", resetSupplier, "");
         buttonPanel.add(resetButton);
-        textPanel = new JPanel();
+        textPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+
+                if (pageTheme.getGradientBG()) {
+                    if (pageTheme.getGradient1Color() == null) {
+                        boolean isLight = Util.isLight(pageTheme.getPageBackground());
+                        Color c1, c2;
+                        Color bg = pageTheme.getPageBackground();
+
+                        if (isLight) {
+                            c1 = bg.brighter();
+                            c2 = Page.darker(bg);
+                        } else {
+                            c1 = bg.darker();
+                            c2 = bg.brighter().brighter();
+                        }
+
+                        Graphics2D g2d = (Graphics2D) g.create();
+                        g2d.setPaint(new GradientPaint(
+                                0, 0, c1, // top color
+                                0, getHeight(), c2 // bottom color
+                        ));
+                        g2d.fillRect(0, 0, getWidth(), getHeight());
+                        g2d.dispose();
+                    } else {
+                        Color c1 = pageTheme.getGradient1Color();
+                        Color c2 = pageTheme.getGradient2Color();
+
+                        Graphics2D g2d = (Graphics2D) g.create();
+                        g2d.setPaint(new GradientPaint(
+                                0, 0, c1, // top color
+                                0, getHeight(), c2 // bottom color
+                        ));
+                        g2d.fillRect(0, 0, getWidth(), getHeight());
+                        g2d.dispose();
+                    }
+
+                } else {
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setColor(pageTheme.getPageBackground());
+                    g2d.fillRect(0, 0, getWidth(), getHeight());
+                    g2d.dispose();
+                }
+                // }
+            }
+        };
         textPanel.setPreferredSize(new Dimension(800, 390));
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
         textPanel.setOpaque(true);
@@ -863,7 +966,7 @@ public class StylePicker extends JPanel {
     }
 
     private void setPanelAttributes() {
-        textPanel.setBackground(pageTheme.getPageBackground());
+
         Font f = new Font(pageTheme.getHeader3FontFamily(), pageTheme.getHeader3Style(), pageTheme.getHeader3Size());
         if (pageTheme.getHeader3Underline()) {
             f = underlineFont(f);
@@ -905,10 +1008,7 @@ public class StylePicker extends JPanel {
         quoteLabel.setFont(f);
 
         quoteLabel.setForeground(pageTheme.getQuoteForeground());
-        f = new Font(pageTheme.getFontFamily(), pageTheme.getFontStyle(), pageTheme.getFontSize());
-        if (pageTheme.getFontUnderline()) {
-            f = underlineFont(f);
-        }
+
         f = new Font(pageTheme.getListFont(), pageTheme.getListStyle(), pageTheme.getListFontSize());
         if (pageTheme.getListUnderline()) {
             f = underlineFont(f);
@@ -927,7 +1027,7 @@ public class StylePicker extends JPanel {
         textLabel.setForeground(pageTheme.getTextForeground());
         monoFontLabel.setFont(new Font(pageTheme.getMonoFontFamily(), Font.PLAIN, pageTheme.getMonoFontSize()));
         monoFontLabel.setForeground(pageTheme.getMonoFontColor());
-
+        textPanel.repaint();
     }
 
     private JPanel wrap(JLabel l) {
@@ -939,6 +1039,37 @@ public class StylePicker extends JPanel {
 
     public PageTheme getAlteredPageTheme() {
         return alteredPageTheme;
+    }
+
+    private void setGrad1Color(Color c, boolean c2Check) {
+        pageTheme.setGradient1Color(c);
+        alteredPageTheme.setGradient1Color(c);
+        if (saveAlteredPageTheme != null) {
+            saveAlteredPageTheme.setGradient1Color(c);
+        }
+        if (c2Check && pageTheme.getGradient2Color() == null) {
+            setGrad2Color(pageTheme.getPageBackground(), true);
+        }
+    }
+
+    private void setGrad2Color(Color c, boolean c1Check) {
+        pageTheme.setGradient2Color(c);
+        alteredPageTheme.setGradient2Color(c);
+        if (saveAlteredPageTheme != null) {
+            saveAlteredPageTheme.setGradient2Color(c);
+        }
+        if (c1Check && pageTheme.getGradient1Color() == null) {
+            setGrad1Color(pageTheme.getPageBackground(), true);
+        }
+    }
+
+    private void setGradBG(boolean b) {
+        pageTheme.setGradientBG(b);
+        alteredPageTheme.setGradientBG(b);
+        if (saveAlteredPageTheme != null) {
+            saveAlteredPageTheme.setGradientBG(b);
+        }
+        textPanel.repaint();
     }
 
 }

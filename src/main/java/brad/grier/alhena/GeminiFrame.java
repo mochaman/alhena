@@ -1076,12 +1076,23 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem gradientItem = new JCheckBoxMenuItem(I18n.t("gradientBGItem"), Alhena.gradientBG);
+        gradientItem.addItemListener(ae -> {
+
+            Alhena.gradientBG = !Alhena.gradientBG;
+
+            DB.insertPref("gradiantbg", String.valueOf(Alhena.gradientBG));
+            Alhena.updateFrames(false, false, false); // can't just repaint as page style needs updating
+
+        });
+
         JCheckBoxMenuItem inlineItem = new JCheckBoxMenuItem(I18n.t("inlineItem"), Alhena.inlineImages);
         inlineItem.addItemListener(ae -> {
 
             Alhena.inlineImages = !Alhena.inlineImages;
 
             DB.insertPref("inlineimages", String.valueOf(Alhena.inlineImages));
+            
 
         });
 
@@ -1151,6 +1162,7 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        settingsMenu.add(gradientItem);
         settingsMenu.add(inlineItem);
         settingsMenu.add(vlcItem);
         settingsMenu.add(favIconItem);

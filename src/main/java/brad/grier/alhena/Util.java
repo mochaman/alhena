@@ -194,8 +194,7 @@ public class Util {
     }
 
     public static void showAbout(Component c) {
-        PreformattedTextPane ptp = new PreformattedTextPane(UIManager.getColor("Panel.background"), 14, UIManager.getBoolean("laf.dark"), null);
-
+        PreformattedTextPane ptp = new PreformattedTextPane(14, UIManager.getBoolean("laf.dark"), null);
         EventQueue.invokeLater(() -> ptp.setCaretPosition(0));
         ptp.addText(colorize(GeminiFrame.getArt()));
 
@@ -1212,7 +1211,8 @@ public class Util {
             } else {
                 pt = GeminiTextPane.getDefaultTheme(UIManager.getDefaults());
             }
-            StylePicker sp = new StylePicker(pt, apt, ui);
+            String styleName = "Scope: " + psi.scope() + ", Value: " + psi.scopeValue() + ", Theme: " + psi.theme();
+            StylePicker sp = new StylePicker(pt, apt, ui, styleName);
             Object[] cmps = {sp};
             JButton okButton = new JButton(I18n.t("okLabel"));
             JButton delButton = new JButton(I18n.t("deleteLabel"));
@@ -1346,6 +1346,8 @@ public class Util {
             }
 
             try {
+                //String styleName = "[" + scope + "][" + scopeValue + "][" + th + "]";
+                String styleName = "Scope: " + scope + ", Value: " + scopeValue + ", Theme: " + th;
                 String jstring = DB.getStyle(scope, scopeValue, th);
                 PageTheme pt;
                 PageTheme apt = new PageTheme();
@@ -1358,7 +1360,7 @@ public class Util {
                 } else {
                     pt = GeminiTextPane.getDefaultTheme(ui);
                 }
-                StylePicker sp = new StylePicker(pt, apt, ui);
+                StylePicker sp = new StylePicker(pt, apt, ui, styleName);
                 Object[] cmps = {sp};
                 JButton okButton = new JButton(I18n.t("okLabel"));
                 JButton delButton = new JButton(I18n.t("deleteLabel"));

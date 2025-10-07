@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
@@ -43,7 +44,7 @@ public class PreformattedTextPane extends JTextPane {
     private int fontSize;
     private final boolean isDark;
 
-    public PreformattedTextPane(Color bgColor, Integer fontSize, boolean isDark, GeminiTextPane parentPane) {
+    public PreformattedTextPane(Integer fontSize, boolean isDark, GeminiTextPane parentPane) {
         this.parentPane = parentPane;
         if (fontSize != null) {
             this.fontSize = fontSize;
@@ -51,7 +52,9 @@ public class PreformattedTextPane extends JTextPane {
         this.isDark = isDark;
         setMargin(new Insets(0, 0, 0, 0));
         setEditable(false);
-        setBackground(bgColor);
+        //background = GeminiTextPane.shadePF ? new Color(0, 0, 0, 10) : new Color(0, 0, 0, 0);
+        //setBackground(background);
+
         DefaultCaret newCaret = new DefaultCaret() {
             @Override
             public void paint(Graphics g) {
@@ -61,8 +64,20 @@ public class PreformattedTextPane extends JTextPane {
         setCaret(newCaret);
 
         setEditorKit(new GeminiEditorKit());
-        init(bgColor);
+        init();
 
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        if (GeminiTextPane.shadePF) {
+
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setColor(new Color(0, 0, 0, 10));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.dispose();
+        }
+        super.paintComponent(g);
     }
     private final GeminiTextPane parentPane;
 
@@ -80,8 +95,8 @@ public class PreformattedTextPane extends JTextPane {
             super.processMouseMotionEvent(e);
         }
     }
-
-    private void buildStyle(Color bgColor) {
+    
+    private void buildStyle() {
         emojiProportional = "Noto Emoji";
         if (SystemInfo.isMacOS) {
             if (!Alhena.macUseNoto) {
@@ -91,11 +106,11 @@ public class PreformattedTextPane extends JTextPane {
         Style pfStyle = doc.addStyle("```", null);
         if (parentPane == null) {
             StyleConstants.setFontFamily(pfStyle, GeminiTextPane.monospacedFamily);
-            StyleConstants.setBackground(pfStyle, bgColor);
+
             StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : GeminiFrame.monoFontSize);
         } else {
             StyleConstants.setFontFamily(pfStyle, parentPane.pageStyle.getMonoFontFamily());
-            StyleConstants.setBackground(pfStyle, bgColor);
+
             StyleConstants.setForeground(pfStyle, parentPane.pageStyle.getMonoFontColor());
             setForeground(parentPane.pageStyle.getMonoFontColor());
             StyleConstants.setFontSize(pfStyle, fontSize != 0 ? fontSize : parentPane.pageStyle.getMonoFontSize());
@@ -103,10 +118,10 @@ public class PreformattedTextPane extends JTextPane {
 
     }
 
-    public final void init(Color bgColor) {
+    public final void init() {
         doc = new DefaultStyledDocument();
         setStyledDocument(doc);
-        buildStyle(bgColor);
+        buildStyle();
     }
 
     public void end() {
@@ -490,7 +505,8 @@ public class PreformattedTextPane extends JTextPane {
 
                         }
 
-                        StyleConstants.setBackground(bStyle, getBackground());
+                        //StyleConstants.setBackground(bStyle, background);
+                        StyleConstants.setBackground(bStyle, new Color(0, 0, 0, 0));
                         StyleConstants.setBold(bStyle, false);
 
                     }

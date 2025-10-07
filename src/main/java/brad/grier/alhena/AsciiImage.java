@@ -1,5 +1,6 @@
 package brad.grier.alhena;
 
+import java.awt.AlphaComposite;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Font;
@@ -38,15 +39,17 @@ public class AsciiImage {
     private static boolean isDark;
 
     // for future reference, this class is not thread safe - only call on EDT
-    public static BufferedImage renderTextToImage(String text, String fontName, int fontSize, Color bgColor, Color fgColor, boolean override) {
+    public static BufferedImage renderTextToImage(boolean shade, String text, String fontName, int fontSize, Color fgColor, boolean override) {
 
         boolean hasAnsi = false;
         ansiBold = false;
-        bgColor = GeminiTextPane.shadePF ? AnsiColor.adjustColor(bgColor, UIManager.getBoolean("laf.dark"), .2d, .8d, .05d) : bgColor;
-        ansiBG = bgColor;
+
+        Color bgColor = (shade && !override) ? new Color(0, 0, 0, 10) : new Color(0, 0, 0, 0);
+        ansiBG = new Color(0,0,0,0);
+
         ansiFG = fgColor;
         isDark = UIManager.getBoolean("laf.dark");
-        bgColor1 = bgColor;
+        bgColor1 = ansiBG;
         fgColor1 = fgColor;
         ansiFG(Color.WHITE);  // "default foreground color" crossword site
         Font font = new Font(fontName, Font.PLAIN, fontSize);
@@ -103,18 +106,19 @@ public class AsciiImage {
         maxChars = override ? 1 : maxChars;
         int height = lineHeight * lines.length;
 
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = image.createGraphics();
+        g.setComposite(AlphaComposite.Clear);
+        g.fillRect(0, 0, width, height);
+
+        g.setComposite(AlphaComposite.SrcOver);
         g.setFont(font);
 
-        g.setColor(bgColor);
-        g.fillRect(0, 0, width, height);
         g.setColor(fgColor);
 
         int cellHeight = height / lines.length;
         int cellWidth = override ? emojiMetrics.stringWidth(text) : width / maxChars;
 
-        
         int baseY = lineHeight;
         int y = 0;
         int lineNum = 0;
@@ -132,10 +136,10 @@ public class AsciiImage {
 
                 // font.canDisplay test means use the font's version of this character instead of the emoji version
                 // often this fixes assumptions made by page designers about character width (weather, etc)
-                if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null  && !font.canDisplay(c)) {
-                    
+                if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null && !font.canDisplay(c)) {
+
                     int charWidth = emojiMetrics.stringWidth(emoji.getEmoji().getEmoji());
-                    
+
                     int superFudge = charWidth <= cellWidth ? cellWidth : cellWidth * 2;
                     cellImage = new BufferedImage(superFudge, cellHeight, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D g2 = cellImage.createGraphics();
@@ -171,7 +175,7 @@ public class AsciiImage {
                             }
                         }
                         if (icon == null) {
-                            
+
                             char[] chars = Character.toChars(text.codePointAt(i));
 
                             i = emoji.getEndCharIndex() + 1;
@@ -241,7 +245,7 @@ public class AsciiImage {
                     int charWidth = metrics.charWidth(c);
                     // +1 when width calculation right on the line (UK forecast site)
                     int superFudge = charWidth <= (cellWidth + 1) ? cellWidth : cellWidth * 2;
-                    
+
                     cellImage = new BufferedImage(superFudge, cellHeight, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D g2 = cellImage.createGraphics();
 
@@ -264,9 +268,9 @@ public class AsciiImage {
                             g2.setFont(font.deriveFont(Font.BOLD));
                         }
                     } else {
-                        g2.setColor(bgColor);
+                        // g2.setColor(bgColor);
 
-                        g2.drawRect(0, 0, superFudge, cellHeight);
+                        // g2.drawRect(0, 0, superFudge, cellHeight);
                         g2.setColor(fgColor);
                     }
 
@@ -286,7 +290,7 @@ public class AsciiImage {
                         g2.setFont(font);
                     }
                     g2.dispose();
-                    if(charWidth > (cellWidth + 1)){ // +1 when the width calculation is right on the line - uk forecast pages
+                    if (charWidth > (cellWidth + 1)) { // +1 when the width calculation is right on the line - uk forecast pages
                         pad += cellWidth;
                     }
                     pad += cellWidth;
@@ -433,7 +437,7 @@ public class AsciiImage {
                     case "47" ->
                         ansiBG(AnsiColor.WHITE);
                     case "48" -> {
-                        // foreground color
+                        // background color
                         if (tokens[1].equals("5")) {
 
                             if (tokens.length == 4) { // why is this here?

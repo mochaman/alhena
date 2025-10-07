@@ -3,6 +3,7 @@ package brad.grier.alhena;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
@@ -1540,7 +1541,7 @@ public class GeminiTextPane extends JTextPane {
 
                         }
 
-                        StyleConstants.setBackground(bStyle, getBackground());
+                        StyleConstants.setBackground(bStyle, new Color(0,0,0,0));
                         StyleConstants.setBold(bStyle, false);
 
                     }
@@ -1665,6 +1666,7 @@ public class GeminiTextPane extends JTextPane {
     private float contentWidth;
 
     public void addPage(String geminiDoc) {
+
         if (pageBuffer == null) {
             return;
         }
@@ -1759,7 +1761,9 @@ public class GeminiTextPane extends JTextPane {
         pageTheme.setListColor(ui.getColor("TextPane.foreground"));
         pageTheme.setListUnderline(false);
         pageTheme.setListFontSize(GeminiFrame.fontSize);
-
+        pageTheme.setGradientBG(Alhena.gradientBG);
+        pageTheme.setGradient1Color((Color)null);
+        pageTheme.setGradient2Color((Color)null);
         return pageTheme;
     }
 
@@ -1912,15 +1916,15 @@ public class GeminiTextPane extends JTextPane {
 
     // only call on EDT
     private static void rebuildLinkIcons(int gfFontSize, Color bgColor, Color linkColor) {
-        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        titanIcon = getLinkIcon("✏️", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        picIcon = getLinkIcon("📸", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        mediaIcon = getLinkIcon("🎥", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        gopherIcon = getLinkIcon("🐹", "Noto Emoji", gfFontSize, bgColor, linkColor);
-        spartanIcon = getLinkIcon("💪", "Noto Emoji", gfFontSize, bgColor, linkColor);
+        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, linkColor);
+        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, linkColor);
+        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, linkColor);
+        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, linkColor);
+        titanIcon = getLinkIcon("✏️", "Noto Emoji", gfFontSize, linkColor);
+        picIcon = getLinkIcon("📸", "Noto Emoji", gfFontSize, linkColor);
+        mediaIcon = getLinkIcon("🎥", "Noto Emoji", gfFontSize, linkColor);
+        gopherIcon = getLinkIcon("🐹", "Noto Emoji", gfFontSize, linkColor);
+        spartanIcon = getLinkIcon("💪", "Noto Emoji", gfFontSize, linkColor);
 
     }
 
@@ -1993,7 +1997,7 @@ public class GeminiTextPane extends JTextPane {
                 if (asciiSB != null && !asciiSB.isEmpty()) {
                     asciiSB.deleteCharAt(asciiSB.length() - 1);
 
-                    BufferedImage bi = AsciiImage.renderTextToImage(asciiSB.toString(), pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), getBackground(), pageStyle.getMonoFontColor(), false);
+                    BufferedImage bi = AsciiImage.renderTextToImage(shadePF, asciiSB.toString(), pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), pageStyle.getMonoFontColor(), false);
                     ImageIcon icon = new ImageIcon(bi);
                     if (ptp == null) {
                         insertComp(new JLabel(icon), doc.getLength());
@@ -2285,7 +2289,7 @@ public class GeminiTextPane extends JTextPane {
 
                 PreformattedTextPane ptpText = createTextComponent(curPos);
                 if (asciiImage && !printing) {
-                    BufferedImage bi = AsciiImage.renderTextToImage(s, pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), getBackground(), pageStyle.getMonoFontColor(), false);
+                    BufferedImage bi = AsciiImage.renderTextToImage(shadePF, s, pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), pageStyle.getMonoFontColor(), false);
                     ImageIcon icon = new ImageIcon(bi);
                     ptpText.insertComp(new JLabel(icon));
                     ptpText.scrollLeft();
@@ -2313,12 +2317,24 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
+    void makeTransparent(Component c) {
+        if (c instanceof JComponent jc) {
+            jc.setOpaque(false);
+        }
+        if (c instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                makeTransparent(child);
+            }
+        }
+    }
+
     private PreformattedTextPane createTextComponent(boolean curPos) {
 
-        Color background = shadePF ? AnsiColor.adjustColor(getBackground(), isDark, .2d, .8d, .05d) : getBackground();
-        PreformattedTextPane pfTextPane = new PreformattedTextPane(background, customFontSize == 0 ? null : customFontSize, isDark, GeminiTextPane.this);
+        //Color background = shadePF ? AnsiColor.adjustColor(getBackground(), isDark, .2d, .8d, .05d) : getBackground();
+        PreformattedTextPane pfTextPane = new PreformattedTextPane(customFontSize == 0 ? null : customFontSize, isDark, GeminiTextPane.this);
 
         JScrollPane sp = new JScrollPane(pfTextPane);
+        makeTransparent(sp);
         pfTextPane.setFocusTraversalKeysEnabled(false);
         EventQueue.invokeLater(() -> pfTextPane.setCaretPosition(0));
 
@@ -2963,8 +2979,8 @@ public class GeminiTextPane extends JTextPane {
 
     private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, mediaIcon, gopherIcon, spartanIcon;
 
-    private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color bgColor, Color fgColor) {
-        BufferedImage bi = AsciiImage.renderTextToImage(txt, fontName, fontSize, bgColor, fgColor, true);
+    private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color fgColor) {
+        BufferedImage bi = AsciiImage.renderTextToImage(shadePF, txt, fontName, fontSize, fgColor, true);
         // this could be optimized as AsciiImage already created font and metrics
         Font font = new Font(fontName, Font.PLAIN, fontSize);
         FontMetrics metrics = new Canvas().getFontMetrics(font);

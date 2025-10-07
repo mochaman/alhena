@@ -49,6 +49,9 @@ public class PageTheme {
     private Boolean listUnderline;
     private Float contentPercentage;
     private Color spinnerColor;
+    private Boolean gradientBG;
+    private Color gradient1Color;
+    private Color gradient2Color;
 
     public Color getLinkColor() {
         return linkColor;
@@ -280,6 +283,34 @@ public class PageTheme {
         }
     }
 
+    public Color getGradient1Color() {
+        return gradient1Color;
+    }
+
+    public void setGradient1Color(Color gradient1Color) {
+        this.gradient1Color = gradient1Color;
+    }
+
+    public void setGradient1Color(Integer gradient1Color) {
+        if (gradient1Color != null) {
+            this.gradient1Color = new Color(gradient1Color);
+        }
+    }
+
+    public Color getGradient2Color() {
+        return gradient2Color;
+    }
+
+    public void setGradient2Color(Color gradient2Color) {
+        this.gradient2Color = gradient2Color;
+    }
+
+    public void setGradient2Color(Integer gradient2Color) {
+        if (gradient2Color != null) {
+            this.gradient2Color = new Color(gradient2Color);
+        }
+    }
+
     public String getHeader1FontFamily() {
         return header1FontFamily;
     }
@@ -374,6 +405,9 @@ public class PageTheme {
         setListColor(jo.getInteger("listColor"));
         setListStyle(jo.getInteger("listStyle"));
         setListUnderline(jo.getBoolean("listUnderline"));
+        setGradientBG(jo.getBoolean("gradientBG"));
+        setGradient1Color(jo.getInteger("gradient1Color"));
+        setGradient2Color(jo.getInteger("gradient2Color"));
 
     }
 
@@ -472,11 +506,19 @@ public class PageTheme {
             styleJson.put("pageBackground", pageBackground.getRGB());
         }
 
-        if(spinnerColor != null){
+        if (spinnerColor != null) {
             styleJson.put("spinnerColor", spinnerColor.getRGB());
         }
 
-        if(contentPercentage != null){
+        if (gradient1Color != null) {
+            styleJson.put("gradient1Color", gradient1Color.getRGB());
+        }
+
+        if (gradient2Color != null) {
+            styleJson.put("gradient2Color", gradient2Color.getRGB());
+        }
+
+        if (contentPercentage != null) {
             styleJson.put("contentPercentage", contentPercentage);
         }
 
@@ -535,6 +577,10 @@ public class PageTheme {
             styleJson.put("listUnderline", listUnderline);
         }
 
+        if (gradientBG != null) {
+            styleJson.put("gradientBG", gradientBG);
+        }
+
         return styleJson.encode();
 
     }
@@ -551,9 +597,16 @@ public class PageTheme {
         pageBackground = null;
     }
 
-    public void clearSpinnerColor(){
+    public void clearGradientSettings() {
+        gradient1Color = null;
+        gradient2Color = null;
+        gradientBG = null;
+    }
+
+    public void clearSpinnerColor() {
         spinnerColor = null;
     }
+
     public void clearContentWidth() {
         contentPercentage = null;
     }
@@ -861,6 +914,16 @@ public class PageTheme {
     public void setListUnderline(Boolean listUnderline) {
         if (listUnderline != null) {
             this.listUnderline = listUnderline;
+        }
+    }
+
+    public Boolean getGradientBG() {
+        return gradientBG;
+    }
+
+    public void setGradientBG(Boolean gradientBG) {
+        if (gradientBG != null) {
+            this.gradientBG = gradientBG;
         }
     }
 
