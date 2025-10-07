@@ -7,6 +7,7 @@ import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.io.File;
 import java.security.cert.X509Certificate;
 
@@ -120,16 +121,20 @@ public class Page extends JPanel {
                             ));
                             g2d.fillRect(0, 0, getWidth(), getHeight());
                             g2d.dispose();
-                        }else{
+                        } else {
                             Color c1 = textPane.pageStyle.getGradient1Color();
                             Color c2 = textPane.pageStyle.getGradient2Color();
-                            if(c1 == null){
+                            if (c1 == null) {
                                 c1 = textPane.pageStyle.getPageBackground();
                             }
-                            if(c2 == null){
+                            if (c2 == null) {
                                 c2 = textPane.pageStyle.getPageBackground();
                             }
                             Graphics2D g2d = (Graphics2D) g.create();
+                            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                            g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+                            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                            g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
                             g2d.setPaint(new GradientPaint(
                                     0, 0, c1, // top color
                                     0, getHeight(), c2 // bottom color

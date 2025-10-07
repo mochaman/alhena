@@ -8,6 +8,7 @@ import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.font.TextAttribute;
@@ -199,14 +200,13 @@ public class StylePicker extends JPanel {
         gradResetItem.addActionListener(al -> {
             PageTheme defaultTheme = GeminiTextPane.getDefaultTheme(ui);
             ItemListener[] il = gradBGItem.getItemListeners();
-            for(ItemListener i : il){
+            for (ItemListener i : il) {
                 gradBGItem.removeItemListener(i);
             }
             gradBGItem.setSelected(defaultTheme.getGradientBG());
-            for(ItemListener i : il){
+            for (ItemListener i : il) {
                 gradBGItem.addItemListener(i);
             }
-            
 
             pageTheme.setGradientBG(defaultTheme.getGradientBG());
             pageTheme.setGradient1Color(defaultTheme.getGradient1Color());
@@ -886,6 +886,10 @@ public class StylePicker extends JPanel {
                         }
 
                         Graphics2D g2d = (Graphics2D) g.create();
+                        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                        g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+                        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                        g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
                         g2d.setPaint(new GradientPaint(
                                 0, 0, c1, // top color
                                 0, getHeight(), c2 // bottom color
