@@ -996,11 +996,11 @@ public final class GeminiFrame extends JFrame {
 
             JCheckBox lineWrapCB = new JCheckBox(I18n.t("lineWrapCB"));
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
-
+            JCheckBox embedPFCB = new JCheckBox(I18n.t("scrollableCB"));
             JCheckBox imagePFCB = new JCheckBox(I18n.t("pfRenderCB"));
             imagePFCB.setSelected(GeminiTextPane.asciiImage);
             imagePFCB.addActionListener(al -> {
-                lineWrapCB.setEnabled(!imagePFCB.isSelected());
+                lineWrapCB.setEnabled(!imagePFCB.isSelected() && !embedPFCB.isSelected());
             });
 
             JCheckBox showsbCB = new JCheckBox(I18n.t("scrollBarCB"));
@@ -1010,15 +1010,16 @@ public final class GeminiFrame extends JFrame {
             JCheckBox shadeCB = new JCheckBox(I18n.t("shadeCB"));
             shadeCB.setSelected(GeminiTextPane.shadePF);
 
-            JCheckBox embedPFCB = new JCheckBox(I18n.t("scrollableCB"));
             // embedPFCB.setToolTipText("If enabled, hold down 's' to horizontally sroll pre-formatted text.\nDisabling (legacy) can affect where gemtext wraps.");
             embedPFCB.setSelected(GeminiTextPane.embedPF);
             embedPFCB.addActionListener(e -> {
                 boolean selected = embedPFCB.isSelected();
                 showsbCB.setEnabled(selected);
                 shadeCB.setEnabled(selected);
+                lineWrapCB.setEnabled(!imagePFCB.isSelected() && !embedPFCB.isSelected());
+                
             });
-
+            lineWrapCB.setEnabled(!imagePFCB.isSelected() && !embedPFCB.isSelected());
             showsbCB.setEnabled(embedPFCB.isSelected());
             shadeCB.setEnabled(embedPFCB.isSelected());
 

@@ -63,7 +63,7 @@ public class PreformattedTextPane extends JTextPane {
         };
         setCaret(newCaret);
 
-        setEditorKit(new GeminiEditorKit());
+        setEditorKit(new NoWrapEditorKit());
         init();
 
     }
@@ -95,7 +95,7 @@ public class PreformattedTextPane extends JTextPane {
             super.processMouseMotionEvent(e);
         }
     }
-    
+
     private void buildStyle() {
         emojiProportional = "Noto Emoji";
         if (SystemInfo.isMacOS) {
@@ -130,6 +130,7 @@ public class PreformattedTextPane extends JTextPane {
             bufferedLine = null;
             addStyledText(lrl, "```");
         }
+
     }
 
     public void removeLastChar() {
@@ -220,23 +221,39 @@ public class PreformattedTextPane extends JTextPane {
 
                             char[] chars = Character.toChars(text.codePointAt(i));
 
-                            i = emoji.getEndCharIndex() + 1;
+                            int eci = emoji.getEndCharIndex();
+                            int emojiSize = eci - emoji.getCharIndex();
+
+                            // advance past emoji
+                            i += (emojiSize - 1);
+
+                            // check for variation selector
+                            if (eci < text.length()) {
+                                int nextCodePoint = text.codePointAt(eci);
+                                if (nextCodePoint == 0xFE0E || nextCodePoint == 0xFE0F) {
+                                    i += Character.charCount(nextCodePoint); // usually 1
+                                }
+                            }
 
                             insertString(doc.getLength(), new String(chars), style);
 
                         } else {
                             // single char emoji followed by unneccessary variation selector
                             // example: snowman
-
+                            int opto = 0;
                             int eci = emoji.getEndCharIndex();
-
                             int emojiSize = eci - emoji.getCharIndex();
 
+                            // advance past emoji
                             i += (emojiSize - 1);
-                            int charPointOfNextChar = emoji.getCodePointIndex() + 1;
 
-                            if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
-                                i++; // skip any variation selector
+                            // check for variation selector
+                            if (eci < text.length()) {
+                                int nextCodePoint = text.codePointAt(eci);
+                                if (nextCodePoint == 0xFE0E || nextCodePoint == 0xFE0F) {
+                                    i += Character.charCount(nextCodePoint); // usually 1
+                                    opto = 1;
+                                }
                             }
 
                             StyleConstants.setIcon(emojiStyle, icon);
@@ -244,26 +261,39 @@ public class PreformattedTextPane extends JTextPane {
                                 doc.insertString(doc.getLength(), " ", emojiStyle); // Use emoji style
                             } catch (BadLocationException ex) {
                             }
+                            if (emojis.size() == 1 && eci < text.length()) {
+                                insertString(doc.getLength(), text.substring(eci + opto), style);
+                                break;
+                            }
 
                         }
                     } else {
-
-                        char[] chars = Character.toChars(text.codePointAt(i));
+                        StyleConstants.setFontFamily(style, emojiProportional);
+                        insertString(doc.getLength(), GeminiTextPane.unescapeUnicode(emoji.getEmoji().getUnicode()), style);
 
                         int eci = emoji.getEndCharIndex();
-
                         int emojiSize = eci - emoji.getCharIndex();
 
+                        // advance past emoji
                         i += (emojiSize - 1);
-                        int charPointOfNextChar = emoji.getCodePointIndex() + 1;
 
-                        if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
-                            i++; // skip any variation selector
+                        // check for variation selector
+                        if (eci < text.length()) {
+                            int nextCodePoint = text.codePointAt(eci);
+                            if (nextCodePoint == 0xFE0E || nextCodePoint == 0xFE0F) {
+                                i += Character.charCount(nextCodePoint); // usually 1
+                                eci += Character.charCount(nextCodePoint);
+                                if (eci < text.length()) { // optomize common scenario
+                                    if (emojis.indexOf(emoji) == emojis.size() - 1) { // this is last emoji
+                                    
+                                        StyleConstants.setFontFamily(style, fontFamily);
+                                        insertString(doc.getLength(), text.substring(eci), style);
+                                        break;
+                                    }
+                                }
+                            }
                         }
 
-                        StyleConstants.setFontFamily(style, emojiProportional);
-
-                        insertString(doc.getLength(), new String(chars), style);
                     }
                 } else {
 

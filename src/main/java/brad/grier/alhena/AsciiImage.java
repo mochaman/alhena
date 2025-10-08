@@ -44,8 +44,7 @@ public class AsciiImage {
         boolean hasAnsi = false;
         ansiBold = false;
 
-        Color bgColor = (shade && !override) ? new Color(0, 0, 0, 10) : new Color(0, 0, 0, 0);
-        ansiBG = new Color(0,0,0,0);
+        ansiBG = new Color(0, 0, 0, 0);
 
         ansiFG = fgColor;
         isDark = UIManager.getBoolean("laf.dark");
@@ -127,7 +126,7 @@ public class AsciiImage {
             IndexedEmoji emoji;
 
             int x = 0;
-            int cpCount = line.codePointCount(0, line.length());
+
             for (int i = 0; i < line.length(); i++) {
                 int pad = 0;
                 char c = line.charAt(i);
@@ -150,8 +149,8 @@ public class AsciiImage {
                         g2.fillRect(0, 0, superFudge, cellHeight);
                         g2.setColor(pc.fg);
                     } else {
-                        g2.setColor(bgColor);
-                        g2.fillRect(0, 0, superFudge, cellHeight);
+                        //g2.setColor(bgColor);
+                        //g2.fillRect(0, 0, superFudge, cellHeight);
                         g2.setColor(fgColor);
                     }
 
@@ -175,10 +174,22 @@ public class AsciiImage {
                             }
                         }
                         if (icon == null) {
-
                             char[] chars = Character.toChars(text.codePointAt(i));
 
-                            i = emoji.getEndCharIndex() + 1;
+                            int eci = emoji.getEndCharIndex();
+                            int emojiSize = eci - emoji.getCharIndex();
+
+                            // advance past emoji
+                            i += (emojiSize - 1);
+
+                            // check for variation selector
+                            if (eci < text.length()) {
+                                int nextCodePoint = text.codePointAt(eci);
+                                if (nextCodePoint == 0xFE0E || nextCodePoint == 0xFE0F) {
+                                    i += Character.charCount(nextCodePoint); // usually 1
+                                }
+                            }
+
                             int x1 = (cellWidth * 2 - charWidth) / 2;
                             int y1 = (cellHeight - metrics.getHeight()) / 2 + metrics.getAscent();
 
@@ -188,14 +199,17 @@ public class AsciiImage {
                         } else {
 
                             int eci = emoji.getEndCharIndex();
-
                             int emojiSize = eci - emoji.getCharIndex();
 
+                            // advance past emoji
                             i += (emojiSize - 1);
-                            int charPointOfNextChar = emoji.getCodePointIndex() + 1;
 
-                            if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
-                                i++; // skip any variation selector
+                            // check for variation selector
+                            if (eci < text.length()) {
+                                int nextCodePoint = text.codePointAt(eci);
+                                if (nextCodePoint == 0xFE0E || nextCodePoint == 0xFE0F) {
+                                    i += Character.charCount(nextCodePoint); // usually 1
+                                }
                             }
                             int x1 = (superFudge - charWidth) / 2;
 
@@ -221,15 +235,19 @@ public class AsciiImage {
                         g2.dispose();
 
                         int eci = emoji.getEndCharIndex();
-
                         int emojiSize = eci - emoji.getCharIndex();
 
+                        //i += emojiSize;
                         i += (emojiSize - 1);
-                        int charPointOfNextChar = emoji.getCodePointIndex() + 1;
 
-                        if (emojiSize == 1 && charPointOfNextChar < cpCount && GeminiTextPane.isEmojiVariationSelector(text.codePointAt(charPointOfNextChar))) {
-                            i++; // skip any variation selector
+                        // check for variation selector
+                        if (eci < text.length()) {
+                            int nextCodePoint = text.codePointAt(eci);
+                            if (nextCodePoint == 0xFE0E || nextCodePoint == 0xFE0F) {
+                                i += Character.charCount(nextCodePoint); // usually 1
+                            }
                         }
+
                         if (charWidth > cellWidth) {
                             pad += cellWidth;
                         }
@@ -241,7 +259,6 @@ public class AsciiImage {
                     i++;
 
                 } else {
-
                     int charWidth = metrics.charWidth(c);
                     // +1 when width calculation right on the line (UK forecast site)
                     int superFudge = charWidth <= (cellWidth + 1) ? cellWidth : cellWidth * 2;
