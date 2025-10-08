@@ -24,6 +24,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
 
     public AudioPlayer() {
         setLayout(new BorderLayout());
+        setOpaque(false);
         final JSlider slider = new JSlider(0, 100, 0);
         add(slider, BorderLayout.NORTH);
         Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
@@ -108,7 +109,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
         });
 
         JPanel controlsPane = new JPanel();
-
+        controlsPane.setOpaque(false);
         pauseButton = new JButton("⏸");
         pauseButton.setFont(buttonFont);
         controlsPane.add(pauseButton);

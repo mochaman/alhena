@@ -30,7 +30,7 @@ public class VideoPlayer extends JPanel implements MediaComponent {
     public VideoPlayer() {
         setLayout(new BorderLayout());
         final JSlider slider = new JSlider(0, 100, 0);
-
+        setOpaque(false);
         Font buttonFont = new Font("Noto Emoji Regular", Font.PLAIN, 18);
         AtomicBoolean suppressEvents = new AtomicBoolean(false);
 
@@ -129,9 +129,10 @@ public class VideoPlayer extends JPanel implements MediaComponent {
         });
 
         JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setOpaque(false);
         southPanel.add(slider, BorderLayout.CENTER);
         JPanel controlsPane = new JPanel();
-
+        controlsPane.setOpaque(false);
         pauseButton = new JButton("⏸");
         pauseButton.setFont(buttonFont);
         controlsPane.add(pauseButton);
