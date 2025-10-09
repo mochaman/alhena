@@ -60,6 +60,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.BooleanSupplier;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -184,11 +188,37 @@ public class Alhena {
 
     public static void main(String[] args) throws Exception {
         String alhenaLocale = System.getenv("ALHENA_LOCALE");
+        String alhenaHome = System.getenv("ALHENA_HOME"); // the directory to store cacerts, db, etc
+        if (alhenaHome != null) {
+            System.setProperty("alhena.home", alhenaHome);
+        } else {
+            // use .alehnahome from here on out but preserve the the non-hidden home
+            // for legacy users
+            boolean legacyHomeExists = new File(System.getProperty("user.home") + "/alhena/cacerts").exists();
+            String sep = legacyHomeExists ? "/" : "/.";
+            alhenaHome = System.getProperty("user.home") + sep + "alhena";
+            System.setProperty("alhena.home", alhenaHome);
+        }
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+
+        CompletableFuture<Void> chain = CompletableFuture
+                .runAsync(() -> {
+                    try {
+                        DB.init();
+                        GeminiTextPane.setup();
+                    } catch (Exception e) {
+                        throw new CompletionException(e); // wrap in unchecked so it propagates properly
+                    }
+                }, executor)
+                .exceptionally(ex -> {
+                    ex.printStackTrace();
+                    return null; 
+                });
 
         if (alhenaLocale != null) {
             I18n.setForcedLocale(Locale.forLanguageTag(alhenaLocale));
         }
-        welcomeMessage = I18n.t("welcomeLabel") + " " + PROG_NAME;
+
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher((KeyEvent e) -> {
             Component source = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
@@ -320,19 +350,7 @@ public class Alhena {
             return false; // allow event to be processed
         });
 
-        // look for file and not directory in case user created alhena directory for install purposes
-        boolean legacyHomeExists = new File(System.getProperty("user.home") + "/alhena/cacerts").exists();
 
-        String alhenaHome = System.getenv("ALHENA_HOME"); // the directory to store cacerts, db, etc
-        if (alhenaHome != null) {
-            System.setProperty("alhena.home", alhenaHome);
-        } else {
-            // use .alehnahome from here on out but preserve the the non-hidden home
-            // for legacy users
-            String sep = legacyHomeExists ? "/" : "/.";
-            alhenaHome = System.getProperty("user.home") + sep + "alhena";
-            System.setProperty("alhena.home", alhenaHome);
-        }
         Files.createDirectories(Paths.get(alhenaHome));
         if (!new File(alhenaHome + "/cacerts").exists()) {
 
@@ -404,9 +422,11 @@ public class Alhena {
         // load a comprehensive emoji font
         // this is used by default except on macintosh which can display color emojis
         Util.loadFont("NotoEmoji-Regular.ttf");
+        welcomeMessage = I18n.t("welcomeLabel") + " " + PROG_NAME;
 
-        // initialize the database
-        DB.init();
+        chain.join();
+        executor.shutdown();
+
         HashMap<String, String> map = DB.getAllPrefs();
         allowVLC = map.getOrDefault("allowvlc", "false").equals("true");
         inlineImages = map.getOrDefault("inlineimages", "true").equals("true");

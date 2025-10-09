@@ -167,7 +167,7 @@ public class GeminiTextPane extends JTextPane {
     public boolean dragging;
     public static boolean dragToScroll;
 
-    static {
+    public static void setup(){
         String userDefined = System.getenv("ALHENA_MONOFONT");
         if (SystemInfo.isWindows) {
 
@@ -196,7 +196,7 @@ public class GeminiTextPane extends JTextPane {
         if (emojiPref == null || emojiPref.equals("google")) { // first time or the default set from jar
             setSheetImage(Util.loadImage(GeminiFrame.emojiNameMap.get("google")));
             DB.insertPref("emoji", "google");  // only really need to this for null
-            readEmojiJson();
+
         } else if (!emojiPref.equals("font")) {
             String url = GeminiFrame.emojiNameMap.get(emojiPref);
             String fn = url.substring(url.lastIndexOf('/') + 1);
@@ -218,12 +218,11 @@ public class GeminiTextPane extends JTextPane {
                 setSheetImage(Util.loadImage(GeminiFrame.emojiNameMap.get("google")));
                 DB.insertPref("emoji", "google");
             }
-            readEmojiJson();
+
         }
     }
 
     private static void readEmojiJson() {
-
         try (InputStream is = GeminiTextPane.class.getResourceAsStream("/emoji.json")) {
             if (is == null) {
                 throw new RuntimeException("Resource not found: /emoji.json");
@@ -251,7 +250,7 @@ public class GeminiTextPane extends JTextPane {
 
                 }
             }
-
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
