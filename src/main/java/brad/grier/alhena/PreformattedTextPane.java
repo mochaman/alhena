@@ -73,7 +73,7 @@ public class PreformattedTextPane extends JTextPane {
         if (GeminiTextPane.shadePF) {
 
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setColor(new Color(0, 0, 0, 10));
+            g2.setColor(new Color(0, 0, 0, isDark ? 90 : 10));
             g2.fillRect(0, 0, getWidth(), getHeight());
             g2.dispose();
         }
