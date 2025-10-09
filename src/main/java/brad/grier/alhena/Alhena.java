@@ -209,11 +209,8 @@ public class Alhena {
                     } catch (Exception e) {
                         throw new CompletionException(e); // wrap in unchecked so it propagates properly
                     }
-                }, executor)
-                .exceptionally(ex -> {
-                    ex.printStackTrace();
-                    return null; 
-                });
+                }, executor);
+                
 
         if (alhenaLocale != null) {
             I18n.setForcedLocale(Locale.forLanguageTag(alhenaLocale));
@@ -350,7 +347,6 @@ public class Alhena {
             return false; // allow event to be processed
         });
 
-
         Files.createDirectories(Paths.get(alhenaHome));
         if (!new File(alhenaHome + "/cacerts").exists()) {
 
@@ -423,8 +419,12 @@ public class Alhena {
         // this is used by default except on macintosh which can display color emojis
         Util.loadFont("NotoEmoji-Regular.ttf");
         welcomeMessage = I18n.t("welcomeLabel") + " " + PROG_NAME;
-
-        chain.join();
+        try {
+            chain.join();
+        } catch (CompletionException ex) {
+            ex.printStackTrace();
+            System.exit(0);
+        }
         executor.shutdown();
 
         HashMap<String, String> map = DB.getAllPrefs();
