@@ -35,6 +35,7 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 * Custom page styles
 * SVG, WEBP and animated GIF support
 * Gradient backgrounds
+* SOCKS5 proxy support
 
 => gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
 
