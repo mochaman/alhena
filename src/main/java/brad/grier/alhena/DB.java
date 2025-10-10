@@ -729,6 +729,7 @@ public class DB {
 
         HashMap<String, String> map = DB.getAllPrefs();
         Alhena.httpProxy = map.getOrDefault("httpproxy", null);
+        Alhena.socksProxy = map.getOrDefault("socksproxy", null);
         Alhena.gopherProxy = map.getOrDefault("gopherproxy", null);
         Alhena.searchUrl = map.getOrDefault("searchurl", null);
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));

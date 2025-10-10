@@ -1017,7 +1017,7 @@ public final class GeminiFrame extends JFrame {
                 showsbCB.setEnabled(selected);
                 shadeCB.setEnabled(selected);
                 lineWrapCB.setEnabled(!imagePFCB.isSelected() && !embedPFCB.isSelected());
-                
+
             });
             lineWrapCB.setEnabled(!imagePFCB.isSelected() && !embedPFCB.isSelected());
             showsbCB.setEnabled(embedPFCB.isSelected());
@@ -1093,7 +1093,6 @@ public final class GeminiFrame extends JFrame {
             Alhena.inlineImages = !Alhena.inlineImages;
 
             DB.insertPref("inlineimages", String.valueOf(Alhena.inlineImages));
-            
 
         });
 
@@ -1209,6 +1208,23 @@ public final class GeminiFrame extends JFrame {
             }
         });
         settingsMenu.add(gopherItem);
+
+        JMenuItem socksItem = new JMenuItem(I18n.t("socksItem"));
+        socksItem.addActionListener(ae -> {
+
+            String proxy = Util.inputDialog(GeminiFrame.this, I18n.t("socksItem"), I18n.t("socksLabel"),
+                    false, Alhena.socksProxy == null ? "" : Alhena.socksProxy, null);
+            if (proxy != null) {
+                if (proxy.isBlank()) {
+                    Alhena.socksProxy = null;
+                } else {
+                    Alhena.socksProxy = proxy;
+                }
+                DB.insertPref("socksproxy", Alhena.socksProxy);
+                Alhena.resetConnections();
+            }
+        });
+        settingsMenu.add(socksItem);
 
         settingsMenu.add(new JSeparator());
         JMenuItem searchItem = new JMenuItem(I18n.t("searchUrlItem"));
@@ -2171,11 +2187,10 @@ public final class GeminiFrame extends JFrame {
                 LinkedHashMap<String, ArrayList<PageStyleInfo>> types = new LinkedHashMap<>();
                 styles.forEach(psi -> {
 
-                    if(!types.containsKey(psi.scope())){
-                        types.put(psi.scope(), new ArrayList<>());    
+                    if (!types.containsKey(psi.scope())) {
+                        types.put(psi.scope(), new ArrayList<>());
                     }
                     types.get(psi.scope()).add(psi);
-                    
 
                 });
 

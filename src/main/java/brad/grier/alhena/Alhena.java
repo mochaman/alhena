@@ -131,6 +131,8 @@ import io.vertx.core.net.JdkSSLEngineOptions;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
+import io.vertx.core.net.ProxyOptions;
+import io.vertx.core.net.ProxyType;
 import io.vertx.core.net.impl.NetSocketInternal;
 import io.vertx.core.spi.tls.SslContextFactory;
 import io.vertx.core.streams.Pump;
@@ -158,6 +160,7 @@ public class Alhena {
     public static String theme;
     public static String httpProxy;
     public static String gopherProxy;
+    public static String socksProxy;
     public static String searchUrl;
     private static NetClient spartanClient = null;
     private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
@@ -210,7 +213,6 @@ public class Alhena {
                         throw new CompletionException(e); // wrap in unchecked so it propagates properly
                     }
                 }, executor);
-                
 
         if (alhenaLocale != null) {
             I18n.setForcedLocale(Locale.forLanguageTag(alhenaLocale));
@@ -242,17 +244,7 @@ public class Alhena {
                         gf.visiblePage().setBusy(false);
                         gf.showGlassPane(false);
                         interrupted = true;
-                        // closing and recreating the client doesn't work for ending connection handshake
-                        // close vertx and recreate
-                        httpClient80 = null;
-                        httpClient443 = null;
-                        spartanClient = null;
-                        vertx.close();
-                        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
-                        vertx = Vertx.vertx(options);
-
-                        // reset all connections in map
-                        certMap.clear();
+                        resetConnections();
                         e.consume();
                         return true; // consume
                     }
@@ -433,6 +425,7 @@ public class Alhena {
         gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         useBrowser = map.getOrDefault("browser", "false").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
+        socksProxy = map.getOrDefault("socksproxy", null);
         gopherProxy = map.getOrDefault("gopherproxy", null);
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
@@ -843,7 +836,7 @@ public class Alhena {
                         getNetClient(URI.create("gemini://" + fiAuthority));
                         URI finalPunyURI = punyURI;
                         String finalOrigURL = origURL;
-                        String finalProxyUR = proxyURL;
+                        String finalProxyURL = proxyURL;
                         fetchGeminiPage(favUrl).onSuccess(content -> {
 
                             String fi = content.trim();
@@ -855,7 +848,7 @@ public class Alhena {
                                     interrupted = false;
                                     return;
                                 }
-                                gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
+                                gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyURL);
                                 p.setFavIcon(fiAuthority, fiInfo);
                             });
 
@@ -865,7 +858,7 @@ public class Alhena {
                                     interrupted = false;
                                     return;
                                 }
-                                gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyUR);
+                                gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyURL);
                             });
                             favMap.put(fiAuthority, null);
                         });
@@ -902,9 +895,13 @@ public class Alhena {
         }
         p.setSpartan(true);
         if (spartanClient == null) {
+            ProxyOptions proxyOptions = getSocksProxy();
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
+            if (proxyOptions != null) {
+                options.setProxyOptions(proxyOptions);
+            }
             spartanClient = vertx.createNetClient(options);
 
         }
@@ -1212,9 +1209,13 @@ public class Alhena {
 
         p.setNex(true);
         if (spartanClient == null) {
+            ProxyOptions proxyOptions = getSocksProxy();
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
+            if (proxyOptions != null) {
+                options.setProxyOptions(proxyOptions);
+            }
             spartanClient = vertx.createNetClient(options);
 
         }
@@ -2150,19 +2151,23 @@ public class Alhena {
 
             if (cci == null) {
                 if (!certMap.containsKey(null)) { // default connection
-
+                    ProxyOptions proxyOptions = getSocksProxy();
                     NetClientOptions options = new NetClientOptions()
                             .setConnectTimeout(60000)
                             .setSslHandshakeTimeout(30)
                             .setSsl(true) // Gemini uses TLS   
                             .setTrustAll(true)
                             .setHostnameVerificationAlgorithm("");
+                    if (proxyOptions != null) {
+                        options.setProxyOptions(proxyOptions);
+                    }
                     certMap.put(null, vertx.createNetClient(options));
                 }
                 res = certMap.get(null); // default shared NetClient for connections without client certs
             } else {
                 // TODO: check server cert in cacerts for validity????
                 if (!certMap.containsKey(cci)) {
+                    ProxyOptions proxyOptions = getSocksProxy();
                     NetClientOptions options = new NetClientOptions()
                             .setSsl(true) // gemini uses TLS
                             .setTrustAll(true) // gemini self-signed certs
@@ -2190,6 +2195,9 @@ public class Alhena {
                                     };
                                 }
                             });
+                    if (proxyOptions != null) {
+                        options.setProxyOptions(proxyOptions);
+                    }
                     certMap.put(cci, vertx.createNetClient(options));
                     //NetClient ccNetClient = vertx.createNetClient(options);
                 }
@@ -3125,11 +3133,16 @@ public class Alhena {
         int port = finalURI.getPort() != -1 ? finalURI.getPort() : (isSSL ? 443 : 80);
         HttpClient httpClient = isSSL ? httpClient443 : httpClient80;
         if (httpClient == null) {
+            ProxyOptions proxyOptions = getSocksProxy();
+
             HttpClientOptions options = new HttpClientOptions().
                     setSsl(isSSL)
                     .setTrustAll(true)
                     .setDecompressionSupported(true)
                     .setLogActivity(false);
+            if (proxyOptions != null) {
+                options.setProxyOptions(proxyOptions);
+            }
             if (isSSL) {
                 httpClient443 = vertx.createHttpClient(options);
             } else {
@@ -3332,6 +3345,20 @@ public class Alhena {
             }
             );
         });
+    }
+
+    private static ProxyOptions getSocksProxy() {
+        ProxyOptions proxyOptions = null;
+        if (socksProxy != null) {
+            int idx = socksProxy.indexOf(":");
+            if (idx != -1) {
+                proxyOptions = new ProxyOptions()
+                        .setType(ProxyType.SOCKS5)
+                        .setHost(socksProxy.substring(0, idx))
+                        .setPort(Integer.parseInt(socksProxy.substring(idx + 1)));
+            }
+        }
+        return proxyOptions;
     }
 
     public static void clearCnList() {
@@ -3561,6 +3588,20 @@ public class Alhena {
                 fixed = fixed.substring(0, idx) + hex + fixed.substring(idx + 1);
             }
         }
+    }
+
+    public static void resetConnections() {
+        // closing and recreating the client doesn't work for ending connection handshake
+        // close vertx and recreate
+        httpClient80 = null;
+        httpClient443 = null;
+        spartanClient = null;
+        vertx.close();
+        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
+        vertx = Vertx.vertx(options);
+
+        // reset all connections in map
+        certMap.clear();
     }
 
 }
