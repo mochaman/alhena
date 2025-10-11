@@ -39,7 +39,7 @@ public class AsciiImage {
     private static boolean isDark;
 
     // for future reference, this class is not thread safe - only call on EDT
-    public static BufferedImage renderTextToImage(boolean shade, String text, String fontName, int fontSize, Color fgColor, boolean override) {
+    public static BufferedImage renderTextToImage(boolean shade, String text, String fontName, int fontSize, Color fgColor, Color bgColor, boolean override) {
 
         boolean hasAnsi = false;
         ansiBold = false;
@@ -50,7 +50,13 @@ public class AsciiImage {
         isDark = UIManager.getBoolean("laf.dark");
         bgColor1 = ansiBG;
         fgColor1 = fgColor;
-        ansiFG(Color.WHITE);  // "default foreground color" crossword site
+        //ansiFG(Color.WHITE);  // "default foreground color" crossword site
+        if (bgColor != null && Util.isLight(bgColor)) {
+            ansiFG(Color.BLACK);
+        } else {
+            ansiFG(Color.WHITE);  // "default foreground color"
+
+        }
         Font font = new Font(fontName, Font.PLAIN, fontSize);
         String[] lines = text.split("\n", -1);
 

@@ -167,7 +167,7 @@ public class GeminiTextPane extends JTextPane {
     public boolean dragging;
     public static boolean dragToScroll;
 
-    public static void setup(){
+    public static void setup() {
         String userDefined = System.getenv("ALHENA_MONOFONT");
         if (SystemInfo.isWindows) {
 
@@ -250,7 +250,7 @@ public class GeminiTextPane extends JTextPane {
 
                 }
             }
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1369,7 +1369,11 @@ public class GeminiTextPane extends JTextPane {
         if (bStyle == null) {
             // copy the preformat style
             bStyle = new SimpleAttributeSet(doc.getStyle("```"));
-            ansiFG(Color.WHITE);  // "default foreground color"
+            if (Util.isLight(getBackground())) {
+                ansiFG(Color.BLACK);
+            } else {
+                ansiFG(Color.WHITE);  // "default foreground color"
+            }
         }
 
         var parser = factory.createParser(line);
@@ -1996,7 +2000,7 @@ public class GeminiTextPane extends JTextPane {
                 if (asciiSB != null && !asciiSB.isEmpty()) {
                     asciiSB.deleteCharAt(asciiSB.length() - 1);
 
-                    BufferedImage bi = AsciiImage.renderTextToImage(shadePF, asciiSB.toString(), pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), pageStyle.getMonoFontColor(), false);
+                    BufferedImage bi = AsciiImage.renderTextToImage(shadePF, asciiSB.toString(), pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), pageStyle.getMonoFontColor(), pageStyle.getPageBackground(), false);
                     ImageIcon icon = new ImageIcon(bi);
                     if (ptp == null) {
                         insertComp(new JLabel(icon), doc.getLength());
@@ -2288,7 +2292,7 @@ public class GeminiTextPane extends JTextPane {
 
                 PreformattedTextPane ptpText = createTextComponent(curPos);
                 if (asciiImage && !printing) {
-                    BufferedImage bi = AsciiImage.renderTextToImage(shadePF, s, pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), pageStyle.getMonoFontColor(), false);
+                    BufferedImage bi = AsciiImage.renderTextToImage(shadePF, s, pageStyle.getMonoFontFamily(), pageStyle.getMonoFontSize(), pageStyle.getMonoFontColor(), pageStyle.getPageBackground(), false);
                     ImageIcon icon = new ImageIcon(bi);
                     ptpText.insertComp(new JLabel(icon));
                     ptpText.scrollLeft();
@@ -2585,7 +2589,7 @@ public class GeminiTextPane extends JTextPane {
                                 eci += Character.charCount(nextCodePoint);
                                 if (eci < text.length()) { // optomize common scenario
                                     if (emojis.indexOf(emoji) == emojis.size() - 1) { // this is last emoji
-                                        
+
                                         StyleConstants.setFontFamily(style, fontFamily);
                                         insertString(doc.getLength(), text.substring(eci), style);
                                         break;
@@ -2983,7 +2987,7 @@ public class GeminiTextPane extends JTextPane {
     private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, mediaIcon, gopherIcon, spartanIcon;
 
     private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color fgColor) {
-        BufferedImage bi = AsciiImage.renderTextToImage(shadePF, txt, fontName, fontSize, fgColor, true);
+        BufferedImage bi = AsciiImage.renderTextToImage(shadePF, txt, fontName, fontSize, fgColor, null, true);
         // this could be optimized as AsciiImage already created font and metrics
         Font font = new Font(fontName, Font.PLAIN, fontSize);
         FontMetrics metrics = new Canvas().getFontMetrics(font);

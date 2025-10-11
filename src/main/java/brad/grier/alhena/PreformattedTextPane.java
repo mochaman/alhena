@@ -346,7 +346,11 @@ public class PreformattedTextPane extends JTextPane {
         if (bStyle == null) {
             // copy the preformat style
             bStyle = new SimpleAttributeSet(doc.getStyle("```"));
-            ansiFG(Color.WHITE);  // "default foreground color"
+            if (Util.isLight(getBackground())) {
+                ansiFG(Color.BLACK);
+            } else {
+                ansiFG(Color.WHITE);  // "default foreground color"
+            }
         }
 
         var parser = factory.createParser(line);
