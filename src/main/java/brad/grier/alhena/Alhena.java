@@ -3165,7 +3165,6 @@ public class Alhena {
             req.putHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15");
             // req.putHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             req.putHeader("Accept-Language", "en-US,en;q=0.9");
-            req.putHeader("Accept-Encoding", "gzip, deflate, br");
 
             req.send().onComplete(ar2 -> {
                 if (ar2.succeeded()) {
