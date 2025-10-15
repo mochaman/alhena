@@ -537,11 +537,12 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(copyItem);
 
                                 }
+                                String resolvedURI = Util.resolveURI(getURI(), range.url);
                                 if (currentMode != STYLE_MODE) {
                                     JMenuItem copyLinkItem = new JMenuItem(I18n.t("copyLinkPopupItem"));
 
                                     copyLinkItem.addActionListener(ev -> {
-                                        copyText(Util.resolveURI(getURI(), range.url));
+                                        copyText(resolvedURI);
                                     });
                                     popupMenu.add(copyLinkItem);
 
@@ -570,6 +571,20 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(menuItem2);
 
                                 }
+                                
+                                if (Alhena.browsingSupported && resolvedURI.toLowerCase().startsWith("http")) {
+                                    JMenuItem httpMenuItem = new JMenuItem(I18n.t("browserPopupItem"));
+                                    httpMenuItem.addActionListener(al -> {
+
+                                        boolean saveBrowser = Alhena.useBrowser;
+                                        Alhena.useBrowser = true;
+                                        f.fetchURL(resolvedURI, false);
+                                        Alhena.useBrowser = saveBrowser;
+                                    });
+
+                                    popupMenu.add(httpMenuItem);
+                                }
+
                                 switch (currentMode) {
                                     case CERT_MODE -> {
                                         popupMenu.add(new JSeparator());
