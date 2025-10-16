@@ -1211,16 +1211,22 @@ public final class GeminiFrame extends JFrame {
 
         JMenuItem socksItem = new JMenuItem(I18n.t("socksItem"));
         socksItem.addActionListener(ae -> {
-
+            JCheckBox selCB = new JCheckBox(I18n.t("socksFilterCB"));
+            selCB.setSelected(Alhena.socksFilter);
             String proxy = Util.inputDialog(GeminiFrame.this, I18n.t("socksItem"), I18n.t("socksLabel"),
-                    false, Alhena.socksProxy == null ? "" : Alhena.socksProxy, null);
+                    false, Alhena.socksProxy == null ? "" : Alhena.socksProxy, selCB);
             if (proxy != null) {
                 if (proxy.isBlank()) {
                     Alhena.socksProxy = null;
                 } else {
                     Alhena.socksProxy = proxy;
                 }
+
                 DB.insertPref("socksproxy", Alhena.socksProxy);
+                if (Alhena.socksFilter != selCB.isSelected()) {
+                    Alhena.socksFilter = !Alhena.socksFilter;
+                    DB.insertPref("socksfilter", String.valueOf(Alhena.socksFilter));
+                }
                 Alhena.resetConnections();
             }
         });
