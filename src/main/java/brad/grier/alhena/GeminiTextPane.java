@@ -57,6 +57,7 @@ import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.InputMap;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -571,7 +572,7 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(menuItem2);
 
                                 }
-                                
+
                                 if (Alhena.browsingSupported && resolvedURI.toLowerCase().startsWith("http")) {
                                     JMenuItem httpMenuItem = new JMenuItem(I18n.t("browserPopupItem"));
                                     httpMenuItem.addActionListener(al -> {
@@ -757,7 +758,37 @@ public class GeminiTextPane extends JTextPane {
                         f.viewServerCert(GeminiTextPane.this, getURI());
                     });
 
-                    popupMenu.add(crtMenuItem);
+                    JCheckBoxMenuItem socksItem = new JCheckBoxMenuItem(I18n.t("socksPopupItem"));
+                    socksItem.setEnabled(currentMode == DEFAULT_MODE && uri != null && Alhena.socksFilter);
+                    boolean socksDomain;
+                    try {
+                        socksDomain = DB.socksDomainExists(uri.getHost());
+                        socksItem.setSelected(socksDomain);
+                    } catch (SQLException ex) {
+                        socksItem.setSelected(false); // in case
+                        ex.printStackTrace();
+                    }
+
+                    socksItem.addActionListener(al -> {
+                        if (socksItem.isSelected()) {
+                            try {
+                                DB.insertSocksDomain(uri.getHost());
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                        } else {
+                            try {
+                                DB.deleteSocksDomain(uri.getHost());
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+
+                        }
+                        Alhena.closeNetClientByDomain(uri.getHost());
+
+                    });
+
+                    popupMenu.add(socksItem);
 
                     popupMenu.add(new JSeparator());
                     JMenuItem saveItem = new JMenuItem(I18n.t("savePageItem"));

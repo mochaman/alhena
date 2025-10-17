@@ -167,6 +167,16 @@ public class DB {
                     runStatement(con, "CREATE INDEX idx_styles ON STYLES(SCOPE, SCOPE_VALUE, THEME);");
                     runStatement(con, "ALTER TABLE STYLES ADD CONSTRAINT uq_styles UNIQUE (SCOPE, SCOPE_VALUE, THEME);");
                 }
+
+                if (!tableExists(con, "SOCKS")) {
+                    String sql = """
+                        CREATE TABLE SOCKS (
+                            DOMAIN VARCHAR_IGNORECASE(256) PRIMARY KEY
+                        );
+                    """;
+                    runStatement(con, sql);
+
+                }
             }
 
         }
@@ -999,5 +1009,36 @@ public class DB {
         return styleList;
     }
 
+    public static boolean socksDomainExists(String domain) throws SQLException {
+        boolean exists;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT 1 FROM SOCKS WHERE DOMAIN = ? LIMIT 1")) {
+
+            ps.setString(1, domain);
+            try (ResultSet rs = ps.executeQuery()) {
+                exists = rs.next();
+            }
+        }
+        return exists;
+
+    }
+
+    public static void insertSocksDomain(String domain) throws SQLException {
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement("INSERT INTO SOCKS (DOMAIN) VALUES (?)")) {
+                ps.setString(1, domain);
+                ps.execute();
+            }
+        }
+    }
+
+    public static void deleteSocksDomain(String domain) throws SQLException {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("DELETE FROM SOCKS WHERE DOMAIN = ?")) {
+            ps.setString(1, domain);
+            ps.execute();
+        }
+
+    }
 
 }

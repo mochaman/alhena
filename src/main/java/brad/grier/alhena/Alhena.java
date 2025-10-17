@@ -157,6 +157,7 @@ public class Alhena {
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
     public static boolean browsingSupported, mailSupported;
     private static final Map<Integer, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
+    private static final Map<String, Integer> certMapByDomain = Collections.synchronizedMap(new HashMap<>());
     public static String theme;
     public static String httpProxy;
     public static String gopherProxy;
@@ -899,7 +900,7 @@ public class Alhena {
         ProxyOptions proxyOptions = getSocksProxy(uri);
         NetClient sClient = proxyOptions == null ? spartanClient : spartanClientSocks;
         if (sClient == null) {
-            
+
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
@@ -907,9 +908,9 @@ public class Alhena {
                 options.setProxyOptions(proxyOptions);
             }
             sClient = vertx.createNetClient(options);
-            if(proxyOptions == null){
+            if (proxyOptions == null) {
                 spartanClient = sClient;
-            }else{
+            } else {
                 spartanClientSocks = sClient;
             }
 
@@ -1220,7 +1221,7 @@ public class Alhena {
         ProxyOptions proxyOptions = getSocksProxy(uri);
         NetClient sClient = proxyOptions == null ? spartanClient : spartanClientSocks;
         if (sClient == null) {
-            
+
             NetClientOptions options = new NetClientOptions()
                     .setConnectTimeout(60000)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
@@ -1228,9 +1229,9 @@ public class Alhena {
                 options.setProxyOptions(proxyOptions);
             }
             sClient = vertx.createNetClient(options);
-            if(proxyOptions == null){
+            if (proxyOptions == null) {
                 spartanClient = sClient;
-            }else{
+            } else {
                 spartanClientSocks = sClient;
             }
 
@@ -2160,6 +2161,17 @@ public class Alhena {
         }
     }
 
+    // need to reset if sock5 setting changed changed for domain
+    public static void closeNetClientByDomain(String domain) {
+
+        Integer id = certMapByDomain.get(domain);
+        if (id != null) {
+            NetClient nc = certMap.get(id);
+            nc.close();
+            certMap.remove(id);
+        }
+    }
+
     public static NetClient getNetClient(URI uri) {
         NetClient res = null;
         try {
@@ -2217,7 +2229,8 @@ public class Alhena {
                         options.setProxyOptions(proxyOptions);
                     }
                     certMap.put(cci.id(), vertx.createNetClient(options));
-                    //NetClient ccNetClient = vertx.createNetClient(options);
+                    certMapByDomain.put(uri.getHost(), cci.id());
+
                 }
                 res = certMap.get(cci.id()); // NetClient with cert
             }
@@ -3171,7 +3184,7 @@ public class Alhena {
             } else {
                 if (proxyOptions == null) {
                     httpClient80 = vertx.createHttpClient(options);
-                }else{
+                } else {
                     httpClient80Socks = vertx.createHttpClient(options);
                 }
             }
@@ -3374,18 +3387,25 @@ public class Alhena {
     }
 
     private static ProxyOptions getSocksProxy(URI uri) {
+
         ProxyOptions proxyOptions = null;
         if (socksProxy != null) {
             int idx = socksProxy.indexOf(":");
             if (idx != -1) {
-                if (!socksFilter || (socksFilter && (uri.getHost().endsWith(".onion") || uri.getHost().endsWith(".i2p")))) {
-                    proxyOptions = new ProxyOptions()
-                            .setType(ProxyType.SOCKS5)
-                            .setHost(socksProxy.substring(0, idx))
-                            .setPort(Integer.parseInt(socksProxy.substring(idx + 1)));
+                try {
+                    if (!socksFilter || (socksFilter && (uri.getHost().endsWith(".onion") || uri.getHost().endsWith(".i2p") || DB.socksDomainExists(uri.getHost())))) {
+                        proxyOptions = new ProxyOptions()
+                                .setType(ProxyType.SOCKS5)
+                                .setHost(socksProxy.substring(0, idx))
+                                .setPort(Integer.parseInt(socksProxy.substring(idx + 1)));
+                    }
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
                 }
+
             }
         }
+
         return proxyOptions;
     }
 
@@ -3636,6 +3656,7 @@ public class Alhena {
 
         // reset all connections in map
         certMap.clear();
+        certMapByDomain.clear();
     }
 
 }
