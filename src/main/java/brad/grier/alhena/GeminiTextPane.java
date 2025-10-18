@@ -1850,8 +1850,9 @@ public class GeminiTextPane extends JTextPane {
     private void buildStyles() {
         pageStyle = getPageStyle();
         isDark = !Util.isLight(pageStyle.getPageBackground());
+        // set to transparent because Dracula theme overrides gradient paint
+        setBackground(new Color(0, 0, 0, 0));
 
-        setBackground(pageStyle.getPageBackground());
         setForeground(pageStyle.getMonoFontColor());
 
         for (MediaComponent ap : playerList) {
