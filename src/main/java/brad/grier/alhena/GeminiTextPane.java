@@ -757,7 +757,8 @@ public class GeminiTextPane extends JTextPane {
 
                         f.viewServerCert(GeminiTextPane.this, getURI());
                     });
-
+                    popupMenu.add(crtMenuItem);
+                    
                     JCheckBoxMenuItem socksItem = new JCheckBoxMenuItem(I18n.t("socksPopupItem"));
                     socksItem.setEnabled(currentMode == DEFAULT_MODE && uri != null && Alhena.socksFilter);
                     boolean socksDomain;
