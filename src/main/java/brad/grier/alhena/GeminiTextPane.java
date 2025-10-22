@@ -758,7 +758,7 @@ public class GeminiTextPane extends JTextPane {
                         f.viewServerCert(GeminiTextPane.this, getURI());
                     });
                     popupMenu.add(crtMenuItem);
-                    
+
                     JCheckBoxMenuItem socksItem = new JCheckBoxMenuItem(I18n.t("socksPopupItem"));
                     socksItem.setEnabled(currentMode == DEFAULT_MODE && uri != null && Alhena.socksFilter);
                     boolean socksDomain;
@@ -1783,7 +1783,6 @@ public class GeminiTextPane extends JTextPane {
         pageTheme.setQuoteForeground(pageTheme.getTextForeground());
         pageTheme.setQuoteStyle(Font.ITALIC);
         pageTheme.setFontSize(GeminiFrame.fontSize);
-        pageTheme.setFontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setHeader1Color(AnsiColor.adjustColor(isDark ? lc.brighter() : lc.darker(), isDark, .1, .9, .2));
         pageTheme.setHeader1Style(Font.PLAIN);
         pageTheme.setHeader2Color(pageTheme.getHeader1Color());
@@ -1795,18 +1794,19 @@ public class GeminiTextPane extends JTextPane {
         pageTheme.setHeader3Size(pageTheme.getFontSize() + 17);
         pageTheme.setLinkSize(pageTheme.getFontSize());
         pageTheme.setQuoteSize(pageTheme.getFontSize());
+        pageTheme.setFontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setHeader1FontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setHeader2FontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setHeader3FontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setLinkFontFamily(GeminiFrame.proportionalFamily);
         pageTheme.setQuoteFontFamily(GeminiFrame.proportionalFamily);
+        pageTheme.setListFont(GeminiFrame.proportionalFamily);
         pageTheme.setLinkUnderline(false);
         pageTheme.setQuoteUnderline(false);
         pageTheme.setFontUnderline(false);
         pageTheme.setHeader1Underline(false);
         pageTheme.setHeader2Underline(false);
         pageTheme.setHeader3Underline(false);
-        pageTheme.setListFont(GeminiFrame.proportionalFamily);
         pageTheme.setListStyle(Font.PLAIN);
         pageTheme.setListColor(ui.getColor("TextPane.foreground"));
         pageTheme.setListUnderline(false);
@@ -1902,7 +1902,7 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setFontSize(h3Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE + 17 : pageStyle.getHeader3Size()); // 32
 
         Style linkStyle;
-        if (page.isNex()) {
+        if (page.isNex() || page.isGopher()) {
             linkStyle = doc.addStyle("=>", h1Style);
             StyleConstants.setFontFamily(linkStyle, monospacedFamily);
             StyleConstants.setFontSize(linkStyle, gfMonoFontSize);
@@ -1992,7 +1992,7 @@ public class GeminiTextPane extends JTextPane {
 
     private void processLine(String line) {
 
-        if (page.isNex() && docURL.endsWith("/")) {
+        if (page.isGopher() || (page.isNex() && docURL.endsWith("/"))) {
 
             if (line.startsWith("=>")) {
                 String ll = line.substring(2).trim();

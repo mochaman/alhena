@@ -53,6 +53,7 @@ public class Page extends JPanel {
     private boolean busy = true;
     private boolean isSpartan;
     private boolean isNex;
+    private boolean isGopher;
     private JLabel overlayLabel;
     public static final int ICON_SIZE = 39;
     private JLayer<JComponent> layer;
@@ -253,6 +254,15 @@ public class Page extends JPanel {
 
     public boolean isNex() {
         return isNex;
+    }
+
+
+    public void setGopher(boolean isGopher) {
+        this.isGopher = isGopher;
+    }
+
+    public boolean isGopher() {
+        return isGopher;
     }
 
     public void setStart() {

@@ -27,6 +27,7 @@ import java.net.IDN;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -187,7 +188,7 @@ public class Alhena {
             = ResourceBundle.getBundle("MessagesBundle", Locale.getDefault());
     private static final List<String> allowedSchemes = List.of(
             "gemini:/", "file:/", "spartan:/", "nex:/",
-            "https:/", "http:/", "titan:/"
+            "https:/", "http:/", "titan:/", "gopher:/"
     );
     public static boolean sDown;
 
@@ -626,8 +627,8 @@ public class Alhena {
 
             String lcScheme = url.substring(0, idx).toLowerCase();
             url = lcScheme + url.substring(idx);
-            boolean isGopher = gopherProxy != null && url.startsWith("gopher");
-            if (allowedSchemes.stream().noneMatch(url::startsWith) && !isGopher) {
+
+            if (allowedSchemes.stream().noneMatch(url::startsWith)) {
                 p.textPane.end("## " + I18n.t("protocolMessage") + "\n", false, url, true);
                 return;
 
@@ -815,9 +816,15 @@ public class Alhena {
             proxyURL = punyURI.toString();
             punyURI = URI.create("gemini://" + httpProxy);
 
-        } else if (gopherProxy != null && punyURI.getScheme().equals("gopher")) {
-            proxyURL = punyURI.toString();
-            punyURI = URI.create("gemini://" + gopherProxy);
+        } else if (punyURI.getScheme().equals("gopher")) {
+            if (gopherProxy != null) {
+
+                proxyURL = punyURI.toString();
+                punyURI = URI.create("gemini://" + gopherProxy);
+            } else {
+                gopher(punyURI, p, origURL, cPage);
+                return;
+            }
         }
 
         switch (punyURI.getScheme()) {
@@ -1391,6 +1398,313 @@ public class Alhena {
 
                                 });
                             }
+                        }
+                    }
+
+                });
+            } else {
+                if (interrupted) {
+                    interrupted = false;
+                    p.frame().setBusy(false, cPage);
+                } else {
+                    bg(() -> {
+                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                    });
+                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
+                }
+            }
+        });
+
+    }
+
+    private static void gopher(URI uri, Page p, String origURL, Page cPage) {
+
+        p.setGopher(true);
+        ProxyOptions proxyOptions = getSocksProxy(uri);
+        NetClient sClient = proxyOptions == null ? spartanClient : spartanClientSocks;
+        if (sClient == null) {
+
+            NetClientOptions options = new NetClientOptions()
+                    .setConnectTimeout(60000)
+                    .setSsl(false).setHostnameVerificationAlgorithm("");
+            if (proxyOptions != null) {
+                options.setProxyOptions(proxyOptions);
+            }
+            sClient = vertx.createNetClient(options);
+            if (proxyOptions == null) {
+                spartanClient = sClient;
+            } else {
+                spartanClientSocks = sClient;
+            }
+
+        }
+        String host = uri.getHost();
+
+        int[] port = {uri.getPort()};
+
+        if (port[0] == -1) {
+            port[0] = 70;
+        }
+        String[] gopherPath = {null};
+        char[] type = {'1'};
+        String path = uri.getPath();
+        if (path.equals("/")) {
+
+            gopherPath[0] = "\r\n";
+        } else {
+            type[0] = path.charAt(1);
+
+            if (path.length() == 2) {
+                gopherPath[0] = "\r\n";
+            } else {
+                if (path.charAt(2) == '/') {
+                    gopherPath[0] = path.substring(3) + "\r\n";
+                }else{
+                    gopherPath[0] = path.substring(2) + "\r\n";
+                }
+            }
+        }
+
+        if (type[0] == '7') {
+
+            String query = Util.inputDialog(p.frame(), "Search", "Enter Search Term", false);
+
+            if (query == null) {
+                p.frame().setBusy(false, cPage);
+                return;
+            } else {
+                //<selector><TAB><search-text><CRLF>
+                gopherPath[0] = path.substring(3) + "\t" + query + "\r\n";
+            }
+        }
+        p.frame().setBusy(true, cPage);
+
+        sClient.connect(port[0], host, connection -> {
+            if (connection.succeeded()) {
+
+                System.out.println("connected: " + host);
+                // wrap for the lambda
+                boolean[] firstBuffer = {true};
+                // if it turns out this is an image request we need to track where it starts
+                int[] imageStartIdx = {-1};
+
+                boolean isSVG = origURL.toLowerCase().endsWith(".svg");
+
+                String[] mimeFromExt = {null};
+                boolean[] isText = {true};
+                boolean[] isMedia = {false};
+
+                if (type[0] == 'I' || type[0] == 'g') {
+                    imageStartIdx[0] = 0;
+                    isText[0] = false;
+                } else if (type[0] == '9' || type[0] == 's') {
+                    // potential media
+                    mimeFromExt[0] = MimeMapping.getMimeTypeForFilename(origURL);
+                    isMedia[0] = mimeFromExt != null && (mimeFromExt[0].startsWith("audio") || mimeFromExt[0].startsWith("video"));
+                    isText[0] = false;
+                }
+
+                if (isText[0] && type[0] != '0' && type[0] != '1') {
+                    // download
+                    isText[0] = false;
+                }
+
+                connection.result().write(gopherPath[0]);
+
+                Buffer saveBuffer = Buffer.buffer();
+                boolean[] rcvdData = {false};
+
+                connection.result().handler(buffer -> {
+
+                    if (imageStartIdx[0] != -1) {
+                        if (!rcvdData[0]) {
+                            rcvdData[0] = true;
+
+                            try {
+                                DB.insertHistory(origURL, null);
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                        saveBuffer.appendBuffer(buffer);
+                        cPage.frame().setTmpStatus((saveBuffer.length() + " bytes"));
+                    } else if (isText[0] || path.lastIndexOf('.') == -1) {
+                        if (firstBuffer[0]) {
+                            firstBuffer[0] = false;
+                            rcvdData[0] = true;
+                            saveBuffer.appendBuffer(buffer);
+
+                        } else {
+                            rcvdData[0] = true;
+                            saveBuffer.appendBuffer(buffer);
+                        }
+
+                    } else if (allowVLC && isMedia[0]) {
+                        try {
+                            connection.result().pause();
+                            connection.result().handler(null);
+                            try {
+                                DB.insertHistory(origURL, null);
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                            File af = File.createTempFile("alhena", "media");
+
+                            af.deleteOnExit();
+                            //String finalMime = mimeFromExt;
+                            Runnable r = () -> {
+                                p.frame().showGlassPane(false);
+                                GeminiTextPane tPane = cPage.textPane;
+                                if (tPane.awatingImage()) {
+                                    tPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
+                                } else {
+                                    p.textPane.end(" ", false, origURL, true);
+                                    p.textPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
+                                }
+                            };
+                            streamToFile(connection.result(), af, buffer, p, origURL, r);
+
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+
+                    } else {
+                        rcvdData[0] = true;
+                        File[] file = new File[1];
+                        connection.result().pause();
+                        connection.result().handler(null);
+
+                        if (p.getDataFile() == null) {
+
+                            try {
+
+                                EventQueue.invokeAndWait(() -> {
+                                    String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
+                                    file[0] = Util.getFile(p.frame(), fileName, false, I18n.t("saveFileDialog"), null);
+
+                                });
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+
+                            if (file[0] == null) {
+                                // canceled
+                                //textPane.end("# Download canceled", false, origURL, true, r);
+                                connection.result().close();
+                                p.frame().showGlassPane(false);
+                                return;
+                            }
+                        }
+
+                        streamToFile(connection.result(), file[0], buffer, p, origURL, null);
+                    }
+
+                });
+
+                connection.result().closeHandler(v -> {
+
+                    System.out.println("connection closed");
+
+                    if (imageStartIdx[0] != -1) {
+
+                        bg(() -> {
+                            // insert into existing page and not new page created for the call to processUrl
+                            // get rid of this - maybe put spawning page in page ref
+
+                            GeminiTextPane tPane = cPage.textPane;
+
+                            if (tPane.awatingImage()) {
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
+
+                            } else {
+                                p.textPane.end(" ", false, origURL, true);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
+                            }
+                        });
+                    } else {
+                        if (p.redirectCount == 0) {
+                            //type[0] = '0'; // to see it all
+
+                            if (type[0] == '7') {
+                                char c = (char) saveBuffer.getByte(0);
+                                if ("0123456789+ghIi".indexOf(c) >= 0) {
+                                    type[0] = '1';
+                                } else {
+                                    type[0] = '0';
+                                }
+                            }
+                            if (type[0] == '0') {
+                                bg(() -> {
+                                    p.textPane.end(saveBuffer.toString(), true, origURL, true);
+
+                                });
+                            } else if (type[0] == '1') {
+                                bg(() -> {
+                                    p.textPane.updatePage("", true, origURL, true);
+                                });
+
+                                // change this for menu handling
+                                String text = saveBuffer.toString(StandardCharsets.UTF_8);
+                                for (String line : text.split("\r?\n")) {
+                                    if (line.equals(".") || line.isEmpty()) {
+                                        continue;
+                                    }
+                                    char lineType = line.charAt(0);
+                                    String[] parts = line.substring(1).split("\t");
+                                    if (parts.length >= 4) {
+                                        if (lineType == 'i') {
+                                            bg(() -> {
+                                                String out;
+                                                if (parts[0].startsWith("-") && parts[0].endsWith("-")) {
+                                                    out = parts[0] + "\n";
+                                                } else {
+                                                    out = parts[0];
+                                                }
+                                                p.textPane.addPage(out + "\n");
+                                            });
+                                        } else if (lineType == 'h' && parts[1].startsWith("URL:")) {
+                                            String link = "=> " + parts[1].substring(4);
+                                            bg(() -> {
+                                                p.textPane.addPage(link + "\n");
+                                            });
+                                        } else if (lineType == '3' || lineType == '2') {
+                                            bg(() -> {
+                                                p.textPane.addPage(parts[0] + "\n");
+                                            });
+                                        } else if (lineType == '8') {
+                                            bg(() -> {
+                                                String gPort = parts[3].equals("23") ? "" : ":" + parts[3];
+                                                p.textPane.addPage("telnet://" + parts[2] + gPort + "/ " + parts[0] + "\n");
+                                            });
+                                        } else {
+                                            String gPort = parts[3].equals("70") ? "" : ":" + parts[3];
+                                            String link = "=> gopher://" + parts[2] + gPort + "/" + lineType + Util.uEncode(parts[1]).replace("%2F", "/") + " " + parts[0];
+                                            bg(() -> {
+                                                p.textPane.addPage(link + "\n");
+                                            });
+                                        }
+                                    }
+                                }
+                                bg(() -> {
+                                    p.textPane.end();
+
+                                });
+                                // bg(() -> {
+                                //     p.textPane.end(saveBuffer.toString(), true, origURL, true);
+
+                                // });    
+                            }
+                            // if (rcvdData[0]) {
+                            //     bg(() -> {
+                            //         p.textPane.end();
+
+                            //     });
+                            // } else {
+                            //     bg(() -> {
+                            //         p.textPane.updatePage("", true, origURL, true);
+                            //         p.textPane.end();
+                            //     });
+                            // }
                         }
                     }
 
