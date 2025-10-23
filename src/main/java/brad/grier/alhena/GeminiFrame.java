@@ -2703,6 +2703,7 @@ public final class GeminiFrame extends JFrame {
                             }
 
                             Page page = (Page) tabbedPane.getComponentAt(tabIndex);
+                            page.textPane.closed = true;
                             removeRootPageAudioPlayers(getRootPage(page));
                             pageHistoryMap.remove(getRootPage(page));
                             tabbedPane.remove(tabIndex);
@@ -2731,6 +2732,7 @@ public final class GeminiFrame extends JFrame {
                             GeminiFrame.this.validate();
                         } else {
                             Page page = (Page) tabbedPane.getComponentAt(tabIndex);
+                            page.textPane.closed = true;
                             removeRootPageAudioPlayers(getRootPage(page));
                             pageHistoryMap.remove(getRootPage(page));
                             tabbedPane.remove(tabIndex);

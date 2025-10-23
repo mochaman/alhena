@@ -984,6 +984,8 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
+    public boolean closed;
+
     // should only use this when inserting at the end since no code to offset links that follow
     private void insertComp(Component c, int pos) {
         SimpleAttributeSet apStyle = new SimpleAttributeSet();
@@ -1035,6 +1037,9 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void insertMediaPlayer(String path, String mime) {
+        if(closed){ // tab closed while media downloading
+            return;
+        }
         inserting = true;
         Alhena.pauseMedia();
         MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
