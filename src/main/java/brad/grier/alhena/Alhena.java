@@ -1491,7 +1491,7 @@ public class Alhena {
                 if (type[0] == 'I' || type[0] == 'g' || type[0] == 'p') {
                     isImage[0] = true;
                     isText[0] = false;
-                } else if (type[0] == '9' || type[0] == 's') {
+                } else if (type[0] == '9' || type[0] == 's' || type[0] == '<') {
                     // potential media
                     mimeFromExt[0] = MimeMapping.getMimeTypeForFilename(origURL);
                     isMedia[0] = mimeFromExt != null && (mimeFromExt[0].startsWith("audio") || mimeFromExt[0].startsWith("video"));
