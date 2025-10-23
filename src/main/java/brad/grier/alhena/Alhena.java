@@ -1467,7 +1467,7 @@ public class Alhena {
 
         if (type[0] == '7') {
 
-            String query = Util.inputDialog(p.frame(), "Search", "Enter Search Term", false);
+            String query = Util.inputDialog(p.frame(), I18n.t("gopherDialog"), I18n.t("gopherDialogText"), false);
 
             if (query == null) {
                 p.frame().setBusy(false, cPage);
@@ -1484,10 +1484,7 @@ public class Alhena {
 
                 System.out.println("connected: " + host);
                 // wrap for the lambda
-                boolean[] firstBuffer = {true};
-                // if it turns out this is an image request we need to track where it starts
-                int[] imageStartIdx = {-1};
-
+                boolean[] isImage = {false};
                 boolean isSVG = origURL.toLowerCase().endsWith(".svg");
 
                 String[] mimeFromExt = {null};
@@ -1495,7 +1492,7 @@ public class Alhena {
                 boolean[] isMedia = {false};
 
                 if (type[0] == 'I' || type[0] == 'g') {
-                    imageStartIdx[0] = 0;
+                    isImage[0] = true;
                     isText[0] = false;
                 } else if (type[0] == '9' || type[0] == 's') {
                     // potential media
@@ -1512,13 +1509,13 @@ public class Alhena {
                 connection.result().write(gopherPath[0]);
 
                 Buffer saveBuffer = Buffer.buffer();
-                boolean[] rcvdData = {false};
+                boolean[] imgLogged = {false};
 
                 connection.result().handler(buffer -> {
 
-                    if (imageStartIdx[0] != -1) {
-                        if (!rcvdData[0]) {
-                            rcvdData[0] = true;
+                    if (isImage[0]) {
+                        if (!imgLogged[0]) {
+                            imgLogged[0] = true;
 
                             try {
                                 DB.insertHistory(origURL, null);
@@ -1529,15 +1526,8 @@ public class Alhena {
                         saveBuffer.appendBuffer(buffer);
                         cPage.frame().setTmpStatus((saveBuffer.length() + " bytes"));
                     } else if (isText[0] || path.lastIndexOf('.') == -1) {
-                        if (firstBuffer[0]) {
-                            firstBuffer[0] = false;
-                            rcvdData[0] = true;
-                            saveBuffer.appendBuffer(buffer);
 
-                        } else {
-                            rcvdData[0] = true;
-                            saveBuffer.appendBuffer(buffer);
-                        }
+                        saveBuffer.appendBuffer(buffer);
 
                     } else if (allowVLC && isMedia[0]) {
                         try {
@@ -1551,7 +1541,7 @@ public class Alhena {
                             File af = File.createTempFile("alhena", "media");
 
                             af.deleteOnExit();
-                            //String finalMime = mimeFromExt;
+
                             Runnable r = () -> {
                                 p.frame().showGlassPane(false);
                                 GeminiTextPane tPane = cPage.textPane;
@@ -1569,7 +1559,6 @@ public class Alhena {
                         }
 
                     } else {
-                        rcvdData[0] = true;
                         File[] file = new File[1];
                         connection.result().pause();
                         connection.result().handler(null);
@@ -1589,7 +1578,6 @@ public class Alhena {
 
                             if (file[0] == null) {
                                 // canceled
-                                //textPane.end("# Download canceled", false, origURL, true, r);
                                 connection.result().close();
                                 p.frame().showGlassPane(false);
                                 return;
@@ -1605,7 +1593,7 @@ public class Alhena {
 
                     System.out.println("connection closed");
 
-                    if (imageStartIdx[0] != -1) {
+                    if (isImage[0]) {
 
                         bg(() -> {
                             // insert into existing page and not new page created for the call to processUrl
@@ -1614,11 +1602,11 @@ public class Alhena {
                             GeminiTextPane tPane = cPage.textPane;
 
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
+                                tPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG);
 
                             } else {
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
+                                p.textPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG);
                             }
                         });
                     } else {
