@@ -1491,7 +1491,7 @@ public class Alhena {
                 boolean[] isText = {true};
                 boolean[] isMedia = {false};
 
-                if (type[0] == 'I' || type[0] == 'g') {
+                if (type[0] == 'I' || type[0] == 'g' || type[0] == 'p') {
                     isImage[0] = true;
                     isText[0] = false;
                 } else if (type[0] == '9' || type[0] == 's') {
