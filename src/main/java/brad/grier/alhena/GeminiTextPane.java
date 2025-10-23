@@ -738,7 +738,7 @@ public class GeminiTextPane extends JTextPane {
 
                     popupMenu.add(homePageMenuItem);
                     homePageMenuItem.setEnabled(currentMode != INFO_MODE);
-                    if (!page.isNex()) {
+                    if (!page.isNex() && !page.isGopher()) {
                         String menuText = plainTextMode ? I18n.t("gemTextItem") : I18n.t("plainTextItem");
                         JMenuItem ptMenuItem = new JMenuItem(menuText);
                         ptMenuItem.setEnabled(!imageOnly);
