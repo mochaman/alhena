@@ -1615,7 +1615,7 @@ public class Alhena {
 
                             if (type[0] == '7') {
                                 char c = (char) saveBuffer.getByte(0);
-                                if ("0123456789+ghIi".indexOf(c) >= 0) {
+                                if ("0123456789+ghIip".indexOf(c) >= 0) {
                                     type[0] = '1';
                                 } else {
                                     type[0] = '0';
