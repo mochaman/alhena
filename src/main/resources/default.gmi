@@ -7,7 +7,7 @@
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝
 ```
 
-Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
+Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java. It's also a star in Gemini.
 
 * Modern UI with multiple themes
 * Color emojis
@@ -28,6 +28,7 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 * HTTP and Gopher proxies
 * Full spartan:// support
 * nex:// protocol support
+* gopher protocol
 * Gemtext highlighting in Titan text editor
 * Optional favicon.txt support
 * Printing and PDF support
@@ -54,6 +55,7 @@ Alhena is a Gemini/Spartan browser written in Java. It's also a star in Gemini.
 => gemini://bbs.geminispace.org/ Gemini BBS
 => gemini://geminiprotocol.net/ About Gemini
 => spartan://mozz.us/ Spartan Home
+=> gopher://mozz.us/ Mozz Gopher
 => nex://nightfall.city/ Nightfall City
 
 ### 🚀 Gemini Capsules
