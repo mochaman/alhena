@@ -1473,7 +1473,7 @@ public class Alhena {
                 gopherPath[0] = path.substring(3) + "\t" + query + "\r\n";
             }
         }
-        System.out.println(gopherPath[0]);
+
         p.frame().setBusy(true, cPage);
 
         sClient.connect(port[0], host, connection -> {
