@@ -1457,11 +1457,7 @@ public class Alhena {
             if (path.length() == 2) {
                 gopherPath[0] = "\r\n";
             } else {
-                if (path.charAt(2) == '/') {
-                    gopherPath[0] = path.substring(3) + "\r\n";
-                }else{
-                    gopherPath[0] = path.substring(2) + "\r\n";
-                }
+                gopherPath[0] = path.substring(2) + "\r\n";
             }
         }
 
@@ -1477,6 +1473,7 @@ public class Alhena {
                 gopherPath[0] = path.substring(3) + "\t" + query + "\r\n";
             }
         }
+        System.out.println(gopherPath[0]);
         p.frame().setBusy(true, cPage);
 
         sClient.connect(port[0], host, connection -> {
