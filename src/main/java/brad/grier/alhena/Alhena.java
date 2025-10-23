@@ -1501,7 +1501,7 @@ public class Alhena {
                     isText[0] = false;
                 }
 
-                if (isText[0] && type[0] != '0' && type[0] != '1') {
+                if (isText[0] && type[0] != '0' && type[0] != '1' && type[0] != '7') {
                     // download
                     isText[0] = false;
                 }
