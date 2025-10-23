@@ -1674,22 +1674,8 @@ public class Alhena {
                                     p.textPane.end();
 
                                 });
-                                // bg(() -> {
-                                //     p.textPane.end(saveBuffer.toString(), true, origURL, true);
-
-                                // });    
+ 
                             }
-                            // if (rcvdData[0]) {
-                            //     bg(() -> {
-                            //         p.textPane.end();
-
-                            //     });
-                            // } else {
-                            //     bg(() -> {
-                            //         p.textPane.updatePage("", true, origURL, true);
-                            //         p.textPane.end();
-                            //     });
-                            // }
                         }
                     }
 
