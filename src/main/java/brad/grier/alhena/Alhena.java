@@ -1498,7 +1498,7 @@ public class Alhena {
                     isText[0] = false;
                 }
 
-                if (isText[0] && type[0] != '0' && type[0] != '1' && type[0] != '7') {
+                if (isText[0] && type[0] != '0' && type[0] != '1' && type[0] != '7' && type[0] != 'h') {
                     // download
                     isText[0] = false;
                 }
@@ -1607,9 +1607,8 @@ public class Alhena {
                             }
                         });
                     } else {
-                        if (p.redirectCount == 0) {
+                        if (p.redirectCount == 0) { // TODO: Investigate (gemini redirects to gopher)
                             //type[0] = '0'; // to see it all
-
                             if (type[0] == '7') {
                                 char c = (char) saveBuffer.getByte(0);
                                 if ("0123456789+ghIip".indexOf(c) >= 0) {
@@ -1618,63 +1617,68 @@ public class Alhena {
                                     type[0] = '0';
                                 }
                             }
-                            if (type[0] == '0') {
-                                bg(() -> {
-                                    p.textPane.end(saveBuffer.toString(), true, origURL, true);
+                            switch (type[0]) {
+                                case 'h' -> {
+                                    p.setGopher(false);
+                                    String content = convertHtmlToGemtext(saveBuffer.toString(), null);
+                                    bg(() -> {
+                                        // System.out.println(origURL);
+                                        p.textPane.end(content, false, origURL, true);
+                                    });
+                                }
+                                case '0' ->
+                                    bg(() -> {
+                                        p.textPane.end(saveBuffer.toString(), true, origURL, true);
 
-                                });
-                            } else if (type[0] == '1') {
-                                bg(() -> {
-                                    p.textPane.updatePage("", true, origURL, true);
-                                });
-
-                                // change this for menu handling
-                                String text = saveBuffer.toString(StandardCharsets.UTF_8);
-                                for (String line : text.split("\r?\n")) {
-                                    if (line.equals(".") || line.isEmpty()) {
-                                        continue;
-                                    }
-                                    char lineType = line.charAt(0);
-                                    String[] parts = line.substring(1).split("\t");
-                                    if (parts.length >= 4) {
-                                        if (lineType == 'i') {
-                                            bg(() -> {
-                                                String out;
-                                                if (parts[0].startsWith("-") && parts[0].endsWith("-")) {
-                                                    out = parts[0] + "\n";
-                                                } else {
-                                                    out = parts[0];
-                                                }
-                                                p.textPane.addPage(out + "\n");
-                                            });
-                                        } else if (lineType == 'h' && parts[1].startsWith("URL:")) {
-                                            String link = "=> " + parts[1].substring(4);
-                                            bg(() -> {
-                                                p.textPane.addPage(link + "\n");
-                                            });
-                                        } else if (lineType == '3' || lineType == '2') {
-                                            bg(() -> {
-                                                p.textPane.addPage(parts[0] + "\n");
-                                            });
-                                        } else if (lineType == '8') {
-                                            bg(() -> {
-                                                String gPort = parts[3].equals("23") ? "" : ":" + parts[3];
-                                                p.textPane.addPage("telnet://" + parts[2] + gPort + "/ " + parts[0] + "\n");
-                                            });
-                                        } else {
-                                            String gPort = parts[3].equals("70") ? "" : ":" + parts[3];
-                                            String link = "=> gopher://" + parts[2] + gPort + "/" + lineType + Util.uEncode(parts[1]).replace("%2F", "/") + " " + parts[0];
-                                            bg(() -> {
-                                                p.textPane.addPage(link + "\n");
-                                            });
+                                    });
+                                case '1' -> {
+                                    bg(() -> {
+                                        p.textPane.updatePage("", true, origURL, true);
+                                    }); // change this for menu handling
+                                    String text = saveBuffer.toString(StandardCharsets.UTF_8);
+                                    for (String line : text.split("\r?\n")) {
+                                        if (line.equals(".") || line.isEmpty()) {
+                                            continue;
+                                        }
+                                        char lineType = line.charAt(0);
+                                        String[] parts = line.substring(1).split("\t");
+                                        if (parts.length >= 4) {
+                                            if (lineType == 'i') {
+                                                bg(() -> {
+                                                    String out;
+                                                    // TODO: look into line feed strategies here for things like "--- section ---", etc
+                                                    p.textPane.addPage(parts[0] + "\n");
+                                                });
+                                            } else if (lineType == 'h' && parts[1].startsWith("URL:")) {
+                                                String link = "=> " + parts[1].substring(4);
+                                                bg(() -> {
+                                                    p.textPane.addPage(link + "\n");
+                                                });
+                                            } else if (lineType == '3' || lineType == '2') {
+                                                bg(() -> {
+                                                    p.textPane.addPage(parts[0] + "\n");
+                                                });
+                                            } else if (lineType == '8') {
+                                                bg(() -> {
+                                                    String gPort = parts[3].equals("23") ? "" : ":" + parts[3];
+                                                    p.textPane.addPage("telnet://" + parts[2] + gPort + "/ " + parts[0] + "\n");
+                                                });
+                                            } else {
+                                                String gPort = parts[3].equals("70") ? "" : ":" + parts[3];
+                                                String link = "=> gopher://" + parts[2] + gPort + "/" + lineType + Util.uEncode(parts[1]).replace("%2F", "/") + " " + parts[0];
+                                                bg(() -> {
+                                                    p.textPane.addPage(link + "\n");
+                                                });
+                                            }
                                         }
                                     }
-                                }
-                                bg(() -> {
-                                    p.textPane.end();
+                                    bg(() -> {
+                                        p.textPane.end();
 
-                                });
- 
+                                    });
+                                }
+                                default -> {
+                                }
                             }
                         }
                     }
@@ -2957,11 +2961,9 @@ public class Alhena {
             }
             case "p" -> {
                 StringBuilder sb = new StringBuilder();
+                sb.insert(0, element.ownText() + "\n");
+                processBlock(sb, element, host);
 
-                boolean match = processBlock(sb, element, host, element.text());
-                if (!match) {
-                    sb.insert(0, element.text() + "\n");
-                }
                 yield sb.toString() + "\n";
 
             }
@@ -3035,18 +3037,15 @@ public class Alhena {
         };
     }
 
-    private static boolean processBlock(StringBuilder sb, Element element, String host, String text) {
-        boolean[] ret = {false};
-        element.children().stream().forEach(child -> {
+    private static void processBlock(StringBuilder sb, Element element, String host) {
+
+        for (Element child : element.children()) {
             String line = processElement(child, host);
-            if (!line.isBlank()) { // weak sauce. avoid double-output of text if this element's contents match the parent's text (single <a> in <p>)
-                if (line.endsWith(text)) {
-                    ret[0] = true;
-                }
+            if (!line.isBlank()) {
+
                 sb.append(line).append("\n");
             }
-        });
-        return ret[0];
+        }
     }
 
     private static String processList(Element element) {
@@ -3310,6 +3309,7 @@ public class Alhena {
             File file = new File(fileUrl.toURI());
             if (file.exists()) {
                 String mimeExt = MimeMapping.getMimeTypeForFilename(url);
+                boolean html = mimeExt != null && mimeExt.equals("text/html");
                 boolean vlcType = allowVLC && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
@@ -3319,7 +3319,7 @@ public class Alhena {
 
                     String fUrl = url;
                     p.frame().setBusy(true, cPage);
-                    boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini"));
+                    boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini") || html);
                     if (!isImage && !vlcType) {
                         p.textPane.updatePage("", pformatted, fUrl, true);
                     }
@@ -3339,7 +3339,7 @@ public class Alhena {
 
                     } else {
                         // boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-                        Buffer imageBuffer = Buffer.buffer();
+                        Buffer saveBuffer = Buffer.buffer();
 
                         vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setRead(true), result -> {
                             if (result.succeeded()) {
@@ -3348,15 +3348,19 @@ public class Alhena {
                                 // read the file in chunks
                                 asyncFile.handler(buffer -> {
                                     if (isImage) {
-                                        imageBuffer.appendBuffer(buffer);
+                                        saveBuffer.appendBuffer(buffer);
                                     } else {
-                                        bg(() -> {
-                                            BufferSplit split = splitBuffer(buffer);
-                                            charIncompleteBuffer[0].appendBuffer(split.complete);
-                                            p.textPane.addPage(charIncompleteBuffer[0].toString());
-                                            charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
+                                        if (html) {
+                                            saveBuffer.appendBuffer(buffer);
+                                        } else {
+                                            bg(() -> {
+                                                BufferSplit split = splitBuffer(buffer);
+                                                charIncompleteBuffer[0].appendBuffer(split.complete);
+                                                p.textPane.addPage(charIncompleteBuffer[0].toString());
+                                                charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
 
-                                        });
+                                            });
+                                        }
                                     }
 
                                 });
@@ -3369,18 +3373,22 @@ public class Alhena {
                                             GeminiTextPane tPane = cPage.textPane;
 
                                             if (tPane.awatingImage()) {
-                                                tPane.insertImage(imageBuffer.getBytes(), false, isSVG);
+                                                tPane.insertImage(saveBuffer.getBytes(), false, isSVG);
 
                                             } else {
                                                 p.textPane.end(" ", false, fUrl, true);
-                                                p.textPane.insertImage(imageBuffer.getBytes(), false, isSVG);
+                                                p.textPane.insertImage(saveBuffer.getBytes(), false, isSVG);
                                             }
                                         });
 
                                     } else {
-                                        bg(() -> {
-                                            p.textPane.end();
-                                        });
+                                        if (html) {
+                                            p.textPane.end(convertHtmlToGemtext(saveBuffer.toString(), fUrl), false, fUrl, true);
+                                        } else {
+                                            bg(() -> {
+                                                p.textPane.end();
+                                            });
+                                        }
                                     }
 
                                     asyncFile.close();
