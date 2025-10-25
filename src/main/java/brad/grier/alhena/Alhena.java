@@ -1623,10 +1623,12 @@ public class Alhena {
                             }
                             switch (type[0]) {
                                 case 'h' -> {
-                                    String content = convertHtmlToGemtext(saveBuffer.toString(), null);
+                                    String content = useBrowser ? saveBuffer.toString() : convertHtmlToGemtext(saveBuffer.toString(), null);
                                     bg(() -> {
-                                        p.setGopher(false);
-                                        p.textPane.gopherHtml = true;
+                                        if (!useBrowser) {
+                                            p.setGopher(false);
+                                            p.textPane.gopherHtml = true;
+                                        }
                                         p.textPane.end(content, false, finalUrl, true);
                                     });
                                 }
@@ -1856,8 +1858,10 @@ public class Alhena {
                     }
                 }
                 Buffer saveBuffer = Buffer.buffer();
+                Buffer htmlBuffer = Buffer.buffer();
 
                 boolean[] error = {false};
+                boolean[] isHtml = {false};
                 int[] hLength = {0};
                 Buffer[] charIncompleteBuffer = {Buffer.buffer()};
                 // Handle the response
@@ -1945,6 +1949,11 @@ public class Alhena {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     if (titanEdit[0]) {
                                         titanSB.append(chunk);
+                                    } else if (!useBrowser && mime.equals("text/html")) {
+                                        if (chunk.length() > 0) {
+                                            htmlBuffer.appendString(chunk);
+                                        }
+                                        isHtml[0] = true;
                                     } else {
                                         bg(() -> {
                                             p.textPane.updatePage(chunk, true, origURL, true);
@@ -2117,7 +2126,9 @@ public class Alhena {
                     } else {
                         //p.redirectCount = 0;
                         if (!error[0]) {
-                            if (imageStartIdx[0] != -1) {
+                            if (isHtml[0]) {
+                                htmlBuffer.appendBuffer(buffer);
+                            } else if (imageStartIdx[0] != -1) {
 
                                 saveBuffer.appendBuffer(buffer);
                                 cPage.frame().setTmpStatus((saveBuffer.length() - hLength[0]) + " bytes");
@@ -2166,7 +2177,16 @@ public class Alhena {
                         if (p.redirectCount == 0) {
 
                             bg(() -> {
-                                if (titanEdit[0]) {
+
+                                if (isHtml[0]) {
+
+                                    String content = convertHtmlToGemtext(htmlBuffer.toString(), null);
+                                    bg(() -> {
+                                        // p.setGopher(false);
+                                        p.textPane.gopherHtml = true;
+                                        p.textPane.end(content, false, origURL, true);
+                                    });
+                                } else if (titanEdit[0]) {
 
                                     TextEditor textEditor = new TextEditor(titanSB.toString(), true, cPage.textPane);
                                     Object[] comps = new Object[1];
@@ -3318,7 +3338,7 @@ public class Alhena {
             File file = new File(fileUrl.toURI());
             if (file.exists()) {
                 String mimeExt = MimeMapping.getMimeTypeForFilename(url);
-                boolean html = mimeExt != null && mimeExt.equals("text/html");
+                boolean html = !useBrowser && mimeExt != null && mimeExt.equals("text/html");
                 boolean vlcType = allowVLC && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
