@@ -37,6 +37,7 @@ Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java. It's also a star 
 * SVG, WEBP and animated GIF support
 * Gradient backgrounds
 * SOCKS5 proxy support
+* Native Gopher
 
 => gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
 

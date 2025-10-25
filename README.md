@@ -1,6 +1,6 @@
 # Alhena 🌟
 
-**Alhena** is an easy-to-use, multi-platform Gemini/Spartan/Nex browser sporting an uncluttered, modern interface. Browse the small web in style!
+**Alhena** is an easy-to-use, multi-platform Gemini/Gopher/Spartan/Nex browser sporting an uncluttered, modern interface. Browse the small web in style!
 
 [![Alhena Screenshot](assets/alhena.png)](https://metaloupe.com/alhena/alhena.html)
 
@@ -37,6 +37,7 @@
 - SVG and animated GIF support
 - Gradient backgrounds
 - SOCKS5 proxy support
+- Gopher support
 
 ## 🎨 Design
 
