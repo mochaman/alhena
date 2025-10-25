@@ -1461,7 +1461,10 @@ public class Alhena {
             }
         }
 
-        if (type[0] == '7') {
+        if (uri.getQuery() != null) {
+            gopherPath[0] = path.substring(3) + "\t" + uri.getQuery() + "\r\n";
+
+        } else if (type[0] == '7') {
 
             String query = Util.inputDialog(p.frame(), I18n.t("gopherDialog"), I18n.t("gopherDialogText"), false);
 
@@ -1471,9 +1474,10 @@ public class Alhena {
             } else {
                 //<selector><TAB><search-text><CRLF>
                 gopherPath[0] = path.substring(3) + "\t" + query + "\r\n";
+                origURL += "?" + Util.uEncode(query);
             }
         }
-
+        String finalUrl = origURL;
         p.frame().setBusy(true, cPage);
 
         sClient.connect(port[0], host, connection -> {
@@ -1482,7 +1486,7 @@ public class Alhena {
                 System.out.println("connected: " + host);
                 // wrap for the lambda
                 boolean[] isImage = {false};
-                boolean isSVG = origURL.toLowerCase().endsWith(".svg");
+                boolean isSVG = finalUrl.toLowerCase().endsWith(".svg");
 
                 String[] mimeFromExt = {null};
                 boolean[] isText = {true};
@@ -1493,7 +1497,7 @@ public class Alhena {
                     isText[0] = false;
                 } else if (type[0] == '9' || type[0] == 's' || type[0] == '<') {
                     // potential media
-                    mimeFromExt[0] = MimeMapping.getMimeTypeForFilename(origURL);
+                    mimeFromExt[0] = MimeMapping.getMimeTypeForFilename(finalUrl);
                     isMedia[0] = mimeFromExt != null && (mimeFromExt[0].startsWith("audio") || mimeFromExt[0].startsWith("video"));
                     isText[0] = false;
                 }
@@ -1515,7 +1519,7 @@ public class Alhena {
                             imgLogged[0] = true;
 
                             try {
-                                DB.insertHistory(origURL, null);
+                                DB.insertHistory(finalUrl, null);
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
@@ -1531,7 +1535,7 @@ public class Alhena {
                             connection.result().pause();
                             connection.result().handler(null);
                             try {
-                                DB.insertHistory(origURL, null);
+                                DB.insertHistory(finalUrl, null);
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
@@ -1545,11 +1549,11 @@ public class Alhena {
                                 if (tPane.awatingImage()) {
                                     tPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
                                 } else {
-                                    p.textPane.end(" ", false, origURL, true);
+                                    p.textPane.end(" ", false, finalUrl, true);
                                     p.textPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
                                 }
                             };
-                            streamToFile(connection.result(), af, buffer, p, origURL, r);
+                            streamToFile(connection.result(), af, buffer, p, finalUrl, r);
 
                         } catch (IOException ex) {
                             ex.printStackTrace();
@@ -1565,7 +1569,7 @@ public class Alhena {
                             try {
 
                                 EventQueue.invokeAndWait(() -> {
-                                    String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
+                                    String fileName = finalUrl.substring(finalUrl.lastIndexOf("/") + 1);
                                     file[0] = Util.getFile(p.frame(), fileName, false, I18n.t("saveFileDialog"), null);
 
                                 });
@@ -1581,7 +1585,7 @@ public class Alhena {
                             }
                         }
 
-                        streamToFile(connection.result(), file[0], buffer, p, origURL, null);
+                        streamToFile(connection.result(), file[0], buffer, p, finalUrl, null);
                     }
 
                 });
@@ -1602,7 +1606,7 @@ public class Alhena {
                                 tPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG);
 
                             } else {
-                                p.textPane.end(" ", false, origURL, true);
+                                p.textPane.end(" ", false, finalUrl, true);
                                 p.textPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG);
                             }
                         });
@@ -1619,21 +1623,21 @@ public class Alhena {
                             }
                             switch (type[0]) {
                                 case 'h' -> {
-                                    p.setGopher(false);
                                     String content = convertHtmlToGemtext(saveBuffer.toString(), null);
                                     bg(() -> {
-                                        // System.out.println(origURL);
-                                        p.textPane.end(content, false, origURL, true);
+                                        p.setGopher(false);
+                                        p.textPane.gopherHtml = true;
+                                        p.textPane.end(content, false, finalUrl, true);
                                     });
                                 }
                                 case '0' ->
                                     bg(() -> {
-                                        p.textPane.end(saveBuffer.toString(), true, origURL, true);
+                                        p.textPane.end(saveBuffer.toString(), true, finalUrl, true);
 
                                     });
                                 case '1' -> {
                                     bg(() -> {
-                                        p.textPane.updatePage("", true, origURL, true);
+                                        p.textPane.updatePage("", true, finalUrl, true);
                                     }); // change this for menu handling
                                     String text = saveBuffer.toString(StandardCharsets.UTF_8);
                                     for (String line : text.split("\r?\n")) {
@@ -1645,7 +1649,6 @@ public class Alhena {
                                         if (parts.length >= 4) {
                                             if (lineType == 'i') {
                                                 bg(() -> {
-                                                    String out;
                                                     // TODO: look into line feed strategies here for things like "--- section ---", etc
                                                     p.textPane.addPage(parts[0] + "\n");
                                                 });
@@ -1691,7 +1694,7 @@ public class Alhena {
                     p.frame().setBusy(false, cPage);
                 } else {
                     bg(() -> {
-                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, finalUrl, true);
                     });
                     //connection.cause().printStackTrace();
                     System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
@@ -2961,9 +2964,11 @@ public class Alhena {
             }
             case "p" -> {
                 StringBuilder sb = new StringBuilder();
-                sb.insert(0, element.ownText() + "\n");
-                processBlock(sb, element, host);
 
+                boolean match = processBlock(sb, element, host, element.text());
+                if (!match) {
+                    sb.insert(0, element.text() + "\n");
+                }
                 yield sb.toString() + "\n";
 
             }
@@ -3037,15 +3042,19 @@ public class Alhena {
         };
     }
 
-    private static void processBlock(StringBuilder sb, Element element, String host) {
-
-        for (Element child : element.children()) {
+    private static boolean processBlock(StringBuilder sb, Element element, String host, String text) {
+        boolean[] ret = {false};
+        element.children().stream().forEach(child -> {
             String line = processElement(child, host);
             if (!line.isBlank()) {
-
+                // weak sauce. avoid double-output of text if this element's contents match the parent's text (single <a> in <p>)
+                if (line.endsWith(text)) {
+                    ret[0] = true;
+                }
                 sb.append(line).append("\n");
             }
-        }
+        });
+        return ret[0];
     }
 
     private static String processList(Element element) {
