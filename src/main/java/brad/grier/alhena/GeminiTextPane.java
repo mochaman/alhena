@@ -985,7 +985,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public boolean closed;
-
+    public boolean gopherHtml;
     // should only use this when inserting at the end since no code to offset links that follow
     private void insertComp(Component c, int pos) {
         SimpleAttributeSet apStyle = new SimpleAttributeSet();
@@ -2233,7 +2233,12 @@ public class GeminiTextPane extends JTextPane {
                             f.toggleCert(id, !active, finalUrl);
                         } else if (currentMode == STYLE_MODE) {
                             Util.showStyleEditor(f, Integer.parseInt(directive[0]));
+                        }else if(gopherHtml){
+                            String resolvedURI = Util.resolveURI(getURI(), finalUrl);
+                            f.addClickedLink(finalUrl);
+                            char gType = getGopherType(finalUrl);
 
+                            f.fetchURL(resolvedURI.replace("/h/", "/" + gType + "/"), false);
                         } else {
                             f.addClickedLink(finalUrl);
                             f.fetchURL(finalUrl, false);
@@ -2371,6 +2376,20 @@ public class GeminiTextPane extends JTextPane {
             //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
         });
 
+    }
+
+    private char getGopherType(String name){
+        String mimeFromExt = MimeMapping.getMimeTypeForFilename(name);    
+
+        if(mimeFromExt != null){
+            if(mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video")){
+                return '9';
+            }
+            if(Alhena.imageExtensions.stream().anyMatch(ext -> name.toLowerCase().endsWith(ext))){
+                return 'I';
+            }
+        }
+        return '0'; // assume text otherwise
     }
 
     void makeTransparent(Component c) {
