@@ -3985,19 +3985,30 @@ public class Alhena {
     public static void resetConnections() {
         // closing and recreating the client doesn't work for ending connection handshake
         // close vertx and recreate
-        httpClient80 = null;
-        httpClient80Socks = null;
-        httpClient443 = null;
-        httpClient443Socks = null;
-        spartanClient = null;
-        spartanClientSocks = null;
-        vertx.close();
-        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
-        vertx = Vertx.vertx(options);
+        vertx.close().onSuccess(s -> {
+            httpClient80 = null;
+            httpClient80Socks = null;
+            httpClient443 = null;
+            httpClient443Socks = null;
+            spartanClient = null;
+            spartanClientSocks = null;
 
-        // reset all connections in map
-        certMap.clear();
-        certMapByDomain.clear();
+            VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
+            //vertx = Vertx.vertx(options);
+            vertx = Vertx.vertx(options);
+            vertx.exceptionHandler(ex ->{
+                ex.printStackTrace();
+            });
+
+            // reset all connections in map
+            certMap.clear();
+            certMapByDomain.clear();
+            interrupted = false;
+        }).onFailure(f -> {
+            // hmm. should never happen
+            f.getCause().printStackTrace();
+        });
+
     }
 
 }
