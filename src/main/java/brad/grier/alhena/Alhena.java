@@ -738,9 +738,9 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
-
+        // TODO: simplify this
         if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("http")
-                || ((!url.startsWith("gemini://") && !url.startsWith("spartan://") && !url.startsWith("nex://")) && (prevURI != null && ("https".equalsIgnoreCase(prevURI.getScheme()) || "http".equalsIgnoreCase(prevURI.getScheme())))))) {
+                || ((!url.startsWith("gemini:/") && !url.startsWith("spartan:/") && !url.startsWith("nex:/") && !url.startsWith("gopher:/")) && (prevURI != null && ("https".equalsIgnoreCase(prevURI.getScheme()) || "http".equalsIgnoreCase(prevURI.getScheme())))))) {
             handleHttp(punyURI.toString(), prevURI, p, cPage, 0);
             return;
         }
