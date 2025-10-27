@@ -963,7 +963,8 @@ public class Alhena {
                 }
 
                 Buffer saveBuffer = Buffer.buffer();
-
+                Buffer htmlBuffer = Buffer.buffer();
+                boolean[] isHtml = {false};
                 boolean[] error = {false};
                 int[] lineEnd = {0};
                 Buffer[] charIncompleteBuffer = {Buffer.buffer()};
@@ -1029,6 +1030,13 @@ public class Alhena {
                                         charIncompleteBuffer[0] = Buffer.buffer(split.incomplete.getBytes());
 
                                     });
+                                } else if (!useBrowser && mime.equals("text/html")) {
+                                    final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
+                                    if (chunk.length() > 0) {
+                                        htmlBuffer.appendString(chunk);
+                                    }
+                                    isHtml[0] = true;
+
                                 } else if (!isSVGExt[0] && (mime.startsWith("text/") || isAscii(saveBuffer.slice(i + 1, saveBuffer.length())))) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     bg(() -> {
@@ -1152,7 +1160,9 @@ public class Alhena {
                     } else {
                         //p.redirectCount = 0;
                         if (!error[0]) {
-                            if (imageStartIdx[0] != -1) {
+                            if (isHtml[0]) {
+                                htmlBuffer.appendBuffer(buffer);
+                            } else if (imageStartIdx[0] != -1) {
                                 cPage.frame().setTmpStatus((saveBuffer.length() - hLength[0]) + " bytes");
                                 saveBuffer.appendBuffer(buffer);
                             } else {
@@ -1195,10 +1205,19 @@ public class Alhena {
                         });
                     } else {
                         if (p.redirectCount == 0) {
-                            bg(() -> {
-                                p.textPane.end();
+                            if (isHtml[0]) {
 
-                            });
+                                String content = convertHtmlToGemtext(htmlBuffer.toString(), null);
+                                bg(() -> {
+                                    p.textPane.gopherHtml = true;
+                                    p.textPane.end(content, false, origURL, true);
+                                });
+                            } else {
+                                bg(() -> {
+                                    p.textPane.end();
+
+                                });
+                            }
                         }
                     }
 
