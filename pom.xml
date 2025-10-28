@@ -8,7 +8,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <exec.mainClass>brad.grier.alhena.Alhena</exec.mainClass>
-        <vertx.version>4.5.17</vertx.version>  
+        <vertx.version>4.5.22</vertx.version>  
     </properties>
     <dependencies>
         <dependency>
@@ -19,7 +19,7 @@
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.18.3</version>
+            <version>1.21.2</version>
         </dependency>    
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -34,12 +34,12 @@
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
-            <version>3.6.1</version>
+            <version>3.6.2</version>
         </dependency>   
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf-intellij-themes</artifactId>
-            <version>3.6.1</version>
+            <version>3.6.2</version>
         </dependency>       
         <!-- to get the fat jar to work on the arm mac-->
         <!-- The resulting three jars from the following two dependencies can be deleted from non-mac builds -->
@@ -47,13 +47,13 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <version>4.1.123.Final</version>
+            <version>4.1.128.Final</version>
             <classifier>osx-aarch_64</classifier>
         </dependency>  
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <version>4.1.123.Final</version>
+            <version>4.1.128.Final</version>
             <classifier>osx-x86_64</classifier>
         </dependency>  
     
