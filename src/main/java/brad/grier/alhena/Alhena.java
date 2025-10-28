@@ -2980,9 +2980,13 @@ public class Alhena {
             case "div" -> {
                 StringBuilder gt = new StringBuilder();
                 element.children().stream().forEach(child -> {
-                    String line = processElement(child, host).trim();
+                    String line = processElement(child, host);
+                    if(!child.tagName().equals("p")){
+                        line = line.trim();
+                    }
                     if (!line.isBlank()) {
-                        gt.append(line).append("\n");
+                        String end = !line.endsWith("\n") ? "\n" : "";
+                        gt.append(line).append(end);
                     }
                 });
                 yield gt.toString() + "\n";
