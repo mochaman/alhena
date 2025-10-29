@@ -2927,6 +2927,12 @@ public class Alhena {
 
         Document doc = Jsoup.parse(html);
 
+        Elements hiddenElems = doc.select(
+                "[hidden], [aria-hidden=true], template, "
+                + "*[style*=display:none], *[style*=visibility:hidden]"
+        );
+        hiddenElems.remove();
+
         for (Element element : doc.body().children()) {
 
             gemtext.append(processElement(element, host));
@@ -2937,9 +2943,6 @@ public class Alhena {
     }
 
     private static String processElement(Element element, String host) {
-        if (element.hasAttr("hidden")) {
-            return "";
-        }
 
         String tagName = element.tagName();
 
@@ -2956,7 +2959,7 @@ public class Alhena {
                     element.children().stream().forEach(child -> {
                         String line = processElement(child, host);
 
-                        if (!line.isBlank() && !child.hasAttr("hidden")) {
+                        if (!line.isBlank()) {
                             sb.append(line.trim()).append("\n\n");
                         }
                     });
@@ -2981,7 +2984,7 @@ public class Alhena {
                 StringBuilder gt = new StringBuilder();
                 element.children().stream().forEach(child -> {
                     String line = processElement(child, host);
-                    if(!child.tagName().equals("p")){
+                    if (!child.tagName().equals("p")) {
                         line = line.trim();
                     }
                     if (!line.isBlank()) {
@@ -3069,7 +3072,7 @@ public class Alhena {
                     element.children().stream().forEach(child -> {
                         String line = processElement(child, host);
 
-                        if (!line.isBlank() && !child.hasAttr("hidden")) {
+                        if (!line.isBlank()) {
                             sb.append(line.trim()).append("\n\n");
                         }
                     });
@@ -4000,7 +4003,7 @@ public class Alhena {
             VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
             //vertx = Vertx.vertx(options);
             vertx = Vertx.vertx(options);
-            vertx.exceptionHandler(ex ->{
+            vertx.exceptionHandler(ex -> {
                 ex.printStackTrace();
             });
 
