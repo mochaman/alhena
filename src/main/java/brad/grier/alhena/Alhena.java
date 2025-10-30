@@ -84,6 +84,7 @@ import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.text.StyledEditorKit;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -1653,6 +1654,7 @@ public class Alhena {
                                 }
                                 case '0' ->
                                     bg(() -> {
+                                        p.textPane.setEditorKit(new StyledEditorKit());
                                         p.textPane.end(saveBuffer.toString(), true, finalUrl, true);
 
                                     });
