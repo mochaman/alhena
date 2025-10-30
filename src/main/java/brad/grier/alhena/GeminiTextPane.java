@@ -714,9 +714,7 @@ public class GeminiTextPane extends JTextPane {
             }
             if (!linkClicked) {
                 if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
-                    if (currentMode == SERVER_MODE) {
-                        return;
-                    }
+
                     JPopupMenu popupMenu = new JPopupMenu();
 
                     String selectedText = getSelectedText();
@@ -750,46 +748,50 @@ public class GeminiTextPane extends JTextPane {
                         popupMenu.add(ptMenuItem);
                     }
 
-                    JMenuItem crtMenuItem = new JMenuItem(I18n.t("viewCertItem"));
                     URI uri = getURI();
-                    crtMenuItem.setEnabled(!imageOnly && currentMode == DEFAULT_MODE && uri != null && uri.getScheme().equals("gemini"));
-                    crtMenuItem.addActionListener(al -> {
+                    if (!imageOnly && uri != null && "gemini".equals(uri.getScheme())) {
+                        JMenuItem crtMenuItem = new JMenuItem(I18n.t("viewCertItem"));
+                        crtMenuItem.addActionListener(al -> {
 
-                        f.viewServerCert(GeminiTextPane.this, getURI());
-                    });
-                    popupMenu.add(crtMenuItem);
+                            f.viewServerCert(GeminiTextPane.this, getURI());
+                        });
 
-                    JCheckBoxMenuItem socksItem = new JCheckBoxMenuItem(I18n.t("socksPopupItem"));
-                    socksItem.setEnabled(currentMode == DEFAULT_MODE && uri != null && Alhena.socksFilter);
-                    boolean socksDomain;
-                    try {
-                        socksDomain = DB.socksDomainExists(uri.getHost());
-                        socksItem.setSelected(socksDomain);
-                    } catch (SQLException ex) {
-                        socksItem.setSelected(false); // in case
-                        ex.printStackTrace();
+                        popupMenu.add(crtMenuItem);
                     }
 
-                    socksItem.addActionListener(al -> {
-                        if (socksItem.isSelected()) {
-                            try {
-                                DB.insertSocksDomain(uri.getHost());
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                        } else {
-                            try {
-                                DB.deleteSocksDomain(uri.getHost());
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
+                    if (currentMode == DEFAULT_MODE && Alhena.socksFilter && uri != null && !"alhena".equals(uri.getScheme())) {
+                        JCheckBoxMenuItem socksItem = new JCheckBoxMenuItem(I18n.t("socksPopupItem"));
 
+                        boolean socksDomain;
+                        try {
+                            socksDomain = DB.socksDomainExists(uri.getHost());
+                            socksItem.setSelected(socksDomain);
+                        } catch (SQLException ex) {
+                            socksItem.setSelected(false); // in case
+                            ex.printStackTrace();
                         }
-                        Alhena.closeNetClientByDomain(uri.getHost());
 
-                    });
+                        socksItem.addActionListener(al -> {
+                            if (socksItem.isSelected()) {
+                                try {
+                                    DB.insertSocksDomain(uri.getHost());
+                                } catch (SQLException ex) {
+                                    ex.printStackTrace();
+                                }
+                            } else {
+                                try {
+                                    DB.deleteSocksDomain(uri.getHost());
+                                } catch (SQLException ex) {
+                                    ex.printStackTrace();
+                                }
 
-                    popupMenu.add(socksItem);
+                            }
+                            Alhena.closeNetClientByDomain(uri.getHost());
+
+                        });
+
+                        popupMenu.add(socksItem);
+                    }
 
                     popupMenu.add(new JSeparator());
                     JMenuItem saveItem = new JMenuItem(I18n.t("savePageItem"));
@@ -798,16 +800,18 @@ public class GeminiTextPane extends JTextPane {
                         f.savePage(GeminiTextPane.this, pageBuffer, currentMode);
                     });
 
-                    JMenuItem titanItem = new JMenuItem(I18n.t("titanItem"));
-                    titanItem.setEnabled(!imageOnly);
-                    titanItem.addActionListener(al -> {
-
-                        f.editPage();
-                    });
-
                     popupMenu.add(saveItem);
 
-                    if (currentMode == DEFAULT_MODE) {
+                    // TODO: When is URI actually null? Investigate.
+                    boolean showGeminiItems = !imageOnly && currentMode == DEFAULT_MODE && uri != null && uri.getHost() != null && "gemini".equals(uri.getScheme());
+
+                    if (showGeminiItems) {
+                        JMenuItem titanItem = new JMenuItem(I18n.t("titanItem"));
+                        titanItem.setEnabled(!imageOnly && currentMode == DEFAULT_MODE && uri != null && "gemini".equals(uri.getScheme()));
+                        titanItem.addActionListener(al -> {
+
+                            f.editPage();
+                        });
                         popupMenu.add(titanItem);
                         JMenuItem pemItem = new JMenuItem(I18n.t("importPEMPopup"));
                         pemItem.setEnabled(!imageOnly);
@@ -822,11 +826,6 @@ public class GeminiTextPane extends JTextPane {
                             f.createCert(getURI());
                         });
                         popupMenu.add(certItem);
-                        boolean disable = uri.getHost() == null || !uri.getScheme().equals("gemini");
-                        if (disable) {
-                            pemItem.setEnabled(false);
-                            certItem.setEnabled(false);
-                        }
                     }
 
                     if (currentMode == STYLE_MODE) {
@@ -986,6 +985,7 @@ public class GeminiTextPane extends JTextPane {
 
     public boolean closed;
     public boolean gopherHtml;
+
     // should only use this when inserting at the end since no code to offset links that follow
     private void insertComp(Component c, int pos) {
         SimpleAttributeSet apStyle = new SimpleAttributeSet();
@@ -1037,7 +1037,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void insertMediaPlayer(String path, String mime) {
-        if(closed){ // tab closed while media downloading
+        if (closed) { // tab closed while media downloading
             return;
         }
         inserting = true;
@@ -2233,7 +2233,7 @@ public class GeminiTextPane extends JTextPane {
                             f.toggleCert(id, !active, finalUrl);
                         } else if (currentMode == STYLE_MODE) {
                             Util.showStyleEditor(f, Integer.parseInt(directive[0]));
-                        }else if(gopherHtml){
+                        } else if (gopherHtml) {
                             String resolvedURI = Util.resolveURI(getURI(), finalUrl);
                             f.addClickedLink(finalUrl);
                             char gType = getGopherType(finalUrl);
@@ -2378,14 +2378,14 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    private char getGopherType(String name){
-        String mimeFromExt = MimeMapping.getMimeTypeForFilename(name);    
+    private char getGopherType(String name) {
+        String mimeFromExt = MimeMapping.getMimeTypeForFilename(name);
 
-        if(mimeFromExt != null){
-            if(mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video")){
+        if (mimeFromExt != null) {
+            if (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video")) {
                 return '9';
             }
-            if(Alhena.imageExtensions.stream().anyMatch(ext -> name.toLowerCase().endsWith(ext))){
+            if (Alhena.imageExtensions.stream().anyMatch(ext -> name.toLowerCase().endsWith(ext))) {
                 return 'I';
             }
         }
