@@ -1075,7 +1075,7 @@ public class Alhena {
                                                 p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
                                             }
                                         };
-                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r);
+                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r, null);
 
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
@@ -1103,6 +1103,7 @@ public class Alhena {
                                             // canceled
                                             //textPane.end("# Download canceled", false, origURL, true, r);
                                             connection.result().close();
+                                            cPage.setBusy(false);
                                             p.frame().showGlassPane(false);
                                             return;
                                         }
@@ -1110,7 +1111,7 @@ public class Alhena {
                                         file[0] = p.getDataFile();
                                     }
 
-                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null);
+                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null, cPage);
 
                                 }
                             }
@@ -1338,6 +1339,7 @@ public class Alhena {
                             String finalMime = mimeFromExt;
                             Runnable r = () -> {
                                 p.frame().showGlassPane(false);
+                                cPage.setBusy(false);
                                 GeminiTextPane tPane = cPage.textPane;
                                 if (tPane.awatingImage()) {
                                     tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
@@ -1346,7 +1348,7 @@ public class Alhena {
                                     p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
                                 }
                             };
-                            streamToFile(connection.result(), af, buffer, p, origURL, r);
+                            streamToFile(connection.result(), af, buffer, p, origURL, r, null);
 
                         } catch (IOException ex) {
                             ex.printStackTrace();
@@ -1375,12 +1377,13 @@ public class Alhena {
                                 // canceled
                                 //textPane.end("# Download canceled", false, origURL, true, r);
                                 connection.result().close();
+                                cPage.setBusy(false);
                                 p.frame().showGlassPane(false);
                                 return;
                             }
                         }
 
-                        streamToFile(connection.result(), file[0], buffer, p, origURL, null);
+                        streamToFile(connection.result(), file[0], buffer, p, origURL, null, cPage);
                     }
 
                 });
@@ -1534,7 +1537,7 @@ public class Alhena {
 
                 connection.result().handler(buffer -> {
 
-                    if (isImage[0]) {
+                    if (inlineImages && isImage[0]) {
                         if (!imgLogged[0]) {
                             imgLogged[0] = true;
 
@@ -1565,6 +1568,7 @@ public class Alhena {
 
                             Runnable r = () -> {
                                 p.frame().showGlassPane(false);
+                                cPage.setBusy(false);
                                 GeminiTextPane tPane = cPage.textPane;
                                 if (tPane.awatingImage()) {
                                     tPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
@@ -1573,7 +1577,7 @@ public class Alhena {
                                     p.textPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
                                 }
                             };
-                            streamToFile(connection.result(), af, buffer, p, finalUrl, r);
+                            streamToFile(connection.result(), af, buffer, p, finalUrl, r, null);
 
                         } catch (IOException ex) {
                             ex.printStackTrace();
@@ -1600,12 +1604,13 @@ public class Alhena {
                             if (file[0] == null) {
                                 // canceled
                                 connection.result().close();
+                                cPage.setBusy(false);
                                 p.frame().showGlassPane(false);
                                 return;
                             }
                         }
 
-                        streamToFile(connection.result(), file[0], buffer, p, finalUrl, null);
+                        streamToFile(connection.result(), file[0], buffer, p, finalUrl, null, cPage);
                     }
 
                 });
@@ -2012,7 +2017,7 @@ public class Alhena {
                                                 p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
                                             }
                                         };
-                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r);
+                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r, null);
 
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
@@ -2045,7 +2050,7 @@ public class Alhena {
                                         file[0] = p.getDataFile();
                                     }
 
-                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null);
+                                    streamToFile(connection.result(), file[0], saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, null, cPage);
                                 }
                             }
 
@@ -2414,7 +2419,7 @@ public class Alhena {
         }
     }
 
-    private static void streamToFile(NetSocket socket, File outFile, Buffer buffer, Page p, String url, Runnable runOnDone) {
+    private static void streamToFile(NetSocket socket, File outFile, Buffer buffer, Page p, String url, Runnable runOnDone, Page cPage) {
         vertx.fileSystem().open(outFile.getAbsolutePath(), new OpenOptions().setWrite(true).setCreate(true).setTruncateExisting(true), fileRes -> {
             if (fileRes.succeeded()) {
                 AsyncFile file = fileRes.result();
@@ -2426,26 +2431,34 @@ public class Alhena {
                     if (!done[0]) {
                         System.out.println("connection closed");
                         done[0] = true;
+                        file.close(s -> {
+                            if (s.succeeded()) {
+                                bg(() -> {
+                                    if (runOnDone == null) {
+                                        try {
+                                            DB.insertHistory(url, null);
+                                        } catch (SQLException ex) {
+                                            ex.printStackTrace();
+                                        }
+                                        p.frame().showGlassPane(false);
+                                        if (p.getDataFile() == null) {
+                                            String message = MessageFormat.format(I18n.t("fileSavedDialogMsg"), outFile.getName());
+                                            Util.infoDialog(p.frame(), I18n.t("fileSavedDialog"), message);
+                                            if (cPage != null) {
+                                                cPage.setBusy(false);
+                                            }
+                                        } else {
+                                            // restore downloaded file
+                                            Util.importData(p.frame(), outFile, true);
+                                        }
 
-                        bg(() -> {
-                            if (runOnDone == null) {
-                                try {
-                                    DB.insertHistory(url, null);
-                                } catch (SQLException ex) {
-                                    ex.printStackTrace();
-                                }
-                                p.frame().showGlassPane(false);
-                                if (p.getDataFile() == null) {
-                                    String message = MessageFormat.format(I18n.t("fileSavedDialogMsg"), outFile.getName());
-                                    Util.infoDialog(p.frame(), I18n.t("fileSavedDialog"), message);
-                                } else {
-                                    // restore downloaded file
-                                    Util.importData(p.frame(), outFile, true);
-                                }
-                                file.close();
+                                    } else {
+                                        runOnDone.run();
+                                    }
+                                });
                             } else {
-                                runOnDone.run();
-                                file.close();
+                                // unlikely but provide visibility
+                                s.cause().printStackTrace();
                             }
                         });
                     }
@@ -3710,6 +3723,7 @@ public class Alhena {
                                             bg(() -> {
                                                 String message = MessageFormat.format(I18n.t("saveCompleteDialogMsg"), file[0].getName());
                                                 Util.infoDialog(p.frame(), I18n.t("saveCompleteDialog"), message);
+                                                cPage.setBusy(false);
                                                 p.frame().showGlassPane(false);
                                             });
                                         });
@@ -3717,6 +3731,7 @@ public class Alhena {
                                 });
                             } else {
                                 req.end();
+                                cPage.setBusy(false);
                                 bg(() -> {
                                     p.frame().showGlassPane(false);
                                 });
