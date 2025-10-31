@@ -941,6 +941,7 @@ public class Util {
                 }
             }
         }
+        f.delete(); // delete immediately rather than defer
     }
 
     public static ImageIcon recolorIcon(String imagePath, Color themeColor, int width, int height) {
