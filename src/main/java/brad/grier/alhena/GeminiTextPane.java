@@ -27,6 +27,8 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.HierarchyBoundsAdapter;
+import java.awt.event.HierarchyEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -452,6 +454,10 @@ public class GeminiTextPane extends JTextPane {
             }
         });
 
+        // componentResized doesn't fire after going fullscreen (mac), showing and then hiding an inline image and then exiting fullscreen
+        // hierarchylistener does fire but more often so only do this on mac
+        boolean useHierarchyListener = SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported;
+
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentShown(ComponentEvent e) {
@@ -460,24 +466,39 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void componentResized(ComponentEvent e) {
-                if (inserting) {
-                    inserting = false;
-                    return;
-                }
-                if (doc != null) {
-                    applyCenteredParagraphStyle();
-                }
-                if (ptpList != null) {
-                    for (PreformattedTextPane ptp : ptpList) {
-                        JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, ptp);
-                        sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
-                        ptp.revalidate();
-                        ptp.repaint();
-                    }
+                if (!useHierarchyListener) {
+                    resized();
                 }
             }
         });
+        if (useHierarchyListener) {
+            addHierarchyBoundsListener(new HierarchyBoundsAdapter() {
+                @Override
+                public void ancestorResized(HierarchyEvent e) {
+                    resized();
+                }
+            });
+        }
 
+    }
+
+    private void resized() {
+        if (inserting) {
+            inserting = false;
+            return;
+        }
+        if (doc != null) {
+            applyCenteredParagraphStyle();
+        }
+
+        if (ptpList != null) {
+            for (PreformattedTextPane ptp : ptpList) {
+                JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, ptp);
+                sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
+                ptp.revalidate();
+                ptp.repaint();
+            }
+        }
     }
 
     @Override
@@ -1066,7 +1087,7 @@ public class GeminiTextPane extends JTextPane {
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
         int width = (int) contentWidth - 50;
-        BufferedImage image = null;
+        BufferedImage image;
         ImageIcon icon = null;
         if (isSVG) {
             SVGLoader loader = new SVGLoader();
@@ -1312,7 +1333,8 @@ public class GeminiTextPane extends JTextPane {
             bufferedLine = null;
             processLine(lrl);
         }
-
+        // hack to fix inline image positioning when an image link is the very last line in the document
+        processLine(" \n");
         JTabbedPane tabbedPane = page.frame().tabbedPane;
         firstHeading = createHeading();
         String title = f.createTitle(docURL, firstHeading);
@@ -1715,7 +1737,6 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setForeground(attrs, getForeground());
 
         doc.setParagraphAttributes(0, doc.getLength(), attrs, false);
-
     }
 
     private float contentWidth;
