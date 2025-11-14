@@ -1334,7 +1334,9 @@ public class GeminiTextPane extends JTextPane {
             processLine(lrl);
         }
         // hack to fix inline image positioning when an image link is the very last line in the document
-        processLine(" \n");
+        if (doc != null) {
+            processLine(" \n");
+        }
         JTabbedPane tabbedPane = page.frame().tabbedPane;
         firstHeading = createHeading();
         String title = f.createTitle(docURL, firstHeading);
