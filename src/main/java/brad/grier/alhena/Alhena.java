@@ -739,14 +739,20 @@ public class Alhena {
             }
         }
         URI punyURI = URI.create(url).normalize();
-        // TODO: simplify this
-        if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("http")
-                || ((!url.startsWith("gemini:/") && !url.startsWith("spartan:/") && !url.startsWith("nex:/") && !url.startsWith("gopher:/")) && (prevURI != null && ("https".equalsIgnoreCase(prevURI.getScheme()) || "http".equalsIgnoreCase(prevURI.getScheme())))))) {
+
+        String punyURIScheme = punyURI.getScheme();
+        if (httpProxy == null && punyURIScheme.startsWith("http")) {
             handleHttp(punyURI.toString(), prevURI, p, cPage, 0);
             return;
         }
 
-        if (punyURI.getScheme().equals("titan") && !punyURI.getPath().endsWith(";edit")) {
+        // if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("http")
+        //         || ((!url.startsWith("gemini:/") && !url.startsWith("spartan:/") && !url.startsWith("nex:/") && !url.startsWith("gopher:/")) && (prevURI != null && ("https".equalsIgnoreCase(prevURI.getScheme()) || "http".equalsIgnoreCase(prevURI.getScheme())))))) {
+        //     handleHttp(punyURI.toString(), prevURI, p, cPage, 0);
+        //     return;
+        // }
+
+        if (punyURIScheme.equals("titan") && !punyURI.getPath().endsWith(";edit")) {
             String port = punyURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
             String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
             if (!p.getTitanEdited() && p.getDataFile() == null) {
@@ -812,25 +818,27 @@ public class Alhena {
             }
         }
         String proxyURL = null;
-        if ((httpProxy != null && punyURI.getScheme().startsWith("http"))) {
+        if ((httpProxy != null && punyURIScheme.startsWith("http"))) {
 
             proxyURL = punyURI.toString();
             punyURI = URI.create("gemini://" + httpProxy);
+            punyURIScheme = "gemini";
 
-        } else if (punyURI.getScheme().equals("gopher")) {
+        } else if (punyURIScheme.equals("gopher")) {
             if (gopherProxy != null) {
 
                 proxyURL = punyURI.toString();
                 punyURI = URI.create("gemini://" + gopherProxy);
+                punyURIScheme = "gemini";
             } else {
                 gopher(punyURI, p, origURL, cPage);
                 return;
             }
         }
 
-        switch (punyURI.getScheme()) {
+        switch (punyURIScheme) {
             case "gemini", "titan" -> {
-                if (favIcon && punyURI.getScheme().equals("gemini")) {
+                if (favIcon && punyURIScheme.equals("gemini")) {
                     String fiAuthority = punyURI.getAuthority();
                     if (favMap.containsKey(fiAuthority)) {
                         FavIconInfo fiInfo = favMap.get(fiAuthority);
@@ -1521,7 +1529,7 @@ public class Alhena {
                 } else if (type[0] == '9' || type[0] == 's' || type[0] == '<') {
                     // potential media
                     mimeFromExt[0] = MimeMapping.getMimeTypeForFilename(finalUrl);
-                    isMedia[0] = mimeFromExt != null && (mimeFromExt[0].startsWith("audio") || mimeFromExt[0].startsWith("video"));
+                    isMedia[0] = mimeFromExt[0] != null && (mimeFromExt[0].startsWith("audio") || mimeFromExt[0].startsWith("video"));
                     isText[0] = false;
                 }
 
@@ -1934,7 +1942,6 @@ public class Alhena {
 
                                         p.setStart();
                                         processURL(nUrl + "?" + Util.uEncode(input), p, null, cPage, false);
-
                                     } else {
                                         cPage.textPane.resetLastClicked();
                                     }
