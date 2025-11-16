@@ -3192,7 +3192,7 @@ public class Alhena {
                                 sb.append(text).append(" ");
                             }
 
-                            if (!href.isEmpty()) {
+                            if (!href.isEmpty() && !href.startsWith("#")) {
                                 links.add("=> " + href + " " + (text.isEmpty() ? "🔗 " + I18n.t("htmlLinkLabel") : "🔗 " + text));
                             }
                         }
