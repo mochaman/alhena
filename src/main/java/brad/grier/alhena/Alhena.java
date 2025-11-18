@@ -751,7 +751,6 @@ public class Alhena {
         //     handleHttp(punyURI.toString(), prevURI, p, cPage, 0);
         //     return;
         // }
-
         if (punyURIScheme.equals("titan") && !punyURI.getPath().endsWith(";edit")) {
             String port = punyURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
             String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
@@ -3030,6 +3029,56 @@ public class Alhena {
                 yield "=> " + src + " " + alt;
 
             }
+            case "video" -> {
+                // Try to get a <source> element inside the <video>
+                Element source = element.selectFirst("source");
+
+                if (source != null) {
+                    String src = source.attr("src").trim();
+                    if (!src.isEmpty()) {
+                        yield "=> " + src + " [video]\n";
+                    }
+                }
+
+                // Fallback: if there's no <source>, try the video[src] directly
+                String directSrc = element.attr("src").trim();
+                if (!directSrc.isEmpty()) {
+                    yield "=> " + directSrc + " [video]\n";
+                }
+
+                // If absolutely nothing usable, skip with empty string
+                yield "";
+            }
+
+            case "audio" -> {
+                Element source = element.selectFirst("source");
+
+                if (source != null) {
+                    String src = source.attr("src").trim();
+                    if (!src.isEmpty()) {
+                        yield "=> " + src + " [audio]\n";
+                    }
+                }
+
+                // Fallback: <audio src="...">
+                String direct = element.attr("src").trim();
+                if (!direct.isEmpty()) {
+                    yield "=> " + direct + " [audio]\n";
+                }
+
+                yield "";
+            }
+            case "center", "b" -> {
+                StringBuilder sb = new StringBuilder();
+
+                boolean match = processBlock(sb, element, host, element.text());
+                if (!match) {
+                    sb.insert(0, element.ownText() + "\n");
+                }
+                yield sb.toString() + "\n";
+
+            }
+
             case "p" -> {
                 StringBuilder sb = new StringBuilder();
 
@@ -3642,8 +3691,12 @@ public class Alhena {
                         vertx.fileSystem().open(file.getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
                             if (fileResult.succeeded()) {
                                 AsyncFile af = fileResult.result();
+                                CountingWriteStream stream = new CountingWriteStream(af)
+                                        .progressHandler(count -> {
+                                            p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                                        });
                                 resp.resume();
-                                Pump pump = Pump.pump(resp, af);
+                                Pump pump = Pump.pump(resp, stream);
                                 pump.start();
                                 resp.endHandler(eh -> {
                                     af.close();
@@ -3689,8 +3742,12 @@ public class Alhena {
                         vertx.fileSystem().open(df.getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
                             if (fileResult.succeeded()) {
                                 AsyncFile af = fileResult.result();
+                                CountingWriteStream stream = new CountingWriteStream(af)
+                                        .progressHandler(count -> {
+                                            p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                                        });
                                 resp.resume();
-                                Pump pump = Pump.pump(resp, af);
+                                Pump pump = Pump.pump(resp, stream);
                                 pump.start();
                                 resp.endHandler(eh -> {
                                     af.close();
