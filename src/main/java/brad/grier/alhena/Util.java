@@ -875,7 +875,7 @@ public class Util {
 
     }
 
-    public static void importData(GeminiFrame frame, File f, boolean decrypt) {
+    public static void importData(GeminiFrame frame, File f, boolean decrypt, boolean delete) {
         if (decrypt) {
 
             try {
@@ -941,7 +941,9 @@ public class Util {
                 }
             }
         }
-        f.delete(); // delete immediately rather than defer
+        if (delete) {
+            f.delete(); // delete immediately rather than defer
+        }
     }
 
     public static ImageIcon recolorIcon(String imagePath, Color themeColor, int width, int height) {
@@ -1294,7 +1296,7 @@ public class Util {
             new JLabel(" "), new JLabel(I18n.t("styleScopeLabel")), scopeCombo, new JLabel(I18n.t("styleThemeLabel")), themeCombo};
         Object[] opts = {new JButton(I18n.t("okLabel")), new JButton(I18n.t("currentLabel")), new JButton(I18n.t("closeLabel"))};
 
-        BooleanSupplier currentR = () ->{
+        BooleanSupplier currentR = () -> {
             Integer styleId = gf.visiblePage().textPane.styleId;
             if (styleId != null) {
                 showStyleEditor(gf, styleId);
@@ -1402,7 +1404,7 @@ public class Util {
                 };
 
                 Object[] options = {okButton, delButton, cancelButton};
-                BooleanSupplier[] suppliers = {okRunnable, delRunnable, ()->true};
+                BooleanSupplier[] suppliers = {okRunnable, delRunnable, () -> true};
 
                 inputDialog2(gf, I18n.t("styleDialog"), cmps, options, false, suppliers);
 
@@ -1412,7 +1414,7 @@ public class Util {
             return false;
 
         };
-        BooleanSupplier[] supps = {okR, currentR, ()-> true};
+        BooleanSupplier[] supps = {okR, currentR, () -> true};
         inputDialog2(gf, I18n.t("stylesItem"), comps, opts, false, supps);
     }
 }
