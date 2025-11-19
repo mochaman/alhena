@@ -666,7 +666,7 @@ public final class GeminiFrame extends JFrame {
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
             File f = Util.getFile(GeminiFrame.this, null, true, I18n.t("importFileDialog"), filter);
             if (f != null) {
-                Util.importData(GeminiFrame.this, f, false);
+                Util.importData(GeminiFrame.this, f, false, false);
             }
         }));
 
