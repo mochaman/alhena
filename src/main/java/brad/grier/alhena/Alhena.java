@@ -2455,7 +2455,7 @@ public class Alhena {
                                             }
                                         } else {
                                             // restore downloaded file
-                                            Util.importData(p.frame(), outFile, true);
+                                            Util.importData(p.frame(), outFile, true, true);
                                         }
 
                                     } else {
@@ -2921,6 +2921,7 @@ public class Alhena {
     }
 
     public static PrivateKey loadPrivateKey(String pemString) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
         try (PEMParser parser = new PEMParser(new StringReader(pemString))) {
             Object obj = parser.readObject();
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
