@@ -27,8 +27,6 @@ import java.util.Map;
 
 import org.h2.jdbcx.JdbcConnectionPool;
 
-import brad.grier.alhena.PipedEncryption.Encryptor;
-
 /**
  * Database methods.
  *
@@ -659,17 +657,6 @@ public class DB {
         return label;
     }
 
-    public static void dumpDB(X509Certificate cert, File outputFile) throws Exception {
-        Encryptor encryptor = new Encryptor(cert, outputFile);
-        try (Connection con = cp.getConnection(); var st = con.createStatement();) {
-            ResultSet rs = st.executeQuery("SCRIPT");
-
-            while (rs.next()) {
-                encryptor.writeString(rs.getString(1));
-            }
-            encryptor.close();
-        }
-    }
 
     public static void dumpDB(File outputFile) throws Exception {
         runStatement("DROP TABLE IF EXISTS CACERTS");
