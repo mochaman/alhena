@@ -23,6 +23,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
@@ -1162,6 +1163,24 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem tabScrollItem = new JCheckBoxMenuItem(I18n.t("tabScrollItem"), Alhena.tabScrolling);
+        tabScrollItem.addItemListener(ae -> {
+
+            Alhena.tabScrolling = !Alhena.tabScrolling;
+            if (tabbedPane != null) {
+                if (Alhena.tabScrolling) {
+                    addTabScrolling();
+                }else{
+                    for(MouseWheelListener l : tabbedPane.getMouseWheelListeners()){
+                        tabbedPane.removeMouseWheelListener(l);
+                    }
+
+                }
+            }
+            DB.insertPref("tabscroll", String.valueOf(Alhena.tabScrolling));
+
+        });
+
         settingsMenu.add(gradientItem);
         settingsMenu.add(inlineItem);
         settingsMenu.add(vlcItem);
@@ -1175,7 +1194,7 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(smoothItem);
         settingsMenu.add(scrollSizeItem);
         settingsMenu.add(dragScrollItem);
-
+        settingsMenu.add(tabScrollItem);
         settingsMenu.add(new JSeparator());
         JMenuItem proxyItem = new JMenuItem(I18n.t("httpProxyItem"));
         proxyItem.addActionListener(ae -> {
@@ -2672,11 +2691,27 @@ public final class GeminiFrame extends JFrame {
         page.textPane.closePlayers();
     }
 
+    private void addTabScrolling() {
+        tabbedPane.addMouseWheelListener(e -> { // Only respond if the mouse is over the tab headers
+            int tabIndex = tabbedPane.getUI().tabForCoordinate(tabbedPane, e.getX(), e.getY());
+            if (tabIndex >= 0) {
+                int tabCount = tabbedPane.getTabCount();
+                int currentIndex = tabbedPane.getSelectedIndex();
+                int rotation = e.getWheelRotation();
+                int nextIndex = (currentIndex + rotation + tabCount) % tabCount;
+                tabbedPane.setSelectedIndex(nextIndex);
+            }
+        });
+    }
+
     public void newTab(String url) {
 
         if (tabbedPane == null) {
             invalidate();
             tabbedPane = new JTabbedPane();
+            if (Alhena.tabScrolling) {
+                addTabScrolling();
+            }
             int newPos = switch (tabPosition) {
                 case 0 ->
                     JTabbedPane.TOP;

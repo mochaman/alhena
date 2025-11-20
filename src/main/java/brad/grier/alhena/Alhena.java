@@ -180,6 +180,7 @@ public class Alhena {
     public static boolean dataUrl;
     public static boolean linkIcons;
     public static boolean bigScrollBar;
+    public static boolean tabScrolling;
     public static String scrollSpeed; // null if not set
     public static int scrollbarSize;
     public static boolean smoothScrolling;
@@ -456,6 +457,7 @@ public class Alhena {
         bigScrollBar = map.getOrDefault("bigscrollbar", "false").equals("true");
         scrollbarSize = Integer.parseInt(map.getOrDefault("scrollbarsize", "18"));
         GeminiTextPane.dragToScroll = map.getOrDefault("dragscroll", "false").equals("true");
+        tabScrolling = map.getOrDefault("tabscroll", "false").equals("true");
         GeminiFrame.proportionalFamily = map.getOrDefault("fontfamily", "SansSerif");
         GeminiFrame.fontSize = Integer.parseInt(map.getOrDefault("fontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.monoFontSize = Integer.parseInt(map.getOrDefault("monofontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
