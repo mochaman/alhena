@@ -193,6 +193,11 @@ public class Alhena {
     );
     public static boolean sDown;
 
+    static{
+        // just do this once
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
     public static void main(String[] args) throws Exception {
         String alhenaLocale = System.getenv("ALHENA_LOCALE");
         String alhenaHome = System.getenv("ALHENA_HOME"); // the directory to store cacerts, db, etc
@@ -2594,7 +2599,6 @@ public class Alhena {
 
     private static void createClientCert(URI uri, String cn) {
         try {
-            Security.addProvider(new BouncyCastleProvider());
             X509Certificate cert;
             PrivateKey privateKey;
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
@@ -2856,8 +2860,6 @@ public class Alhena {
     }
 
     private static SSLContext createSSLContext(ClientCertInfo certInfo) throws Exception {
-        // register Bouncy Castle as a security provider
-        Security.addProvider(new BouncyCastleProvider());
         X509Certificate cert = (X509Certificate) loadCertificate(certInfo.cert());
         PrivateKey privateKey = loadPrivateKey(certInfo.privateKey());
 
@@ -2880,7 +2882,6 @@ public class Alhena {
 
     // only used by sync server upload - consolidate at some point
     public static void createKeyPair(String host, String cn) throws Exception {
-        Security.addProvider(new BouncyCastleProvider());
         // generate a key pair
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
         keyGen.initialize(2048);
@@ -2901,8 +2902,6 @@ public class Alhena {
     }
 
     private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String cn) throws Exception {
-        Security.addProvider(new BouncyCastleProvider());
-        //X500Name subject = new X500Name("CN=Jeremy,O=UltimatumLabs,L=Elkhorn,C=US");
         X500Name subject = new X500Name("CN=" + cn);
         BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
         Date notBefore = new Date();
@@ -2921,7 +2920,6 @@ public class Alhena {
     }
 
     public static PrivateKey loadPrivateKey(String pemString) throws Exception {
-        Security.addProvider(new BouncyCastleProvider());
         try (PEMParser parser = new PEMParser(new StringReader(pemString))) {
             Object obj = parser.readObject();
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");

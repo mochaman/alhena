@@ -48,7 +48,6 @@ import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
-import java.security.Security;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
@@ -91,7 +90,6 @@ import org.bouncycastle.cms.RecipientInformation;
 import org.bouncycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
 import org.bouncycastle.cms.jcajce.JceKeyTransEnvelopedRecipient;
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.drjekyll.fontchooser.FontChooser;
 
 import com.bric.colorpicker.ColorPicker;
@@ -798,7 +796,6 @@ public class Util {
 
     public static void encryptFile(String inputFile, String outputFile, X509Certificate certificate) throws Exception {
 
-        Security.addProvider(new BouncyCastleProvider());
         // Create the generator for encrypted data
         CMSEnvelopedDataStreamGenerator edGen = new CMSEnvelopedDataStreamGenerator();
 
@@ -827,7 +824,6 @@ public class Util {
     }
 
     public static void decryptFile(String inputFile, String outputFile, PrivateKey privateKey) throws Exception {
-        Security.addProvider(new BouncyCastleProvider());
         // Set up the recipient
         JceKeyTransEnvelopedRecipient recipient = (JceKeyTransEnvelopedRecipient) new JceKeyTransEnvelopedRecipient(privateKey)
                 .setProvider("BC");
