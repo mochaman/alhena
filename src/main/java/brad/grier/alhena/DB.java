@@ -752,6 +752,7 @@ public class DB {
         Alhena.gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         Alhena.useBrowser = map.getOrDefault("browser", "false").equals("true");
         Alhena.theme = map.get("theme");
+        Alhena.streamVLC = map.getOrDefault("streamvlc", "false").equals("true");
 
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes

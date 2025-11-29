@@ -128,6 +128,9 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.net.JdkSSLEngineOptions;
 import io.vertx.core.net.NetClient;
@@ -138,6 +141,7 @@ import io.vertx.core.net.ProxyType;
 import io.vertx.core.net.impl.NetSocketInternal;
 import io.vertx.core.spi.tls.SslContextFactory;
 import io.vertx.core.streams.Pump;
+import io.vertx.core.streams.ReadStream;
 
 /**
  * Static main class to manage frame creation and connectivity
@@ -173,6 +177,7 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+    public static boolean streamVLC;
     public static boolean inlineImages;
     public static boolean gradientBG;
     public static boolean useBrowser;
@@ -193,8 +198,14 @@ public class Alhena {
             "https:/", "http:/", "titan:/", "gopher:/"
     );
     public static boolean sDown;
+    private static StreamSession currentSession;
+    private static String currentMime;
+    private static Buffer pendingBuffer;
+    private static Page currentPage;
+    private static HttpServer streamServer;
+    public static int streamingPort;
 
-    static{
+    static {
         // just do this once
         Security.addProvider(new BouncyCastleProvider());
     }
@@ -431,6 +442,7 @@ public class Alhena {
 
         HashMap<String, String> map = DB.getAllPrefs();
         allowVLC = map.getOrDefault("allowvlc", "false").equals("true");
+        streamVLC = map.getOrDefault("streamvlc", "false").equals("true");
         inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
         gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         useBrowser = map.getOrDefault("browser", "false").equals("true");
@@ -484,6 +496,8 @@ public class Alhena {
         // turn off blocked thread warnings - this is not a server
         VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
         vertx = Vertx.vertx(options);
+
+        startStreamingServer();
     }
 
     private static PopupMenu createPopupMenu() {
@@ -753,11 +767,6 @@ public class Alhena {
             return;
         }
 
-        // if (httpProxy == null && !url.startsWith("file:/") && (url.startsWith("http")
-        //         || ((!url.startsWith("gemini:/") && !url.startsWith("spartan:/") && !url.startsWith("nex:/") && !url.startsWith("gopher:/")) && (prevURI != null && ("https".equalsIgnoreCase(prevURI.getScheme()) || "http".equalsIgnoreCase(prevURI.getScheme())))))) {
-        //     handleHttp(punyURI.toString(), prevURI, p, cPage, 0);
-        //     return;
-        // }
         if (punyURIScheme.equals("titan") && !punyURI.getPath().endsWith(";edit")) {
             String port = punyURI.getPort() != -1 ? ":" + punyURI.getPort() : "";
             String query = punyURI.getRawQuery() == null ? "" : "?" + punyURI.getRawQuery();
@@ -948,6 +957,7 @@ public class Alhena {
             if (connection.succeeded()) {
 
                 System.out.println("connected: " + host);
+                StreamSession ss = new StreamSession(connection.result());
                 // wrap for the lambda
                 boolean[] firstBuffer = {true};
                 // if it turns out this is an image request we need to track where it starts
@@ -1075,27 +1085,46 @@ public class Alhena {
                                         } catch (SQLException ex) {
                                             ex.printStackTrace();
                                         }
-                                        File af = File.createTempFile("alhena", "media");
-                                        af.deleteOnExit();
-                                        String finalMime = mime;
-                                        Runnable r = () -> {
-                                            p.frame().showGlassPane(false);
-                                            GeminiTextPane tPane = cPage.textPane;
-                                            if (tPane.awatingImage()) {
-                                                tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
-                                            } else {
-                                                cPage.setBusy(false);
-                                                p.textPane.end(" ", false, origURL, true);
-                                                p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
-                                            }
-                                        };
-                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r, null);
+                                        if (streamVLC) {
+                                            currentMime = mime;
+                                            pendingBuffer = buffer;
 
+                                            currentSession = ss;
+                                            bg(() -> {
+                                                GeminiTextPane tPane = cPage.textPane;
+                                                if (tPane.awatingImage()) {
+                                                    currentPage = cPage;
+                                                    tPane.insertMediaPlayer(null, currentMime, currentSession);
+                                                } else {
+                                                    currentPage = p;
+                                                    cPage.setBusy(false);
+                                                    p.textPane.end(" ", false, origURL, true);
+                                                    p.textPane.insertMediaPlayer(null, currentMime, currentSession);
+                                                }
+                                            });
+                                        } else {
+                                            File af = File.createTempFile("alhena", "media");
+                                            af.deleteOnExit();
+                                            String finalMime = mime;
+                                            Runnable r = () -> {
+                                                p.frame().showGlassPane(false);
+                                                GeminiTextPane tPane = cPage.textPane;
+                                                if (tPane.awatingImage()) {
+                                                    tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime, null);
+                                                } else {
+                                                    cPage.setBusy(false);
+                                                    p.textPane.end(" ", false, origURL, true);
+                                                    p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime, null);
+                                                }
+                                            };
+                                            streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r, null);
+                                        }
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
                                     }
 
                                 } else {
+                                    cPage.textPane.resetLastClicked();
                                     File[] file = new File[1];
                                     connection.result().pause();
                                     connection.result().handler(null);
@@ -1198,6 +1227,7 @@ public class Alhena {
                 });
 
                 connection.result().closeHandler(v -> {
+                    ss.markClosed();
                     if (p.redirectCount > 0) {
                         p.redirectCount--;
                     }
@@ -1289,6 +1319,7 @@ public class Alhena {
             if (connection.succeeded()) {
 
                 System.out.println("connected: " + host);
+                StreamSession ss = new StreamSession(connection.result());
                 // wrap for the lambda
                 boolean[] firstBuffer = {true};
                 // if it turns out this is an image request we need to track where it starts
@@ -1347,28 +1378,48 @@ public class Alhena {
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
-                            File af = File.createTempFile("alhena", "media");
+                            if (streamVLC) {
+                                rcvdData[0] = true; // mull on this
+                                currentMime = mimeFromExt;
 
-                            af.deleteOnExit();
-                            String finalMime = mimeFromExt;
-                            Runnable r = () -> {
-                                p.frame().showGlassPane(false);
-                                cPage.setBusy(false);
-                                GeminiTextPane tPane = cPage.textPane;
-                                if (tPane.awatingImage()) {
-                                    tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
-                                } else {
-                                    p.textPane.end(" ", false, origURL, true);
-                                    p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
-                                }
-                            };
-                            streamToFile(connection.result(), af, buffer, p, origURL, r, null);
+                                pendingBuffer = buffer;
+                                currentSession = ss;
+                                bg(() -> {
+                                    GeminiTextPane tPane = cPage.textPane;
+                                    if (tPane.awatingImage()) {
+                                        currentPage = cPage;
+                                        tPane.insertMediaPlayer(null, currentMime, currentSession);
+                                    } else {
+                                        currentPage = p;
+                                        cPage.setBusy(false);
+                                        p.textPane.end(" ", false, origURL, true);
+                                        p.textPane.insertMediaPlayer(null, currentMime, currentSession);
+                                    }
+                                });
+                            } else {
+                                File af = File.createTempFile("alhena", "media");
 
+                                af.deleteOnExit();
+                                String finalMime = mimeFromExt;
+                                Runnable r = () -> {
+                                    p.frame().showGlassPane(false);
+                                    cPage.setBusy(false);
+                                    GeminiTextPane tPane = cPage.textPane;
+                                    if (tPane.awatingImage()) {
+                                        tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime, null);
+                                    } else {
+                                        p.textPane.end(" ", false, origURL, true);
+                                        p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime, null);
+                                    }
+                                };
+                                streamToFile(connection.result(), af, buffer, p, origURL, r, null);
+                            }
                         } catch (IOException ex) {
                             ex.printStackTrace();
                         }
 
                     } else {
+                        cPage.textPane.resetLastClicked();
                         rcvdData[0] = true;
                         File[] file = new File[1];
                         connection.result().pause();
@@ -1403,7 +1454,7 @@ public class Alhena {
                 });
 
                 connection.result().closeHandler(v -> {
-
+                    ss.markClosed();
                     System.out.println("connection closed");
                     if (imageStartIdx[0] != -1) {
 
@@ -1521,6 +1572,7 @@ public class Alhena {
             if (connection.succeeded()) {
 
                 System.out.println("connected: " + host);
+                StreamSession ss = new StreamSession(connection.result());
                 // wrap for the lambda
                 boolean[] isImage = {false};
                 boolean isSVG = finalUrl.toLowerCase().endsWith(".svg");
@@ -1576,28 +1628,46 @@ public class Alhena {
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
-                            File af = File.createTempFile("alhena", "media");
+                            if (streamVLC) {
+                                currentMime = mimeFromExt[0];
+                                currentSession = ss;
+                                pendingBuffer = buffer;
+                                bg(() -> {
+                                    GeminiTextPane tPane = cPage.textPane;
+                                    if (tPane.awatingImage()) {
+                                        currentPage = cPage;
+                                        tPane.insertMediaPlayer(null, currentMime, currentSession);
+                                    } else {
+                                        currentPage = p;
+                                        cPage.setBusy(false);
+                                        p.textPane.end(" ", false, finalUrl, true);
+                                        p.textPane.insertMediaPlayer(null, currentMime, currentSession);
+                                    }
+                                });
+                            } else {
+                                File af = File.createTempFile("alhena", "media");
 
-                            af.deleteOnExit();
+                                af.deleteOnExit();
 
-                            Runnable r = () -> {
-                                p.frame().showGlassPane(false);
-                                cPage.setBusy(false);
-                                GeminiTextPane tPane = cPage.textPane;
-                                if (tPane.awatingImage()) {
-                                    tPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
-                                } else {
-                                    p.textPane.end(" ", false, finalUrl, true);
-                                    p.textPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0]);
-                                }
-                            };
-                            streamToFile(connection.result(), af, buffer, p, finalUrl, r, null);
-
+                                Runnable r = () -> {
+                                    p.frame().showGlassPane(false);
+                                    cPage.setBusy(false);
+                                    GeminiTextPane tPane = cPage.textPane;
+                                    if (tPane.awatingImage()) {
+                                        tPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0], null);
+                                    } else {
+                                        p.textPane.end(" ", false, finalUrl, true);
+                                        p.textPane.insertMediaPlayer(af.getAbsolutePath(), mimeFromExt[0], null);
+                                    }
+                                };
+                                streamToFile(connection.result(), af, buffer, p, finalUrl, r, null);
+                            }
                         } catch (IOException ex) {
                             ex.printStackTrace();
                         }
 
                     } else {
+                        cPage.textPane.resetLastClicked();
                         File[] file = new File[1];
                         connection.result().pause();
                         connection.result().handler(null);
@@ -1632,7 +1702,7 @@ public class Alhena {
                 connection.result().closeHandler(v -> {
 
                     System.out.println("connection closed");
-
+                    ss.markClosed();
                     if (isImage[0]) {
 
                         bg(() -> {
@@ -1779,6 +1849,86 @@ public class Alhena {
         });
     }
 
+    private static void handleStreamRequest(HttpServerRequest req) {
+
+        if (!"/stream".equals(req.path())) {
+            req.response().setStatusCode(404);
+            return;
+        }
+        if (currentSession == null) {
+            req.response().setStatusCode(503).end("no active stream");
+            return;
+        }
+;
+        HttpServerResponse resp = req.response().setStatusCode(200).putHeader("Content-Type", currentMime);
+        currentSession.setHttpResponse(resp);
+        resp.setChunked(true);
+        setupStreamPump(currentSession, resp);
+        currentSession = null;
+        currentMime = null;
+
+    }
+
+    private static void setupStreamPump(StreamSession ss, HttpServerResponse resp) {
+
+        final Page cp = currentPage;
+
+        resp.write(pendingBuffer, handler -> {
+            if (handler.succeeded()) {
+                ReadStream rs = ss.getNetSocket() == null ? ss.getHttpClientResponse() : ss.getNetSocket();
+                CountingWriteStream stream = new CountingWriteStream(resp)
+                        .progressHandler(count -> {
+                            if (cp.frame().visiblePage() == cp) {
+
+                                cp.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                            }
+                        });
+
+                Pump pump = Pump.pump(rs, stream);
+
+                resp.closeHandler(v -> cleanupStream(ss, pump));
+                resp.exceptionHandler(e -> cleanupStream(ss, pump));
+
+                pump.start();
+                if (ss.getNetSocket() != null) {
+                    ss.getNetSocket().resume();
+                } else {
+                    ss.getHttpClientResponse().resume();
+                }
+            }
+        });
+        pendingBuffer = null;
+        currentPage = null;
+
+    }
+
+    private static void cleanupStream(StreamSession ss, Pump p) {
+        if (p != null) {
+            p.stop();
+        }
+        if (ss != null) {
+            ss.close();
+        }
+
+    }
+
+    private static void startStreamingServer() {
+        if (streamServer == null) {
+
+            streamServer = vertx.createHttpServer();
+            streamServer.requestHandler(Alhena::handleStreamRequest);
+
+            streamServer.listen(0, "127.0.0.1", ar -> {
+                if (ar.failed()) {
+                    System.out.println("error starting streaming server:\n" + ar.cause());
+                } else {
+                    streamingPort = ar.result().actualPort();
+                }
+            });
+        }
+
+    }
+
     private static void gemini(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
         if (p.redirectCount == 0) {
             p.frame().setBusy(true, cPage);
@@ -1795,7 +1945,7 @@ public class Alhena {
         client.connect(port[0], host, connection -> {
             if (connection.succeeded()) {
                 NetSocket socket = connection.result();
-
+                StreamSession ss = new StreamSession(socket);
                 NetSocketInternal socketInternal = (NetSocketInternal) socket;
                 Channel channel = socketInternal.channelHandlerContext().channel();
 
@@ -2009,33 +2159,55 @@ public class Alhena {
                                     }
                                 } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
                                     try {
-                                        connection.result().pause();
-                                        connection.result().handler(null);
+                                        socket.pause();
+                                        socket.handler(null);
                                         try {
                                             DB.insertHistory(origURL, null);
                                         } catch (SQLException ex) {
                                             ex.printStackTrace();
                                         }
-                                        File af = File.createTempFile("alhena", "media");
-                                        af.deleteOnExit();
-                                        String finalMime = mime;
-                                        Runnable r = () -> {
-                                            p.frame().showGlassPane(false);
-                                            GeminiTextPane tPane = cPage.textPane;
-                                            if (tPane.awatingImage()) {
-                                                tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
-                                            } else {
-                                                cPage.setBusy(false);
-                                                p.textPane.end(" ", false, origURL, true);
-                                                p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime);
-                                            }
-                                        };
-                                        streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r, null);
+
+                                        if (streamVLC) {
+
+                                            currentMime = mime;
+                                            currentSession = ss;
+                                            pendingBuffer = saveBuffer.slice(i + 1, saveBuffer.length());
+                                            bg(() -> {
+                                                GeminiTextPane tPane = cPage.textPane;
+                                                if (tPane.awatingImage()) {
+                                                    currentPage = cPage;
+                                                    tPane.insertMediaPlayer(null, currentMime, ss);
+                                                } else {
+                                                    currentPage = p;
+                                                    cPage.setBusy(false);
+                                                    p.textPane.end(" ", false, origURL, true);
+                                                    p.textPane.insertMediaPlayer(null, currentMime, ss);
+                                                }
+                                            });
+
+                                        } else {
+                                            File af = File.createTempFile("alhena", "media");
+                                            af.deleteOnExit();
+                                            String finalMime = mime;
+                                            Runnable r = () -> {
+                                                p.frame().showGlassPane(false);
+                                                GeminiTextPane tPane = cPage.textPane;
+                                                if (tPane.awatingImage()) {
+                                                    tPane.insertMediaPlayer(af.getAbsolutePath(), finalMime, null);
+                                                } else {
+                                                    cPage.setBusy(false);
+                                                    p.textPane.end(" ", false, origURL, true);
+                                                    p.textPane.insertMediaPlayer(af.getAbsolutePath(), finalMime, null);
+                                                }
+                                            };
+                                            streamToFile(connection.result(), af, saveBuffer.slice(i + 1, saveBuffer.length()), p, origURL, r, null);
+                                        }
 
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
                                     }
                                 } else {
+                                    cPage.textPane.resetLastClicked();
                                     File[] file = new File[1];
                                     connection.result().handler(null);
                                     connection.result().pause();
@@ -2193,6 +2365,7 @@ public class Alhena {
                 });
 
                 connection.result().closeHandler(v -> {
+                    ss.markClosed();
                     if (p.redirectCount > 0) {
                         p.redirectCount--;
                     }
@@ -3457,11 +3630,11 @@ public class Alhena {
                         }
 
                         if (cPage.textPane.awatingImage()) {
-                            cPage.textPane.insertMediaPlayer(file.getAbsolutePath(), mimeExt);
+                            cPage.textPane.insertMediaPlayer(file.getAbsolutePath(), mimeExt, null);
                         } else {
 
                             p.textPane.end(" ", false, fUrl, true);
-                            p.textPane.insertMediaPlayer(file.getAbsolutePath(), mimeExt);
+                            p.textPane.insertMediaPlayer(file.getAbsolutePath(), mimeExt, null);
                         }
 
                     } else {
@@ -3592,6 +3765,7 @@ public class Alhena {
                     .setTrustAll(true)
                     .setDecompressionSupported(true)
                     .setLogActivity(false);
+
             if (proxyOptions != null) {
                 options.setProxyOptions(proxyOptions);
             }
@@ -3726,46 +3900,72 @@ public class Alhena {
                             }
                         });
                     } else if (contentType != null && (allowVLC && (contentType.startsWith("audio/") || contentType.startsWith("video/")))) {
+
                         resp.pause();
 
-                        File df;
-                        try {
-                            df = File.createTempFile("alhena", "media");
-                            df.deleteOnExit();
-                        } catch (IOException ex) {
-                            ex.printStackTrace();
-                            bg(() -> {
-                                p.frame().showGlassPane(false);
+                        if (streamVLC) {
+
+                            currentMime = finalCT;
+                            StreamSession ss = new StreamSession(resp);
+                            currentSession = ss;
+
+                            resp.endHandler(eh -> {
+                                ss.markClosed();
+                                req.end();
                             });
-                            return;
-                        }
-                        String absPath = df.getAbsolutePath();
-                        vertx.fileSystem().open(df.getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
-                            if (fileResult.succeeded()) {
-                                AsyncFile af = fileResult.result();
-                                CountingWriteStream stream = new CountingWriteStream(af)
-                                        .progressHandler(count -> {
-                                            p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
-                                        });
-                                resp.resume();
-                                Pump pump = Pump.pump(resp, stream);
-                                pump.start();
-                                resp.endHandler(eh -> {
-                                    af.close();
-                                    req.end();
-                                    bg(() -> {
-                                        p.frame().showGlassPane(false);
-                                        GeminiTextPane tPane = cPage.textPane;
-                                        if (tPane.awatingImage()) {
-                                            tPane.insertMediaPlayer(absPath, finalCT);
-                                        } else {
-                                            p.textPane.end(" ", false, finalURL, true);
-                                            p.textPane.insertMediaPlayer(absPath, finalCT);
-                                        }
-                                    });
+                            bg(() -> {
+                                pendingBuffer = Buffer.buffer();
+                                GeminiTextPane tPane = cPage.textPane;
+                                if (tPane.awatingImage()) {
+                                    currentPage = cPage;
+                                    tPane.insertMediaPlayer(null, currentMime, currentSession);
+                                } else {
+                                    currentPage = p;
+                                    cPage.setBusy(false);
+                                    p.textPane.end(" ", false, finalURL, true);
+                                    p.textPane.insertMediaPlayer(null, currentMime, currentSession);
+                                }
+                            });
+                        } else {
+                            File df;
+                            try {
+                                df = File.createTempFile("alhena", "media");
+                                df.deleteOnExit();
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
+                                bg(() -> {
+                                    p.frame().showGlassPane(false);
                                 });
+                                return;
                             }
-                        });
+                            String absPath = df.getAbsolutePath();
+                            vertx.fileSystem().open(df.getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
+                                if (fileResult.succeeded()) {
+                                    AsyncFile af = fileResult.result();
+                                    CountingWriteStream stream = new CountingWriteStream(af)
+                                            .progressHandler(count -> {
+                                                p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                                            });
+                                    resp.resume();
+                                    Pump pump = Pump.pump(resp, stream);
+                                    pump.start();
+                                    resp.endHandler(eh -> {
+                                        af.close();
+                                        req.end();
+                                        bg(() -> {
+                                            p.frame().showGlassPane(false);
+                                            GeminiTextPane tPane = cPage.textPane;
+                                            if (tPane.awatingImage()) {
+                                                tPane.insertMediaPlayer(absPath, finalCT, null);
+                                            } else {
+                                                p.textPane.end(" ", false, finalURL, true);
+                                                p.textPane.insertMediaPlayer(absPath, finalCT, null);
+                                            }
+                                        });
+                                    });
+                                }
+                            });
+                        }
 
                     } else {
                         try {
@@ -4074,6 +4274,9 @@ public class Alhena {
     public static void resetConnections() {
         // closing and recreating the client doesn't work for ending connection handshake
         // close vertx and recreate
+        streamServer.close();
+        streamServer = null;
+
         vertx.close().onSuccess(s -> {
             httpClient80 = null;
             httpClient80Socks = null;
@@ -4088,6 +4291,8 @@ public class Alhena {
             vertx.exceptionHandler(ex -> {
                 ex.printStackTrace();
             });
+
+            startStreamingServer();
 
             // reset all connections in map
             certMap.clear();

@@ -1413,4 +1413,17 @@ public class Util {
         BooleanSupplier[] supps = {okR, currentR, () -> true};
         inputDialog2(gf, I18n.t("stylesItem"), comps, opts, false, supps);
     }
+
+    public static String formatElapsed(long millis) {
+        long totalSeconds = millis / 1000;
+        long seconds = totalSeconds % 60;
+        long minutes = (totalSeconds / 60) % 60;
+        long hours = totalSeconds / 3600;
+
+        if (hours > 0) {
+            return String.format("%d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            return String.format("%02d:%02d", minutes, seconds);
+        }
+    }
 }

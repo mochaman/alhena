@@ -8,6 +8,7 @@ import java.awt.event.MouseWheelEvent;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
@@ -26,8 +27,10 @@ public class VideoPlayer extends JPanel implements MediaComponent {
     private JButton pauseButton;
     private boolean stopped;
     private GeminiTextPane gtp;
+    private StreamSession session;
 
-    public VideoPlayer() {
+    public VideoPlayer(StreamSession session) {
+        this.session = session;
         setLayout(new BorderLayout());
         final JSlider slider = new JSlider(0, 100, 0);
         setOpaque(false);
@@ -35,17 +38,6 @@ public class VideoPlayer extends JPanel implements MediaComponent {
         AtomicBoolean suppressEvents = new AtomicBoolean(false);
 
         mediaPlayerComponent = new CallbackMediaPlayerComponent() {
-            @Override
-            public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
-
-                super.positionChanged(mediaPlayer, newPosition);
-                EventQueue.invokeLater(() -> {
-                    suppressEvents.set(true);
-                    slider.setValue((int) (newPosition * 100));
-                    suppressEvents.set(false);
-                });
-
-            }
 
             @Override
             public void mouseWheelMoved(MouseWheelEvent e) {
@@ -60,9 +52,12 @@ public class VideoPlayer extends JPanel implements MediaComponent {
             }
 
         };
+
         mediaPlayerComponent.setImagePainter(new ScaledCallbackImagePainter());
 
         add(mediaPlayerComponent, BorderLayout.CENTER);
+        JLabel timeLabel = new JLabel(" ");
+        timeLabel.setPreferredSize(new Dimension(100, timeLabel.getPreferredSize().height));
         mediaPlayerComponent.mediaPlayer().events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
             @Override
             public void finished(MediaPlayer mediaPlayer) {
@@ -71,11 +66,32 @@ public class VideoPlayer extends JPanel implements MediaComponent {
                 ended = true;
                 EventQueue.invokeLater(() -> {
                     pauseButton.setText("▶");
-
+                    if (session != null) {
+                        pauseButton.setEnabled(false);
+                    }
                     suppressEvents.set(true);
                     slider.setValue(0);
                     suppressEvents.set(false);
                 });
+            }
+
+            @Override
+            public void timeChanged(MediaPlayer mediaPlayer, long newTime) {
+                EventQueue.invokeLater(() -> {
+                    timeLabel.setText(Util.formatElapsed(newTime));
+                });
+            }
+
+            @Override
+            public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
+
+                super.positionChanged(mediaPlayer, newPosition);
+                EventQueue.invokeLater(() -> {
+                    suppressEvents.set(true);
+                    slider.setValue((int) (newPosition * 100));
+                    suppressEvents.set(false);
+                });
+
             }
 
             @Override
@@ -86,61 +102,61 @@ public class VideoPlayer extends JPanel implements MediaComponent {
             }
         });
 
-        slider.addChangeListener(cl -> {
-            if (suppressEvents.get()) {
-                return;
-            }
-            if (!slider.getValueIsAdjusting()) { // slider released
-                pauseExempt = true;
-                Alhena.pauseMedia();
-                pauseExempt = false;
-                float value = (float) slider.getValue() / 100;
-                stopped = false;
-                paused = false;
-                pauseButton.setText("⏸");
-                //mediaPlayerComponent.mediaPlayer().controls().setPosition(value);
-                mediaPlayerComponent.mediaPlayer().submit(() -> {
-
-                    if (ended) {
-                        ended = false;
-                        mediaPlayerComponent.mediaPlayer().media().play(mrl);
-                        mediaPlayerComponent.mediaPlayer().controls().setPosition(value);
-                    } else {
-                        mediaPlayerComponent.mediaPlayer().controls().setPosition(value);
-                        mediaPlayerComponent.mediaPlayer().controls().pause();
-                    }
-                });
-            } else {
-                //System.out.println("stopped: " + stopped + " paused: " + paused);
-                if (!stopped) {
-                    stopped = true;
-                    if (!paused) {
-                        paused = true;
-
-                        pauseButton.setText("▶");
-                        mediaPlayerComponent.mediaPlayer().submit(() -> {
-
-                            mediaPlayerComponent.mediaPlayer().controls().pause();
-                        });
-                    }
-                }
-
-            }
-        });
-
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.setOpaque(false);
-        southPanel.add(slider, BorderLayout.CENTER);
+        if (session == null) {
+            slider.addChangeListener(cl -> {
+                if (suppressEvents.get()) {
+                    return;
+                }
+                if (!slider.getValueIsAdjusting()) { // slider released
+                    pauseExempt = true;
+                    Alhena.pauseMedia();
+                    pauseExempt = false;
+                    float value = (float) slider.getValue() / 100;
+                    stopped = false;
+                    paused = false;
+                    pauseButton.setText("⏸");
+                    //mediaPlayerComponent.mediaPlayer().controls().setPosition(value);
+                    mediaPlayerComponent.mediaPlayer().submit(() -> {
+
+                        if (ended) {
+                            ended = false;
+                            mediaPlayerComponent.mediaPlayer().media().play(mrl);
+                            mediaPlayerComponent.mediaPlayer().controls().setPosition(value);
+                        } else {
+                            mediaPlayerComponent.mediaPlayer().controls().setPosition(value);
+                            mediaPlayerComponent.mediaPlayer().controls().pause();
+                        }
+                    });
+                } else {
+                    //System.out.println("stopped: " + stopped + " paused: " + paused);
+                    if (!stopped) {
+                        stopped = true;
+                        if (!paused) {
+                            paused = true;
+
+                            pauseButton.setText("▶");
+                            mediaPlayerComponent.mediaPlayer().submit(() -> {
+
+                                mediaPlayerComponent.mediaPlayer().controls().pause();
+                            });
+                        }
+                    }
+
+                }
+            });
+            southPanel.add(slider, BorderLayout.CENTER);
+        }
+
         JPanel controlsPane = new JPanel();
         controlsPane.setOpaque(false);
         pauseButton = new JButton("⏸");
         pauseButton.setFont(buttonFont);
         controlsPane.add(pauseButton);
+        controlsPane.add(timeLabel);
 
-        // JButton rewindButton = new JButton("Rewind");
-        // controlsPane.add(rewindButton);
-        // JButton skipButton = new JButton("Skip");
-        // controlsPane.add(skipButton);
+
         southPanel.add(controlsPane, BorderLayout.SOUTH);
         add(southPanel, BorderLayout.SOUTH);
         //contentPane.add(controlsPane, BorderLayout.SOUTH);
@@ -149,11 +165,17 @@ public class VideoPlayer extends JPanel implements MediaComponent {
             paused = !paused;
             if (paused) {
                 pauseButton.setText("▶");
+                if (session != null) {
+                    session.pause();
+                }
             } else {
                 pauseButton.setText("⏸");
                 pauseExempt = true;
                 Alhena.pauseMedia();
                 pauseExempt = false;
+                if (session != null) {
+                    session.resume();
+                }
             }
 
             mediaPlayerComponent.mediaPlayer().submit(() -> {
@@ -171,6 +193,7 @@ public class VideoPlayer extends JPanel implements MediaComponent {
 
     }
     private boolean pauseExempt;
+
     // called to pause players when new player link is opened
     // call from event dispatch thread
     @Override
@@ -179,7 +202,9 @@ public class VideoPlayer extends JPanel implements MediaComponent {
             paused = true;
             pauseButton.setText("▶");
             mediaPlayerComponent.mediaPlayer().submit(() -> {
-
+                if (session != null) {
+                    session.pause();
+                }
                 mediaPlayerComponent.mediaPlayer().controls().pause(); // pause() will toggle play/pause
 
             });
@@ -209,13 +234,14 @@ public class VideoPlayer extends JPanel implements MediaComponent {
     }
 
     private Dimension pSize;
-    @Override
-    public Dimension getPreferredSize(){
 
-        if(pSize == null){
+    @Override
+    public Dimension getPreferredSize() {
+
+        if (pSize == null) {
             pSize = super.getPreferredSize();
         }
-        return pSize;   
+        return pSize;
     }
 
 }

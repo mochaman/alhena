@@ -1057,18 +1057,18 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    public void insertMediaPlayer(String path, String mime) {
+    public void insertMediaPlayer(String path, String mime, StreamSession session) {
         if (closed) { // tab closed while media downloading
             return;
         }
         inserting = true;
         Alhena.pauseMedia();
-        MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
+        MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer(session) : new VideoPlayer(session);
 
         playerList.add(ap);
 
         insertComp((Component) ap);
-        ap.start(path);
+        ap.start(path == null ? "http://localhost:" + Alhena.streamingPort + "/stream" : path);
         f.setBusy(false, page);
 
     }
@@ -2348,7 +2348,7 @@ public class GeminiTextPane extends JTextPane {
                 af.deleteOnExit();
                 Files.write(af.toPath(), byteData);  // overwrite or create
 
-                MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer() : new VideoPlayer();
+                MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer(null) : new VideoPlayer(null);
 
                 playerList.add(ap);
 

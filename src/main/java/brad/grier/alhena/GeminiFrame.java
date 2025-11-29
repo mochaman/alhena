@@ -50,7 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
@@ -144,6 +143,8 @@ public final class GeminiFrame extends JFrame {
     private Color saveButtonFG = null;
     private static JRadioButtonMenuItem lastSelectedItem;
     public static int tabPosition = 0;
+    // set to true when compiling native image
+    private static final boolean NATIVE_IMAGE = false;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatArcIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme", "Arc", false)),
@@ -670,74 +671,74 @@ public final class GeminiFrame extends JFrame {
                 Util.importData(GeminiFrame.this, f, false, false);
             }
         }));
+        if (!NATIVE_IMAGE) {
+            userMenu.add(new JSeparator());
 
-        userMenu.add(new JSeparator());
+            userMenu.add(createMenuItem(I18n.t("syncUploadItem"), null, () -> {
+                try {
+                    ClientCertInfo ci = DB.getClientCertInfo(SYNC_SERVER);
+                    if (ci == null) {
 
-        userMenu.add(createMenuItem(I18n.t("syncUploadItem"), null, () -> {
-            try {
-                ClientCertInfo ci = DB.getClientCertInfo(SYNC_SERVER);
-                if (ci == null) {
-
-                    String message = MessageFormat.format(I18n.t("syncMissingCertDialogMsg"), SYNC_SERVER);
-                    Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("syncMissingCertDialog"), message, JOptionPane.YES_NO_OPTION, null, null);
-                    if (r instanceof Integer result) {
-                        if (result == JOptionPane.YES_OPTION) {
-                            try {
-                                Alhena.createKeyPair(SYNC_SERVER, "sync");
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
+                        String message = MessageFormat.format(I18n.t("syncMissingCertDialogMsg"), SYNC_SERVER);
+                        Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("syncMissingCertDialog"), message, JOptionPane.YES_NO_OPTION, null, null);
+                        if (r instanceof Integer result) {
+                            if (result == JOptionPane.YES_OPTION) {
+                                try {
+                                    Alhena.createKeyPair(SYNC_SERVER, "sync");
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            } else {
+                                Util.infoDialog(GeminiFrame.this, I18n.t("syncCanceledDialog"), I18n.t("syncCanceledDialogMsg"));
+                                return;
                             }
-                        } else {
-                            Util.infoDialog(GeminiFrame.this, I18n.t("syncCanceledDialog"), I18n.t("syncCanceledDialogMsg"));
-                            return;
+                        }
+                    }
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+                Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("syncConfirmDialog"), I18n.t("syncConfirmDialogMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                if (r instanceof Integer result) {
+                    if (result == JOptionPane.YES_OPTION) {
+                        ClientCertInfo certInfo;
+                        try {
+
+                            certInfo = DB.getClientCertInfo(SYNC_SERVER);
+                            PrivateKey pk = Alhena.loadPrivateKey(certInfo.privateKey());
+                            X509Certificate cert = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
+                            File file = File.createTempFile("alhenadb", ".zip");
+                            DB.dumpDB(file);
+                            File encFile = File.createTempFile("alhenadb", ".enc");
+
+                            Util.encryptFile(file.getAbsolutePath(), encFile.getAbsolutePath(), cert);
+                            String hash = Util.hashAndSign(encFile, pk);
+                            file.deleteOnExit();
+                            encFile.deleteOnExit();
+
+                            String titanUrl = "titan://" + SYNC_SERVER + "/sync;token=alhenasync;mime=application/octet-stream;size=" + encFile.length() + "?hash=" + hash;
+                            fetchURL(titanUrl, encFile, false);
+
+                        } catch (Exception ex) {
+                            Util.infoDialog(GeminiFrame.this, I18n.t("syncFailedDialog"), I18n.t("syncFailedDialogMsg") + "\n" + ex.getMessage());
+                            ex.printStackTrace();
                         }
                     }
                 }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-            Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("syncConfirmDialog"), I18n.t("syncConfirmDialogMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
-            if (r instanceof Integer result) {
-                if (result == JOptionPane.YES_OPTION) {
-                    ClientCertInfo certInfo;
-                    try {
 
-                        certInfo = DB.getClientCertInfo(SYNC_SERVER);
-                        PrivateKey pk = Alhena.loadPrivateKey(certInfo.privateKey());
-                        X509Certificate cert = (X509Certificate) Alhena.loadCertificate(certInfo.cert());
-                        File file = File.createTempFile("alhenadb", ".zip");
-                        DB.dumpDB(file);
-                        File encFile = File.createTempFile("alhenadb", ".enc");
+            }));
 
-                        Util.encryptFile(file.getAbsolutePath(), encFile.getAbsolutePath(), cert);
-                        String hash = Util.hashAndSign(encFile, pk);
-                        file.deleteOnExit();
-                        encFile.deleteOnExit();
+            userMenu.add(createMenuItem(I18n.t("syncDownloadItem"), null, () -> {
+                try {
+                    File file = File.createTempFile("alhenadb", ".enc");
 
-                        String titanUrl = "titan://" + SYNC_SERVER + "/sync;token=alhenasync;mime=application/octet-stream;size=" + encFile.length() + "?hash=" + hash;
-                        fetchURL(titanUrl, encFile, false);
-
-                    } catch (Exception ex) {
-                        Util.infoDialog(GeminiFrame.this, I18n.t("syncFailedDialog"), I18n.t("syncFailedDialogMsg") + "\n" + ex.getMessage());
-                        ex.printStackTrace();
-                    }
+                    fetchURL("gemini://" + SYNC_SERVER + "/sync/", file, false);
+                    file.deleteOnExit();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
                 }
-            }
 
-        }));
-
-        userMenu.add(createMenuItem(I18n.t("syncDownloadItem"), null, () -> {
-            try {
-                File file = File.createTempFile("alhenadb", ".enc");
-
-                fetchURL("gemini://" + SYNC_SERVER + "/sync/", file, false);
-                file.deleteOnExit();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-
-        }));
-
+            }));
+        }
         fileMenu.add(userMenu);
 
         if (!SystemInfo.isMacOS) {
@@ -1110,6 +1111,15 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem streamItem = new JCheckBoxMenuItem(I18n.t("streamItem"), Alhena.streamVLC);
+        streamItem.addItemListener(ae -> {
+
+            Alhena.streamVLC = !Alhena.streamVLC;
+
+            DB.insertPref("streamvlc", String.valueOf(Alhena.streamVLC));
+
+        });
+
         JCheckBoxMenuItem favIconItem = new JCheckBoxMenuItem(I18n.t("favIconItem"), Alhena.favIcon);
         favIconItem.addItemListener(ae -> {
 
@@ -1170,8 +1180,8 @@ public final class GeminiFrame extends JFrame {
             if (tabbedPane != null) {
                 if (Alhena.tabScrolling) {
                     addTabScrolling();
-                }else{
-                    for(MouseWheelListener l : tabbedPane.getMouseWheelListeners()){
+                } else {
+                    for (MouseWheelListener l : tabbedPane.getMouseWheelListeners()) {
                         tabbedPane.removeMouseWheelListener(l);
                     }
 
@@ -1184,6 +1194,7 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(gradientItem);
         settingsMenu.add(inlineItem);
         settingsMenu.add(vlcItem);
+        settingsMenu.add(streamItem);
         settingsMenu.add(favIconItem);
         settingsMenu.add(dataUrlItem);
         settingsMenu.add(linkIconItem);
