@@ -1089,6 +1089,8 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JMenu mediaMenu = new JMenu("Media");
+
         JCheckBoxMenuItem inlineItem = new JCheckBoxMenuItem(I18n.t("inlineItem"), Alhena.inlineImages);
         inlineItem.addItemListener(ae -> {
 
@@ -1119,6 +1121,34 @@ public final class GeminiFrame extends JFrame {
             DB.insertPref("streamvlc", String.valueOf(Alhena.streamVLC));
 
         });
+
+        JMenu visualMenu = new JMenu("Visualizations");
+        JRadioButtonMenuItem naRadio = new JRadioButtonMenuItem("Off", Alhena.audioVisualizer.equals("Off"));
+        naRadio.addActionListener(al -> setVisualizer("Off"));
+        visualMenu.add(naRadio);
+
+        JRadioButtonMenuItem wfRadio = new JRadioButtonMenuItem("Waveform", Alhena.audioVisualizer.equals("Waveform"));
+        wfRadio.addActionListener(al -> setVisualizer("Waveform"));
+        visualMenu.add(wfRadio);
+
+        JRadioButtonMenuItem kRadio = new JRadioButtonMenuItem("Kaleidoscope", Alhena.audioVisualizer.equals("Kaleidoscope"));
+        kRadio.addActionListener(al -> setVisualizer("Kaleidoscope"));
+        visualMenu.add(kRadio);
+
+        JRadioButtonMenuItem bandsRadio = new JRadioButtonMenuItem("Bands", Alhena.audioVisualizer.equals("Bands"));
+        bandsRadio.addActionListener(al -> setVisualizer("Bands"));
+        visualMenu.add(bandsRadio);
+
+        JRadioButtonMenuItem oscRadio = new JRadioButtonMenuItem("Oscilloscope", Alhena.audioVisualizer.equals("Oscilloscope"));
+        oscRadio.addActionListener(al -> setVisualizer("Oscilloscope"));
+        visualMenu.add(oscRadio);
+
+        ButtonGroup avBG = new ButtonGroup();
+        avBG.add(naRadio);
+        avBG.add(wfRadio);
+        avBG.add(kRadio);
+        avBG.add(bandsRadio);
+        avBG.add(oscRadio);
 
         JCheckBoxMenuItem favIconItem = new JCheckBoxMenuItem(I18n.t("favIconItem"), Alhena.favIcon);
         favIconItem.addItemListener(ae -> {
@@ -1191,10 +1221,16 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        settingsMenu.add(gradientItem);
+        
+        mediaMenu.add(vlcItem);
+
+        mediaMenu.add(streamItem);
+        mediaMenu.add(visualMenu);
+        settingsMenu.add(mediaMenu);
         settingsMenu.add(inlineItem);
-        settingsMenu.add(vlcItem);
-        settingsMenu.add(streamItem);
+
+        settingsMenu.add(gradientItem);
+
         settingsMenu.add(favIconItem);
         settingsMenu.add(dataUrlItem);
         settingsMenu.add(linkIconItem);
@@ -1279,6 +1315,11 @@ public final class GeminiFrame extends JFrame {
         });
         settingsMenu.add(searchItem);
 
+    }
+
+    private void setVisualizer(String name){
+        DB.insertPref("visualizer", name);
+        Alhena.audioVisualizer = name;
     }
 
     public void setTabPos(int pos) {

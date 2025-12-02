@@ -753,6 +753,7 @@ public class DB {
         Alhena.useBrowser = map.getOrDefault("browser", "false").equals("true");
         Alhena.theme = map.get("theme");
         Alhena.streamVLC = map.getOrDefault("streamvlc", "false").equals("true");
+        Alhena.audioVisualizer = map.getOrDefault("visualizer", "Off");
 
         // after DB VERSION 1 of db release, need to call future initV2(), initV3() methods so older database dumps have
         // subsequent database changes

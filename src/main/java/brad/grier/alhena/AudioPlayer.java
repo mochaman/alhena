@@ -3,17 +3,28 @@ package brad.grier.alhena;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.SourceDataLine;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.SwingConstants;
 
+import com.sun.jna.Pointer;
+
+import uk.co.caprica.vlcj.player.base.AudioApi;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
+import uk.co.caprica.vlcj.player.base.callback.AudioCallbackAdapter;
 import uk.co.caprica.vlcj.player.component.AudioPlayerComponent;
 
 public class AudioPlayer extends JPanel implements MediaComponent {
@@ -24,6 +35,8 @@ public class AudioPlayer extends JPanel implements MediaComponent {
     private JButton pauseButton;
     private boolean stopped;
     private StreamSession session;
+    private SourceDataLine line;
+    private Visualizer visualizerPanel;
 
     public AudioPlayer(StreamSession session) {
         this.session = session;
@@ -81,8 +94,8 @@ public class AudioPlayer extends JPanel implements MediaComponent {
                 }
             });
         }
-        JLabel timeLabel = new JLabel(" ");
-        timeLabel.setPreferredSize(new Dimension(100, timeLabel.getPreferredSize().height));
+        JLabel timeLabel = new JLabel(" ", SwingConstants.CENTER);
+        timeLabel.setPreferredSize(new Dimension(50, timeLabel.getPreferredSize().height));
         mediaPlayerComponent.mediaPlayer().events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
 
             @Override
@@ -132,19 +145,95 @@ public class AudioPlayer extends JPanel implements MediaComponent {
         });
 
         JPanel controlsPane = new JPanel();
-        controlsPane.setOpaque(false);
+        //controlsPane.setOpaque(false);
         pauseButton = new JButton("⏸");
         pauseButton.setFont(buttonFont);
         controlsPane.add(pauseButton);
         controlsPane.add(timeLabel);
-        add(controlsPane, BorderLayout.CENTER);
 
+        add(controlsPane, BorderLayout.CENTER);
+        //Visualizer visualizerPanel = null;
+        String vis = Alhena.audioVisualizer;
+        switch (vis) {
+            case "Waveform" ->
+                visualizerPanel = new WaveformPanel();
+            case "Oscilloscope" ->
+                visualizerPanel = new OscilloscopePanel();
+            case "Kaleidoscope" ->
+                visualizerPanel = new KaleidoscopePanel();
+            case "Bands" ->
+                visualizerPanel = new BandVisualizer();
+            default -> {
+            }
+        }
+
+        if (visualizerPanel != null) {
+            Visualizer finalV = visualizerPanel;
+            try {
+                AudioFormat format = new AudioFormat(
+                        44100, // sample rate
+                        16, // sample size in bits
+                        2, // channels (stereo)
+                        true, // signed
+                        false // little-endian
+                );
+
+                line = AudioSystem.getSourceDataLine(format);
+                line.open(format);
+                line.start();
+                AudioApi audio = mediaPlayerComponent.mediaPlayer().audio();
+                audio.callback("S16N", 44100, 2,
+                        new AudioCallbackAdapter() {
+
+                    @Override
+                    public void play(MediaPlayer mp, Pointer buffer, int sampleCount, long pts) {
+                        // For stereo, total samples = sampleCount * 2
+                        int channels = 2;
+                        int byteCount = sampleCount * channels * 2; // 2 bytes per sample
+                        ByteBuffer bb = buffer.getByteBuffer(0, byteCount).order(ByteOrder.LITTLE_ENDIAN);
+
+                        byte[] audioBytes = new byte[byteCount];
+                        bb.get(audioBytes);
+
+                        // write to JavaSound
+                        line.write(audioBytes, 0, audioBytes.length);
+                        long now = System.currentTimeMillis();
+                        if (now - lastUpdate > 60) {
+                            lastUpdate = now;
+                            // optional: extract samples for waveform (use only one channel or mix)
+                            short[] pcm = new short[sampleCount];
+                            ByteBuffer bb2 = ByteBuffer.wrap(audioBytes).order(ByteOrder.LITTLE_ENDIAN);
+                            for (int i = 0; i < sampleCount; i++) {
+                                short left = bb2.getShort();
+                                short right = bb2.getShort();
+                                pcm[i] = (short) ((left + right) / 2); // mix to mono for waveform
+                            }
+                            finalV.updateSamples(pcm);
+                        }
+                    }
+                }
+                );
+
+                JPanel wrapper = new JPanel();
+                wrapper.setOpaque(false);
+                wrapper.setLayout(new FlowLayout());
+                wrapper.add(visualizerPanel);
+                visualizerPanel.setPreferredSize(new Dimension(150, 50)); // height limited
+                controlsPane.add(wrapper, BorderLayout.SOUTH);
+                //add(wavePanel, BorderLayout.SOUTH);
+            } catch (Exception ex) {
+
+            }
+        }
         pauseButton.addActionListener(al -> {
             paused = !paused;
             if (paused) {
                 pauseButton.setText("▶");
                 if (session != null) {
                     session.pause();
+                }
+                if (visualizerPanel != null) {
+                    visualizerPanel.pause();
                 }
             } else {
                 pauseButton.setText("⏸");
@@ -154,13 +243,20 @@ public class AudioPlayer extends JPanel implements MediaComponent {
                 if (session != null) {
                     session.resume();
                 }
+                if (visualizerPanel != null) {
+                    visualizerPanel.resume();
+                }
             }
 
             mediaPlayerComponent.mediaPlayer().submit(() -> {
                 if (ended) {
                     ended = false;
-                    paused = false;
-                    pauseButton.setText("⏸");
+
+                    EventQueue.invokeLater(() -> {
+                        paused = false;
+                        pauseButton.setText("⏸");
+                    });
+
                     mediaPlayerComponent.mediaPlayer().media().play(mrl);
                 } else {
 
@@ -174,6 +270,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
     }
 
     private boolean pauseExempt;
+    private long lastUpdate;
 
     // called to pause players when new player link is opened
     // call from event dispatch thread
@@ -182,6 +279,9 @@ public class AudioPlayer extends JPanel implements MediaComponent {
         if (!paused && !pauseExempt) {
             paused = true;
             pauseButton.setText("▶");
+            if (visualizerPanel != null) {
+                visualizerPanel.pause();
+            }
             mediaPlayerComponent.mediaPlayer().submit(() -> {
                 if (session != null) {
                     session.pause();
@@ -208,9 +308,22 @@ public class AudioPlayer extends JPanel implements MediaComponent {
     @Override
     public void dispose() {
         System.out.println("audio player dispose");
+
         mediaPlayerComponent.mediaPlayer().submit(() -> {
             mediaPlayerComponent.mediaPlayer().controls().stop();
             mediaPlayerComponent.mediaPlayer().release();
+            if (line != null) {
+                line.stop();
+                line.drain();
+                line.close();
+
+            }
+            if (visualizerPanel != null) {
+                EventQueue.invokeLater(() -> {
+                    visualizerPanel.dispose();
+                });
+
+            }
         });
     }
 

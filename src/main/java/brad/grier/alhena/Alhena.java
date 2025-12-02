@@ -187,6 +187,7 @@ public class Alhena {
     public static boolean bigScrollBar;
     public static boolean tabScrolling;
     public static String scrollSpeed; // null if not set
+    public static String audioVisualizer;
     public static int scrollbarSize;
     public static boolean smoothScrolling;
     public static boolean macUseNoto;
@@ -443,6 +444,7 @@ public class Alhena {
         HashMap<String, String> map = DB.getAllPrefs();
         allowVLC = map.getOrDefault("allowvlc", "false").equals("true");
         streamVLC = map.getOrDefault("streamvlc", "false").equals("true");
+        audioVisualizer = map.getOrDefault("visualizer", "Off");
         inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
         gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         useBrowser = map.getOrDefault("browser", "false").equals("true");
