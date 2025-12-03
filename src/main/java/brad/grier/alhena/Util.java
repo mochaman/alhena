@@ -1426,4 +1426,21 @@ public class Util {
             return String.format("%02d:%02d", minutes, seconds);
         }
     }
+
+    public static String bytesDecimal(long bytes) {
+        if (bytes < 1000) {
+            return bytes + " B";
+        }
+
+        final String[] units = {"kB", "MB", "GB", "TB", "PB", "EB"};
+        double value = bytes;
+        int unitIndex = -1;
+
+        while (value >= 1000 && unitIndex < units.length - 1) {
+            value /= 1000;
+            unitIndex++;
+        }
+
+        return String.format("%.2f %s", value, units[unitIndex]);
+    }
 }

@@ -1210,7 +1210,7 @@ public class Alhena {
                             if (isHtml[0]) {
                                 htmlBuffer.appendBuffer(buffer);
                             } else if (imageStartIdx[0] != -1) {
-                                cPage.frame().setTmpStatus((saveBuffer.length() - hLength[0]) + " bytes");
+                                cPage.frame().setTmpStatus(Util.bytesDecimal(saveBuffer.length() - hLength[0]));
                                 saveBuffer.appendBuffer(buffer);
                             } else {
 
@@ -1355,7 +1355,7 @@ public class Alhena {
                             }
                         }
                         saveBuffer.appendBuffer(buffer);
-                        cPage.frame().setTmpStatus((saveBuffer.length() + " bytes"));
+                        cPage.frame().setTmpStatus(Util.bytesDecimal(saveBuffer.length()));
                     } else if (isText || path.lastIndexOf('.') == -1) {
                         if (firstBuffer[0]) {
                             firstBuffer[0] = false;
@@ -1616,7 +1616,7 @@ public class Alhena {
                             }
                         }
                         saveBuffer.appendBuffer(buffer);
-                        cPage.frame().setTmpStatus((saveBuffer.length() + " bytes"));
+                        cPage.frame().setTmpStatus(Util.bytesDecimal(saveBuffer.length()));
                     } else if (isText[0] || path.lastIndexOf('.') == -1) {
 
                         saveBuffer.appendBuffer(buffer);
@@ -1882,7 +1882,7 @@ public class Alhena {
                         .progressHandler(count -> {
                             if (cp.frame().visiblePage() == cp) {
 
-                                cp.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                                cp.frame().setTmpStatus(Util.bytesDecimal(count));
                             }
                         });
 
@@ -2344,7 +2344,7 @@ public class Alhena {
                             } else if (imageStartIdx[0] != -1) {
 
                                 saveBuffer.appendBuffer(buffer);
-                                cPage.frame().setTmpStatus((saveBuffer.length() - hLength[0]) + " bytes");
+                                cPage.frame().setTmpStatus(Util.bytesDecimal(saveBuffer.length() - hLength[0]));
                             } else {
                                 if (titanEdit[0]) {
                                     p.frame().setBusy(false, cPage);
@@ -2662,7 +2662,7 @@ public class Alhena {
                 });
                 CountingWriteStream stream = new CountingWriteStream(file)
                         .progressHandler(count -> {
-                            p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                            p.frame().setTmpStatus(Util.bytesDecimal(count));
                         });
                 // socket.handler(null);
                 socket.resume();
@@ -3870,7 +3870,7 @@ public class Alhena {
                                 AsyncFile af = fileResult.result();
                                 CountingWriteStream stream = new CountingWriteStream(af)
                                         .progressHandler(count -> {
-                                            p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                                            p.frame().setTmpStatus(Util.bytesDecimal(count));
                                         });
                                 resp.resume();
                                 Pump pump = Pump.pump(resp, stream);
@@ -3946,7 +3946,7 @@ public class Alhena {
                                     AsyncFile af = fileResult.result();
                                     CountingWriteStream stream = new CountingWriteStream(af)
                                             .progressHandler(count -> {
-                                                p.frame().setTmpStatus(count + " " + I18n.t("bytesLabel"));
+                                                p.frame().setTmpStatus(Util.bytesDecimal(count));
                                             });
                                     resp.resume();
                                     Pump pump = Pump.pump(resp, stream);

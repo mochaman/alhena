@@ -1124,24 +1124,24 @@ public final class GeminiFrame extends JFrame {
 
         JMenu visualMenu = new JMenu("Visualizations");
         JRadioButtonMenuItem naRadio = new JRadioButtonMenuItem("Off", Alhena.audioVisualizer.equals("Off"));
-        naRadio.addActionListener(al -> setVisualizer("Off"));
+        naRadio.addActionListener(al -> setVisualizer("Off")); // pass in pref value and not any translation (the same in English)
         visualMenu.add(naRadio);
 
         JRadioButtonMenuItem wfRadio = new JRadioButtonMenuItem("Waveform", Alhena.audioVisualizer.equals("Waveform"));
-        wfRadio.addActionListener(al -> setVisualizer("Waveform"));
+        wfRadio.addActionListener(al -> setVisualizer("Waveform")); // pass in pref value and not any translation
         visualMenu.add(wfRadio);
 
         JRadioButtonMenuItem kRadio = new JRadioButtonMenuItem("Kaleidoscope", Alhena.audioVisualizer.equals("Kaleidoscope"));
-        kRadio.addActionListener(al -> setVisualizer("Kaleidoscope"));
+        kRadio.addActionListener(al -> setVisualizer("Kaleidoscope")); // pass in pref value and not any translation
         visualMenu.add(kRadio);
 
         JRadioButtonMenuItem bandsRadio = new JRadioButtonMenuItem("Bands", Alhena.audioVisualizer.equals("Bands"));
-        bandsRadio.addActionListener(al -> setVisualizer("Bands"));
+        bandsRadio.addActionListener(al -> setVisualizer("Bands")); // pass in pref value and not any translation
         visualMenu.add(bandsRadio);
 
         JRadioButtonMenuItem oscRadio = new JRadioButtonMenuItem("Oscilloscope", Alhena.audioVisualizer.equals("Oscilloscope"));
-        oscRadio.addActionListener(al -> setVisualizer("Oscilloscope"));
-        visualMenu.add(oscRadio);
+        oscRadio.addActionListener(al -> setVisualizer("Oscilloscope")); // pass in pref value and not any translation
+        visualMenu.add(oscRadio); 
 
         ButtonGroup avBG = new ButtonGroup();
         avBG.add(naRadio);
@@ -1940,10 +1940,13 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void refreshFromCache(Page pb) {
+
+        // on theme change this prevents media from being removed
+        // problem is there are theme inconsistencies on these pages (notably media players)
         if (pb.textPane.imageOnly()) {
             return;
         }
-        //showGlassPane(true, pb);
+
         String url = pb.textPane.getDocURLString();
         CurrentPage res = pb.textPane.current();
         streamChunks(res.currentPage(), 100, url, res.pMode());
