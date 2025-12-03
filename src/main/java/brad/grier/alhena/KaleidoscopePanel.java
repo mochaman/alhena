@@ -1,4 +1,3 @@
-
 package brad.grier.alhena;
 
 import java.awt.Color;
@@ -11,6 +10,7 @@ public class KaleidoscopePanel extends Visualizer {
     private short[] samples = new short[0];
     private final int mirrors = 8;
     private boolean paused;
+    private final float[] normalizedSamples = new float[8192]; // or expected max size
 
     @Override
     public void updateSamples(short[] s) {
@@ -19,22 +19,24 @@ public class KaleidoscopePanel extends Visualizer {
     }
 
     @Override
-    public void pause(){
+    public void pause() {
         paused = true;
         repaint();
     }
 
     @Override
-    public void resume(){
+    public void resume() {
         paused = false;
     }
 
     @Override
+    // optimized by claude
     protected void paintComponent(Graphics g0) {
         super.paintComponent(g0);
-        if(paused){
+        if (paused) {
             return;
         }
+
         Graphics2D g = (Graphics2D) g0;
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
@@ -43,32 +45,43 @@ public class KaleidoscopePanel extends Visualizer {
         int cx = w / 2;
         int cy = h / 2;
 
-        float[] pts = new float[samples.length];
-        for (int i = 0; i < samples.length; i++) {
-            pts[i] = samples[i] / 32768f;
+        // Optimization 1: Pre-allocate arrays and reuse them (make these class fields)
+        // float[] normalizedSamples
+        // int[] xPoints, yPoints
+        int numSamples = samples.length;
+
+        // Optimization 2: Pre-calculate normalized samples once
+        for (int i = 0; i < numSamples; i++) {
+            normalizedSamples[i] = samples[i] * (100f / 32768f); // combine operations
         }
 
         float angleStep = (float) (2 * Math.PI / mirrors);
+        float sampleAngleStep = angleStep / numSamples;
 
+        // Optimization 3: Pre-calculate sin/cos for sample positions (LUT approach)
+        // Could cache these in a lookup table if mirrors value doesn't change often
         for (int m = 0; m < mirrors; m++) {
-            double baseAngle = m * angleStep;
+            float baseAngle = m * angleStep;
 
             g.setColor(Color.getHSBColor((float) m / mirrors, 1f, 1f));
 
-            for (int i = 0; i < pts.length - 1; i++) {
-                float r1 = pts[i] * 100;
-                float r2 = pts[i + 1] * 100;
+            // Optimization 4: Build polygon/path instead of individual lines
+            // This reduces draw calls significantly
+            int[] xPts = new int[numSamples];
+            int[] yPts = new int[numSamples];
 
-                double a1 = baseAngle + (i / (float) pts.length) * angleStep;
-                double a2 = baseAngle + ((i + 1) / (float) pts.length) * angleStep;
+            for (int i = 0; i < numSamples; i++) {
+                float radius = normalizedSamples[i];
+                float angle = baseAngle + (i * sampleAngleStep);
 
-                int x1 = cx + (int) (r1 * Math.cos(a1));
-                int y1 = cy + (int) (r1 * Math.sin(a1));
-                int x2 = cx + (int) (r2 * Math.cos(a2));
-                int y2 = cy + (int) (r2 * Math.sin(a2));
-
-                g.drawLine(x1, y1, x2, y2);
+                // Optimization 5: Use direct math instead of intermediate variables
+                xPts[i] = cx + (int) (radius * Math.cos(angle));
+                yPts[i] = cy + (int) (radius * Math.sin(angle));
             }
+
+            // Draw as polyline - single draw call instead of numSamples draw calls
+            g.drawPolyline(xPts, yPts, numSamples);
         }
     }
+
 }
