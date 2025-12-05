@@ -96,6 +96,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
         }
         JLabel timeLabel = new JLabel(" ", SwingConstants.CENTER);
         timeLabel.setPreferredSize(new Dimension(50, timeLabel.getPreferredSize().height));
+
         mediaPlayerComponent.mediaPlayer().events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
 
             @Override
@@ -163,6 +164,8 @@ public class AudioPlayer extends JPanel implements MediaComponent {
                 visualizerPanel = new KaleidoscopePanel();
             case "Bands" ->
                 visualizerPanel = new BandVisualizer();
+            case "ColorOrgan" ->
+                visualizerPanel = new ColorOrganVisualizer();
             default -> {
             }
         }

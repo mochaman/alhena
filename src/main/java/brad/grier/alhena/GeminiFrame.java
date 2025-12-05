@@ -1143,12 +1143,17 @@ public final class GeminiFrame extends JFrame {
         oscRadio.addActionListener(al -> setVisualizer("Oscilloscope")); // pass in pref value and not any translation
         visualMenu.add(oscRadio); 
 
+        JRadioButtonMenuItem coRadio = new JRadioButtonMenuItem("Color Organ", Alhena.audioVisualizer.equals("ColorOrgan"));
+        coRadio.addActionListener(al -> setVisualizer("ColorOrgan")); // pass in pref value and not any translation
+        visualMenu.add(coRadio); 
+
         ButtonGroup avBG = new ButtonGroup();
         avBG.add(naRadio);
         avBG.add(wfRadio);
         avBG.add(kRadio);
         avBG.add(bandsRadio);
         avBG.add(oscRadio);
+        avBG.add(coRadio);
 
         JCheckBoxMenuItem favIconItem = new JCheckBoxMenuItem(I18n.t("favIconItem"), Alhena.favIcon);
         favIconItem.addItemListener(ae -> {
