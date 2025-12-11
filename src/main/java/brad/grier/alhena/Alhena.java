@@ -601,15 +601,19 @@ public class Alhena {
     }
 
     public static void exit(GeminiFrame gf) {
-        for (GeminiFrame jf : frameList) {
-            jf.forEachPage(page -> {
-                page.textPane().closePlayers();
-            });
-        }
+
         if (frameList.size() == 1) {
             gf.setVisible(false); // closes faster for the naysayers
+            for (GeminiFrame jf : frameList) {
+                jf.forEachPage(page -> {
+                    page.textPane().closePlayers();
+                });
+            }
             System.exit(0);
         } else {
+            gf.forEachPage(page -> {
+                page.textPane().closePlayers();
+            });
             gf.shutDown();
             frameList.remove(gf);
             if (Taskbar.isTaskbarSupported()) {
@@ -1861,7 +1865,6 @@ public class Alhena {
             req.response().setStatusCode(503).end("no active stream");
             return;
         }
-;
         HttpServerResponse resp = req.response().setStatusCode(200).putHeader("Content-Type", currentMime);
         currentSession.setHttpResponse(resp);
         resp.setChunked(true);
