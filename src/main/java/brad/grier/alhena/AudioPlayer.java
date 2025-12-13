@@ -38,7 +38,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
     private SourceDataLine line;
     private Visualizer visualizerPanel;
 
-    public AudioPlayer(StreamSession session) {
+    public AudioPlayer(StreamSession session, boolean vlcDirect) {
         this.session = session;
         setLayout(new BorderLayout());
         setOpaque(false);
@@ -101,7 +101,9 @@ public class AudioPlayer extends JPanel implements MediaComponent {
 
             @Override
             public void finished(MediaPlayer mediaPlayer) {
-
+                if (vlcDirect) {
+                    return;
+                }
                 paused = false;
                 stopped = false;
                 ended = true;

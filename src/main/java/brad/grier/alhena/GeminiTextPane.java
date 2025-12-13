@@ -1063,7 +1063,7 @@ public class GeminiTextPane extends JTextPane {
         }
         inserting = true;
         Alhena.pauseMedia();
-        MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer(session) : new VideoPlayer(session);
+        MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer(session, path != null && session != null) : new VideoPlayer(session);
 
         playerList.add(ap);
 
@@ -2348,7 +2348,7 @@ public class GeminiTextPane extends JTextPane {
                 af.deleteOnExit();
                 Files.write(af.toPath(), byteData);  // overwrite or create
 
-                MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer(null) : new VideoPlayer(null);
+                MediaComponent ap = mime.startsWith("audio") ? new AudioPlayer(null, false) : new VideoPlayer(null);
 
                 playerList.add(ap);
 

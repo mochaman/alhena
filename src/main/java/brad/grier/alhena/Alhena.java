@@ -161,6 +161,7 @@ public class Alhena {
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg");
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
+    public static final List<String> vlcDirectTypes = List.of("application/x-mpegURL", "application/vnd.apple.mpegurl", "application/dash+xml", "audio/x-mpegurl", "audio/x-scpls", "application/xspf+xml");
     public static boolean browsingSupported, mailSupported;
     private static final Map<Integer, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
     private static final Map<String, Integer> certMapByDomain = Collections.synchronizedMap(new HashMap<>());
@@ -3835,6 +3836,8 @@ public class Alhena {
                     }
                     String finalCT = contentType;
                     String finalName = fileName;
+                    boolean vlcDirect = vlcDirectTypes.stream().anyMatch(m -> finalCT.equalsIgnoreCase(m));
+
                     if (contentType != null && contentType.startsWith("text/")) {
                         resp.body().onSuccess(buffer -> {
                             bg(() -> {
@@ -3904,11 +3907,11 @@ public class Alhena {
                                 });
                             }
                         });
-                    } else if (contentType != null && (allowVLC && (contentType.startsWith("audio/") || contentType.startsWith("video/")))) {
+                    } else if (contentType != null && (allowVLC && (contentType.startsWith("audio/") || contentType.startsWith("video/") || vlcDirect))) {
 
                         resp.pause();
 
-                        if (streamVLC) {
+                        if (streamVLC || vlcDirect) {
 
                             currentMime = finalCT;
                             StreamSession ss = new StreamSession(resp);
@@ -3919,16 +3922,17 @@ public class Alhena {
                                 req.end();
                             });
                             bg(() -> {
+                                
                                 pendingBuffer = Buffer.buffer();
                                 GeminiTextPane tPane = cPage.textPane;
                                 if (tPane.awatingImage()) {
                                     currentPage = cPage;
-                                    tPane.insertMediaPlayer(null, currentMime, currentSession);
+                                    tPane.insertMediaPlayer(vlcDirect ? finalURL : null, currentMime, currentSession);
                                 } else {
                                     currentPage = p;
                                     cPage.setBusy(false);
                                     p.textPane.end(" ", false, finalURL, true);
-                                    p.textPane.insertMediaPlayer(null, currentMime, currentSession);
+                                    p.textPane.insertMediaPlayer(vlcDirect ? finalURL : null, currentMime, currentSession);
                                 }
                             });
                         } else {
