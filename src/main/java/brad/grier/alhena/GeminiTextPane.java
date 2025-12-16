@@ -1064,7 +1064,13 @@ public class GeminiTextPane extends JTextPane {
         }
         inserting = true;
         Alhena.pauseMedia();
-        MediaComponent ap = mime.startsWith("audio") ? (!Alhena.allowVLC && Alhena.playerCommand != null) ? new ExternalPlayer(f) : new AudioPlayer(session, path != null && session != null) : new VideoPlayer(session);
+
+        MediaComponent ap;
+        if(!Alhena.allowVLC && Alhena.playerCommand != null){
+            ap = new ExternalPlayer(f);
+        }else{
+            ap = mime.startsWith("audio") ? new AudioPlayer(session, path != null && session != null) : new VideoPlayer(session);
+        }
 
         playerList.add(ap);
 

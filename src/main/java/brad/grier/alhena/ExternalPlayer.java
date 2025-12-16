@@ -39,12 +39,11 @@ public class ExternalPlayer extends JPanel implements MediaComponent {
 
     @Override
     public void start(String mrl) {
-        // try {
         //String cmd = "/usr/local/bin/ffplay -loglevel quiet %1";
         // String cmd = "/usr/local/bin/mpv --no-video %1"
         //String cmd = "/Applications/VLC.app/Contents/MacOS/VLC %1"
         String[] args = parseCommand(Alhena.playerCommand, mrl);
-        frame.setTmpStatus("opening: " + args[0]);
+        frame.setTmpStatus("Opening: " + args[0]);
         new Thread(() -> {
             ProcessBuilder pb = new ProcessBuilder(
                     args
