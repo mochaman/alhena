@@ -168,6 +168,7 @@ public class Alhena {
     public static String theme;
     public static String httpProxy;
     public static String gopherProxy;
+    public static String playerCommand;
     public static String socksProxy;
     public static boolean socksFilter;
     public static String searchUrl;
@@ -453,6 +454,7 @@ public class Alhena {
         socksProxy = map.getOrDefault("socksproxy", null);
         socksFilter = map.getOrDefault("socksfilter", "false").equals("true");
         gopherProxy = map.getOrDefault("gopherproxy", null);
+        playerCommand = map.getOrDefault("playercommand", null);
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
@@ -1083,7 +1085,7 @@ public class Alhena {
                                     } catch (SQLException ex) {
                                         ex.printStackTrace();
                                     }
-                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
+                                } else if ((allowVLC || playerCommand != null) && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
                                     try {
                                         connection.result().pause();
                                         connection.result().handler(null);
@@ -1376,7 +1378,7 @@ public class Alhena {
                             });
                         }
 
-                    } else if (allowVLC && isMedia) {
+                    } else if ((allowVLC || playerCommand != null) && isMedia) {
                         try {
                             connection.result().pause();
                             connection.result().handler(null);
@@ -1626,7 +1628,7 @@ public class Alhena {
 
                         saveBuffer.appendBuffer(buffer);
 
-                    } else if (allowVLC && isMedia[0]) {
+                    } else if ((allowVLC || playerCommand != null) && isMedia[0]) {
                         try {
                             connection.result().pause();
                             connection.result().handler(null);
@@ -2163,7 +2165,7 @@ public class Alhena {
                                     } catch (SQLException ex) {
                                         ex.printStackTrace();
                                     }
-                                } else if (allowVLC && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
+                                } else if ((allowVLC || playerCommand != null) && (mime.startsWith("audio/") || mime.startsWith("video/"))) {
                                     try {
                                         socket.pause();
                                         socket.handler(null);
@@ -3616,7 +3618,7 @@ public class Alhena {
             if (file.exists()) {
                 String mimeExt = MimeMapping.getMimeTypeForFilename(url);
                 boolean html = !useBrowser && mimeExt != null && mimeExt.equals("text/html");
-                boolean vlcType = allowVLC && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
+                boolean vlcType = (allowVLC || playerCommand != null) && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
                 boolean isSVG = isImage && url.toLowerCase().endsWith(".svg");
@@ -3907,7 +3909,7 @@ public class Alhena {
                                 });
                             }
                         });
-                    } else if (contentType != null && (allowVLC && (contentType.startsWith("audio/") || contentType.startsWith("video/") || vlcDirect))) {
+                    } else if (contentType != null && ((allowVLC || playerCommand != null) && (contentType.startsWith("audio/") || contentType.startsWith("video/") || vlcDirect))) {
 
                         resp.pause();
 

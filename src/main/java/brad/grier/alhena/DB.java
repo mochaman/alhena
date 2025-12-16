@@ -729,6 +729,7 @@ public class DB {
         Alhena.socksProxy = map.getOrDefault("socksproxy", null);
         Alhena.socksFilter = map.getOrDefault("socksfilter", "false").equals("true");
         Alhena.gopherProxy = map.getOrDefault("gopherproxy", null);
+        Alhena.playerCommand = map.getOrDefault("playercommand", null);
         Alhena.searchUrl = map.getOrDefault("searchurl", null);
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);

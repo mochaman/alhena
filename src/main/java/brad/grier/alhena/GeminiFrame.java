@@ -1141,11 +1141,11 @@ public final class GeminiFrame extends JFrame {
 
         JRadioButtonMenuItem oscRadio = new JRadioButtonMenuItem("Oscilloscope", Alhena.audioVisualizer.equals("Oscilloscope"));
         oscRadio.addActionListener(al -> setVisualizer("Oscilloscope")); // pass in pref value and not any translation
-        visualMenu.add(oscRadio); 
+        visualMenu.add(oscRadio);
 
         JRadioButtonMenuItem coRadio = new JRadioButtonMenuItem("Color Organ", Alhena.audioVisualizer.equals("ColorOrgan"));
         coRadio.addActionListener(al -> setVisualizer("ColorOrgan")); // pass in pref value and not any translation
-        visualMenu.add(coRadio); 
+        visualMenu.add(coRadio);
 
         ButtonGroup avBG = new ButtonGroup();
         avBG.add(naRadio);
@@ -1226,11 +1226,27 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        
         mediaMenu.add(vlcItem);
 
         mediaMenu.add(streamItem);
         mediaMenu.add(visualMenu);
+
+        JMenuItem extPlayerItem = new JMenuItem("External Player");
+        extPlayerItem.addActionListener(ae -> {
+
+            String cmd = Util.inputDialog(GeminiFrame.this, "External Player", "Enter command for external player. Use %1 to indicate URL placement.\nInline VLC must be off.",
+                    false, Alhena.playerCommand == null ? "" : Alhena.playerCommand, null);
+            if (cmd != null) {
+                if (cmd.isBlank()) {
+                    Alhena.playerCommand = null;
+                } else {
+                    Alhena.playerCommand = cmd;
+                }
+                DB.insertPref("playercommand", Alhena.playerCommand);
+            }
+        });
+        mediaMenu.add(extPlayerItem);
+
         settingsMenu.add(mediaMenu);
         settingsMenu.add(inlineItem);
 
@@ -1322,7 +1338,7 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    private void setVisualizer(String name){
+    private void setVisualizer(String name) {
         DB.insertPref("visualizer", name);
         Alhena.audioVisualizer = name;
     }
