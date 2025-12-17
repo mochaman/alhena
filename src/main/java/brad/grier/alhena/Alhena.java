@@ -1094,7 +1094,7 @@ public class Alhena {
                                         } catch (SQLException ex) {
                                             ex.printStackTrace();
                                         }
-                                        if (streamVLC) {
+                                        if (streamVLC || (!allowVLC && playerCommand != null)) {
                                             currentMime = mime;
                                             pendingBuffer = buffer;
 
@@ -1387,7 +1387,7 @@ public class Alhena {
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
-                            if (streamVLC) {
+                            if (streamVLC || (!allowVLC && playerCommand != null)) {
                                 rcvdData[0] = true; // mull on this
                                 currentMime = mimeFromExt;
 
@@ -1637,7 +1637,7 @@ public class Alhena {
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
-                            if (streamVLC) {
+                            if (streamVLC || (!allowVLC && playerCommand != null)) {
                                 currentMime = mimeFromExt[0];
                                 currentSession = ss;
                                 pendingBuffer = buffer;
@@ -2175,7 +2175,7 @@ public class Alhena {
                                             ex.printStackTrace();
                                         }
 
-                                        if (streamVLC) {
+                                        if (streamVLC || (!allowVLC && playerCommand != null)) {
 
                                             currentMime = mime;
                                             currentSession = ss;
