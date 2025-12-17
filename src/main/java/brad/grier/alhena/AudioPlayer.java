@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.sound.sampled.AudioFormat;
@@ -21,6 +22,9 @@ import javax.swing.SwingConstants;
 
 import com.sun.jna.Pointer;
 
+import uk.co.caprica.vlcj.media.MediaEventAdapter;
+import uk.co.caprica.vlcj.media.MediaParsedStatus;
+import uk.co.caprica.vlcj.media.Meta;
 import uk.co.caprica.vlcj.player.base.AudioApi;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
@@ -96,6 +100,30 @@ public class AudioPlayer extends JPanel implements MediaComponent {
         }
         JLabel timeLabel = new JLabel(" ", SwingConstants.CENTER);
         timeLabel.setPreferredSize(new Dimension(50, timeLabel.getPreferredSize().height));
+
+        mediaPlayerComponent.mediaPlayer().events().addMediaEventListener(new MediaEventAdapter() {
+
+            @Override
+            public void mediaParsedChanged(uk.co.caprica.vlcj.media.Media media, MediaParsedStatus newStatus) {
+
+                Map<Meta,String> map = media.meta().asMetaData().values();
+                StringBuilder sb = new StringBuilder();
+                int size = map.size();
+                int i = 0;
+                for(Meta m : map.keySet()){
+                    sb.append(m.toString()).append(": ").append(map.get(m));
+                    if(i++ < size - 1){
+                        sb.append('\n');
+                    }
+
+                }
+                EventQueue.invokeLater(()->{
+                    AudioPlayer.this.setToolTipText(sb.toString());
+                });
+                
+            }
+
+        });
 
         mediaPlayerComponent.mediaPlayer().events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
 
