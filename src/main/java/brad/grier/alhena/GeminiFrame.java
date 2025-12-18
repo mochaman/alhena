@@ -1052,6 +1052,72 @@ public final class GeminiFrame extends JFrame {
             Util.newStyle(GeminiFrame.this);
 
         }));
+
+        settingsMenu.add(createMenuItem("Media", null, () -> {
+            JLabel txtLabel = new JLabel("VLC must be installed and configured to use inline media. See documentation for details.");
+            JPanel inlinePanel = new JPanel(new GridLayout(3, 1));
+            JCheckBox vlcCB = new JCheckBox("Inline VLC", Alhena.allowVLC);
+            inlinePanel.add(vlcCB);
+            JCheckBox streamCB = new JCheckBox("Streaming", Alhena.streamVLC);
+            streamCB.setEnabled(Alhena.allowVLC);
+
+            inlinePanel.add(streamCB);
+            JPanel visPosPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JLabel visLabel = new JLabel("Visualization:");
+            visPosPanel.add(visLabel);
+            String[] items = {"Off", "Waveform", "Kaleidoscope", "Bands", "Oscilloscope", "Color Organ"};
+            JComboBox<String> visCombo = new JComboBox<>(items);
+            visCombo.setEditable(false);
+            visCombo.setSelectedIndex(0); // TODO:
+            visPosPanel.add(visCombo);
+            inlinePanel.add(visPosPanel);
+            visCombo.setEnabled(Alhena.allowVLC);
+            visLabel.setEnabled(Alhena.allowVLC);
+
+            String selectedVis = Alhena.audioVisualizer != null ? Alhena.audioVisualizer : "Off";
+            if(selectedVis.equals("ColorOrgan")){ // ugh. backward compatibility
+                selectedVis = "Color Organ";
+            }
+            visCombo.setSelectedItem(selectedVis);
+
+            JLabel extLabel = new JLabel("Enter command for external player. Use %1 to indicate URL placement.");
+            JTextField extField = new JTextField(50);
+            extField.setEnabled(!Alhena.allowVLC);
+            if (Alhena.playerCommand != null) {
+                extField.setText(Alhena.playerCommand);
+            }
+            extLabel.setEnabled(!Alhena.allowVLC);
+            vlcCB.addActionListener(e -> {
+                boolean selected = vlcCB.isSelected();
+                streamCB.setEnabled(selected);
+                visCombo.setEnabled(selected);
+                visLabel.setEnabled(selected);
+                extField.setEnabled(!selected);
+                extLabel.setEnabled(!selected);
+
+            });
+            Object[] comps = {txtLabel, new JLabel(" "), inlinePanel, new JLabel(" "), extLabel, extField};
+            Object res = Util.inputDialog2(GeminiFrame.this, "Media", comps, null, false);
+            if (res != null) {
+                Alhena.allowVLC = vlcCB.isSelected();
+                DB.insertPref("allowvlc", String.valueOf(Alhena.allowVLC));
+
+                Alhena.streamVLC = streamCB.isSelected();
+                DB.insertPref("streamvlc", String.valueOf(Alhena.streamVLC));
+
+                setVisualizer((String) visCombo.getSelectedItem());
+                String cmd = extField.getText();
+                if (cmd != null) {
+                    if (cmd.isBlank()) {
+                        Alhena.playerCommand = null;
+                    } else {
+                        Alhena.playerCommand = cmd;
+                    }
+                    DB.insertPref("playercommand", Alhena.playerCommand);
+                }
+            }
+        }));
+
         settingsMenu.add(new JSeparator());
         JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem(I18n.t("smoothScrollingItem"), Alhena.smoothScrolling);
         smoothItem.addItemListener(ae -> {
@@ -1089,8 +1155,6 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        JMenu mediaMenu = new JMenu("Media");
-
         JCheckBoxMenuItem inlineItem = new JCheckBoxMenuItem(I18n.t("inlineItem"), Alhena.inlineImages);
         inlineItem.addItemListener(ae -> {
 
@@ -1099,61 +1163,6 @@ public final class GeminiFrame extends JFrame {
             DB.insertPref("inlineimages", String.valueOf(Alhena.inlineImages));
 
         });
-
-        JCheckBoxMenuItem vlcItem = new JCheckBoxMenuItem(I18n.t("vlcItem"), Alhena.allowVLC);
-        vlcItem.addItemListener(ae -> {
-
-            Alhena.allowVLC = !Alhena.allowVLC;
-
-            DB.insertPref("allowvlc", String.valueOf(Alhena.allowVLC));
-
-            if (Alhena.allowVLC) {
-                Util.infoDialog(GeminiFrame.this, I18n.t("vlcUpdateDialog"), I18n.t("vlcUpdateDialogMsg"));
-            }
-
-        });
-
-        JCheckBoxMenuItem streamItem = new JCheckBoxMenuItem(I18n.t("streamItem"), Alhena.streamVLC);
-        streamItem.addItemListener(ae -> {
-
-            Alhena.streamVLC = !Alhena.streamVLC;
-
-            DB.insertPref("streamvlc", String.valueOf(Alhena.streamVLC));
-
-        });
-
-        JMenu visualMenu = new JMenu("Visualizations");
-        JRadioButtonMenuItem naRadio = new JRadioButtonMenuItem("Off", Alhena.audioVisualizer.equals("Off"));
-        naRadio.addActionListener(al -> setVisualizer("Off")); // pass in pref value and not any translation (the same in English)
-        visualMenu.add(naRadio);
-
-        JRadioButtonMenuItem wfRadio = new JRadioButtonMenuItem("Waveform", Alhena.audioVisualizer.equals("Waveform"));
-        wfRadio.addActionListener(al -> setVisualizer("Waveform")); // pass in pref value and not any translation
-        visualMenu.add(wfRadio);
-
-        JRadioButtonMenuItem kRadio = new JRadioButtonMenuItem("Kaleidoscope", Alhena.audioVisualizer.equals("Kaleidoscope"));
-        kRadio.addActionListener(al -> setVisualizer("Kaleidoscope")); // pass in pref value and not any translation
-        visualMenu.add(kRadio);
-
-        JRadioButtonMenuItem bandsRadio = new JRadioButtonMenuItem("Bands", Alhena.audioVisualizer.equals("Bands"));
-        bandsRadio.addActionListener(al -> setVisualizer("Bands")); // pass in pref value and not any translation
-        visualMenu.add(bandsRadio);
-
-        JRadioButtonMenuItem oscRadio = new JRadioButtonMenuItem("Oscilloscope", Alhena.audioVisualizer.equals("Oscilloscope"));
-        oscRadio.addActionListener(al -> setVisualizer("Oscilloscope")); // pass in pref value and not any translation
-        visualMenu.add(oscRadio);
-
-        JRadioButtonMenuItem coRadio = new JRadioButtonMenuItem("Color Organ", Alhena.audioVisualizer.equals("ColorOrgan"));
-        coRadio.addActionListener(al -> setVisualizer("ColorOrgan")); // pass in pref value and not any translation
-        visualMenu.add(coRadio);
-
-        ButtonGroup avBG = new ButtonGroup();
-        avBG.add(naRadio);
-        avBG.add(wfRadio);
-        avBG.add(kRadio);
-        avBG.add(bandsRadio);
-        avBG.add(oscRadio);
-        avBG.add(coRadio);
 
         JCheckBoxMenuItem favIconItem = new JCheckBoxMenuItem(I18n.t("favIconItem"), Alhena.favIcon);
         favIconItem.addItemListener(ae -> {
@@ -1226,11 +1235,6 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        mediaMenu.add(vlcItem);
-
-        mediaMenu.add(streamItem);
-        mediaMenu.add(visualMenu);
-
         JMenuItem extPlayerItem = new JMenuItem("External Player");
         extPlayerItem.addActionListener(ae -> {
 
@@ -1245,9 +1249,7 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("playercommand", Alhena.playerCommand);
             }
         });
-        mediaMenu.add(extPlayerItem);
 
-        settingsMenu.add(mediaMenu);
         settingsMenu.add(inlineItem);
 
         settingsMenu.add(gradientItem);
@@ -1339,6 +1341,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void setVisualizer(String name) {
+        name = name.replace(" ", "");
         DB.insertPref("visualizer", name);
         Alhena.audioVisualizer = name;
     }
