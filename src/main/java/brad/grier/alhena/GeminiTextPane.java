@@ -1066,9 +1066,9 @@ public class GeminiTextPane extends JTextPane {
         Alhena.pauseMedia();
 
         MediaComponent ap;
-        if(!Alhena.allowVLC && Alhena.playerCommand != null){
+        if (!Alhena.allowVLC && Alhena.playerCommand != null) {
             ap = new ExternalPlayer(f);
-        }else{
+        } else {
             ap = mime.startsWith("audio") ? new AudioPlayer(session, path != null && session != null) : new VideoPlayer(session);
         }
 
@@ -2002,15 +2002,17 @@ public class GeminiTextPane extends JTextPane {
 
     // only call on EDT
     private static void rebuildLinkIcons(int gfFontSize, Color bgColor, Color linkColor) {
-        dataIcon = getLinkIcon("📎", "Noto Emoji", gfFontSize, linkColor);
-        mailIcon = getLinkIcon("✉️", "Noto Emoji", gfFontSize, linkColor);
-        geminiIcon = getLinkIcon("♊️", "Noto Emoji", gfFontSize, linkColor);
-        otherIcon = getLinkIcon("🌐", "Noto Emoji", gfFontSize, linkColor);
-        titanIcon = getLinkIcon("✏️", "Noto Emoji", gfFontSize, linkColor);
-        picIcon = getLinkIcon("📸", "Noto Emoji", gfFontSize, linkColor);
-        mediaIcon = getLinkIcon("🎥", "Noto Emoji", gfFontSize, linkColor);
-        gopherIcon = getLinkIcon("🐹", "Noto Emoji", gfFontSize, linkColor);
-        spartanIcon = getLinkIcon("💪", "Noto Emoji", gfFontSize, linkColor);
+        String iconFont = "Noto Emoji";
+        dataIcon = getLinkIcon("📎", iconFont, gfFontSize, linkColor);
+        mailIcon = getLinkIcon("✉️", iconFont, gfFontSize, linkColor);
+        geminiIcon = getLinkIcon("♊️", iconFont, gfFontSize, linkColor);
+        otherIcon = getLinkIcon("🌐", iconFont, gfFontSize, linkColor);
+        titanIcon = getLinkIcon("✏️", iconFont, gfFontSize, linkColor);
+        picIcon = getLinkIcon("📸", iconFont, gfFontSize, linkColor);
+        videoIcon = getLinkIcon("🎥", iconFont, gfFontSize, linkColor);
+        audioIcon = getLinkIcon("🎧", iconFont, gfFontSize, linkColor);
+        gopherIcon = getLinkIcon("🐹", iconFont, gfFontSize, linkColor);
+        spartanIcon = getLinkIcon("💪", iconFont, gfFontSize, linkColor);
 
     }
 
@@ -2174,17 +2176,28 @@ public class GeminiTextPane extends JTextPane {
             if (Alhena.linkIcons && currentMode != CERT_MODE && currentMode != STYLE_MODE) {
 
                 boolean isImage = Alhena.imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
-                boolean isMedia = false;
+                boolean isVideo = false;
+                boolean isAudio = false;
                 if (!isImage) {
-                    String mimeExt = MimeMapping.getMimeTypeForFilename(finalUrl);
-                    isMedia = (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
+                    if (url.toLowerCase().endsWith(".opus")) {
+                        isAudio = true;
+                    } else {
+                        String mimeExt = MimeMapping.getMimeTypeForFilename(finalUrl);
+
+                        if (mimeExt != null) {
+                            isVideo = mimeExt.startsWith("video");
+                            isAudio = mimeExt.startsWith("audio");
+
+                        }
+                    }
                 }
 
                 if (isImage) {
                     sfx = "🌠";
-                } else if (isMedia) {
+                } else if (isVideo) {
                     sfx = "🎥";
-
+                } else if (isAudio) {
+                    sfx = "🎧";
                 } else if (finalUrl.indexOf("://") == -1) {
                     if (finalUrl.startsWith("data")) {
                         sfx = "📎";
@@ -2584,7 +2597,9 @@ public class GeminiTextPane extends JTextPane {
                             case "🌠" ->
                                 picIcon;
                             case "🎥" ->
-                                mediaIcon;
+                                videoIcon;
+                            case "🎧" ->
+                                audioIcon;
                             case "🐭" ->
                                 gopherIcon;
                             case "💪" ->
@@ -3086,7 +3101,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, mediaIcon, gopherIcon, spartanIcon;
+    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, videoIcon, audioIcon, gopherIcon, spartanIcon;
 
     private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color fgColor) {
         BufferedImage bi = AsciiImage.renderTextToImage(shadePF, txt, fontName, fontSize, fgColor, null, true);
