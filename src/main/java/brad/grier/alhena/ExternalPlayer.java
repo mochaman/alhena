@@ -53,14 +53,14 @@ public class ExternalPlayer extends JPanel implements MediaComponent {
             pb.redirectError(ProcessBuilder.Redirect.DISCARD);
             try {
                 process = pb.start();
-            
+
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-            process.onExit().thenAccept(proc ->{
+            process.onExit().thenAccept(proc -> {
                 packets.stop();
             });
-            
+
         }).start(); // overkill - needed to get opening message to the status bar on the EDT right away
     }
 
@@ -113,7 +113,7 @@ public class ExternalPlayer extends JPanel implements MediaComponent {
             args.set(i, args.get(i).replace("%1", url));
         }
 
-        return args.toArray(new String[0]);
+        return args.toArray(String[]::new);
     }
 
     public class PacketDotsIndicator extends JComponent {
@@ -121,13 +121,22 @@ public class ExternalPlayer extends JPanel implements MediaComponent {
         private static final int FPS = 30;
         private static final int MAX_DOTS = 8;
 
-        private final List<Dot> dots = new ArrayList<>();
+        private final List<Dot> dots = new ArrayList<>(MAX_DOTS);
         private final Random rnd = new Random();
         private final Timer timer;
+        private final Color baseColor;
+
+        private final AlphaComposite[] compositeCache = new AlphaComposite[101];
 
         public PacketDotsIndicator() {
             setPreferredSize(new Dimension(100, 24));
             setOpaque(false);
+
+            baseColor = UIManager.getColor("Label.foreground");
+
+            for (int i = 0; i <= 100; i++) {
+                compositeCache[i] = AlphaComposite.SrcOver.derive(i / 100f);
+            }
 
             timer = new Timer(1000 / FPS, e -> tick());
         }
@@ -145,8 +154,11 @@ public class ExternalPlayer extends JPanel implements MediaComponent {
         }
 
         private void tick() {
+            boolean needsRepaint = false;
+
             if (dots.size() < MAX_DOTS && rnd.nextFloat() < 0.25f) {
                 dots.add(new Dot());
+                needsRepaint = true;
             }
 
             Iterator<Dot> it = dots.iterator();
@@ -157,25 +169,36 @@ public class ExternalPlayer extends JPanel implements MediaComponent {
 
                 if (d.x > getWidth() || d.alpha <= 0) {
                     it.remove();
+                    needsRepaint = true;
+                } else {
+                    needsRepaint = true;
                 }
             }
 
-            repaint();
+            if (needsRepaint) {
+                repaint();
+            }
         }
 
         @Override
         protected void paintComponent(Graphics g) {
+            if (dots.isEmpty()) {
+                return;
+            }
+
             Graphics2D g2 = (Graphics2D) g.create();
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_ON);
 
-                int h = getHeight();
-                Color base = UIManager.getColor("Label.foreground");
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING,
+                        RenderingHints.VALUE_RENDER_SPEED);
+
+                g2.setColor(baseColor);
 
                 for (Dot d : dots) {
-                    g2.setComposite(AlphaComposite.SrcOver.derive(d.alpha));
-                    g2.setColor(base);
+                    int alphaIndex = Math.max(0, Math.min(100, (int) (d.alpha * 100)));
+                    g2.setComposite(compositeCache[alphaIndex]);
                     g2.fillOval((int) d.x, d.y, d.size, d.size);
                 }
             } finally {
