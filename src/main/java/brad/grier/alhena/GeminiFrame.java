@@ -1053,17 +1053,17 @@ public final class GeminiFrame extends JFrame {
 
         }));
 
-        settingsMenu.add(createMenuItem("Media", null, () -> {
-            JLabel txtLabel = new JLabel("VLC must be installed and configured to use inline media. See documentation for details.");
+        settingsMenu.add(createMenuItem(I18n.t("mediaDialog"), null, () -> {
+            JLabel txtLabel = new JLabel(I18n.t("mediaInfoTxt"));
             JPanel inlinePanel = new JPanel(new GridLayout(3, 1));
-            JCheckBox vlcCB = new JCheckBox("Inline VLC", Alhena.allowVLC);
+            JCheckBox vlcCB = new JCheckBox(I18n.t("vlcItem"), Alhena.allowVLC);
             inlinePanel.add(vlcCB);
-            JCheckBox streamCB = new JCheckBox("Streaming", Alhena.streamVLC);
+            JCheckBox streamCB = new JCheckBox(I18n.t("streamingCB"), Alhena.streamVLC);
             streamCB.setEnabled(Alhena.allowVLC);
 
             inlinePanel.add(streamCB);
             JPanel visPosPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            JLabel visLabel = new JLabel("Visualization:");
+            JLabel visLabel = new JLabel(I18n.t("visCombo"));
             visPosPanel.add(visLabel);
             String[] items = {"Off", "Waveform", "Kaleidoscope", "Bands", "Oscilloscope", "Color Organ"};
             JComboBox<String> visCombo = new JComboBox<>(items);
@@ -1080,7 +1080,7 @@ public final class GeminiFrame extends JFrame {
             }
             visCombo.setSelectedItem(selectedVis);
 
-            JLabel extLabel = new JLabel("Enter command for external player. Use %1 to indicate URL placement.");
+            JLabel extLabel = new JLabel(I18n.t("mediaCmdTxt"));
             JTextField extField = new JTextField(50);
             extField.setEnabled(!Alhena.allowVLC);
             if (Alhena.playerCommand != null) {
@@ -1097,7 +1097,7 @@ public final class GeminiFrame extends JFrame {
 
             });
             Object[] comps = {txtLabel, new JLabel(" "), inlinePanel, new JLabel(" "), extLabel, extField};
-            Object res = Util.inputDialog2(GeminiFrame.this, "Media", comps, null, false);
+            Object res = Util.inputDialog2(GeminiFrame.this, I18n.t("mediaDialog"), comps, null, false);
             if (res != null) {
                 Alhena.allowVLC = vlcCB.isSelected();
                 DB.insertPref("allowvlc", String.valueOf(Alhena.allowVLC));
