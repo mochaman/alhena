@@ -1266,10 +1266,12 @@ public class Alhena {
                                 bg(() -> {
                                     p.textPane.gopherHtml = true;
                                     p.textPane.end(content, false, origURL, true);
+                                    p.frame().setBusy(false, cPage);
                                 });
                             } else {
                                 bg(() -> {
                                     p.textPane.end();
+                                    p.frame().setBusy(false, cPage);
 
                                 });
                             }
@@ -1486,12 +1488,13 @@ public class Alhena {
                             if (rcvdData[0]) {
                                 bg(() -> {
                                     p.textPane.end();
-
+                                    p.frame().setBusy(false, cPage);
                                 });
                             } else {
                                 bg(() -> {
                                     p.textPane.updatePage("", true, origURL, true);
                                     p.textPane.end();
+                                    p.frame().setBusy(false, cPage);
 
                                 });
                             }
@@ -1798,6 +1801,7 @@ public class Alhena {
                                     }
                                     bg(() -> {
                                         p.textPane.end();
+                                        p.frame().setBusy(false, cPage);
 
                                     });
                                 }
