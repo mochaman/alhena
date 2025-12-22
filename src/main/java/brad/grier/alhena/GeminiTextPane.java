@@ -2013,6 +2013,7 @@ public class GeminiTextPane extends JTextPane {
         audioIcon = getLinkIcon("🎧", iconFont, gfFontSize, linkColor);
         gopherIcon = getLinkIcon("🐹", iconFont, gfFontSize, linkColor);
         spartanIcon = getLinkIcon("💪", iconFont, gfFontSize, linkColor);
+        nexIcon = getLinkIcon("🚄", iconFont, gfFontSize, linkColor);
 
     }
 
@@ -2210,6 +2211,8 @@ public class GeminiTextPane extends JTextPane {
                             sfx = "🔗";
                         } else if (docURL.startsWith("gopher")) {
                             sfx = "🐭";
+                        } else if (docURL.startsWith("nex")){
+                            sfx = "🚄";
                         } else {
                             sfx = "🌐";
                         }
@@ -2224,6 +2227,8 @@ public class GeminiTextPane extends JTextPane {
                         sfx = "🔗";
                     } else if (finalUrl.startsWith("gopher")) {
                         sfx = "🐭";
+                    } else if(finalUrl.startsWith("nex")){
+                        sfx = "🚄";
                     } else {
                         sfx = "🌐";
                     }
@@ -2604,6 +2609,8 @@ public class GeminiTextPane extends JTextPane {
                                 gopherIcon;
                             case "💪" ->
                                 spartanIcon;
+                            case "🚄" ->
+                                nexIcon;
                             default ->
                                 geminiIcon;
                         };
@@ -3101,7 +3108,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, videoIcon, audioIcon, gopherIcon, spartanIcon;
+    private static ImageIcon dataIcon, mailIcon, geminiIcon, otherIcon, titanIcon, picIcon, videoIcon, audioIcon, gopherIcon, spartanIcon, nexIcon;
 
     private static ImageIcon getLinkIcon(String txt, String fontName, int fontSize, Color fgColor) {
         BufferedImage bi = AsciiImage.renderTextToImage(shadePF, txt, fontName, fontSize, fgColor, null, true);
