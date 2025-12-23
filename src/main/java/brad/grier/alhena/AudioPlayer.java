@@ -99,7 +99,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
             });
         }
         JLabel timeLabel = new JLabel(" ", SwingConstants.CENTER);
-        timeLabel.setPreferredSize(new Dimension(50, timeLabel.getPreferredSize().height));
+        timeLabel.setPreferredSize(new Dimension(80, timeLabel.getPreferredSize().height));
 
         mediaPlayerComponent.mediaPlayer().events().addMediaEventListener(new MediaEventAdapter() {
 
