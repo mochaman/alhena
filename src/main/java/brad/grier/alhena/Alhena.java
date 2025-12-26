@@ -1919,7 +1919,9 @@ public class Alhena {
             p.stop();
         }
         if (ss != null) {
-            ss.getHttpClientResponse().request().connection().close();
+            if (ss.getHttpClientResponse() != null) {
+                ss.getHttpClientResponse().request().connection().close();
+            }
             ss.close();
         }
 
@@ -3929,7 +3931,7 @@ public class Alhena {
                                 req.end();
                             });
                             bg(() -> {
-                                
+
                                 pendingBuffer = Buffer.buffer();
                                 GeminiTextPane tPane = cPage.textPane;
                                 if (tPane.awatingImage()) {
