@@ -1919,6 +1919,7 @@ public class Alhena {
             p.stop();
         }
         if (ss != null) {
+            ss.getHttpClientResponse().request().connection().close();
             ss.close();
         }
 
