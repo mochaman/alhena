@@ -333,7 +333,7 @@ public class AudioPlayer extends JPanel implements MediaComponent {
 
         this.mrl = mrl;
         mediaPlayerComponent.mediaPlayer().submit(() -> {
-            mediaPlayerComponent.mediaPlayer().media().play(mrl);
+            mediaPlayerComponent.mediaPlayer().media().play(mrl, ":network-caching=1500");
         });
 
     }
