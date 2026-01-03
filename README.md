@@ -85,19 +85,19 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT required (except for the Basic install). The platform specific installs each include a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-5.4.8_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-5.4.8_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-5.4.8_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-5.4.8_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-5.4.8_linux_aarch64.tgz) untar and run 'Alhena' script
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-5.4.8_freebsd_x64.tgz) untar and run script
-- [Basic](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-5.4.8_nojava.zip) JAVA_HOME must point to Java 21+ directory. Run via .bat or .sh scripts.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-5.4.9_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-5.4.9_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-5.4.9_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-5.4.9_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-5.4.9_linux_aarch64.tgz) untar and run 'Alhena' script
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-5.4.9_freebsd_x64.tgz) untar and run script
+- [Basic](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-5.4.9_nojava.zip) JAVA_HOME must point to Java 21+ directory. Run via .bat or .sh scripts.
 
 ## ⚙️ GraalVM Native Image
 
 An experimental version of Alhena compiled with GraalVM native-image is available for Linux glibc x64. Run via the alhena.sh script. Remote sync has been disabled and printing is untested. Feedback welcome. More information is available in the included readme.
 
-- [Native Linux](https://github.com/mochaman/alhena/releases/download/v5.4.8/alhena-native-5.4.8_linux_glibc_x64.tar.gz) untar and run 'alhena.sh'
+- [Native Linux](https://github.com/mochaman/alhena/releases/download/v5.4.9/alhena-native-5.4.9_linux_glibc_x64.tar.gz) untar and run 'alhena.sh'
 
 ## 🐳 Docker
 
