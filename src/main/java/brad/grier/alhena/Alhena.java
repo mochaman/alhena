@@ -155,7 +155,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public static String welcomeMessage;
-    public final static String VERSION = "5.4.8";
+    public final static String VERSION = "5.4.9";
     private static volatile boolean interrupted;
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg");
@@ -577,7 +577,7 @@ public class Alhena {
             if (updateBookmarks) {
                 jf.updateBookmarks();
             }
-            if(updateToolbar){
+            if (updateToolbar) {
                 jf.configNavPanel(true);
             }
             if (updateWindowsMenu) {
@@ -677,16 +677,20 @@ public class Alhena {
             if (url.length() == url.indexOf("//") + 2) {
                 return;
             }
-        } else if (userInput && searchUrl != null) {
-            // submit to search engine
-            if (url.contains(" ")) {
-                url = searchUrl + "?" + Util.uEncode(url);
-            } else if (url.contains("/") && !url.startsWith("/")) {
+        } else if (userInput) {
+            if (searchUrl != null) {
+                // submit to search engine
+                if (url.contains(" ")) {
+                    url = searchUrl + "?" + Util.uEncode(url);
+                } else if (url.contains("/") && !url.startsWith("/")) {
+                    url = "gemini://" + url;
+                } else if (qIdx != -1 && !url.startsWith("?")) {
+                    url = "gemini://" + url;
+                } else {
+                    url = searchUrl + "?" + Util.uEncode(url);
+                }
+            }else{
                 url = "gemini://" + url;
-            } else if (qIdx != -1 && !url.startsWith("?")) {
-                url = "gemini://" + url;
-            } else {
-                url = searchUrl + "?" + Util.uEncode(url);
             }
 
         }
