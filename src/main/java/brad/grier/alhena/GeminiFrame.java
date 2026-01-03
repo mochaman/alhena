@@ -59,8 +59,6 @@ import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 import javax.security.auth.x500.X500Principal;
-import javax.swing.AbstractAction;
-import javax.swing.Action;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -117,6 +115,9 @@ public final class GeminiFrame extends JFrame {
     public final JButton forwardButton;
     private final JButton favButton;
     public final JButton refreshButton;
+    private final JButton homeButton;
+    private final PopupMenuButton hotButton;
+    private final JPanel navPanel;
     public static int currentThemeId;
     private final HashMap<Page, ArrayList<Page>> pageHistoryMap = new HashMap<>();
     private final List<String> clickedLinks = new ArrayList<>();
@@ -408,101 +409,22 @@ public final class GeminiFrame extends JFrame {
 
         backButton.setEnabled(false);
         backButton.addActionListener(al -> {
-
-            //showGlassPane(true);
-            Page vPage = visiblePage();
-            Page rootPage = getRootPage(vPage);
-            if (hasPrev(rootPage)) {
-                Page prev = prev(rootPage);
-                String cUrl = prev.textPane.getDocURLString();
-                updateComboBox(cUrl);
-                if (tabbedPane == null) {
-                    invalidate();
-                    remove(vPage);
-                    prev.setVisible(true);
-                    add(prev, BorderLayout.CENTER);
-                    revalidate();
-
-                } else {
-                    int idx = tabbedPane.getSelectedIndex();
-                    tabbedPane.setComponentAt(idx, prev);
-
-                }
-                if (prev.getThemeId() != currentThemeId) {
-
-                    SwingUtilities.updateComponentTreeUI(prev);
-                    prev.setThemeId(currentThemeId);
-                    refreshFromCache(prev);
-
-                }
-                setTitle(createTitle(cUrl, prev.textPane.getFirstHeading()));
-                backButton.setEnabled(hasPrev(rootPage));
-                forwardButton.setEnabled(hasNext(rootPage));
-
-            }
-
-            validate();
-            repaint();
-            visiblePage().textPane.requestFocusInWindow();
-
+            goBack();
         });
 
         forwardButton.setEnabled(false);
         forwardButton.addActionListener(al -> {
-
-            Page vPage = visiblePage();
-            Page groupPane = getRootPage(vPage);
-            if (hasNext(groupPane)) {
-                Page next = next(groupPane);
-                String cUrl = next.textPane.getDocURLString();
-                updateComboBox(cUrl);
-                if (tabbedPane == null) {
-                    invalidate();
-
-                    remove(vPage);
-                    next.setVisible(true);
-                    add(next, BorderLayout.CENTER);
-
-                    revalidate();
-                } else {
-                    int idx = tabbedPane.getSelectedIndex();
-                    tabbedPane.setComponentAt(idx, next);
-                }
-
-                if (next.getThemeId() != currentThemeId) {
-                    SwingUtilities.updateComponentTreeUI(next);
-                    next.setThemeId(currentThemeId);
-                    refreshFromCache(next);
-
-                }
-                setTitle(createTitle(cUrl, next.textPane.getFirstHeading()));
-                backButton.setEnabled(hasPrev(groupPane));
-                forwardButton.setEnabled(hasNext(groupPane));
-            }
-
-            validate();
-            repaint();
-            visiblePage().textPane.requestFocusInWindow();
-
+            goForward();
         });
 
         ImageIcon refreshIcon = Util.recolorIcon("/refresh.png", UIManager.getColor("Button.foreground"), 21, 21);
         refreshButton = new JButton(refreshIcon);
         refreshButton.setToolTipText(I18n.t("refreshButtonTip"));
         refreshButton.setEnabled(false);
-
-        Action refreshAction = new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                refresh();
-            }
-        };
-        refreshButton.addActionListener(refreshAction);
-        refreshButton.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
-                .put(KeyStroke.getKeyStroke(KeyEvent.VK_R, mod), "refresh");
-        refreshButton.getActionMap().put("refresh", refreshAction);
-
-        JButton homeButton = new JButton("🏠");
+        refreshButton.addActionListener(al -> {
+            refresh();
+        });
+        homeButton = new JButton("🏠");
         homeButton.setToolTipText(I18n.t("homeButtonTip"));
         homeButton.addActionListener(al -> {
 
@@ -524,20 +446,7 @@ public final class GeminiFrame extends JFrame {
 
         favButton.setFont(buttonFont);
 
-        JPanel navPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints c = new GridBagConstraints();
-        c.insets = new java.awt.Insets(0, 5, 5, 0);
-        navPanel.add(backButton, c);
-        navPanel.add(forwardButton, c);
-        navPanel.add(refreshButton, c);
-
-        GridBagConstraints gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.weighty = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(1, 6, 7, 4);
-
-        navPanel.add(comboBox, gridBagConstraints);
+        navPanel = new JPanel(new GridBagLayout());
 
         Supplier<List<JComponent>> dynamicMenuSupplier = () -> {
             List<JComponent> items = new ArrayList<>();
@@ -545,11 +454,11 @@ public final class GeminiFrame extends JFrame {
                 List<Bookmark> mList = DB.loadTopBookmarks();
 
                 mList.stream().forEach(bmark -> {
-                    JMenuItem mi = new JMenuItem(bmark.label());
+                    JMenuItem m = new JMenuItem(bmark.label());
                     mi.addActionListener(e -> {
                         fetchURL(bmark.url(), false);
                     });
-                    items.add(mi);
+                    items.add(m);
                 });
             } catch (SQLException ex) {
                 ex.printStackTrace();
@@ -557,17 +466,12 @@ public final class GeminiFrame extends JFrame {
 
             return items;
         };
-        PopupMenuButton hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, I18n.t("noHistoryPopupLabel"));
+        hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, I18n.t("noHistoryPopupLabel"));
         hotButton.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
         hotButton.setToolTipText(I18n.t("hotButtonTip"));
         hotButton.setFont(buttonFont);
 
-        navPanel.add(hotButton, c);
-        navPanel.add(homeButton, c);
-
-        GridBagConstraints c1 = new java.awt.GridBagConstraints();
-        c1.insets = new java.awt.Insets(0, 5, 5, 5);
-        navPanel.add(favButton, c1);
+        configNavPanel(false);
         if (SystemInfo.isMacOS) {
             JPanel macPanel = new JPanel(new GridLayout(2, 1));
             titleLabel = new JLabel();
@@ -845,6 +749,112 @@ public final class GeminiFrame extends JFrame {
 
     }
 
+    public void configNavPanel(boolean reset) {
+        if (reset) {
+            navPanel.removeAll();
+        }
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new java.awt.Insets(0, 5, 5, 0);
+        navPanel.add(backButton, c);
+        navPanel.add(forwardButton, c);
+        if (!Alhena.compactTB) {
+            navPanel.add(refreshButton, c);
+        }
+
+        GridBagConstraints gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.weighty = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(1, 6, 7, 4);
+
+        navPanel.add(comboBox, gridBagConstraints);
+        if (!Alhena.compactTB) {
+            navPanel.add(hotButton, c);
+            navPanel.add(homeButton, c);
+
+            GridBagConstraints c1 = new java.awt.GridBagConstraints();
+            c1.insets = new java.awt.Insets(0, 5, 5, 5);
+            navPanel.add(favButton, c1);
+        }
+        if (reset) {
+            navPanel.revalidate();
+        }
+    }
+
+    public void goForward() {
+        Page vPage = visiblePage();
+        Page groupPane = getRootPage(vPage);
+        if (hasNext(groupPane)) {
+            Page next = next(groupPane);
+            String cUrl = next.textPane.getDocURLString();
+            updateComboBox(cUrl);
+            if (tabbedPane == null) {
+                invalidate();
+
+                remove(vPage);
+                next.setVisible(true);
+                add(next, BorderLayout.CENTER);
+
+                revalidate();
+            } else {
+                int idx = tabbedPane.getSelectedIndex();
+                tabbedPane.setComponentAt(idx, next);
+            }
+
+            if (next.getThemeId() != currentThemeId) {
+                SwingUtilities.updateComponentTreeUI(next);
+                next.setThemeId(currentThemeId);
+                refreshFromCache(next);
+
+            }
+            setTitle(createTitle(cUrl, next.textPane.getFirstHeading()));
+            backButton.setEnabled(hasPrev(groupPane));
+            forwardButton.setEnabled(hasNext(groupPane));
+        }
+
+        validate();
+        repaint();
+        visiblePage().textPane.requestFocusInWindow();
+    }
+
+    public void goBack() {
+        //showGlassPane(true);
+        Page vPage = visiblePage();
+        Page rootPage = getRootPage(vPage);
+        if (hasPrev(rootPage)) {
+            Page prev = prev(rootPage);
+            String cUrl = prev.textPane.getDocURLString();
+            updateComboBox(cUrl);
+            if (tabbedPane == null) {
+                invalidate();
+                remove(vPage);
+                prev.setVisible(true);
+                add(prev, BorderLayout.CENTER);
+                revalidate();
+
+            } else {
+                int idx = tabbedPane.getSelectedIndex();
+                tabbedPane.setComponentAt(idx, prev);
+
+            }
+            if (prev.getThemeId() != currentThemeId) {
+
+                SwingUtilities.updateComponentTreeUI(prev);
+                prev.setThemeId(currentThemeId);
+                refreshFromCache(prev);
+
+            }
+            setTitle(createTitle(cUrl, prev.textPane.getFirstHeading()));
+            backButton.setEnabled(hasPrev(rootPage));
+            forwardButton.setEnabled(hasNext(rootPage));
+
+        }
+
+        validate();
+        repaint();
+        visiblePage().textPane.requestFocusInWindow();
+    }
+
     public void findAgain() {
         if (lastSearch == null) {
             return;
@@ -889,7 +899,7 @@ public final class GeminiFrame extends JFrame {
 
                             DB.insertPref("theme", value.className());
                             Alhena.theme = value.className();
-                            Alhena.updateFrames(false, false, true);
+                            Alhena.updateFrames(false, false, true, false);
 
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -908,7 +918,7 @@ public final class GeminiFrame extends JFrame {
 
                 proportionalFamily = font.getName();
                 fontSize = font.getSize();
-                Alhena.updateFrames(false, false, false);
+                Alhena.updateFrames(false, false, false, false);
 
                 DB.insertPref("font", font.getName());
                 DB.insertPref("fontfamily", proportionalFamily);
@@ -996,6 +1006,9 @@ public final class GeminiFrame extends JFrame {
             tabPosCombo.setSelectedIndex(tabPosition);
             tabPosPanel.add(tabPosCombo);
 
+            JCheckBox compactCB = new JCheckBox(I18n.t("compactCB"));
+            compactCB.setSelected(Alhena.compactTB);
+
             JCheckBox lineWrapCB = new JCheckBox(I18n.t("lineWrapCB"));
             lineWrapCB.setSelected(GeminiTextPane.wrapPF);
             JCheckBox embedPFCB = new JCheckBox(I18n.t("scrollableCB"));
@@ -1025,10 +1038,18 @@ public final class GeminiFrame extends JFrame {
             showsbCB.setEnabled(embedPFCB.isSelected());
             shadeCB.setEnabled(embedPFCB.isSelected());
 
-            Object[] comps = {new JLabel(I18n.t("contentWidthLabel")), slider, new JLabel(" "), tabPosPanel, lineWrapCB, imagePFCB, embedPFCB, showsbCB, shadeCB};
+            Object[] comps = {new JLabel(I18n.t("contentWidthLabel")), slider, new JLabel(" "), tabPosPanel, compactCB, lineWrapCB, imagePFCB,
+                embedPFCB, showsbCB, shadeCB};
             Object res = Util.inputDialog2(GeminiFrame.this, "Layout", comps, null, false);
 
             if (res != null) {
+                boolean compactTB = compactCB.isSelected();
+                boolean updateToolbar = false;
+                if (compactTB != Alhena.compactTB) {
+                    DB.insertPref("compact", String.valueOf(compactTB));
+                    Alhena.compactTB = compactTB;
+                    updateToolbar = true;
+                }
                 tabPosition = tabPosCombo.getSelectedIndex();
                 DB.insertPref("tabpos", String.valueOf(tabPosition));
                 GeminiTextPane.asciiImage = imagePFCB.isSelected();
@@ -1041,9 +1062,10 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("embedpf", String.valueOf(GeminiTextPane.embedPF));
                 GeminiTextPane.showSB = showsbCB.isSelected();
                 DB.insertPref("showsb", String.valueOf(GeminiTextPane.showSB));
+
                 GeminiTextPane.shadePF = shadeCB.isSelected();
                 DB.insertPref("shadepf", String.valueOf(GeminiTextPane.shadePF));
-                Alhena.updateFrames(false, false, false);
+                Alhena.updateFrames(false, false, false, updateToolbar);
             }
 
         }));
@@ -1075,7 +1097,7 @@ public final class GeminiFrame extends JFrame {
             visLabel.setEnabled(Alhena.allowVLC);
 
             String selectedVis = Alhena.audioVisualizer != null ? Alhena.audioVisualizer : "Off";
-            if(selectedVis.equals("ColorOrgan")){ // ugh. backward compatibility
+            if (selectedVis.equals("ColorOrgan")) { // ugh. backward compatibility
                 selectedVis = "Color Organ";
             }
             visCombo.setSelectedItem(selectedVis);
@@ -1151,7 +1173,7 @@ public final class GeminiFrame extends JFrame {
             Alhena.gradientBG = !Alhena.gradientBG;
 
             DB.insertPref("gradiantbg", String.valueOf(Alhena.gradientBG));
-            Alhena.updateFrames(false, false, false); // can't just repaint as page style needs updating
+            Alhena.updateFrames(false, false, false, false); // can't just repaint as page style needs updating
 
         });
 
@@ -1182,7 +1204,7 @@ public final class GeminiFrame extends JFrame {
 
             DB.insertPref("dataurl", String.valueOf(Alhena.dataUrl));
 
-            Alhena.updateFrames(false, false, false);
+            Alhena.updateFrames(false, false, false, false);
 
         });
 
@@ -1193,7 +1215,7 @@ public final class GeminiFrame extends JFrame {
 
             DB.insertPref("linkicons", String.valueOf(Alhena.linkIcons));
 
-            Alhena.updateFrames(false, false, false);
+            Alhena.updateFrames(false, false, false, false);
 
         });
 
@@ -1204,7 +1226,7 @@ public final class GeminiFrame extends JFrame {
 
             DB.insertPref("bigscrollbar", String.valueOf(Alhena.bigScrollBar));
 
-            Alhena.updateFrames(false, false, false);
+            Alhena.updateFrames(false, false, false, false);
 
         });
 
@@ -1430,17 +1452,17 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("emoji", setName);
                 DB.insertPref("macusenoto", String.valueOf(macUseNoto));
                 Alhena.macUseNoto = macUseNoto;
-                Alhena.updateFrames(false, false, false);
+                Alhena.updateFrames(false, false, false, false);
                 lastSelectedItem = selected;
             } else if (macUseNoto != savedMacNotoPref && setName.equals(savedSet)) {
 
-                Alhena.updateFrames(false, false, false);
+                Alhena.updateFrames(false, false, false, false);
             } else {
                 String url = emojiNameMap.get(setName);
                 if (setName.equals("google")) {
                     GeminiTextPane.setSheetImage(Util.loadImage(url));
                     DB.insertPref("emoji", "google");
-                    Alhena.updateFrames(false, false, false);
+                    Alhena.updateFrames(false, false, false, false);
                     lastSelectedItem = selected;
                 } else {
                     String fn = url.substring(url.lastIndexOf('/'));
@@ -1453,7 +1475,7 @@ public final class GeminiFrame extends JFrame {
                         try {
                             GeminiTextPane.setSheetImage(ImageIO.read(emojiFile));
                             DB.insertPref("emoji", setName);
-                            Alhena.updateFrames(false, false, false);
+                            Alhena.updateFrames(false, false, false, false);
                             lastSelectedItem = selected;
                         } catch (IOException ex) {
                             lastSelectedItem.setSelected(true);
@@ -1481,7 +1503,7 @@ public final class GeminiFrame extends JFrame {
                         DB.insertPref("emoji", setName);
 
                         GeminiTextPane.setSheetImage(setImage);
-                        Alhena.updateFrames(false, false, false);
+                        Alhena.updateFrames(false, false, false, false);
                         lastSelectedItem = selected;
 
                     });
@@ -2436,7 +2458,7 @@ public final class GeminiFrame extends JFrame {
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     DB.deleteBookmark(bmId);
-                    Alhena.updateFrames(true, false, false);
+                    Alhena.updateFrames(true, false, false, false);
                     EventQueue.invokeLater(() -> refresh());
 
                 }
@@ -2597,7 +2619,7 @@ public final class GeminiFrame extends JFrame {
                     DB.updateBookmark(bmId, labelField.getText(), (String) bmComboBox.getSelectedItem(), urlField.getText());
                 }
                 refresh();
-                Alhena.updateFrames(true, false, false);
+                Alhena.updateFrames(true, false, false, false);
                 //EventQueue.invokeLater(() -> refresh());
             }
 
@@ -3112,8 +3134,9 @@ public final class GeminiFrame extends JFrame {
         } else if (t.contains(":/")) {
             t = t.substring(t.indexOf(":/") + 2); // file:/
         }
-        if (t.length() > 30) {
-            t = t.substring(0, 30) + "...";
+        int maxChars = Alhena.compactTB ? 10 : 30;
+        if (t.length() > maxChars) {
+            t = t.substring(0, maxChars) + "...";
         }
         return t;
     }

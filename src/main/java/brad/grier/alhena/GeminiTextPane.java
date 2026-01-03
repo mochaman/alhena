@@ -660,7 +660,7 @@ public class GeminiTextPane extends JTextPane {
                                                 } catch (SQLException ex) {
                                                     ex.printStackTrace();
                                                 }
-                                                Alhena.updateFrames(false, false, false);
+                                                Alhena.updateFrames(false, false, false, false);
                                                 EventQueue.invokeLater(() -> f.refresh());
                                             }
 

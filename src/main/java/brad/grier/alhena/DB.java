@@ -735,6 +735,7 @@ public class DB {
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
         GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
         GeminiTextPane.asciiImage = map.getOrDefault("asciipf", "false").equals("true");
+        Alhena.compactTB = map.getOrDefault("compact", "false").equals("true");
         GeminiTextPane.embedPF = map.getOrDefault("embedpf", "true").equals("true");
         GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
         GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");

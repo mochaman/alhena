@@ -179,6 +179,7 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+    public static boolean compactTB;
     public static boolean streamVLC;
     public static boolean inlineImages;
     public static boolean gradientBG;
@@ -290,7 +291,10 @@ public class Alhena {
                     gf.editPage();
                     e.consume();
                     return true;
-
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_R, MOD))) {
+                    gf.refresh();
+                    e.consume();
+                    return true;
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_C, MOD))) {
 
                     Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
@@ -305,11 +309,13 @@ public class Alhena {
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_L, MOD))) {
                     gf.focusOnAddressBar();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, MOD))) {
-                    gf.backButton.doClick();
+                    gf.goBack();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET, MOD))) {
-                    gf.forwardButton.doClick();
+                    gf.goForward();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_R, MOD)) || ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0))) {
-                    gf.refreshButton.doClick();
+                    gf.refresh();
+                    e.consume();
+                    return true;
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0))) {
                     sDown = true;
                 } else {
@@ -461,6 +467,7 @@ public class Alhena {
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
         GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
         GeminiTextPane.asciiImage = map.getOrDefault("asciipf", "false").equals("true");
+        compactTB = map.getOrDefault("compact", "false").equals("true");
         GeminiTextPane.embedPF = map.getOrDefault("embedpf", "true").equals("true");
         GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
         GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
@@ -543,7 +550,7 @@ public class Alhena {
         }
     }
 
-    public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu, boolean newTheme) {
+    public static void updateFrames(boolean updateBookmarks, boolean updateWindowsMenu, boolean newTheme, boolean updateToolbar) {
 
         UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? scrollbarSize : 10));
         GeminiTextPane.clearLinkIcons();
@@ -569,6 +576,9 @@ public class Alhena {
         for (GeminiFrame jf : frameList) {
             if (updateBookmarks) {
                 jf.updateBookmarks();
+            }
+            if(updateToolbar){
+                jf.configNavPanel(true);
             }
             if (updateWindowsMenu) {
                 jf.updateWindowsMenu();
@@ -3512,7 +3522,7 @@ public class Alhena {
                         message = "## " + m + "\n";
                         if (bigScrollBar) {
                             bg(() -> {
-                                Alhena.updateFrames(false, false, false);
+                                Alhena.updateFrames(false, false, false, false);
                             });
                         }
                     }

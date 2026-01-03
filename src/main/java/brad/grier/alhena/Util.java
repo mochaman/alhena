@@ -898,7 +898,7 @@ public class Util {
             if (result.equals(I18n.t("replaceLabel"))) {
                 try {
                     String prevEmo = DB.getPref("emoji", null);
-
+                    boolean compactTB = Alhena.compactTB;
                     if (DB.restoreDB(f) != 0) {
                         infoDialog(frame, I18n.t("versionErrorDialog"), I18n.t("versionErrorDialogMsg"));
                     } else {
@@ -916,7 +916,7 @@ public class Util {
                         frame.resetFont();
                         infoDialog(frame, I18n.t("importSuccessDialog"), I18n.t("importSuccessDialogMsg"));
                         Alhena.clearCnList();
-                        Alhena.updateFrames(true, true, true);
+                        Alhena.updateFrames(true, true, true, compactTB != Alhena.compactTB);
                     }
                 } catch (Exception ex) {
                     infoDialog(frame, I18n.t("importErrorDialog"), I18n.t("importErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
@@ -929,7 +929,7 @@ public class Util {
                         infoDialog(frame, I18n.t("versionErrorDialog"), I18n.t("versionErrorDialogMsg"));
                     } else {
                         infoDialog(frame, I18n.t("mergeCompleteDialog"), I18n.t("mergeCompleteDialogMsg"));
-                        Alhena.updateFrames(true, false, false);
+                        Alhena.updateFrames(true, false, false, false);
                     }
                 } catch (Exception ex) {
                     infoDialog(frame, I18n.t("mergeErrorDialog"), I18n.t("mergeErrorDialogMsg"), JOptionPane.ERROR_MESSAGE);
@@ -1219,7 +1219,7 @@ public class Util {
             BooleanSupplier okRunnable = () -> {
                 try {
                     DB.updateStyle(styleId, sp.getAlteredPageTheme().getJson());
-                    Alhena.updateFrames(false, false, false);
+                    Alhena.updateFrames(false, false, false, false);
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                 }
@@ -1235,7 +1235,7 @@ public class Util {
                     } catch (SQLException ex) {
                         ex.printStackTrace();
                     }
-                    Alhena.updateFrames(false, false, false);
+                    Alhena.updateFrames(false, false, false, false);
                     if (refreshPage[0]) {
                         EventQueue.invokeLater(() -> gf.refresh());
 
@@ -1371,7 +1371,7 @@ public class Util {
                 BooleanSupplier okRunnable = () -> {
                     try {
                         DB.insertStyle(fScope, fScopeVal, fTheme, sp.getAlteredPageTheme().getJson(), null);
-                        Alhena.updateFrames(false, false, false);
+                        Alhena.updateFrames(false, false, false, false);
                         if (refresh[0]) {
                             EventQueue.invokeLater(() -> gf.refresh());
                         }
@@ -1387,7 +1387,7 @@ public class Util {
                     if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
                         try {
                             DB.deleteStyle(fScope, fScopeVal, fTheme);
-                            Alhena.updateFrames(false, false, false);
+                            Alhena.updateFrames(false, false, false, false);
                             if (refresh[0]) {
                                 EventQueue.invokeLater(() -> gf.refresh());
                             }
