@@ -454,11 +454,11 @@ public final class GeminiFrame extends JFrame {
                 List<Bookmark> mList = DB.loadTopBookmarks();
 
                 mList.stream().forEach(bmark -> {
-                    JMenuItem m = new JMenuItem(bmark.label());
+                    JMenuItem mi = new JMenuItem(bmark.label());
                     mi.addActionListener(e -> {
                         fetchURL(bmark.url(), false);
                     });
-                    items.add(m);
+                    items.add(mi);
                 });
             } catch (SQLException ex) {
                 ex.printStackTrace();
