@@ -1288,6 +1288,24 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(dragScrollItem);
         settingsMenu.add(tabScrollItem);
         settingsMenu.add(new JSeparator());
+
+        JMenuItem geminiItem = new JMenuItem(I18n.t("geminiProxyItem"));
+        geminiItem.addActionListener(ae -> {
+
+            String proxy = Util.inputDialog(GeminiFrame.this, I18n.t("geminiProxyItem"), I18n.t("geminiProxyDialogMsg"),
+                    false, Alhena.geminiProxy == null ? "" : Alhena.geminiProxy, null);
+            if (proxy != null) {
+                if (proxy.isBlank()) {
+                    Alhena.geminiProxy = null;
+                } else {
+                    Alhena.geminiProxy = proxy;
+                }
+                DB.insertPref("geminiproxy", Alhena.geminiProxy);
+            }
+        });
+        settingsMenu.add(geminiItem);
+
+
         JMenuItem proxyItem = new JMenuItem(I18n.t("httpProxyItem"));
         proxyItem.addActionListener(ae -> {
 

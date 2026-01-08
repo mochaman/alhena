@@ -168,6 +168,7 @@ public class Alhena {
     public static String theme;
     public static String httpProxy;
     public static String gopherProxy;
+    public static String geminiProxy;
     public static String playerCommand;
     public static String socksProxy;
     public static boolean socksFilter;
@@ -460,6 +461,7 @@ public class Alhena {
         socksProxy = map.getOrDefault("socksproxy", null);
         socksFilter = map.getOrDefault("socksfilter", "false").equals("true");
         gopherProxy = map.getOrDefault("gopherproxy", null);
+        geminiProxy = map.getOrDefault("geminiproxy", null);
         playerCommand = map.getOrDefault("playercommand", null);
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
@@ -689,7 +691,7 @@ public class Alhena {
                 } else {
                     url = searchUrl + "?" + Util.uEncode(url);
                 }
-            }else{
+            } else {
                 url = "gemini://" + url;
             }
 
@@ -856,7 +858,12 @@ public class Alhena {
             }
         }
         String proxyURL = null;
-        if ((httpProxy != null && punyURIScheme.startsWith("http"))) {
+
+        if (geminiProxy != null && punyURIScheme.equals("gemini")) {
+            proxyURL = punyURI.toString();
+            punyURI = URI.create("gemini://" + geminiProxy);
+
+        } else if ((httpProxy != null && punyURIScheme.startsWith("http"))) {
 
             proxyURL = punyURI.toString();
             punyURI = URI.create("gemini://" + httpProxy);
