@@ -65,6 +65,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -156,7 +157,7 @@ public class Alhena {
     public final static String PROG_NAME = "Alhena";
     public static String welcomeMessage;
     public final static String VERSION = "5.4.9";
-    private static volatile boolean interrupted;
+    private static final AtomicBoolean interrupted = new AtomicBoolean();
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg");
@@ -267,9 +268,13 @@ public class Alhena {
                     keyDown = true;
 
                     if (gf.visiblePage().busy()) {
-                        gf.visiblePage().setBusy(false);
-                        gf.showGlassPane(false);
-                        interrupted = true;
+                        for (GeminiFrame jf : frameList) {
+                            jf.forEachPage(page -> {
+                                page.setBusy(false);
+                            });
+                        }
+
+                        interrupted.set(true);
                         resetConnections();
                         e.consume();
                         return true; // consume
@@ -908,8 +913,7 @@ public class Alhena {
 
                             favMap.put(fiAuthority, fiInfo);
                             bg(() -> {
-                                if (interrupted) {
-                                    interrupted = false;
+                                if (interrupted.get()) {
                                     return;
                                 }
                                 gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyURL);
@@ -918,8 +922,7 @@ public class Alhena {
 
                         }).onFailure(error -> {
                             bg(() -> {
-                                if (interrupted) {
-                                    interrupted = false;
+                                if (interrupted.get()) {
                                     return;
                                 }
                                 gemini(getNetClient(finalPunyURI), finalPunyURI, p, finalOrigURL, cPage, finalProxyURL);
@@ -1302,16 +1305,12 @@ public class Alhena {
                 });
             } else {
                 p.redirectCount = 0;
-                if (interrupted) {
-                    interrupted = false;
-                    p.frame().setBusy(false, cPage);
-                } else {
-                    bg(() -> {
-                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
-                    });
-                    //connection.cause().printStackTrace();
-                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
-                }
+
+                bg(() -> {
+                    p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                });
+                //connection.cause().printStackTrace();
+                System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
             }
         });
 
@@ -1524,15 +1523,12 @@ public class Alhena {
 
                 });
             } else {
-                if (interrupted) {
-                    interrupted = false;
-                    p.frame().setBusy(false, cPage);
-                } else {
-                    bg(() -> {
-                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
-                    });
-                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
-                }
+
+                bg(() -> {
+                    p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                });
+                System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
+
             }
         });
 
@@ -1835,16 +1831,12 @@ public class Alhena {
                 });
             } else {
                 //p.redirectCount = 0;
-                if (interrupted) {
-                    interrupted = false;
-                    p.frame().setBusy(false, cPage);
-                } else {
-                    bg(() -> {
-                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, finalUrl, true);
-                    });
-                    //connection.cause().printStackTrace();
-                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
-                }
+
+                bg(() -> {
+                    p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, finalUrl, true);
+                });
+                //connection.cause().printStackTrace();
+                System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
             }
         });
 
@@ -2475,27 +2467,24 @@ public class Alhena {
                 });
             } else {
                 p.redirectCount = 0;
-                if (interrupted) {
-                    interrupted = false;
-                    p.frame().setBusy(false, cPage);
-                } else {
-                    bg(() -> {
-                        p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
-                        String cause = findCauseMessage(connection.cause(), CertificateParsingException.class);
-                        if (cause != null) {
-                            Util.infoDialog(p.frame(), "Certificate Error", cause, JOptionPane.ERROR_MESSAGE);
-                        } else {
-                            cause = findCauseMessage(connection.cause(), SSLHandshakeException.class);
 
-                            if (cause != null) {
-                                String msg = I18n.t("sslErrorDialogMsg");
-                                Util.infoDialog(p.frame(), I18n.t("sslErrorDialog"), msg, JOptionPane.ERROR_MESSAGE);
-                            }
+                bg(() -> {
+                    p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
+                    String cause = findCauseMessage(connection.cause(), CertificateParsingException.class);
+                    if (cause != null) {
+                        Util.infoDialog(p.frame(), "Certificate Error", cause, JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        cause = findCauseMessage(connection.cause(), SSLHandshakeException.class);
+
+                        if (cause != null) {
+                            String msg = I18n.t("sslErrorDialogMsg");
+                            Util.infoDialog(p.frame(), I18n.t("sslErrorDialog"), msg, JOptionPane.ERROR_MESSAGE);
                         }
-                    });
-                    //connection.cause().printStackTrace();
-                    System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
-                }
+                    }
+                });
+                //connection.cause().printStackTrace();
+                System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
+
             }
         });
     }
@@ -4336,7 +4325,8 @@ public class Alhena {
             // reset all connections in map
             certMap.clear();
             certMapByDomain.clear();
-            interrupted = false;
+
+            interrupted.set(false);
         }).onFailure(f -> {
             // hmm. should never happen
             f.getCause().printStackTrace();
