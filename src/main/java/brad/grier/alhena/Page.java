@@ -96,61 +96,7 @@ public class Page extends JPanel {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                if (textPane.pageStyle != null) {
-                    if (textPane.pageStyle.getGradientBG()) {
-                        if (textPane.pageStyle.getGradient1Color() == null) {
-                            boolean isLight = Util.isLight(textPane.pageStyle.getPageBackground());
-                            Color c1, c2;
-                            Color bg = textPane.pageStyle.getPageBackground();
-                            if (isLight) {
-                                //c1 = AnsiColor.blend(bg, bg.brighter(), .8);
-                                //c2 = AnsiColor.blend(bg, bg.darker(), .3);
-                                c1 = bg.brighter();
-                                c2 = darker(bg);
-                            } else {
-
-                                //c1 = AnsiColor.blend(bg, bg.darker(), .8);
-                                c1 = bg.darker();
-                                //c2 = AnsiColor.blend(bg, bg.brighter(), .7);
-                                c2 = bg.brighter().brighter();
-                            }
-
-                            Graphics2D g2d = (Graphics2D) g.create();
-                            g2d.setPaint(new GradientPaint(
-                                    0, 0, c1, // top color
-                                    0, getHeight(), c2 // bottom color
-                            ));
-                            g2d.fillRect(0, 0, getWidth(), getHeight());
-                            g2d.dispose();
-                        } else {
-                            Color c1 = textPane.pageStyle.getGradient1Color();
-                            Color c2 = textPane.pageStyle.getGradient2Color();
-                            if (c1 == null) {
-                                c1 = textPane.pageStyle.getPageBackground();
-                            }
-                            if (c2 == null) {
-                                c2 = textPane.pageStyle.getPageBackground();
-                            }
-                            Graphics2D g2d = (Graphics2D) g.create();
-                            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                            g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
-                            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                            g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
-                            g2d.setPaint(new GradientPaint(
-                                    0, 0, c1, // top color
-                                    0, getHeight(), c2 // bottom color
-                            ));
-                            g2d.fillRect(0, 0, getWidth(), getHeight());
-                            g2d.dispose();
-                        }
-                        // }
-                    } else {
-                        Graphics2D g2d = (Graphics2D) g.create();
-                        g2d.setColor(textPane.pageStyle.getPageBackground());
-                        g2d.fillRect(0, 0, getWidth(), getHeight());
-                        g2d.dispose();
-                    }
-                }
+                paintGradient(g, textPane, getWidth(), getHeight());
             }
         };
         gradientPanel.add(scrollPane, BorderLayout.CENTER);
@@ -178,6 +124,65 @@ public class Page extends JPanel {
         });
         add(layer, BorderLayout.CENTER);
     }
+
+    public static void paintGradient(Graphics g, GeminiTextPane textPane, int width, int height) {
+        if (textPane.pageStyle != null) {
+            if (textPane.pageStyle.getGradientBG()) {
+                if (textPane.pageStyle.getGradient1Color() == null) {
+                    boolean isLight = Util.isLight(textPane.pageStyle.getPageBackground());
+                    Color c1, c2;
+                    Color bg = textPane.pageStyle.getPageBackground();
+                    if (isLight) {
+                        //c1 = AnsiColor.blend(bg, bg.brighter(), .8);
+                        //c2 = AnsiColor.blend(bg, bg.darker(), .3);
+                        c1 = bg.brighter();
+                        c2 = darker(bg);
+                    } else {
+
+                        //c1 = AnsiColor.blend(bg, bg.darker(), .8);
+                        c1 = bg.darker();
+                        //c2 = AnsiColor.blend(bg, bg.brighter(), .7);
+                        c2 = bg.brighter().brighter();
+                    }
+
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setPaint(new GradientPaint(
+                            0, 0, c1, // top color
+                            0, height, c2 // bottom color
+                    ));
+                    g2d.fillRect(0, 0, width, height);
+                    g2d.dispose();
+                } else {
+                    Color c1 = textPane.pageStyle.getGradient1Color();
+                    Color c2 = textPane.pageStyle.getGradient2Color();
+                    if (c1 == null) {
+                        c1 = textPane.pageStyle.getPageBackground();
+                    }
+                    if (c2 == null) {
+                        c2 = textPane.pageStyle.getPageBackground();
+                    }
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
+                    g2d.setPaint(new GradientPaint(
+                            0, 0, c1, // top color
+                            0, height, c2 // bottom color
+                    ));
+                    g2d.fillRect(0, 0, width, height);
+                    g2d.dispose();
+                }
+                // }
+            } else {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setColor(textPane.pageStyle.getPageBackground());
+                g2d.fillRect(0, 0, width, height);
+                g2d.dispose();
+            }
+        }
+    }
+
     private static final double FACTOR = 0.9;
 
     public static Color darker(Color c) {
@@ -255,7 +260,6 @@ public class Page extends JPanel {
     public boolean isNex() {
         return isNex;
     }
-
 
     public void setGopher(boolean isGopher) {
         this.isGopher = isGopher;
