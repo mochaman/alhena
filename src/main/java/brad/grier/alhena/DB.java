@@ -741,6 +741,7 @@ public class DB {
         GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
         GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
         GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
+        Alhena.forceWhite = map.getOrDefault("forcewhite", "false").equals("true");
         Alhena.favIcon = map.getOrDefault("favicon", "false").equals("true");
         Alhena.dataUrl = map.getOrDefault("dataurl", "true").equals("true");
         Alhena.linkIcons = map.getOrDefault("linkicons", "false").equals("true");

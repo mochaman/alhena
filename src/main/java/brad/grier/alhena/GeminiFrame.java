@@ -98,6 +98,7 @@ import brad.grier.alhena.DB.Bookmark;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.DBClientCertInfo;
 import brad.grier.alhena.DB.PageStyleInfo;
+import brad.grier.alhena.GeminiTextPane.ClickableRange;
 import brad.grier.alhena.GeminiTextPane.CurrentPage;
 import brad.grier.alhena.Util.PemData;
 
@@ -146,6 +147,7 @@ public final class GeminiFrame extends JFrame {
     public static int tabPosition = 0;
     // set to true when compiling native image
     private static final boolean NATIVE_IMAGE = false;
+    private PrinterJob job;
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatArcIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme", "Arc", false)),
@@ -513,20 +515,27 @@ public final class GeminiFrame extends JFrame {
 
             Page p = new Page(Page.ROOT_PAGE, this, gtp.getDocURLString(), currentThemeId);
             StringBuilder sb = new StringBuilder(gtp.current().currentPage());
-            p.textPane.end(sb.toString(), gtp.current().pMode(), gtp.getDocURLString(), false, true);
-
-            PrinterJob job = PrinterJob.getPrinterJob();
+            job = PrinterJob.getPrinterJob();
             job.setJobName("Alhena"); // this might do something somewhere
-
             PageFormat pf = job.defaultPage();
-
-            job.setPrintable(new ViewBasedTextPanePrinter(p.textPane, pf), pf);
-
-            if (job.printDialog()) {
-                try {
-                    job.print();
-                } catch (PrinterException ex) {
-                    ex.printStackTrace();
+            p.textPane.setPrintWidth((int) pf.getImageableWidth());
+            p.textPane.end(sb.toString(), gtp.current().pMode(), gtp.getDocURLString(), false, true);
+            int i = 0;
+            boolean openingImages = false;
+            for (ClickableRange range : gtp.clickableRegions) {
+                if (range.openImage) {
+                    p.textPane.queueLink(i);
+                    openingImages = true;
+                }
+                i++;
+            }
+            if (openingImages) {
+                p.textPane.fetchLink();
+            } else {
+                if (gtp.imageOnly()) {
+                    Alhena.processURL(gtp.getDocURLString(), p, null, p, false);
+                } else {
+                    printIt(p.textPane);
                 }
             }
 
@@ -815,6 +824,19 @@ public final class GeminiFrame extends JFrame {
         validate();
         repaint();
         visiblePage().textPane.requestFocusInWindow();
+    }
+
+    public void printIt(GeminiTextPane tPane) {
+        PageFormat pf = job.defaultPage();
+        job.setPrintable(new ViewBasedTextPanePrinter(tPane, pf), pf);
+        if (job.printDialog()) {
+            try {
+                job.print();
+                job = null;
+            } catch (PrinterException ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 
     public void goBack() {
@@ -1304,7 +1326,6 @@ public final class GeminiFrame extends JFrame {
             }
         });
         settingsMenu.add(geminiItem);
-
 
         JMenuItem proxyItem = new JMenuItem(I18n.t("httpProxyItem"));
         proxyItem.addActionListener(ae -> {

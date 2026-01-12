@@ -119,7 +119,7 @@ import net.fellbaum.jemoji.IndexedEmoji;
 public class GeminiTextPane extends JTextPane {
 
     private StyledDocument doc;
-    private List<ClickableRange> clickableRegions = new ArrayList<>();
+    public List<ClickableRange> clickableRegions = new ArrayList<>();
     private int currentCursor = Cursor.DEFAULT_CURSOR;
     private boolean preformattedMode;
     private String currentStatus = Alhena.welcomeMessage;
@@ -169,6 +169,8 @@ public class GeminiTextPane extends JTextPane {
     public long pressTime;
     public boolean dragging;
     public static boolean dragToScroll;
+    private int printWidth;
+    private ArrayList<ClickableRange> openQueue;
 
     public static void setup() {
         String userDefined = System.getenv("ALHENA_MONOFONT");
@@ -917,7 +919,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private void removeItemAtIndex(ClickableRange rg) {
-
+        rg.openImage = false;
         int index = rg.imageIndex;
         try {
             Element element = doc.getCharacterElement(index + 1);
@@ -1121,10 +1123,11 @@ public class GeminiTextPane extends JTextPane {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        } else if (isGif(imageBytes)) {
+        } else if (isGif(imageBytes) && !printing) {
             icon = new ImageIcon(imageBytes);
         } else {
-            image = Util.getImage(imageBytes, width, width * 2, null, false);
+            int scaleWidth = printing ? printWidth : width;
+            image = Util.getImage(imageBytes, scaleWidth, scaleWidth * 2, null, false);
 
             if (image == null) {
                 f.setBusy(false, page);
@@ -1143,6 +1146,9 @@ public class GeminiTextPane extends JTextPane {
             } else if (lastClicked == null) {
                 doc.insertString(0, " ", emojiStyle);
                 imageOnly = true;
+                if (printing) {
+                    f.printIt(this);
+                }
             } else {
 
                 doc.insertString(lastClicked.end + 1, " ", emojiStyle);
@@ -1163,7 +1169,15 @@ public class GeminiTextPane extends JTextPane {
                         }
                     }
                 }
+                lastClicked.openImage = true;
                 lastClicked = null;
+                if (printing) {
+                    if (openQueue != null && openQueue.isEmpty()) {
+                        f.printIt(this);
+                    }
+                    fetchLink(); // when printing, fetch the next open image
+
+                }
             }
 
         } catch (Exception ex) {
@@ -1422,6 +1436,9 @@ public class GeminiTextPane extends JTextPane {
 
     // for one and done messages
     public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
+        if (printing) {
+            return;
+        }
         end(geminiDoc, pfMode, docURL, newRequest, false);
     }
 
@@ -1430,7 +1447,7 @@ public class GeminiTextPane extends JTextPane {
     public void end(String geminiDoc, boolean pfMode, String docURL, boolean newRequest, boolean printing) {
         this.printing = printing;
         if (printing) {
-            setBackground(Color.WHITE);
+            //setBackground(Color.WHITE);
             hasAnsi = true;
         }
         updatePage(geminiDoc, pfMode, docURL, newRequest);
@@ -1998,6 +2015,11 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
+    // get background color for printing
+    public Color getPageBackground() {
+        return pageStyle.getPageBackground();
+    }
+
     private static Color linkIconBG;
 
     // only call on EDT
@@ -2212,9 +2234,9 @@ public class GeminiTextPane extends JTextPane {
                             sfx = "🔗";
                         } else if (docURL.startsWith("gopher")) {
                             sfx = "🐭";
-                        } else if (docURL.startsWith("nex")){
+                        } else if (docURL.startsWith("nex")) {
                             sfx = "🚄";
-                        } else if (docURL.startsWith("file")){
+                        } else if (docURL.startsWith("file")) {
                             sfx = "💾";
                         } else {
                             sfx = "🌐";
@@ -2230,9 +2252,9 @@ public class GeminiTextPane extends JTextPane {
                         sfx = "🔗";
                     } else if (finalUrl.startsWith("gopher")) {
                         sfx = "🐭";
-                    } else if(finalUrl.startsWith("nex")){
+                    } else if (finalUrl.startsWith("nex")) {
                         sfx = "🚄";
-                    } else if(finalUrl.startsWith("file")){
+                    } else if (finalUrl.startsWith("file")) {
                         sfx = "💾";
                     } else {
                         sfx = "🌐";
@@ -2827,6 +2849,32 @@ public class GeminiTextPane extends JTextPane {
         });
     }
 
+    // create a list of image links that are currently open and displayed
+    public void queueLink(int linkNum) {
+        if (openQueue == null) {
+            openQueue = new ArrayList<>();
+        }
+        int i = 0;
+        for (ClickableRange range : clickableRegions) {
+            if (i == linkNum) {
+                openQueue.add(range);
+                break;
+            }
+            i++;
+        }
+    }
+
+    public void fetchLink() {
+        if (openQueue != null && !openQueue.isEmpty()) {
+            lastClicked = openQueue.remove(0);
+            Alhena.processURL(lastClicked.url, page, null, page, false);
+        }
+    }
+
+    public void setPrintWidth(int pw) {
+        printWidth = pw;
+    }
+
     public static class ClickableRange {
 
         int start;
@@ -2836,6 +2884,7 @@ public class GeminiTextPane extends JTextPane {
         String directive;
         int imageIndex = -1;
         boolean dataUrl;
+        boolean openImage;
 
         ClickableRange(int start, int end, Runnable action) {
             this.start = start;

@@ -181,6 +181,7 @@ public class Alhena {
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
+    public static boolean forceWhite;
     public static boolean compactTB;
     public static boolean streamVLC;
     public static boolean inlineImages;
@@ -479,6 +480,7 @@ public class Alhena {
         GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
         GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
         GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
+        Alhena.forceWhite = map.getOrDefault("forcewhite", "false").equals("true");
         favIcon = map.getOrDefault("favicon", "false").equals("true");
         dataUrl = map.getOrDefault("dataurl", "true").equals("true");
         linkIcons = map.getOrDefault("linkicons", "false").equals("true");
@@ -3504,6 +3506,8 @@ public class Alhena {
                 }
                 case "scrollbarsize" ->
                     message = "# scrollbarsize\n### " + I18n.t("scrollbarSizeHeading");
+                case "forcewhite" ->
+                    message = "# forcewhite\n### " + I18n.t("forceWhiteHeading");
                 default -> {
                 }
             }
@@ -3568,6 +3572,16 @@ public class Alhena {
                     message = "## ansialert " + m + "\n";
                 } else {
                     message = "## " + I18n.t("ansiError") + "\n";
+                }
+            }else if (cmd[0].equals("forcewhite")) {
+
+                if (cmd[1].equals("true") || cmd[1].equals("false")) {
+                    DB.insertPref("forcewhite", cmd[1]);
+                    Alhena.forceWhite = cmd[1].equals("true");
+                    String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]); // generic "set to string";
+                    message = "## forcewhite " + m + "\n";
+                } else {
+                    message = "## " + I18n.t("ansiError") + "\n"; // actually a generic true/false message
                 }
             }
         }

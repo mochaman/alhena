@@ -1,5 +1,6 @@
 package brad.grier.alhena;
 
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -7,7 +8,6 @@ import java.awt.Shape;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.awt.print.PrinterJob;
 
 import javax.swing.JTextPane;
 import javax.swing.text.View;
@@ -17,8 +17,9 @@ public class ViewBasedTextPanePrinter implements Printable {
     private final View rootView;
     private final int pageWidth;
     public static final int MONOSPACED_SIZE = 12;
+    private final GeminiTextPane srcTextPane;
 
-    public ViewBasedTextPanePrinter(JTextPane source, PageFormat pageFormat) {
+    public ViewBasedTextPanePrinter(GeminiTextPane source, PageFormat pageFormat) {
 
         // TODO: Not sure this is needed anymore since using offscreen GeminiTextPane
         JTextPane dummyPane = new JTextPane();
@@ -27,6 +28,7 @@ public class ViewBasedTextPanePrinter implements Printable {
         dummyPane.setSize((int) pageFormat.getImageableWidth(), Integer.MAX_VALUE);
         dummyPane.setEditable(false);
         dummyPane.setCaretPosition(0);
+        srcTextPane = source;
         dummyPane.validate();
 
         rootView = dummyPane.getUI().getRootView(dummyPane);
@@ -38,11 +40,16 @@ public class ViewBasedTextPanePrinter implements Printable {
     public int print(Graphics g, PageFormat pageFormat, int pageIndex) throws PrinterException {
         Graphics2D g2 = (Graphics2D) g;
         g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+        if (!Alhena.forceWhite) {
+            Color c = g2.getColor();
+            Page.paintGradient(g, srcTextPane, g.getClipBounds().width, g.getClipBounds().height);
+            g2.setColor(c);
+        }
 
         int pageHeight = (int) pageFormat.getImageableHeight();
         int pageCounter = 0;
         int yOffset = 0;
-        int pageStartY = 0; 
+        int pageStartY = 0;
 
         View contentView = rootView.getView(0);
         int n = contentView.getViewCount();
@@ -105,17 +112,4 @@ public class ViewBasedTextPanePrinter implements Printable {
         return new Rectangle(0, yOffset, pageWidth, (int) height);
     }
 
-    public static void printJTextPane(JTextPane textPane) {
-        PrinterJob job = PrinterJob.getPrinterJob();
-        PageFormat pf = job.defaultPage();
-        job.setPrintable(new ViewBasedTextPanePrinter(textPane, pf), pf);
-
-        if (job.printDialog()) {
-            try {
-                job.print();
-            } catch (PrinterException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
 }
