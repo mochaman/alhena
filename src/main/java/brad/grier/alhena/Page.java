@@ -96,7 +96,7 @@ public class Page extends JPanel {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                paintGradient(g, textPane, getWidth(), getHeight());
+                paintGradient(g, textPane, 0, 0, getWidth(), getHeight());
             }
         };
         gradientPanel.add(scrollPane, BorderLayout.CENTER);
@@ -125,7 +125,7 @@ public class Page extends JPanel {
         add(layer, BorderLayout.CENTER);
     }
 
-    public static void paintGradient(Graphics g, GeminiTextPane textPane, int width, int height) {
+    public static void paintGradient(Graphics g, GeminiTextPane textPane, int x, int y, int width, int height) {
         if (textPane.pageStyle != null) {
             if (textPane.pageStyle.getGradientBG()) {
                 if (textPane.pageStyle.getGradient1Color() == null) {
@@ -150,7 +150,7 @@ public class Page extends JPanel {
                             0, 0, c1, // top color
                             0, height, c2 // bottom color
                     ));
-                    g2d.fillRect(0, 0, width, height);
+                    g2d.fillRect(x, y, width, height);
                     g2d.dispose();
                 } else {
                     Color c1 = textPane.pageStyle.getGradient1Color();
@@ -170,14 +170,14 @@ public class Page extends JPanel {
                             0, 0, c1, // top color
                             0, height, c2 // bottom color
                     ));
-                    g2d.fillRect(0, 0, width, height);
+                    g2d.fillRect(x, y, width, height);
                     g2d.dispose();
                 }
                 // }
             } else {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setColor(textPane.pageStyle.getPageBackground());
-                g2d.fillRect(0, 0, width, height);
+                g2d.fillRect(x, y, width, height);
                 g2d.dispose();
             }
         }

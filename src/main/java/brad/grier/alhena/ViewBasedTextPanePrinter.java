@@ -40,10 +40,31 @@ public class ViewBasedTextPanePrinter implements Printable {
     public int print(Graphics g, PageFormat pageFormat, int pageIndex) throws PrinterException {
         Graphics2D g2 = (Graphics2D) g;
         g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-        if (!Alhena.forceWhite) {
+        if (Alhena.gradientBG && !Alhena.forceWhite) {
+
+            // Color c = g2.getColor();
+            // Page.paintGradient(g, srcTextPane, 0, 0, g.getClipBounds().width, g.getClipBounds().height);
+            // g2.setColor(c);
+
             Color c = g2.getColor();
-            Page.paintGradient(g, srcTextPane, g.getClipBounds().width, g.getClipBounds().height);
+            Rectangle clip = g2.getClipBounds();
+
+            // save state
+            Shape oldClip = g2.getClip();
+
+            g2.setClip(null);
+
+            int x = clip != null ? clip.x : (int) pageFormat.getImageableX();
+            int y = clip != null ? clip.y : (int) pageFormat.getImageableY();
+
+            int w = (int) Math.ceil(pageFormat.getImageableWidth());
+            int h = (int) Math.ceil(pageFormat.getImageableHeight());
+
+            Page.paintGradient(g2, srcTextPane, x, y, w, h);
+
+            g2.setClip(oldClip);
             g2.setColor(c);
+
         }
 
         int pageHeight = (int) pageFormat.getImageableHeight();
