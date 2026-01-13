@@ -40,12 +40,13 @@ public class ViewBasedTextPanePrinter implements Printable {
     public int print(Graphics g, PageFormat pageFormat, int pageIndex) throws PrinterException {
         Graphics2D g2 = (Graphics2D) g;
         g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-        if (Alhena.gradientBG && !Alhena.forceWhite) {
+        if (!Alhena.forceWhite) {
 
             // Color c = g2.getColor();
             // Page.paintGradient(g, srcTextPane, 0, 0, g.getClipBounds().width, g.getClipBounds().height);
             // g2.setColor(c);
 
+            // still can have issues with gradient printing on linux cups
             Color c = g2.getColor();
             Rectangle clip = g2.getClipBounds();
 
