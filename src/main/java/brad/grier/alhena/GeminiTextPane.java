@@ -1923,7 +1923,7 @@ public class GeminiTextPane extends JTextPane {
         linkColor = pageStyle.getLinkColor();
         hoverColor = pageStyle.getHoverColor();
 
-        int gfMonoFontSize = printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getMonoFontSize();
+        int gfMonoFontSize = ViewBasedTextPanePrinter.getMonospacedPrintSize(printing, pageStyle.getMonoFontSize());
         Style pfStyle = doc.addStyle("```", null);
         StyleConstants.setFontFamily(pfStyle, pageStyle.getMonoFontFamily());
         StyleConstants.setFontSize(pfStyle, gfMonoFontSize);

@@ -36,6 +36,14 @@ public class ViewBasedTextPanePrinter implements Printable {
         rootView.setSize(pageWidth, Integer.MAX_VALUE);
     }
 
+    public static int getMonospacedPrintSize(boolean printing, int sz) {
+        if (printing) {
+            return sz < MONOSPACED_SIZE ? sz : MONOSPACED_SIZE;
+        } else {
+            return sz;
+        }
+    }
+
     @Override
     public int print(Graphics g, PageFormat pageFormat, int pageIndex) throws PrinterException {
         Graphics2D g2 = (Graphics2D) g;
@@ -45,7 +53,6 @@ public class ViewBasedTextPanePrinter implements Printable {
             // Color c = g2.getColor();
             // Page.paintGradient(g, srcTextPane, 0, 0, g.getClipBounds().width, g.getClipBounds().height);
             // g2.setColor(c);
-
             // still can have issues with gradient printing on linux cups
             Color c = g2.getColor();
             Rectangle clip = g2.getClipBounds();
