@@ -505,44 +505,45 @@ public final class GeminiFrame extends JFrame {
         fileMenu.add(createMenuItem(I18n.t("openFileItem"), KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
             openFile(null);
         }));
-
-        fileMenu.add(createMenuItem(I18n.t("printItem"), KeyStroke.getKeyStroke(KeyEvent.VK_P, mod), () -> {
-            if (!Util.isPrintingAvailable()) {
-                Util.infoDialog(GeminiFrame.this, I18n.t("printDialog"), I18n.t("printDialogMsg"));
-                return;
-            }
-            GeminiTextPane gtp = visiblePage().textPane;
-
-            Page p = new Page(Page.ROOT_PAGE, this, gtp.getDocURLString(), currentThemeId);
-            p.setGopher(visiblePage().isGopher());
-            p.setSpartan(visiblePage().isSpartan());
-            p.setNex(visiblePage().isNex());
-            StringBuilder sb = new StringBuilder(gtp.current().currentPage());
-            job = PrinterJob.getPrinterJob();
-            job.setJobName("Alhena"); // this might do something somewhere
-            PageFormat pf = job.defaultPage();
-            p.textPane.setPrintWidth((int) pf.getImageableWidth());
-            p.textPane.end(sb.toString(), gtp.current().pMode(), gtp.getDocURLString(), false, true);
-            int i = 0;
-            boolean openingImages = false;
-            for (ClickableRange range : gtp.clickableRegions) {
-                if (range.openImage) {
-                    p.textPane.queueLink(i);
-                    openingImages = true;
+        if (!NATIVE_IMAGE) {
+            fileMenu.add(createMenuItem(I18n.t("printItem"), KeyStroke.getKeyStroke(KeyEvent.VK_P, mod), () -> {
+                if (!Util.isPrintingAvailable()) {
+                    Util.infoDialog(GeminiFrame.this, I18n.t("printDialog"), I18n.t("printDialogMsg"));
+                    return;
                 }
-                i++;
-            }
-            if (openingImages) {
-                p.textPane.fetchLink();
-            } else {
-                if (gtp.imageOnly()) {
-                    Alhena.processURL(gtp.getDocURLString(), p, null, p, false);
+                GeminiTextPane gtp = visiblePage().textPane;
+
+                Page p = new Page(Page.ROOT_PAGE, this, gtp.getDocURLString(), currentThemeId);
+                p.setGopher(visiblePage().isGopher());
+                p.setSpartan(visiblePage().isSpartan());
+                p.setNex(visiblePage().isNex());
+                StringBuilder sb = new StringBuilder(gtp.current().currentPage());
+                job = PrinterJob.getPrinterJob();
+                job.setJobName("Alhena"); // this might do something somewhere
+                PageFormat pf = job.defaultPage();
+                p.textPane.setPrintWidth((int) pf.getImageableWidth());
+                p.textPane.end(sb.toString(), gtp.current().pMode(), gtp.getDocURLString(), false, true);
+                int i = 0;
+                boolean openingImages = false;
+                for (ClickableRange range : gtp.clickableRegions) {
+                    if (range.openImage) {
+                        p.textPane.queueLink(i);
+                        openingImages = true;
+                    }
+                    i++;
+                }
+                if (openingImages) {
+                    p.textPane.fetchLink();
                 } else {
-                    printIt(p.textPane);
+                    if (gtp.imageOnly()) {
+                        Alhena.processURL(gtp.getDocURLString(), p, null, p, false);
+                    } else {
+                        printIt(p.textPane);
+                    }
                 }
-            }
 
-        }));
+            }));
+        }
         fileMenu.add(new JSeparator());
 
         fileMenu.add(createMenuItem(I18n.t("newTabItem"), KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
