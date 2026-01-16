@@ -8,7 +8,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <exec.mainClass>brad.grier.alhena.Alhena</exec.mainClass>
-        <vertx.version>4.5.22</vertx.version>  
+        <vertx.version>4.5.24</vertx.version>  
     </properties>
     <dependencies>
         <dependency>
@@ -30,7 +30,22 @@
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
             <version>1.80</version>
-        </dependency>      
+        </dependency>   
+        <!-- include the following for native-image only -->   
+        <!---
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bctls-jdk18on</artifactId>
+            <version>1.80</version>
+        </dependency>   
+
+        <dependency>
+            <groupId>org.graalvm.sdk</groupId>
+            <artifactId>nativeImage</artifactId>
+            <version>25.0.1</version>
+            <scope>provided</scope>
+        </dependency>
+        -->
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
@@ -47,13 +62,13 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <version>4.1.128.Final</version>
+            <version>4.1.130.Final</version>
             <classifier>osx-aarch_64</classifier>
         </dependency>  
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <version>4.1.128.Final</version>
+            <version>4.1.130.Final</version>
             <classifier>osx-x86_64</classifier>
         </dependency>  
     
