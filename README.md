@@ -95,7 +95,7 @@ Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT
 
 ## ⚙️ GraalVM Native Image
 
-An experimental version of Alhena compiled with GraalVM native-image is available for Linux glibc x64. Run via the alhena.sh script. Remote sync has been disabled and printing is untested. Feedback welcome. More information is available in the included readme.
+An experimental version of Alhena compiled with GraalVM native-image is available for Linux glibc x64. Run via the alhena.sh script. Remote sync and printing are not supported. Feedback welcome. More information is available in the included readme.
 
 - [Native Linux](https://github.com/mochaman/alhena/releases/download/v5.5.0/alhena-native-5.5.0_linux_glibc_x64.tar.gz) untar and run 'alhena.sh'
 
