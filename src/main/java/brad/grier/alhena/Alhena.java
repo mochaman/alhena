@@ -272,6 +272,7 @@ public class Alhena {
                         for (GeminiFrame jf : frameList) {
                             jf.forEachPage(page -> {
                                 page.setBusy(false);
+                                page.textPane.clearLastClicked();
                             });
                         }
 

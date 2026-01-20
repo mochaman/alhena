@@ -1022,6 +1022,13 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
+    // Needed if user clicks a link, cancels that connection with ESC but 
+    // then subsequently opens a bookmark for a media-only resource.
+    // Without setting lastClicked to null, the media player opens as an embedded link.
+    public void clearLastClicked(){
+        lastClicked = null;
+    }
+
     private void insertComp(Component c) {
         SimpleAttributeSet apStyle = new SimpleAttributeSet();
         StyleConstants.setComponent(apStyle, c);
