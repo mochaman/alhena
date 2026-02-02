@@ -510,8 +510,11 @@ public class Alhena {
             }
 
             String u = Util.getHome();
-
-            newWindow(u, u);
+            if (args.length == 1) {
+                newWindow(args[0], args[0]);
+            } else {
+                newWindow(u, u);
+            }
 
         });
 
@@ -3574,7 +3577,7 @@ public class Alhena {
                 } else {
                     message = "## " + I18n.t("ansiError") + "\n";
                 }
-            }else if (cmd[0].equals("forcewhite")) {
+            } else if (cmd[0].equals("forcewhite")) {
 
                 if (cmd[1].equals("true") || cmd[1].equals("false")) {
                     DB.insertPref("forcewhite", cmd[1]);
