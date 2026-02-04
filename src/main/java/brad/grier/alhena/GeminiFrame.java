@@ -661,7 +661,7 @@ public final class GeminiFrame extends JFrame {
         if (!SystemInfo.isMacOS) {
             fileMenu.add(new JSeparator());
             fileMenu.add(createMenuItem(I18n.t("quitItem"), KeyStroke.getKeyStroke(KeyEvent.VK_Q, mod), () -> {
-                Alhena.exit(GeminiFrame.this);
+                Alhena.exit(null);
             }));
         }
         fileMenu.setMnemonic('F');

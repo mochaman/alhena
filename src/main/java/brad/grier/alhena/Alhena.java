@@ -438,7 +438,11 @@ public class Alhena {
             if (desktop.isSupported(Desktop.Action.MAIL)) {
                 mailSupported = true;
             }
-
+            if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER) && SystemInfo.isMacOS) {
+                desktop.setQuitHandler((e, response) -> {
+                    exit(null);
+                });
+            }
         }
 
         // load monospaced font for windows known to correctly align ascii art
@@ -628,13 +632,15 @@ public class Alhena {
 
     public static void exit(GeminiFrame gf) {
 
-        if (frameList.size() == 1) {
-            gf.setVisible(false); // closes faster for the naysayers
+        if (frameList.size() == 1 || gf == null) { // shutting down all windows and exiting
+
             for (GeminiFrame jf : frameList) {
+                jf.setVisible(false);
                 jf.forEachPage(page -> {
                     page.textPane().closePlayers();
                 });
             }
+
             System.exit(0);
         } else {
             gf.forEachPage(page -> {
