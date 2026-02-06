@@ -10,8 +10,11 @@ import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Transparency;
 import java.awt.event.ActionEvent;
@@ -1442,5 +1445,20 @@ public class Util {
         }
 
         return String.format("%.2f %s", value, units[unitIndex]);
+    }
+
+    public static boolean isOnAnyScreen(Rectangle r) {
+        GraphicsEnvironment ge =
+                GraphicsEnvironment.getLocalGraphicsEnvironment();
+
+        for (GraphicsDevice gd : ge.getScreenDevices()) {
+            GraphicsConfiguration gc = gd.getDefaultConfiguration();
+            Rectangle screenBounds = gc.getBounds();
+
+            if (screenBounds.intersects(r)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
