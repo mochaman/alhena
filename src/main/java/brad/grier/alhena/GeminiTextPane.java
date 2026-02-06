@@ -534,6 +534,20 @@ public class GeminiTextPane extends JTextPane {
         if (sheet != null && emojiSheetMap.isEmpty()) {
             readEmojiJson();
         }
+
+        // IF YOU WANT SPRITE EMOJIS TO BE GRAYSCALE
+        // BufferedImage gray = new BufferedImage(
+        //         sheet.getWidth(),
+        //         sheet.getHeight(),
+        //         BufferedImage.TYPE_INT_ARGB
+        // );
+
+        // ColorConvertOp op = new ColorConvertOp(
+        //         ColorSpace.getInstance(ColorSpace.CS_GRAY), null
+        // );
+        // op.filter(sheet, gray);
+        // sheetImage = gray;
+
         sheetImage = sheet;
     }
 
@@ -1025,7 +1039,7 @@ public class GeminiTextPane extends JTextPane {
     // Needed if user clicks a link, cancels that connection with ESC but 
     // then subsequently opens a bookmark for a media-only resource.
     // Without setting lastClicked to null, the media player opens as an embedded link.
-    public void clearLastClicked(){
+    public void clearLastClicked() {
         lastClicked = null;
     }
 
