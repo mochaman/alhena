@@ -19,6 +19,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -556,7 +557,21 @@ public final class GeminiFrame extends JFrame {
             Alhena.newWindow(home, home);
         }));
 
+        fileMenu.add(createMenuItem(I18n.t("closeTabItem"), KeyStroke.getKeyStroke(KeyEvent.VK_W, mod), () -> {
+            if (tabbedPane == null) {
+                Alhena.exit(GeminiFrame.this);
+            } else {
+                Object callbackObj = tabbedPane.getClientProperty("JTabbedPane.tabCloseCallback");
+                if (callbackObj instanceof IntConsumer callback) {
+                    int selectedIndex = tabbedPane.getSelectedIndex();
+
+                    callback.accept(selectedIndex);
+
+                }
+            }
+        }));
         fileMenu.add(new JSeparator());
+
         JMenu userMenu = new JMenu(I18n.t("userDataItem"));
 
         userMenu.add(createMenuItem(I18n.t("exportDataItem"), null, () -> {
@@ -753,8 +768,24 @@ public final class GeminiFrame extends JFrame {
         menuBar.add(aboutMenu);
         setJMenuBar(menuBar);
         add(statusField, BorderLayout.SOUTH);
-        setSize(1024, 600);
-        setLocationRelativeTo(null);
+
+        if (Alhena.windowBounds != null && Util.isOnAnyScreen(Alhena.windowBounds)) {
+            if (SystemInfo.isMacOS) {
+                EventQueue.invokeLater(() -> {
+                    setBounds(Alhena.windowBounds);
+                    setMinimumSize(new Dimension(320, 200));
+                });
+                setMinimumSize(new Dimension(0, 0));
+            } else {
+                setBounds(Alhena.windowBounds);
+                setMinimumSize(new Dimension(320, 200));
+            }
+
+        } else {
+            setSize(1024, 600);
+            setLocationRelativeTo(null);
+            setMinimumSize(new Dimension(320, 200));
+        }
         setVisible(true);
         if (url != null) {
             init(url, pb);
@@ -1819,7 +1850,7 @@ public final class GeminiFrame extends JFrame {
                 bookmarkMenu.setMnemonic('B');
                 menuBar.add(bookmarkMenu);
             }
-            bookmarkMenu.add(createMenuItem(I18n.t("newBookmarkItem"), KeyStroke.getKeyStroke(KeyEvent.VK_W, mod), () -> {
+            bookmarkMenu.add(createMenuItem(I18n.t("newBookmarkItem"), KeyStroke.getKeyStroke(KeyEvent.VK_B, (mod | InputEvent.SHIFT_DOWN_MASK)), () -> {
                 bookmarkPage(true);
             }));
             bookmarkMenu.add(createMenuItem(I18n.t("bookmarkPageItem"), KeyStroke.getKeyStroke(KeyEvent.VK_D, mod), () -> {
@@ -3005,10 +3036,6 @@ public final class GeminiFrame extends JFrame {
         statusField.setText(msg);
     }
 
-    public void shutDown() {
-        setVisible(false);
-        dispose();
-    }
 
     public HashMap<KeyStroke, Runnable> actionMap = new HashMap<>();
 

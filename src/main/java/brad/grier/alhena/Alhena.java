@@ -7,11 +7,13 @@ import java.awt.Font;
 import java.awt.KeyboardFocusManager;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
+import java.awt.Rectangle;
 import java.awt.Taskbar;
 import java.awt.Taskbar.Feature;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.awt.desktop.AppReopenedListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
@@ -78,6 +80,9 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import javax.swing.JTabbedPane;
@@ -212,6 +217,8 @@ public class Alhena {
     private static HttpServer streamServer;
     public static int streamingPort;
 
+    public static Rectangle windowBounds;
+
     static {
         // just do this once
         Security.addProvider(new BouncyCastleProvider());
@@ -313,7 +320,6 @@ public class Alhena {
                         e.consume();
                         return true;
                     }
-
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_L, MOD))) {
                     gf.focusOnAddressBar();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, MOD))) {
@@ -438,11 +444,25 @@ public class Alhena {
             if (desktop.isSupported(Desktop.Action.MAIL)) {
                 mailSupported = true;
             }
-            if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER) && SystemInfo.isMacOS) {
-                desktop.setQuitHandler((e, response) -> {
-                    exit(null);
-                });
+
+            if (SystemInfo.isMacOS) {
+                if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
+                    desktop.setQuitHandler((e, response) -> {
+                        exit(null);
+                    });
+                }
+
+                desktop.addAppEventListener(
+                        (AppReopenedListener) e -> {
+                            if (frameList.isEmpty()) {
+                                String u = Util.getHome();
+                                newWindow(u, u);
+                            }
+
+                        }
+                );
             }
+
         }
 
         // load monospaced font for windows known to correctly align ascii art
@@ -500,6 +520,15 @@ public class Alhena {
         GeminiFrame.fontSize = Integer.parseInt(map.getOrDefault("fontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.monoFontSize = Integer.parseInt(map.getOrDefault("monofontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.saveFont = new Font(DB.getPref("font", "SansSerif"), Font.PLAIN, GeminiFrame.fontSize);
+        if (map.containsKey("win.x")) {
+            try{
+            windowBounds = new Rectangle(Integer.parseInt(map.get("win.x")), Integer.parseInt(map.get("win.y")),
+                    Integer.parseInt(map.get("win.w")), Integer.parseInt(map.get("win.h")));
+            }catch(Exception ex){
+                // ignore - only in case db entries got corrupted somehow 
+                // we don't want to prevent app from opening
+            }
+        }
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
 
@@ -513,6 +542,29 @@ public class Alhena {
                 DB.insertPref("theme", theme);
             }
 
+            if (SystemInfo.isMacOS) {
+                // workaround to activate File menu on MacOS when all windows are closed but app still active
+
+                JFrame hiddenFrame = new JFrame();
+                JMenuBar menuBar = new JMenuBar();
+                JMenu fileMenu = new JMenu(I18n.t("fileMenu"));
+
+                JMenuItem menuItem = new JMenuItem(I18n.t("newWindowItem"));
+
+                menuItem.addActionListener(al -> {
+
+                    String home = Util.getHome();
+                    Alhena.newWindow(home, home);
+                });
+
+                menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, MOD));
+                fileMenu.add(menuItem);
+                menuBar.add(fileMenu);
+                hiddenFrame.setJMenuBar(menuBar);
+                hiddenFrame.setUndecorated(true);
+                hiddenFrame.setSize(0, 0);
+                hiddenFrame.setVisible(true);
+            }
             String u = Util.getHome();
             if (args.length == 1) {
                 newWindow(args[0], args[0]);
@@ -632,13 +684,21 @@ public class Alhena {
 
     public static void exit(GeminiFrame gf) {
 
-        if (frameList.size() == 1 || gf == null) { // shutting down all windows and exiting
-
+        if ((frameList.size() == 1 && !SystemInfo.isMacOS) || gf == null) { // shutting down all windows and exiting
+            Rectangle bounds = null;
             for (GeminiFrame jf : frameList) {
                 jf.setVisible(false);
                 jf.forEachPage(page -> {
                     page.textPane().closePlayers();
                 });
+                bounds = jf.getBounds();
+            }
+
+            if (bounds != null) {
+                DB.insertPref("win.x", String.valueOf(bounds.x));
+                DB.insertPref("win.y", String.valueOf(bounds.y));
+                DB.insertPref("win.w", String.valueOf(bounds.width));
+                DB.insertPref("win.h", String.valueOf(bounds.height));
             }
 
             System.exit(0);
@@ -646,7 +706,9 @@ public class Alhena {
             gf.forEachPage(page -> {
                 page.textPane().closePlayers();
             });
-            gf.shutDown();
+            //gf.shutDown();
+            gf.setVisible(false);
+            gf.dispose();
             frameList.remove(gf);
             if (Taskbar.isTaskbarSupported()) {
                 Taskbar taskbar = Taskbar.getTaskbar();
@@ -654,6 +716,16 @@ public class Alhena {
 
                     taskbar.setMenu(createPopupMenu());
                 }
+            }
+
+            if (SystemInfo.isMacOS && frameList.isEmpty()) { 
+
+                Rectangle bounds = gf.getBounds();
+                DB.insertPref("win.x", String.valueOf(bounds.x));
+                DB.insertPref("win.y", String.valueOf(bounds.y));
+                DB.insertPref("win.w", String.valueOf(bounds.width));
+                DB.insertPref("win.h", String.valueOf(bounds.height));
+                windowBounds = bounds;
             }
         }
 
