@@ -225,7 +225,83 @@ public class Alhena {
         Security.addProvider(new BouncyCastleProvider());
     }
 
+    private final static int PORT = 61965;
+
+    private static void startIPC(String[] args) {
+        vertx.createNetServer()
+                .connectHandler(sock -> {
+                    sock.handler(buf -> {
+                        String[] furl = {buf.toString()};
+                        System.out.println("open request: " + furl);
+
+                        if (allowedSchemes.stream().noneMatch(furl[0]::startsWith)) {
+                            try {
+                                File file = new File(furl[0]);
+                                furl[0] = file.toURI().toString();
+                            } catch (Exception e) {
+                                //f = u; // just open the default
+                            }
+
+                        }
+                        EventQueue.invokeLater(() -> {
+                            if (frameList.size() > 0) {
+
+                                GeminiFrame gf = frameList.get(frameList.size() - 1);
+                                gf.fetchURL(furl[0], false);
+                            } else {
+                                // this should only happen on mac where app can be running without open windows
+                                newWindow(furl[0], furl[0]);
+                            }
+                        });
+
+                        sock.close();
+                    });
+                })
+                .listen(PORT, "127.0.0.1", res -> {
+                    if (res.succeeded()) {
+                        try {
+                            start(args);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            System.exit(0);
+                        }
+                    } else if (args.length == 1) {
+                        // this only happens if another instance already has the port
+                        sendArg(vertx, args[0]);
+                    } else {
+                        vertx.close();
+                        System.exit(0);
+                    }
+                });
+    }
+
+    private static void sendArg(Vertx vertx, String url) {
+
+        vertx.createNetClient()
+                .connect(PORT, "127.0.0.1", res -> {
+                    if (res.succeeded()) {
+                        res.result().write(url, eh -> {
+                            res.result().close();
+                            System.exit(0);
+                        });
+
+                    } else {
+                        System.exit(0);
+                    }
+                });
+    }
+
     public static void main(String[] args) throws Exception {
+        // turn off blocked thread warnings - this is not a server
+        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
+        vertx = Vertx.vertx(options);
+
+        // start IPC to handle command line args from subsequent instances
+        startIPC(args);
+
+    }
+
+    private static void start(String[] args) throws Exception {
         String alhenaLocale = System.getenv("ALHENA_LOCALE");
         String alhenaHome = System.getenv("ALHENA_HOME"); // the directory to store cacerts, db, etc
         if (alhenaHome != null) {
@@ -594,7 +670,7 @@ public class Alhena {
                     try {
                         File file = new File(f);
                         f = file.toURI().toString();
-                    } catch (Exception e) { 
+                    } catch (Exception e) {
                         f = u; // just open the default
                     }
 
@@ -606,10 +682,9 @@ public class Alhena {
 
         });
 
-        // turn off blocked thread warnings - this is not a server
-        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
-        vertx = Vertx.vertx(options);
-
+        // // turn off blocked thread warnings - this is not a server
+        // VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
+        // vertx = Vertx.vertx(options);
         startStreamingServer();
     }
 
