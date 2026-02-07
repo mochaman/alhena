@@ -258,6 +258,9 @@ public class Alhena {
                     });
                 })
                 .listen(PORT, "127.0.0.1", res -> {
+                    if(args == null){
+                        return;
+                    }
                     if (res.succeeded()) {
                         try {
                             start(args);
@@ -269,7 +272,6 @@ public class Alhena {
                         // this only happens if another instance already has the port
                         sendArg(vertx, args[0]);
                     } else {
-                        vertx.close();
                         System.exit(0);
                     }
                 });
@@ -4522,7 +4524,7 @@ public class Alhena {
             vertx.exceptionHandler(ex -> {
                 ex.printStackTrace();
             });
-
+            startIPC(null);;
             startStreamingServer();
 
             // reset all connections in map
