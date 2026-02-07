@@ -14,6 +14,7 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.desktop.AppReopenedListener;
+import java.awt.desktop.OpenFilesEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
@@ -429,6 +430,7 @@ public class Alhena {
             }
 
         }
+        String[] pendingFile = {null};
         if (Desktop.isDesktopSupported()) {
             Desktop desktop = Desktop.getDesktop();
             if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
@@ -461,6 +463,24 @@ public class Alhena {
 
                         }
                 );
+
+                if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
+                    desktop.setOpenFileHandler((OpenFilesEvent e) -> {
+
+                        for (File file : e.getFiles()) {
+                            if (frameList.size() > 0) {
+                                String f = file.toURI().toString();
+                                GeminiFrame gf = frameList.get(frameList.size() - 1);
+                                gf.fetchURL(f, false);
+                            } else {
+                                pendingFile[0] = file.toURI().toString();
+                            }
+                            break;
+                        }
+
+                    });
+                }
+
             }
 
         }
@@ -521,10 +541,10 @@ public class Alhena {
         GeminiFrame.monoFontSize = Integer.parseInt(map.getOrDefault("monofontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.saveFont = new Font(DB.getPref("font", "SansSerif"), Font.PLAIN, GeminiFrame.fontSize);
         if (map.containsKey("win.x")) {
-            try{
-            windowBounds = new Rectangle(Integer.parseInt(map.get("win.x")), Integer.parseInt(map.get("win.y")),
-                    Integer.parseInt(map.get("win.w")), Integer.parseInt(map.get("win.h")));
-            }catch(Exception ex){
+            try {
+                windowBounds = new Rectangle(Integer.parseInt(map.get("win.x")), Integer.parseInt(map.get("win.y")),
+                        Integer.parseInt(map.get("win.w")), Integer.parseInt(map.get("win.h")));
+            } catch (Exception ex) {
                 // ignore - only in case db entries got corrupted somehow 
                 // we don't want to prevent app from opening
             }
@@ -566,8 +586,20 @@ public class Alhena {
                 hiddenFrame.setVisible(true);
             }
             String u = Util.getHome();
-            if (args.length == 1) {
-                newWindow(args[0], args[0]);
+            if (pendingFile[0] != null) {
+                newWindow(pendingFile[0], pendingFile[0]);
+            } else if (args.length == 1) {
+                String f = args[0];
+                if (allowedSchemes.stream().noneMatch(f::startsWith)) {
+                    try {
+                        File file = new File(f);
+                        f = file.toURI().toString();
+                    } catch (Exception e) { 
+                        f = u; // just open the default
+                    }
+
+                }
+                newWindow(f, f);
             } else {
                 newWindow(u, u);
             }
@@ -718,7 +750,7 @@ public class Alhena {
                 }
             }
 
-            if (SystemInfo.isMacOS && frameList.isEmpty()) { 
+            if (SystemInfo.isMacOS && frameList.isEmpty()) {
 
                 Rectangle bounds = gf.getBounds();
                 DB.insertPref("win.x", String.valueOf(bounds.x));
