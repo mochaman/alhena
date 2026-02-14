@@ -11,6 +11,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.KeyboardFocusManager;
 import java.awt.MenuItem;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
@@ -60,8 +61,11 @@ import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 import javax.security.auth.x500.X500Principal;
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
@@ -1724,6 +1728,42 @@ public final class GeminiFrame extends JFrame {
                 }
             }
         });
+        textField.setFocusTraversalKeysEnabled(false);
+        InputMap im = textField.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap am = textField.getActionMap();
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "tabOrAccept");
+        am.put("tabOrAccept", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (popup.isVisible() && suggestionList.getSelectedValue() != null) {
+
+                    // accept suggestion
+                    textField.getDocument().removeDocumentListener(dl);
+                    textField.setText(suggestionList.getSelectedValue());
+                    textField.getDocument().addDocumentListener(dl);
+
+                    popup.dispose();
+                    suggestionList.removeAll();
+
+                } else {
+                    KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                            .focusNextComponent(textField);
+                }
+            }
+        });
+        im.put(KeyStroke.getKeyStroke(
+                KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK),
+                "shiftTab");
+
+        am.put("shiftTab", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!popup.isVisible()) {
+                    KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                            .focusPreviousComponent(textField);
+                }
+            }
+        });
         textField.addMouseListener(new ContextMenuMouseListener());
         textField.addFocusListener(new FocusAdapter() {
             @Override
@@ -3035,7 +3075,6 @@ public final class GeminiFrame extends JFrame {
     public void setStatus(String msg) {
         statusField.setText(msg);
     }
-
 
     public HashMap<KeyStroke, Runnable> actionMap = new HashMap<>();
 
