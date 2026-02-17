@@ -541,13 +541,11 @@ public class GeminiTextPane extends JTextPane {
         //         sheet.getHeight(),
         //         BufferedImage.TYPE_INT_ARGB
         // );
-
         // ColorConvertOp op = new ColorConvertOp(
         //         ColorSpace.getInstance(ColorSpace.CS_GRAY), null
         // );
         // op.filter(sheet, gray);
         // sheetImage = gray;
-
         sheetImage = sheet;
     }
 
@@ -3048,6 +3046,13 @@ public class GeminiTextPane extends JTextPane {
 
                 // get scroll amount with multiplier for sensitivity
                 double scrollAmount = e.getPreciseWheelRotation() * SCROLL_MULTIPLIER * osScrollFactor;
+
+                // detect direction change
+                if (Math.signum(scrollAmount) != Math.signum(momentumY)) {
+                    momentumY = 0;
+                    lastScrollAmount = 0;
+                }
+
                 // update momentum based on current scroll
                 momentumY = scrollAmount * 8; // Initial velocity
                 // record time for velocity calculations
