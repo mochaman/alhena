@@ -436,7 +436,7 @@ public class GeminiTextPane extends JTextPane {
                         String lcName = file.getName().toLowerCase();
                         boolean matches = Alhena.fileExtensions.stream().anyMatch(lcName::endsWith);
                         String mimeExt = MimeMapping.getMimeTypeForFilename(lcName);
-                        boolean vlcType = url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video")));
+                        boolean vlcType = lcName.endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video")));
                         if (matches || vlcType) {
 
                             if (lcName.endsWith(".pem")) {
