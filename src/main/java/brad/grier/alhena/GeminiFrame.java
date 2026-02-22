@@ -1890,7 +1890,7 @@ public final class GeminiFrame extends JFrame {
                 bookmarkMenu.setMnemonic('B');
                 menuBar.add(bookmarkMenu);
             }
-            bookmarkMenu.add(createMenuItem(I18n.t("newBookmarkItem"), KeyStroke.getKeyStroke(KeyEvent.VK_B, (mod | InputEvent.SHIFT_DOWN_MASK)), () -> {
+            bookmarkMenu.add(createMenuItem(I18n.t("newBookmarkItem"), KeyStroke.getKeyStroke(KeyEvent.VK_M, mod), () -> {
                 bookmarkPage(true);
             }));
             bookmarkMenu.add(createMenuItem(I18n.t("bookmarkPageItem"), KeyStroke.getKeyStroke(KeyEvent.VK_D, mod), () -> {
