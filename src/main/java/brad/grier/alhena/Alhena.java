@@ -1783,7 +1783,7 @@ public class Alhena {
                 return;
             } else {
                 //<selector><TAB><search-text><CRLF>
-                gopherPath[0] = path.substring(3) + "\t" + query + "\r\n";
+                gopherPath[0] = path.substring(2) + "\t" + query + "\r\n";
                 origURL += "?" + Util.uEncode(query);
             }
         }
