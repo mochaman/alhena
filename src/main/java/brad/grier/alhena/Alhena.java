@@ -3378,7 +3378,7 @@ public class Alhena {
                     });
                     yield sb.toString();
                 } else {
-                    TableResult result = processTable(element);
+                    TableResult result = processTable(element, host);
                     StringBuilder sb = new StringBuilder(result.asciiTable);
                     if (result.links.size() > 0) {
                         sb.append("Table Links\n");
@@ -3418,6 +3418,7 @@ public class Alhena {
             case "img" -> {
                 String src = element.attr("src");
                 String alt = element.attr("alt");
+                src = resolve(src, host);
                 yield "=> " + src + " " + alt;
 
             }
@@ -3428,6 +3429,7 @@ public class Alhena {
                 if (source != null) {
                     String src = source.attr("src").trim();
                     if (!src.isEmpty()) {
+                        src = resolve(src, host);
                         yield "=> " + src + " [video]\n";
                     }
                 }
@@ -3435,6 +3437,7 @@ public class Alhena {
                 // Fallback: if there's no <source>, try the video[src] directly
                 String directSrc = element.attr("src").trim();
                 if (!directSrc.isEmpty()) {
+                    directSrc = resolve(directSrc, host);
                     yield "=> " + directSrc + " [video]\n";
                 }
 
@@ -3448,6 +3451,7 @@ public class Alhena {
                 if (source != null) {
                     String src = source.attr("src").trim();
                     if (!src.isEmpty()) {
+                        src = resolve(src, host);
                         yield "=> " + src + " [audio]\n";
                     }
                 }
@@ -3455,6 +3459,7 @@ public class Alhena {
                 // Fallback: <audio src="...">
                 String direct = element.attr("src").trim();
                 if (!direct.isEmpty()) {
+                    direct = resolve(direct, host);
                     yield "=> " + direct + " [audio]\n";
                 }
 
@@ -3501,9 +3506,8 @@ public class Alhena {
                 if (hashIndex != -1) {
                     href = href.substring(0, hashIndex);
                 }
-                if (href.startsWith("/") && host != null) {
-                    href = host + href;
-                }
+
+                href = resolve(href, host);
                 String elemText = element.text();
 
                 if (elemText == null || elemText.isEmpty()) {
@@ -3580,7 +3584,7 @@ public class Alhena {
         List<String> links;
     }
 
-    private static TableResult processTable(Element table) {
+    private static TableResult processTable(Element table, String host) {
         AsciiTable at = new AsciiTable();
         at.addRule();
 
@@ -3608,7 +3612,7 @@ public class Alhena {
                         case "img" -> {
                             String alt = el.attr("alt");
                             String src = el.attr("src");
-
+                            src = resolve(src, host);
                             if (!alt.isEmpty()) {
                                 sb.append(alt).append(" ");
                             }
@@ -3619,6 +3623,7 @@ public class Alhena {
                         }
                         case "a" -> {
                             String href = el.attr("href");
+                            href = resolve(href, host);
                             String text = el.text().trim();
 
                             // if text empty, try to use alt text of any img child
@@ -3663,6 +3668,21 @@ public class Alhena {
         result.asciiTable = "```\n" + at.render() + "\n```\n";
         result.links = links;
         return result;
+    }
+
+    private static String resolve(String href, String host){
+        if(href.startsWith("/") && host != null){
+            if(href.startsWith("//")){
+                if(host.startsWith("https")){
+                    href = "https:" + href;
+                }else{
+                    href = "http:" + href;
+                }
+            }else{
+                href = host + href;
+            }
+        }
+        return href;
     }
 
     private static boolean containsNestedTable(Element table) {
