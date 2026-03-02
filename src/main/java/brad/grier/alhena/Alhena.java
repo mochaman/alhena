@@ -258,7 +258,7 @@ public class Alhena {
                     });
                 })
                 .listen(PORT, "127.0.0.1", res -> {
-                    if(args == null){
+                    if (args == null) {
                         return;
                     }
                     if (res.succeeded()) {
@@ -3617,7 +3617,7 @@ public class Alhena {
                                 sb.append(alt).append(" ");
                             }
                             if (!src.isEmpty()) {
-                                links.add("=> " + src + " " + (alt.isEmpty() ? "🖼️ " + I18n.t("htmlImageLabel") : "🖼️ " + alt));
+                                links.add("=> " + src + " " + (alt.isEmpty() ? I18n.t("htmlImageLabel") : alt));
                             }
 
                         }
@@ -3639,7 +3639,7 @@ public class Alhena {
                             }
 
                             if (!href.isEmpty() && !href.startsWith("#")) {
-                                links.add("=> " + href + " " + (text.isEmpty() ? "🔗 " + I18n.t("htmlLinkLabel") : "🔗 " + text));
+                                links.add("=> " + href + " " + (text.isEmpty() ? I18n.t("htmlLinkLabel") : text));
                             }
                         }
                     }
@@ -3670,19 +3670,28 @@ public class Alhena {
         return result;
     }
 
-    private static String resolve(String href, String host){
-        if(href.startsWith("/") && host != null){
-            if(href.startsWith("//")){
-                if(host.startsWith("https")){
-                    href = "https:" + href;
-                }else{
-                    href = "http:" + href;
-                }
-            }else{
-                href = host + href;
+    private static String resolve(String href, String base) {
+
+        if (base == null) {
+            return href;
+        }
+        URI hrefUri;
+        if (base.startsWith("file:")) {
+            Path path = Paths.get(href);
+            hrefUri = path.toUri();
+        } else {
+            hrefUri = URI.create(href);
+        }
+
+        if (hrefUri.isAbsolute()) {
+            if (base.startsWith("file:")) {
+                return href.replace(" ", "%20");
+            }else {
+                return href;
             }
         }
-        return href;
+        URI baseUri = URI.create(base);
+        return baseUri.resolve(hrefUri).toString();
     }
 
     private static boolean containsNestedTable(Element table) {
@@ -4061,7 +4070,11 @@ public class Alhena {
                         if (location != null) {
                             URI redirectURI = URI.create(location);
                             if (redirectURI.getScheme() == null) {
-                                redirectURI = prevURI.resolve(redirectURI);
+                                if (prevURI.getScheme().startsWith("file")) {
+                                    redirectURI = finalURI.resolve(redirectURI);
+                                } else {
+                                    redirectURI = prevURI.resolve(redirectURI);
+                                }
                             }
                             handleHttp(redirectURI.toString(), prevURI, p, cPage, redirectCount + 1);
                         } else {
@@ -4086,7 +4099,7 @@ public class Alhena {
                         resp.body().onSuccess(buffer -> {
                             bg(() -> {
                                 if (finalCT.startsWith("text/html")) {
-                                    p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURI.getScheme() + "://" + finalURI.getAuthority()), false, finalURL, true);
+                                    p.textPane.end(convertHtmlToGemtext(buffer.toString(), finalURI.toString()), false, finalURL, true);
                                 } else {
                                     p.textPane.end(buffer.toString(), false, finalURL, true);
                                 }
