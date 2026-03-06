@@ -526,6 +526,25 @@ public class Alhena {
             }
 
             if (SystemInfo.isMacOS) {
+
+                if (desktop.isSupported(Desktop.Action.APP_MENU_BAR)) {
+                    JMenuBar menuBar = new JMenuBar();
+                    JMenu fileMenu = new JMenu(I18n.t("fileMenu"));
+
+                    JMenuItem menuItem = new JMenuItem(I18n.t("newWindowItem"));
+
+                    menuItem.addActionListener(al -> {
+
+                        String home = Util.getHome();
+                        Alhena.newWindow(home, home);
+                    });
+
+                    menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, MOD));
+                    fileMenu.add(menuItem);
+                    menuBar.add(fileMenu);
+                    desktop.setDefaultMenuBar(menuBar);
+                }
+
                 if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
                     desktop.setQuitHandler((e, response) -> {
                         exit(null);
@@ -640,29 +659,6 @@ public class Alhena {
                 DB.insertPref("theme", theme);
             }
 
-            if (SystemInfo.isMacOS) {
-                // workaround to activate File menu on MacOS when all windows are closed but app still active
-
-                JFrame hiddenFrame = new JFrame();
-                JMenuBar menuBar = new JMenuBar();
-                JMenu fileMenu = new JMenu(I18n.t("fileMenu"));
-
-                JMenuItem menuItem = new JMenuItem(I18n.t("newWindowItem"));
-
-                menuItem.addActionListener(al -> {
-
-                    String home = Util.getHome();
-                    Alhena.newWindow(home, home);
-                });
-
-                menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, MOD));
-                fileMenu.add(menuItem);
-                menuBar.add(fileMenu);
-                hiddenFrame.setJMenuBar(menuBar);
-                hiddenFrame.setUndecorated(true);
-                hiddenFrame.setSize(0, 0);
-                hiddenFrame.setVisible(true);
-            }
             String u = Util.getHome();
             if (pendingFile[0] != null) {
                 newWindow(pendingFile[0], pendingFile[0]);
@@ -3686,7 +3682,7 @@ public class Alhena {
         if (hrefUri.isAbsolute()) {
             if (base.startsWith("file:")) {
                 return href.replace(" ", "%20");
-            }else {
+            } else {
                 return href;
             }
         }
