@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dialog;
+import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
@@ -132,7 +133,8 @@ public class Util {
         JOptionPane optionPane = new JOptionPane(msg, msgType);
         JDialog dialog = optionPane.createDialog(c, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
 
         if (SystemInfo.isMacOS) {
             dressDialog(dialog);
@@ -170,7 +172,8 @@ public class Util {
         );
         JDialog dialog = optionPane.createDialog(parent, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
         if (SystemInfo.isMacOS) {
             dressDialog(dialog);
         }
@@ -217,7 +220,9 @@ public class Util {
         );
         JDialog dialog = optionPane.createDialog(parent, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
+
         if (SystemInfo.isMacOS) {
             dressDialog(dialog);
         }
@@ -252,7 +257,9 @@ public class Util {
         JDialog dialog = optionPane.createDialog(c, title);
         dialog.setResizable(resizable);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
+
         if (SystemInfo.isMacOS) {
             dressDialog(dialog);
         }
@@ -336,7 +343,9 @@ public class Util {
         optionPane.setWantsInput(false);
 
         JDialog dialog = optionPane.createDialog(c, title);
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
+
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         textArea.getDocument().addDocumentListener(new DocumentListener() {
 
@@ -479,7 +488,9 @@ public class Util {
 
         optionPane.setWantsInput(false);
         JDialog dialog = optionPane.createDialog(f, I18n.t("fontDialogTitle"));
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
+
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
         if (SystemInfo.isMacOS) {
@@ -528,7 +539,9 @@ public class Util {
 
         optionPane.setWantsInput(false);
         JDialog dialog = optionPane.createDialog(f, I18n.t("pageBgColorDialog"));
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
+
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
         if (SystemInfo.isMacOS) {
@@ -549,7 +562,9 @@ public class Util {
     public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter) {
         JDialog dialog = new JDialog(f, title);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+        dialog.setModalityType(mt);
+
         if (SystemInfo.isMacOS) {
             dressDialog(dialog);
         }
@@ -1448,8 +1463,8 @@ public class Util {
     }
 
     public static boolean isOnAnyScreen(Rectangle r) {
-        GraphicsEnvironment ge =
-                GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsEnvironment ge
+                = GraphicsEnvironment.getLocalGraphicsEnvironment();
 
         for (GraphicsDevice gd : ge.getScreenDevices()) {
             GraphicsConfiguration gc = gd.getDefaultConfiguration();
