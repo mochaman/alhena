@@ -217,6 +217,7 @@ public class Alhena {
     private static Page currentPage;
     private static HttpServer streamServer;
     public static int streamingPort;
+    public static boolean isHaiku;
 
     public static Rectangle windowBounds;
 
@@ -316,6 +317,7 @@ public class Alhena {
             alhenaHome = System.getProperty("user.home") + sep + "alhena";
             System.setProperty("alhena.home", alhenaHome);
         }
+        isHaiku = System.getProperty("os.name").equals("Haiku");
         ExecutorService executor = Executors.newFixedThreadPool(1);
 
         CompletableFuture<Void> chain = CompletableFuture
@@ -490,7 +492,7 @@ public class Alhena {
             System.setProperty("apple.awt.application.name", PROG_NAME);
             System.setProperty("apple.laf.useScreenMenuBar", "true");
 
-        } else if (SystemInfo.isLinux) {
+        } else if (SystemInfo.isLinux || isHaiku) {
             // enable custom window decorations
             JFrame.setDefaultLookAndFeelDecorated(true);
             JDialog.setDefaultLookAndFeelDecorated(true);
@@ -637,7 +639,7 @@ public class Alhena {
         GeminiFrame.fontSize = Integer.parseInt(map.getOrDefault("fontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.monoFontSize = Integer.parseInt(map.getOrDefault("monofontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.saveFont = new Font(DB.getPref("font", "SansSerif"), Font.PLAIN, GeminiFrame.fontSize);
-        if (map.containsKey("win.x")) {
+        if (map.containsKey("win.x") && !isHaiku) {
             try {
                 windowBounds = new Rectangle(Integer.parseInt(map.get("win.x")), Integer.parseInt(map.get("win.y")),
                         Integer.parseInt(map.get("win.w")), Integer.parseInt(map.get("win.h")));
