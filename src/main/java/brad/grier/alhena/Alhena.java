@@ -495,9 +495,9 @@ public class Alhena {
             JFrame.setDefaultLookAndFeelDecorated(true);
             JDialog.setDefaultLookAndFeelDecorated(true);
         }
+        Taskbar taskbar = getTaskbar();
+        if (taskbar != null) {
 
-        if (Taskbar.isTaskbarSupported()) {
-            Taskbar taskbar = Taskbar.getTaskbar();
             if (taskbar.isSupported(Feature.ICON_IMAGE)) {
                 URL iconUrl = Alhena.class.getClassLoader().getResource("alhena_256x256.png");
                 taskbar.setIconImage(new ImageIcon(iconUrl).getImage());
@@ -715,8 +715,9 @@ public class Alhena {
     public static void newWindow(String url, String baseUrl) {
         frameList.add(new GeminiFrame(url, baseUrl));
         // GeminiFrame.ansiAlert = DB.getPref("ansialert", "false").equals("true");
-        if (Taskbar.isTaskbarSupported()) {
-            Taskbar taskbar = Taskbar.getTaskbar();
+        Taskbar taskbar = getTaskbar();
+        if (taskbar != null) {
+
             if (taskbar.isSupported(Feature.MENU)) {
 
                 taskbar.setMenu(createPopupMenu());
@@ -815,8 +816,8 @@ public class Alhena {
             gf.setVisible(false);
             gf.dispose();
             frameList.remove(gf);
-            if (Taskbar.isTaskbarSupported()) {
-                Taskbar taskbar = Taskbar.getTaskbar();
+            Taskbar taskbar = getTaskbar();
+            if (taskbar != null) {
                 if (taskbar.isSupported(Feature.MENU)) {
 
                     taskbar.setMenu(createPopupMenu());
@@ -4566,6 +4567,18 @@ public class Alhena {
             f.getCause().printStackTrace();
         });
 
+    }
+
+    private static Taskbar getTaskbar() {
+        try {
+            if (Taskbar.isTaskbarSupported()) {
+                return Taskbar.getTaskbar();
+            }
+        } catch (Exception ex) {
+            // OpenJDK 21 on Haiku returns true for isTaskbarSupported but
+            // throws an exception on getTaskbar
+        }
+        return null;
     }
 
 }
