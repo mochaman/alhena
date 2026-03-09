@@ -208,7 +208,7 @@ public class Alhena {
             = ResourceBundle.getBundle("MessagesBundle", Locale.getDefault());
     private static final List<String> allowedSchemes = List.of(
             "gemini:/", "file:/", "spartan:/", "nex:/",
-            "https:/", "http:/", "titan:/", "gopher:/"
+            "https:/", "http:/", "titan:/", "gopher:/", "gophers:/"
     );
     public static boolean sDown;
     private static StreamSession currentSession;
@@ -1073,9 +1073,12 @@ public class Alhena {
                 punyURI = URI.create("gemini://" + gopherProxy);
                 punyURIScheme = "gemini";
             } else {
-                gopher(punyURI, p, origURL, cPage);
+                gopher(punyURI, p, origURL, cPage, false);
                 return;
             }
+        } else if (punyURIScheme.equals("gophers")) {
+            gopher(punyURI, p, origURL, cPage, true);
+            return;
         }
 
         switch (punyURIScheme) {
@@ -1726,26 +1729,31 @@ public class Alhena {
 
     }
 
-    private static void gopher(URI uri, Page p, String origURL, Page cPage) {
+    private static void gopher(URI uri, Page p, String origURL, Page cPage, boolean gopherS) {
 
         p.setGopher(true);
         ProxyOptions proxyOptions = getSocksProxy(uri);
-        NetClient sClient = proxyOptions == null ? spartanClient : spartanClientSocks;
-        if (sClient == null) {
+        NetClient sClient;
+        if (!gopherS) {
+            sClient = proxyOptions == null ? spartanClient : spartanClientSocks;
+            if (sClient == null) {
 
-            NetClientOptions options = new NetClientOptions()
-                    .setConnectTimeout(60000)
-                    .setSsl(false).setHostnameVerificationAlgorithm("");
-            if (proxyOptions != null) {
-                options.setProxyOptions(proxyOptions);
-            }
-            sClient = vertx.createNetClient(options);
-            if (proxyOptions == null) {
-                spartanClient = sClient;
-            } else {
-                spartanClientSocks = sClient;
-            }
+                NetClientOptions options = new NetClientOptions()
+                        .setConnectTimeout(60000)
+                        .setSsl(false).setHostnameVerificationAlgorithm("");
+                if (proxyOptions != null) {
+                    options.setProxyOptions(proxyOptions);
+                }
+                sClient = vertx.createNetClient(options);
+                if (proxyOptions == null) {
+                    spartanClient = sClient;
+                } else {
+                    spartanClientSocks = sClient;
+                }
 
+            }
+        } else {
+            sClient = getNetClient(uri);
         }
         String host = uri.getHost();
 
@@ -1791,7 +1799,22 @@ public class Alhena {
 
         sClient.connect(port[0], host, connection -> {
             if (connection.succeeded()) {
+                if (gopherS) {
+                    NetSocket socket = connection.result();
+                    StreamSession ss = new StreamSession(socket);
+                    NetSocketInternal socketInternal = (NetSocketInternal) socket;
+                    Channel channel = socketInternal.channelHandlerContext().channel();
 
+                    channel.pipeline().addAfter("ssl", "ssl-close-detector", new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                            if (evt instanceof SslCloseCompletionEvent) {
+                                socket.close();
+                            }
+                            super.userEventTriggered(ctx, evt);
+                        }
+                    });
+                }
                 System.out.println("connected: " + host);
                 StreamSession ss = new StreamSession(connection.result());
                 // wrap for the lambda
