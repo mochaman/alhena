@@ -519,7 +519,7 @@ public final class GeminiFrame extends JFrame {
                 GeminiTextPane gtp = visiblePage().textPane;
 
                 Page p = new Page(Page.ROOT_PAGE, this, gtp.getDocURLString(), currentThemeId);
-                p.setGopher(visiblePage().isGopher());
+                p.setGopher(visiblePage().isGopher(), visiblePage().isGopherTLS());
                 p.setSpartan(visiblePage().isSpartan());
                 p.setNex(visiblePage().isNex());
                 StringBuilder sb = new StringBuilder(gtp.current().currentPage());

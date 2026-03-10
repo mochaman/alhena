@@ -184,6 +184,7 @@ public class Alhena {
     private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private static final int MODIFIER = (InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
     private static final ArrayList<String> cnConfirmedList = new ArrayList<>();
+    private static final ArrayList<String> gophersList = new ArrayList<>();
     private static boolean keyDown;
     private static LinkGlassPane lgp;
     public static boolean allowVLC;
@@ -1073,10 +1074,12 @@ public class Alhena {
                 punyURI = URI.create("gemini://" + gopherProxy);
                 punyURIScheme = "gemini";
             } else {
-                gopher(punyURI, p, origURL, cPage, false);
+
+                gopher(punyURI, p, origURL, cPage, gophersList.contains(punyURI.getAuthority()));
                 return;
             }
         } else if (punyURIScheme.equals("gophers")) {
+
             gopher(punyURI, p, origURL, cPage, true);
             return;
         }
@@ -1731,7 +1734,7 @@ public class Alhena {
 
     private static void gopher(URI uri, Page p, String origURL, Page cPage, boolean gopherS) {
 
-        p.setGopher(true);
+        p.setGopher(true, gopherS);
         ProxyOptions proxyOptions = getSocksProxy(uri);
         NetClient sClient;
         if (!gopherS) {
@@ -1800,6 +1803,10 @@ public class Alhena {
         sClient.connect(port[0], host, connection -> {
             if (connection.succeeded()) {
                 if (gopherS) {
+                    String sAuth = uri.getAuthority();
+                    if (!gophersList.contains(sAuth)) {
+                        gophersList.add(sAuth);
+                    }
                     NetSocket socket = connection.result();
                     StreamSession ss = new StreamSession(socket);
                     NetSocketInternal socketInternal = (NetSocketInternal) socket;
@@ -1824,15 +1831,28 @@ public class Alhena {
                 String[] mimeFromExt = {null};
                 boolean[] isText = {true};
                 boolean[] isMedia = {false};
-
+                boolean[] mediaType = {false};
                 if (type[0] == 'I' || type[0] == 'g' || type[0] == 'p') {
                     isImage[0] = true;
                     isText[0] = false;
                 } else if (type[0] == '9' || type[0] == 's' || type[0] == '<') {
                     // potential media
+                    mediaType[0] = true;
                     mimeFromExt[0] = MimeMapping.getMimeTypeForFilename(finalUrl);
+
                     isMedia[0] = mimeFromExt[0] != null && (mimeFromExt[0].startsWith("audio") || mimeFromExt[0].startsWith("video"));
                     isText[0] = false;
+
+                    // this commented code will display an .m3u file as text
+                    // some external players supposedly support gopher and gophers links but bitreich m3u files do not appear to work
+                    // if(finalUrl.endsWith(".m3u")){
+                    //     // display m3u - user can at least cut/paste individual gopher urls 
+                    //     // tested players can't handle m3u file with gopher urls
+                    //     isMedia[0] = false;
+                    //     mediaType[0] = false;
+                    //     type[0] = '0';
+                    //     isText[0] = true;
+                    // }
                 }
 
                 if (isText[0] && type[0] != '0' && type[0] != '1' && type[0] != '7' && type[0] != 'h') {
@@ -1844,22 +1864,35 @@ public class Alhena {
 
                 Buffer saveBuffer = Buffer.buffer();
                 boolean[] imgLogged = {false};
-
+                boolean[] firstBuffer = {true};
                 connection.result().handler(buffer -> {
+                    if (firstBuffer[0] && mediaType[0] && !isMedia[0]) { // isMedia to see if mime already found from extension
+                        firstBuffer[0] = false;
+                        String mime = detectMediaType(buffer);
 
+                        if (mime != null) {
+                            isMedia[0] = true;
+                            mimeFromExt[0] = mime;
+                        }
+
+                    }
                     if (inlineImages && isImage[0]) {
                         if (!imgLogged[0]) {
                             imgLogged[0] = true;
 
                             try {
-                                DB.insertHistory(finalUrl, null);
+                                String hUrl = finalUrl;
+                                if (gopherS) {
+                                    hUrl = hUrl.replace("gopher:/", "gophers:/");
+                                }
+                                DB.insertHistory(hUrl, null);
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
                         }
                         saveBuffer.appendBuffer(buffer);
                         cPage.frame().setTmpStatus(Util.bytesDecimal(saveBuffer.length()));
-                    } else if (isText[0] || path.lastIndexOf('.') == -1) {
+                    } else if (!isMedia[0] && (isText[0] || path.lastIndexOf('.') == -1)) {
 
                         saveBuffer.appendBuffer(buffer);
 
@@ -1868,7 +1901,11 @@ public class Alhena {
                             connection.result().pause();
                             connection.result().handler(null);
                             try {
-                                DB.insertHistory(finalUrl, null);
+                                String hUrl = finalUrl;
+                                if (gopherS) {
+                                    hUrl = hUrl.replace("gopher:/", "gophers:/");
+                                }
+                                DB.insertHistory(hUrl, null);
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
@@ -1890,7 +1927,6 @@ public class Alhena {
                                 });
                             } else {
                                 File af = File.createTempFile("alhena", "media");
-
                                 af.deleteOnExit();
 
                                 Runnable r = () -> {
@@ -1979,7 +2015,7 @@ public class Alhena {
                                     String content = useBrowser ? saveBuffer.toString() : convertHtmlToGemtext(saveBuffer.toString(), null);
                                     bg(() -> {
                                         if (!useBrowser) {
-                                            p.setGopher(false);
+                                            p.setGopher(false, gopherS);
                                             p.textPane.gopherHtml = true;
                                         }
                                         p.textPane.end(content, false, finalUrl, true);
@@ -2055,6 +2091,57 @@ public class Alhena {
             }
         });
 
+    }
+
+    private static String detectMediaType(Buffer buffer) {
+        if (buffer == null || buffer.length() < 2) {
+            return null;
+        }
+
+        byte[] b = buffer.getBytes(0, Math.min(16, buffer.length()));
+
+        if (b.length >= 3 && b[0] == 0x49 && b[1] == 0x44 && b[2] == 0x33) {
+            return "audio/mpeg"; // ID3
+        }
+
+        if (b.length >= 2 && b[0] == (byte) 0xFF
+                && (b[1] == (byte) 0xFB || b[1] == (byte) 0xF3 || b[1] == (byte) 0xF2)) {
+            return "audio/mpeg";
+        }
+
+        if (b.length >= 4 && b[0] == 0x4F && b[1] == 0x67 && b[2] == 0x67 && b[3] == 0x53) {
+            return "audio/ogg";
+        }
+
+        if (b.length >= 4 && b[0] == 0x66 && b[1] == 0x4C && b[2] == 0x61 && b[3] == 0x43) {
+            return "audio/flac";
+        }
+
+        if (b.length >= 2 && b[0] == (byte) 0xFF && (b[1] == (byte) 0xF1 || b[1] == (byte) 0xF9)) {
+            return "audio/aac";
+        }
+
+        if (b.length >= 4 && b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46) {
+            return "audio/wav";
+        }
+
+        if (b.length >= 3 && b[0] == 0x49 && b[1] == 0x43 && b[2] == 0x59) {
+            return "audio/icy-stream";
+        }
+
+        if (b.length >= 8 && b[4] == 0x66 && b[5] == 0x74 && b[6] == 0x79 && b[7] == 0x70) {
+            return "video/mp4";
+        }
+
+        if (b.length >= 4 && b[0] == 0x4D && b[1] == 0x54 && b[2] == 0x68 && b[3] == 0x64) {
+            return "audio/midi";
+        }
+
+        if (b.length >= 4 && b[0] == 0x1A && b[1] == 0x45 && b[2] == (byte) 0xDF && b[3] == (byte) 0xA3) {
+            return "video/webm";
+        }
+
+        return null;
     }
 
     private static void streamToSocket(String path, NetSocket socket, Page p, String origURL) {

@@ -1707,6 +1707,9 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
+        if(page.isGopherTLS()){
+            docURL = docURL.replace("gopher:/", "gophers:/");
+        }
         if (!docURL.equals(this.docURL) && newRequest) {
 
             if (currentMode == DEFAULT_MODE)
