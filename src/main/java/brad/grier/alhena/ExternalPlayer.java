@@ -72,7 +72,7 @@ public class ExternalPlayer extends JPanel implements MediaComponent {
 
     @Override
     public void pause() {
-        // no op
+        dispose();
     }
 
     public static String[] parseCommand(String command, String url) {
