@@ -375,7 +375,7 @@ public class Alhena {
                     // go to root
                     URI uri = gf.visiblePage().textPane().getURI();
                     if (uri.getHost() != null && uri.getScheme() != null) {
-                        URI rootURI = URI.create(uri.getScheme() + "://" + uri.getHost());
+                        URI rootURI = URI.create(uri.getScheme() + "://" + uri.getAuthority());
                         gf.fetchURL(rootURI.toString(), false);
                     }
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.ALT_DOWN_MASK)))) {
