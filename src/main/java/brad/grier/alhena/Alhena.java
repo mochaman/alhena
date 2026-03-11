@@ -2026,13 +2026,14 @@ public class Alhena {
                                             p.textPane.gopherHtml = true;
                                         }
                                         p.textPane.end(content, false, finalUrl, true);
+                                        p.frame().setBusy(false, cPage);
                                     });
                                 }
                                 case '0' ->
                                     bg(() -> {
                                         p.textPane.setEditorKit(new StyledEditorKit());
                                         p.textPane.end(saveBuffer.toString(), true, finalUrl, true);
-
+                                        p.frame().setBusy(false, cPage);
                                     });
                                 case '1' -> {
                                     bg(() -> {
