@@ -897,7 +897,8 @@ public class GeminiTextPane extends JTextPane {
     public void processKeyEvent(KeyEvent e) {
 
         if ((e.getModifiersEx() & mod) != 0) {
-            if (e.getKeyCode() == KeyEvent.VK_I && e.getID() == KeyEvent.KEY_PRESSED) {
+            int kc = e.getKeyCode();
+            if ((kc == KeyEvent.VK_I || kc == KeyEvent.VK_U) && e.getID() == KeyEvent.KEY_PRESSED) {
                 Point mousePoint = MouseInfo.getPointerInfo().getLocation();
                 SwingUtilities.convertPointFromScreen(mousePoint, GeminiTextPane.this);
 
