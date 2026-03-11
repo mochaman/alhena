@@ -153,6 +153,29 @@ public final class GeminiFrame extends JFrame {
     // set to true when compiling native image
     private static final boolean NATIVE_IMAGE = false;
     private PrinterJob job;
+    private JMenu fileMenu;
+    private final JMenu viewMenu, aboutMenu;
+
+    // Haiku JVM doesn't allow alt modifier which breaks menu mnemonics
+    public boolean haikuMenuShortcut(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.VK_F ->
+                fileMenu.doClick();
+            case KeyEvent.VK_V ->
+                viewMenu.doClick();
+            case KeyEvent.VK_B ->
+                bookmarkMenu.doClick();
+            case KeyEvent.VK_S ->
+                settingsMenu.doClick();
+            case KeyEvent.VK_H ->
+                aboutMenu.doClick();
+            default -> {
+                return false;
+            }
+
+        }
+        return true;
+    }
 
     private Map<String, ThemeInfo> themes = Map.ofEntries(
             Map.entry("FlatArcIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme", "Arc", false)),
@@ -505,7 +528,7 @@ public final class GeminiFrame extends JFrame {
 
         menuBar = new JMenuBar();
 
-        JMenu fileMenu = new JMenu(I18n.t("fileMenu"));
+        fileMenu = new JMenu(I18n.t("fileMenu"));
 
         fileMenu.add(createMenuItem(I18n.t("openFileItem"), KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
             openFile(null);
@@ -686,9 +709,10 @@ public final class GeminiFrame extends JFrame {
         fileMenu.setMnemonic('F');
         menuBar.add(fileMenu);
 
-        JMenu viewMenu = new JMenu(I18n.t("viewMenu"));
+        viewMenu = new JMenu(I18n.t("viewMenu"));
         viewMenu.setMnemonic('V');
 
+        int osMask = Alhena.isHaiku ? (KeyEvent.META_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK) : (mod | KeyEvent.ALT_DOWN_MASK);
         for (String label : CUSTOM_LABELS) {
             KeyStroke ks = null;
             if (!label.equals(INFO_LABEL)) {
@@ -698,9 +722,9 @@ public final class GeminiFrame extends JFrame {
                 } else if (label.equals(BOOKMARK_LABEL)) {
                     ks = KeyStroke.getKeyStroke(KeyEvent.VK_B, mod);
                 } else if (label.equals(CERT_LABEL)) {
-                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, (mod | KeyEvent.ALT_DOWN_MASK));
+                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_C, osMask);
                 } else if (label.equals(SERVERS_LABEL)) {
-                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, (mod | KeyEvent.ALT_DOWN_MASK));
+                    ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, osMask);
                 }
 
                 viewMenu.add(createMenuItem(label, ks, () -> {
@@ -735,7 +759,7 @@ public final class GeminiFrame extends JFrame {
 
         addWindowsMenu();
 
-        JMenu aboutMenu = new JMenu(I18n.t("helpMenu"));
+        aboutMenu = new JMenu(I18n.t("helpMenu"));
         aboutMenu.setMnemonic('H');
         if (!SystemInfo.isMacOS) {
             aboutMenu.add(createMenuItem("About", null, () -> {
@@ -971,7 +995,8 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(lightThemeMenu);
         settingsMenu.add(darkThemeMenu);
 
-        settingsMenu.add(createMenuItem(I18n.t("fontItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
+        int osMask = Alhena.isHaiku ? (KeyEvent.META_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK) : (mod | KeyEvent.ALT_DOWN_MASK);
+        settingsMenu.add(createMenuItem(I18n.t("fontItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F, osMask), () -> {
             Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, DEFAULT_FONT_SIZE);
             Font font = Util.getFont(GeminiFrame.this, defFont, true, true);
             if (font != null) {
@@ -1049,7 +1074,7 @@ public final class GeminiFrame extends JFrame {
 
         settingsMenu.add(emojiMenu);
 
-        settingsMenu.add(createMenuItem(I18n.t("layoutItem"), KeyStroke.getKeyStroke(KeyEvent.VK_L, (mod | KeyEvent.ALT_DOWN_MASK)), () -> {
+        settingsMenu.add(createMenuItem(I18n.t("layoutItem"), KeyStroke.getKeyStroke(KeyEvent.VK_L, osMask), () -> {
             JSlider slider = new JSlider(50, 100, (int) (GeminiTextPane.contentPercentage * 100f));
 
             slider.setMajorTickSpacing(10);

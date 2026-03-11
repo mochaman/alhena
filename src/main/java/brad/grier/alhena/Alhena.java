@@ -414,8 +414,13 @@ public class Alhena {
                     return true;
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0))) {
                     sDown = true;
-                } else {
 
+                } else {
+                    if (isHaiku) { // haiku jvm doesn't allow ALT key as modifier
+                        if ((ks.getModifiers() & KeyEvent.META_DOWN_MASK) != 0 && gf.haikuMenuShortcut(ks.getKeyCode())) {
+                            return true;
+                        }
+                    }
                     if ((e.getModifiersEx() & MODIFIER) == MODIFIER) {
 
                         if (!keyDown) {
@@ -651,7 +656,7 @@ public class Alhena {
         }
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
-            if(isHaiku){
+            if (isHaiku) {
                 UIManager.put("PasswordField.showCapsLock", false);
             }
             UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? scrollbarSize : 10));
