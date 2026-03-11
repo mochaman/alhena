@@ -651,7 +651,9 @@ public class Alhena {
         }
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
-
+            if(isHaiku){
+                UIManager.put("PasswordField.showCapsLock", false);
+            }
             UIManager.put("ScrollBar.width", (Alhena.bigScrollBar ? scrollbarSize : 10));
             if (theme != null) {
 
