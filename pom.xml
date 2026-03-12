@@ -49,12 +49,12 @@
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
-            <version>3.6.2</version>
+            <version>3.7.1</version>
         </dependency>   
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf-intellij-themes</artifactId>
-            <version>3.6.2</version>
+            <version>3.7.1</version>
         </dependency>       
         <!-- to get the fat jar to work on the arm mac-->
         <!-- The resulting three jars from the following two dependencies can be deleted from non-mac builds -->
