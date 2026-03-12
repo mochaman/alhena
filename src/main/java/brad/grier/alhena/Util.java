@@ -98,6 +98,7 @@ import org.drjekyll.fontchooser.FontChooser;
 
 import com.bric.colorpicker.ColorPicker;
 import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.DB.ClientCertInfo;
@@ -560,54 +561,80 @@ public class Util {
     }
 
     public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter) {
-        JDialog dialog = new JDialog(f, title);
-        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
-        dialog.setModalityType(mt);
+        if (Alhena.systemFileChooser) {
+            
+            SystemFileChooser fc = new SystemFileChooser();
+            
+            fc.setDialogTitle(title);
+            if (fileName != null) {
+                fc.setSelectedFile(new File(fileName));
+            }
+            if (filter != null) {
+                fc.addChoosableFileFilter(new SystemFileChooser.FileNameExtensionFilter(filter.getDescription(), filter.getExtensions()));
+            }
+            if (isOpenMode) {
+                if (fc.showOpenDialog(f) == SystemFileChooser.APPROVE_OPTION) {
+                    return fc.getSelectedFile();
+                    //System.out.println(file);
+                }
+            } else {
+                if (fc.showSaveDialog(f) == SystemFileChooser.APPROVE_OPTION) {
+                    return fc.getSelectedFile();
 
-        if (SystemInfo.isMacOS) {
-            dressDialog(dialog);
-        }
-        JFileChooser fileChooser = new JFileChooser();
-        if (filter != null) {
-            fileChooser.setFileFilter(filter);
-        }
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        fileChooser.setApproveButtonText(isOpenMode ? I18n.t("importFileDialog") : I18n.t("saveLabel"));
-
-        if (fileName != null && !fileName.trim().isEmpty()) {
-
-            fileChooser.setSelectedFile(new File(System.getProperty("user.home"), fileName));
-        } else {
-            fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
-        }
-
-        dialog.setLayout(new BorderLayout());
-        dialog.add(fileChooser, BorderLayout.CENTER);
-        File[] selectedFile = {null};
-
-        fileChooser.addActionListener(event -> {
-            if (JFileChooser.APPROVE_SELECTION.equals(event.getActionCommand())) {
-                File returnedFile = fileChooser.getSelectedFile();
-                if (!isOpenMode && returnedFile.exists()) {
-                    Object res = Util.confirmDialog(dialog, I18n.t("fileExistsDialog"), I18n.t("fileExistsDialogMsg"), JOptionPane.YES_NO_OPTION, null, null);
-                    if (res instanceof Integer result) {
-                        if (result == JOptionPane.YES_OPTION) {
-                            selectedFile[0] = returnedFile;
-                        }
-                    }
-                } else {
-                    selectedFile[0] = returnedFile;
                 }
             }
-            dialog.dispose();
-        });
+            return null;
+        } else {
 
-        dialog.setSize(600, 400);
-        dialog.setLocationRelativeTo(f);
-        dialog.setVisible(true);
+            JDialog dialog = new JDialog(f, title);
+            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+            ModalityType mt = Alhena.isHaiku ? Dialog.ModalityType.APPLICATION_MODAL : Dialog.ModalityType.DOCUMENT_MODAL;
+            dialog.setModalityType(mt);
 
-        return selectedFile[0];
+            if (SystemInfo.isMacOS) {
+                dressDialog(dialog);
+            }
+            JFileChooser fileChooser = new JFileChooser();
+            if (filter != null) {
+                fileChooser.setFileFilter(filter);
+            }
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            fileChooser.setApproveButtonText(isOpenMode ? I18n.t("importFileDialog") : I18n.t("saveLabel"));
+
+            if (fileName != null && !fileName.trim().isEmpty()) {
+
+                fileChooser.setSelectedFile(new File(System.getProperty("user.home"), fileName));
+            } else {
+                fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
+            }
+
+            dialog.setLayout(new BorderLayout());
+            dialog.add(fileChooser, BorderLayout.CENTER);
+            File[] selectedFile = {null};
+
+            fileChooser.addActionListener(event -> {
+                if (JFileChooser.APPROVE_SELECTION.equals(event.getActionCommand())) {
+                    File returnedFile = fileChooser.getSelectedFile();
+                    if (!isOpenMode && returnedFile.exists()) {
+                        Object res = Util.confirmDialog(dialog, I18n.t("fileExistsDialog"), I18n.t("fileExistsDialogMsg"), JOptionPane.YES_NO_OPTION, null, null);
+                        if (res instanceof Integer result) {
+                            if (result == JOptionPane.YES_OPTION) {
+                                selectedFile[0] = returnedFile;
+                            }
+                        }
+                    } else {
+                        selectedFile[0] = returnedFile;
+                    }
+                }
+                dialog.dispose();
+            });
+
+            dialog.setSize(600, 400);
+            dialog.setLocationRelativeTo(f);
+            dialog.setVisible(true);
+
+            return selectedFile[0];
+        }
     }
 
     public static BufferedImage getImage(byte[] imageBytes, int previewWidth, int previewHeight, BufferedImage bi, boolean allowScaleUp) {

@@ -755,6 +755,7 @@ public class DB {
         Alhena.inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
         Alhena.gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         Alhena.useBrowser = map.getOrDefault("browser", "false").equals("true");
+        Alhena.systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
         Alhena.theme = map.get("theme");
         Alhena.streamVLC = map.getOrDefault("streamvlc", "false").equals("true");
         Alhena.audioVisualizer = map.getOrDefault("visualizer", "Off");

@@ -1253,6 +1253,15 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem fcItem = new JCheckBoxMenuItem("Use Native File Chooser", Alhena.systemFileChooser);
+        fcItem.addItemListener(ae -> {
+
+            Alhena.systemFileChooser = !Alhena.systemFileChooser;
+
+            DB.insertPref("systemchooser", String.valueOf(Alhena.systemFileChooser));
+
+        });
+
         JCheckBoxMenuItem gradientItem = new JCheckBoxMenuItem(I18n.t("gradientBGItem"), Alhena.gradientBG);
         gradientItem.addItemListener(ae -> {
 
@@ -1367,6 +1376,12 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(linkIconItem);
         if (Alhena.browsingSupported) {
             settingsMenu.add(browserItem);
+        }
+
+        settingsMenu.add(fcItem);
+        if(Alhena.isHaiku){
+            fcItem.setEnabled(false);
+            Alhena.systemFileChooser = false;
         }
         settingsMenu.add(new JSeparator());
         settingsMenu.add(smoothItem);

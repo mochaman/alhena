@@ -219,7 +219,7 @@ public class Alhena {
     private static HttpServer streamServer;
     public static int streamingPort;
     public static boolean isHaiku;
-
+    public static boolean systemFileChooser;
     public static Rectangle windowBounds;
 
     static {
@@ -613,6 +613,7 @@ public class Alhena {
         inlineImages = map.getOrDefault("inlineimages", "true").equals("true");
         gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         useBrowser = map.getOrDefault("browser", "false").equals("true");
+        systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         socksProxy = map.getOrDefault("socksproxy", null);
         socksFilter = map.getOrDefault("socksfilter", "false").equals("true");
