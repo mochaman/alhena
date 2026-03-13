@@ -417,7 +417,9 @@ public class Alhena {
 
                 } else {
                     if (isHaiku) { // haiku jvm doesn't allow ALT key as modifier
-                        if ((ks.getModifiers() & KeyEvent.META_DOWN_MASK) != 0 && gf.haikuMenuShortcut(ks.getKeyCode())) {
+                        if ((ks.getModifiers() & KeyEvent.META_DOWN_MASK) != 0
+                                && (ks.getModifiers() & KeyEvent.SHIFT_DOWN_MASK) == 0
+                                && gf.haikuMenuShortcut(ks.getKeyCode())) {
                             return true;
                         }
                     }

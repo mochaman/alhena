@@ -1253,7 +1253,7 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        JCheckBoxMenuItem fcItem = new JCheckBoxMenuItem("Use Native File Chooser", Alhena.systemFileChooser);
+        JCheckBoxMenuItem fcItem = new JCheckBoxMenuItem(I18n.t("nativeChooserItem"), Alhena.systemFileChooser);
         fcItem.addItemListener(ae -> {
 
             Alhena.systemFileChooser = !Alhena.systemFileChooser;
@@ -1379,7 +1379,7 @@ public final class GeminiFrame extends JFrame {
         }
 
         settingsMenu.add(fcItem);
-        if(Alhena.isHaiku){
+        if (Alhena.isHaiku) {
             fcItem.setEnabled(false);
             Alhena.systemFileChooser = false;
         }
@@ -1733,6 +1733,12 @@ public final class GeminiFrame extends JFrame {
         textField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
+
+                if (Alhena.isHaiku && (e.getModifiersEx() & KeyEvent.META_DOWN_MASK) != 0) {
+                    // workaround for haiku sending the key to textField even if consumed
+                    visiblePage().textPane.requestFocusInWindow();
+
+                }
                 if (popup.isVisible()) {
                     switch (e.getKeyCode()) {
                         case KeyEvent.VK_DOWN -> {
