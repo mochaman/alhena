@@ -2678,6 +2678,30 @@ public final class GeminiFrame extends JFrame {
         }).start();
     }
 
+    private Timer dateTimer;
+
+    public void setDateField(String msg) {
+        // only call on EDT!
+        if (dateTimer != null) {
+            dateField.setText(msg);
+            if (dateTimer.isRunning()) {
+                dateTimer.restart();
+            } else {
+                dateTimer.start();
+            }
+
+        } else {
+
+            dateField.setText(msg);
+            dateTimer = new Timer(10000, event -> {
+
+                dateField.setText(" ");
+            });
+            dateTimer.setRepeats(false);
+            dateTimer.start();
+        }
+    }
+
     public void setTmpStatus(String msg) {
         Runnable r = () -> {
 
@@ -3371,7 +3395,7 @@ public final class GeminiFrame extends JFrame {
             }
 
             textField.getDocument().addDocumentListener(dl);
-            dateField.setText(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
+            setDateField(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
         });
     }
     private DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault());
@@ -3396,7 +3420,7 @@ public final class GeminiFrame extends JFrame {
 
         textField.getDocument().addDocumentListener(dl);
         if (visiblePage() != null) {
-            dateField.setText(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
+            setDateField(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
         }
 
     }
