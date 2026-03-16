@@ -2462,8 +2462,8 @@ public final class GeminiFrame extends JFrame {
     }
 
     @Override
-    public String getTitle(){
-        if(SystemInfo.isMacOS){
+    public String getTitle() {
+        if (SystemInfo.isMacOS) {
             return titleLabel.getText();
         }
         return super.getTitle();
@@ -3332,7 +3332,6 @@ public final class GeminiFrame extends JFrame {
     public void updateComboBox(String s) {
         updateComboBox(new ComboItem(s, null));
     }
-    int testCount = 0;
 
     private void updateComboBox(ComboItem origURL) {
 
@@ -3395,6 +3394,10 @@ public final class GeminiFrame extends JFrame {
         }
 
         textField.getDocument().addDocumentListener(dl);
+        if (visiblePage() != null) {
+            dateField.setText(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
+        }
+
     }
 
     public Page visiblePage() {
