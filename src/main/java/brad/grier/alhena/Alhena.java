@@ -889,7 +889,11 @@ public class Alhena {
         if ((frameList.size() == 1 && !SystemInfo.isMacOS) || gf == null) { // shutting down all windows and exiting
 
             int i = 0;
-            deleteFrameState();
+            if ((SystemInfo.isMacOS && !restoreTabs) || !SystemInfo.isMacOS) {
+                // mac can have state where there are no open windows while running
+                // if user quits from that state, any previously saved tabs would be lost
+                deleteFrameState();
+            }
 
             for (GeminiFrame jf : frameList) {
                 jf.setVisible(false);
