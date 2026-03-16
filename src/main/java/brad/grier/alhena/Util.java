@@ -765,7 +765,7 @@ public class Util {
 
         String homePage = DB.getPref("home", null);
         if (homePage == null) {
-            String homeDir = System.getProperty("alhena.home");
+            String homeDir = Alhena.alhenaHome;
             File file = new File(homeDir + "/default.gmi");
             if (!file.exists()) {
                 file = copyFromJar(homeDir);
@@ -949,7 +949,7 @@ public class Util {
                     } else {
                         String postEmo = DB.getPref("emoji", null);
                         if ("facebook".equals(postEmo) || "apple".equals(postEmo) || "twitter".equals(postEmo)) {
-                            File sheetFile = new File(System.getProperty("alhena.home") + File.separatorChar + "sheet_" + postEmo + "_64.png");
+                            File sheetFile = new File(Alhena.alhenaHome + File.separatorChar + "sheet_" + postEmo + "_64.png");
                             if (!sheetFile.exists()) {
                                 // trying to change to an emoji set not installed
                                 DB.insertPref("emoji", prevEmo);
