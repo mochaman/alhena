@@ -422,6 +422,22 @@ public class GeminiTextPane extends JTextPane {
                     dragging = false;
                 }
             }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                // duplicate of !entered logic above
+                // links could remain highlighted if located near top or bottom of JTextPane and mouse exits
+                f.setStatus(" ");
+
+                if (saveRange != null) {
+                    SimpleAttributeSet sas = f.isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
+
+                    doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
+                    saveRange = null;
+                }
+                currentStatus = " ";
+
+            }
         });
 
         setDropTarget(new DropTarget() {
