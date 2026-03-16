@@ -29,7 +29,7 @@ public class DBBackup {
 
     public static void init() throws Exception {
 
-        String homeDir = System.getProperty("alhena.home");
+        String homeDir = Alhena.alhenaHome;
         File prevDB = new File(homeDir + "/alhena_restore.mv.db");
         if (prevDB.exists()) {
             prevDB.delete();
@@ -72,7 +72,7 @@ public class DBBackup {
 
         }
         cp.dispose();
-        String homeDir = System.getProperty("alhena.home");
+        String homeDir = Alhena.alhenaHome;
         new File(homeDir + "/alhena_restore.mv.db").delete();
         return version <= Integer.parseInt(DB.VERSION) ? 0 : version; // backwards but...
 
