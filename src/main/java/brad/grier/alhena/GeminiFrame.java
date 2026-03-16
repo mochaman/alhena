@@ -2230,6 +2230,7 @@ public final class GeminiFrame extends JFrame {
 
         visiblePage.textPane.getDocURL().ifPresent(cURL -> {
             visiblePage.textPane.resetLastClicked();
+            visiblePage.setFetchTime(System.currentTimeMillis());
             switch (visiblePage.textPane.getDocMode()) {
                 case GeminiTextPane.HISTORY_MODE ->
                     loadHistory(visiblePage.textPane, visiblePage);
