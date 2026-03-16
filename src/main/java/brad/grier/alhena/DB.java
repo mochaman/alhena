@@ -43,7 +43,7 @@ public class DB {
 
     public static void init() throws Exception {
 
-        String homeDir = System.getProperty("alhena.home");
+        String homeDir = Alhena.alhenaHome;
         if (System.getenv("ALHENAPSWD") != null) {
             cp = JdbcConnectionPool.create("jdbc:h2:" + homeDir + "/alhena;CIPHER=AES", "sa", "sa " + System.getenv("ALHENAPSWD"));
         } else {
@@ -756,6 +756,7 @@ public class DB {
         Alhena.gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         Alhena.useBrowser = map.getOrDefault("browser", "false").equals("true");
         Alhena.systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
+        Alhena.restoreTabs = map.getOrDefault("restoretabs", "false").equals("true");
         Alhena.theme = map.get("theme");
         Alhena.streamVLC = map.getOrDefault("streamvlc", "false").equals("true");
         Alhena.audioVisualizer = map.getOrDefault("visualizer", "Off");

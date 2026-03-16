@@ -205,7 +205,7 @@ public class GeminiTextPane extends JTextPane {
         } else if (!emojiPref.equals("font")) {
             String url = GeminiFrame.emojiNameMap.get(emojiPref);
             String fn = url.substring(url.lastIndexOf('/') + 1);
-            File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
+            File emojiFile = new File(Alhena.alhenaHome + File.separatorChar + fn);
 
             // if the file exists, make sure it's the right version
             if (emojiFile.exists() && Util.getSetSize(emojiPref) == emojiFile.length()) {
@@ -589,7 +589,7 @@ public class GeminiTextPane extends JTextPane {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
-                                        f.newTab(range.url);
+                                        f.newTab(range.url, null);
                                         Alhena.useBrowser = saveSetting;
                                     });
                                     menuItem1.setEnabled(!range.dataUrl);
@@ -600,7 +600,7 @@ public class GeminiTextPane extends JTextPane {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
-                                        Alhena.newWindow(range.url, docURL);
+                                        Alhena.newWindow(range.url, docURL, null, null);
                                         Alhena.useBrowser = saveSetting;
 
                                     });
@@ -738,7 +738,7 @@ public class GeminiTextPane extends JTextPane {
                                 if (!range.dataUrl) {
                                     boolean saveSetting = Alhena.useBrowser;
                                     Alhena.useBrowser = false;
-                                    f.newTab(range.url);
+                                    f.newTab(range.url, null);
                                     Alhena.useBrowser = saveSetting;
                                 }
                             }
@@ -1708,7 +1708,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
-        if(page.isGopherTLS()){
+        if (page.isGopherTLS()) {
             docURL = docURL.replace("gopher:/", "gophers:/");
         }
         if (!docURL.equals(this.docURL) && newRequest) {
@@ -2307,7 +2307,7 @@ public class GeminiTextPane extends JTextPane {
                                     }
                                 } else {
                                     f.addClickedLink(finalUrl);
-                                    f.fetchURL(finalUrl, (File) result, false);
+                                    f.fetchURL(finalUrl, (File) result, false, null);
                                 }
                             }
 

@@ -11,6 +11,7 @@ import java.awt.RenderingHints;
 import java.io.File;
 import java.security.cert.X509Certificate;
 
+import javax.swing.BoundedRangeModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
@@ -22,6 +23,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.ChangeListener;
 import javax.swing.plaf.LayerUI;
 
 import com.formdev.flatlaf.util.SystemInfo;
@@ -66,6 +68,7 @@ public class Page extends JPanel {
 
     public Page(Page rootPage, GeminiFrame frame, String url, int themeId) {
         start = System.currentTimeMillis();
+        fetchTime = start;
         // sometimes we know enough to make a page root at construction, sometimes not
         this.rootPage = rootPage;
         this.frame = frame;
@@ -271,7 +274,7 @@ public class Page extends JPanel {
         return isGopher;
     }
 
-    public boolean isGopherTLS(){
+    public boolean isGopherTLS() {
         return isGopherTLS;
     }
 
@@ -527,6 +530,38 @@ public class Page extends JPanel {
 
     public String getCipherSuite() {
         return cipherSuite;
+    }
+
+    public int getScrollPos() {
+        return scrollPane.getVerticalScrollBar().getValue();
+    }
+
+    public void setScrollPos(int val) {
+        ChangeListener[] listener = new ChangeListener[1];
+        boolean[] applied = {false};
+        listener[0] = e -> {
+            if (applied[0]) {
+                return;
+            }
+            BoundedRangeModel model = scrollPane.getVerticalScrollBar().getModel();
+            if (model.getMaximum() > val) {
+                applied[0] = true;
+                model.removeChangeListener(listener[0]);
+                // Defer the actual set to after layout settles
+                EventQueue.invokeLater(() -> {
+                    model.setValue(val);
+                });
+            }
+        };
+        scrollPane.getVerticalScrollBar().getModel().addChangeListener(listener[0]);
+    }
+
+    private long fetchTime;
+    public void setFetchTime(long ts){
+        fetchTime = ts;
+    }
+    public long getFetchTime(){
+        return fetchTime;
     }
 
 }

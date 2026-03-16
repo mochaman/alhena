@@ -115,6 +115,8 @@ import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.DB.CertInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
+import static brad.grier.alhena.GeminiFrame.CUSTOM_LABELS;
+import brad.grier.alhena.GeminiFrame.InfoPageInfo;
 import de.vandermeer.asciitable.AsciiTable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -139,6 +141,8 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.impl.MimeMapping;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JdkSSLEngineOptions;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
@@ -220,7 +224,8 @@ public class Alhena {
     public static int streamingPort;
     public static boolean isHaiku;
     public static boolean systemFileChooser;
-    public static Rectangle windowBounds;
+    public static boolean restoreTabs;
+    public static String alhenaHome;
 
     static {
         // just do this once
@@ -252,7 +257,7 @@ public class Alhena {
                                 gf.fetchURL(furl[0], false);
                             } else {
                                 // this should only happen on mac where app can be running without open windows
-                                newWindow(furl[0], furl[0]);
+                                newWindow(furl[0], furl[0], null, null);
                             }
                         });
 
@@ -307,17 +312,16 @@ public class Alhena {
 
     private static void start(String[] args) throws Exception {
         String alhenaLocale = System.getenv("ALHENA_LOCALE");
-        String alhenaHome = System.getenv("ALHENA_HOME"); // the directory to store cacerts, db, etc
-        if (alhenaHome != null) {
-            System.setProperty("alhena.home", alhenaHome);
-        } else {
+        alhenaHome = System.getenv("ALHENA_HOME"); // the directory to store cacerts, db, etc
+
+        if (alhenaHome == null) {
             // use .alehnahome from here on out but preserve the the non-hidden home
             // for legacy users
             boolean legacyHomeExists = new File(System.getProperty("user.home") + "/alhena/cacerts").exists();
             String sep = legacyHomeExists ? "/" : "/.";
             alhenaHome = System.getProperty("user.home") + sep + "alhena";
-            System.setProperty("alhena.home", alhenaHome);
         }
+
         isHaiku = System.getProperty("os.name").equals("Haiku");
         ExecutorService executor = Executors.newFixedThreadPool(1);
 
@@ -546,7 +550,7 @@ public class Alhena {
                     menuItem.addActionListener(al -> {
 
                         String home = Util.getHome();
-                        Alhena.newWindow(home, home);
+                        Alhena.newWindow(home, home, null, null);
                     });
 
                     menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, MOD));
@@ -564,8 +568,10 @@ public class Alhena {
                 desktop.addAppEventListener(
                         (AppReopenedListener) e -> {
                             if (frameList.isEmpty()) {
-                                String u = Util.getHome();
-                                newWindow(u, u);
+                                if (!(restoreTabs && loadState())) {
+                                    String u = Util.getHome();
+                                    newWindow(u, u, null, null);
+                                }
                             }
 
                         }
@@ -616,6 +622,7 @@ public class Alhena {
         gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         useBrowser = map.getOrDefault("browser", "false").equals("true");
         systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
+        restoreTabs = map.getOrDefault("restoretabs", "false").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         socksProxy = map.getOrDefault("socksproxy", null);
         socksFilter = map.getOrDefault("socksfilter", "false").equals("true");
@@ -648,15 +655,7 @@ public class Alhena {
         GeminiFrame.fontSize = Integer.parseInt(map.getOrDefault("fontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.monoFontSize = Integer.parseInt(map.getOrDefault("monofontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.saveFont = new Font(DB.getPref("font", "SansSerif"), Font.PLAIN, GeminiFrame.fontSize);
-        if (map.containsKey("win.x") && !isHaiku) {
-            try {
-                windowBounds = new Rectangle(Integer.parseInt(map.get("win.x")), Integer.parseInt(map.get("win.y")),
-                        Integer.parseInt(map.get("win.w")), Integer.parseInt(map.get("win.h")));
-            } catch (Exception ex) {
-                // ignore - only in case db entries got corrupted somehow 
-                // we don't want to prevent app from opening
-            }
-        }
+
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
             if (isHaiku) {
@@ -672,23 +671,26 @@ public class Alhena {
                 DB.insertPref("theme", theme);
             }
 
-            String u = Util.getHome();
-            if (pendingFile[0] != null) {
-                newWindow(pendingFile[0], pendingFile[0]);
-            } else if (args.length == 1) {
-                String f = args[0];
-                if (allowedSchemes.stream().noneMatch(f::startsWith)) {
-                    try {
-                        File file = new File(f);
-                        f = file.toURI().toString();
-                    } catch (Exception e) {
-                        f = u; // just open the default
-                    }
+            if (!(restoreTabs && loadState())) {
 
+                String u = Util.getHome();
+                if (pendingFile[0] != null) {
+                    newWindow(pendingFile[0], pendingFile[0], null, null);
+                } else if (args.length == 1) {
+                    String f = args[0];
+                    if (allowedSchemes.stream().noneMatch(f::startsWith)) {
+                        try {
+                            File file = new File(f);
+                            f = file.toURI().toString();
+                        } catch (Exception e) {
+                            f = u; // just open the default
+                        }
+
+                    }
+                    newWindow(f, f, null, null);
+                } else {
+                    newWindow(u, u, null, null);
                 }
-                newWindow(f, f);
-            } else {
-                newWindow(u, u);
             }
 
         });
@@ -699,19 +701,101 @@ public class Alhena {
         startStreamingServer();
     }
 
+    private static boolean loadState() {
+        boolean done = false;
+        GeminiFrame[] gf = {null};
+        try (var stream = Files.newDirectoryStream(Path.of(alhenaHome), "framestate_*")) {
+
+            for (Path file : stream) {
+                boolean[] first = {true};
+                String json = Files.readString(file);
+                JsonObject jo = new JsonObject(json);
+                JsonArray tabs = jo.getJsonArray("tabs");
+                int[] tabCount = {0};
+                int selectedTab = jo.getInteger("activeTabIndex");
+
+                tabs.forEach(tabObject -> {
+
+                    JsonObject tab = (JsonObject) tabObject;
+                    int pageIdx = tab.getInteger("activePageIndex");
+
+                    JsonArray pages = tab.getJsonArray("pages");
+                    boolean[] firstTab = {true};
+
+                    pages.forEach(pageObject -> {
+                        JsonObject page = (JsonObject) pageObject;
+
+                        String url = page.getString("url");
+                        if (first[0]) {
+                            first[0] = false;
+                            Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
+                            newWindow(url, url, page, windowBounds);
+
+                            gf[0] = frameList.getLast();
+
+                        } else if (tabCount[0] == 0) {
+                            // add subsequent pages
+                            if (CUSTOM_LABELS.contains(url)) {
+                                InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
+                                gf[0].showCustomPage(url, false, pageInfo, true);
+                            } else {
+                                gf[0].fetchURL(url, null, false, page);
+                            }
+                        } else {
+                            // new tab
+                            if (firstTab[0]) {
+                                firstTab[0] = false;
+                                gf[0].newTab(url, page);
+
+                            } else {
+                                if (CUSTOM_LABELS.contains(url)) {
+                                    InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
+                                    gf[0].showCustomPage(url, false, pageInfo, true);
+                                } else {
+                                    gf[0].fetchURL(url, null, false, page);
+                                }
+                            }
+
+                        }
+
+                    });
+                    int currPageIdx = pages.size() - 1;
+                    while (pageIdx < currPageIdx) {
+                        gf[0].goBack();
+                        currPageIdx--;
+                    }
+                    tabCount[0]++;
+                });
+                if (tabCount[0] > 1 && tabCount[0] != selectedTab) {
+                    int st = selectedTab;
+                    GeminiFrame gfFinal = gf[0];
+                    bg(() -> {
+                        gfFinal.tabbedPane.setSelectedIndex(st);
+                    });
+
+                }
+                done = true;
+            }
+        } catch (IOException io) {
+            done = false;
+        }
+        return done;
+    }
+
     private static PopupMenu createPopupMenu() {
         PopupMenu popupMenu = new PopupMenu();
 
         MenuItem frameItem = new MenuItem(I18n.t("newWindowItem"));
         frameItem.addActionListener(al -> {
             String home = Util.getHome();
-            newWindow(home, home);
+            newWindow(home, home, null, null);
         });
-        int idx = 1;
+
         for (GeminiFrame gf : frameList) {
             MenuItem mi = gf.getMenuItem();
             if (mi == null) {
-                mi = new MenuItem(I18n.t("newWindowPopup") + " " + idx++);
+
+                mi = new MenuItem(gf.getTitle());
                 gf.setMenuItem(mi);
                 mi.addActionListener(al -> {
                     gf.toFront();
@@ -725,9 +809,8 @@ public class Alhena {
         return popupMenu;
     }
 
-    public static void newWindow(String url, String baseUrl) {
-        frameList.add(new GeminiFrame(url, baseUrl));
-        // GeminiFrame.ansiAlert = DB.getPref("ansialert", "false").equals("true");
+    public static void newWindow(String url, String baseUrl, JsonObject page, Rectangle frameBounds) {
+        frameList.add(new GeminiFrame(url, baseUrl, page, frameBounds));
         Taskbar taskbar = getTaskbar();
         if (taskbar != null) {
 
@@ -804,22 +887,25 @@ public class Alhena {
     public static void exit(GeminiFrame gf) {
 
         if ((frameList.size() == 1 && !SystemInfo.isMacOS) || gf == null) { // shutting down all windows and exiting
-            Rectangle bounds = null;
+
+            int i = 0;
+            deleteFrameState();
+
             for (GeminiFrame jf : frameList) {
                 jf.setVisible(false);
                 jf.forEachPage(page -> {
                     page.textPane().closePlayers();
-                    System.out.println(page.textPane().getDocURLString());
 
                 });
-                bounds = jf.getBounds();
-            }
-
-            if (bounds != null) {
-                DB.insertPref("win.x", String.valueOf(bounds.x));
-                DB.insertPref("win.y", String.valueOf(bounds.y));
-                DB.insertPref("win.w", String.valueOf(bounds.width));
-                DB.insertPref("win.h", String.valueOf(bounds.height));
+                if (restoreTabs) {
+                    try {
+                        File stateFile = new File(alhenaHome + File.separatorChar + "framestate_" + i + ".json");
+                        Files.writeString(stateFile.toPath(), jf.getAppState().encode(), StandardCharsets.UTF_8);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                i++;
             }
 
             System.exit(0);
@@ -829,8 +915,22 @@ public class Alhena {
             });
             //gf.shutDown();
             gf.setVisible(false);
-            gf.dispose();
             frameList.remove(gf);
+            if (SystemInfo.isMacOS && frameList.isEmpty()) {
+                if (restoreTabs) {
+                    deleteFrameState();
+
+                    try {
+                        File stateFile = new File(alhenaHome + File.separatorChar + "framestate_0.json");
+                        Files.writeString(stateFile.toPath(), gf.getAppState().encode(), StandardCharsets.UTF_8);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+
+            }
+            gf.dispose();
+
             Taskbar taskbar = getTaskbar();
             if (taskbar != null) {
                 if (taskbar.isSupported(Feature.MENU)) {
@@ -839,17 +939,18 @@ public class Alhena {
                 }
             }
 
-            if (SystemInfo.isMacOS && frameList.isEmpty()) {
-
-                Rectangle bounds = gf.getBounds();
-                DB.insertPref("win.x", String.valueOf(bounds.x));
-                DB.insertPref("win.y", String.valueOf(bounds.y));
-                DB.insertPref("win.w", String.valueOf(bounds.width));
-                DB.insertPref("win.h", String.valueOf(bounds.height));
-                windowBounds = bounds;
-            }
         }
 
+    }
+
+    static private void deleteFrameState() {
+        try (var stream = Files.newDirectoryStream(Path.of(alhenaHome), "framestate_*")) {
+            for (Path file : stream) {
+                Files.delete(file);
+            }
+        } catch (IOException io) {
+            io.printStackTrace();
+        }
     }
 
     static public record FavIconInfo(String favicon, Object icon) {
@@ -3233,7 +3334,7 @@ public class Alhena {
     public static void addCertToTrustStore(URI uri, X509Certificate cert, boolean replaceExistingAlias) {
         // add server certs for sites that require a client certificate
 
-        String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
+        String cacertsPath = alhenaHome + "/cacerts"; // Default cacerts path
         String cacertsPassword = "changeit"; // Default cacerts password
         File f = new File(cacertsPath);
         if (f.exists()) {
@@ -3284,7 +3385,7 @@ public class Alhena {
     public static HashMap<String, X509Certificate> getServerCerts(List<String> hostList) {
         // add server certs for sites that require a client certificate
         HashMap<String, X509Certificate> cMap = new HashMap<>();
-        String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
+        String cacertsPath = alhenaHome + "/cacerts"; // Default cacerts path
         String cacertsPassword = "changeit"; // Default cacerts password
         File f = new File(cacertsPath);
         if (f.exists()) {
@@ -3323,7 +3424,7 @@ public class Alhena {
     // used when restoring database
     public static void setServerCerts(HashMap<String, X509Certificate> certMap) {
 
-        String cacertsPath = System.getProperty("alhena.home") + "/cacerts"; // Default cacerts path
+        String cacertsPath = alhenaHome + "/cacerts"; // Default cacerts path
         String cacertsPassword = "changeit"; // Default cacerts password
         File f = new File(cacertsPath);
         if (f.exists()) {

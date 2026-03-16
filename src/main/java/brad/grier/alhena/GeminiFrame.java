@@ -14,6 +14,7 @@ import java.awt.Image;
 import java.awt.KeyboardFocusManager;
 import java.awt.MenuItem;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -41,14 +42,17 @@ import java.net.URL;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -106,6 +110,8 @@ import brad.grier.alhena.DB.PageStyleInfo;
 import brad.grier.alhena.GeminiTextPane.ClickableRange;
 import brad.grier.alhena.GeminiTextPane.CurrentPage;
 import brad.grier.alhena.Util.PemData;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Alhena frame
@@ -116,6 +122,7 @@ public final class GeminiFrame extends JFrame {
 
     private JComboBox comboBox;
     private final JLabel statusField;
+    private final JLabel dateField;
     public JTabbedPane tabbedPane;
     public final JButton backButton;
     public final JButton forwardButton;
@@ -220,6 +227,66 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatMTMaterialDarkerIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialDarkerIJTheme", "Material Darker", true)),
             Map.entry("FlatMTDraculaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTDraculaIJTheme", "Dracula Material", true))
     );
+
+    public JsonObject getAppState() {
+        JsonObject jo = new JsonObject();
+        Rectangle bounds = getBounds();
+        jo.put("winx", bounds.x);
+        jo.put("winy", bounds.y);
+        jo.put("winw", bounds.width);
+        jo.put("winh", bounds.height);
+        JsonArray tabArray = new JsonArray();
+        if (tabbedPane != null) {
+            jo.put("activeTabIndex", tabbedPane.getSelectedIndex());
+
+            int tabCount = tabbedPane.getTabCount();
+
+            for (int i = 0; i < tabCount; i++) {
+                JsonObject tabObject = new JsonObject();
+                Page p = (Page) tabbedPane.getComponentAt(i);
+                tabObject.put("activePageIndex", p.getArrayIndex());
+                JsonArray pageArray = new JsonArray();
+
+                pageHistoryMap.get(getRootPage(p)).forEach(page -> {
+                    JsonObject jp = new JsonObject();
+                    jp.put("url", page.toString());
+                    jp.put("content", page.textPane.current().currentPage().toString());
+                    jp.put("pfmode", page.textPane.current().pMode());
+                    jp.put("pos", page.getScrollPos());
+                    jp.put("fetchtime", page.getFetchTime());
+                    pageArray.add(jp);
+                });
+                tabObject.put("pages", pageArray);
+                tabArray.add(tabObject);
+
+            }
+            jo.put("tabs", tabArray);
+        } else {
+
+            jo.put("activeTabIndex", 0);
+            JsonObject tabObject = new JsonObject();
+
+            pageHistoryMap.entrySet().stream().forEach(entry -> {
+                tabObject.put("activePageIndex", entry.getKey().getArrayIndex());
+                JsonArray pageArray = new JsonArray();
+                entry.getValue().forEach(page -> {
+                    JsonObject jp = new JsonObject();
+                    jp.put("url", page.toString());
+                    jp.put("content", page.textPane.current().currentPage().toString());
+                    jp.put("pfmode", page.textPane.current().pMode());
+                    jp.put("pos", page.getScrollPos());
+                    jp.put("fetchtime", page.getFetchTime());
+                    pageArray.add(jp);
+                });
+                tabObject.put("pages", pageArray);
+
+            });
+            tabArray.add(tabObject);
+            jo.put("tabs", tabArray);
+
+        }
+        return jo;
+    }
 
     public void forEachPage(Consumer<Page> c) {
         pageHistoryMap.entrySet().stream().forEach(entry -> {
@@ -357,7 +424,7 @@ public final class GeminiFrame extends JFrame {
         return pb.getRootPage() == Page.ROOT_PAGE ? pb : pb.getRootPage(); // returning null means this page has no history (new window/tab)
     }
 
-    public GeminiFrame(String url, String baseUrl) {
+    public GeminiFrame(String url, String baseUrl, JsonObject savedPage, Rectangle windowBounds) {
         // Ubuntu seems to use the frame icon for the dock icon, using the 64x64 image improves the
         // resolution of the dock image at some cost to the frame image (bad downscaling)
         String pngName = SystemInfo.isWindows ? "alhena_32x32.png" : "alhena_64x64.png";
@@ -524,7 +591,6 @@ public final class GeminiFrame extends JFrame {
         add(pb, BorderLayout.CENTER);
         statusField = new JLabel(" ");
         setTmpStatus(Alhena.welcomeMessage);
-        statusField.setBorder(new EmptyBorder(5, 5, 5, 5)); // Add padding
 
         menuBar = new JMenuBar();
 
@@ -575,13 +641,13 @@ public final class GeminiFrame extends JFrame {
         fileMenu.add(new JSeparator());
 
         fileMenu.add(createMenuItem(I18n.t("newTabItem"), KeyStroke.getKeyStroke(KeyEvent.VK_T, mod), () -> {
-            newTab("alhena:art");
+            newTab("alhena:art", null);
 
         }));
 
         fileMenu.add(createMenuItem(I18n.t("newWindowItem"), KeyStroke.getKeyStroke(KeyEvent.VK_N, mod), () -> {
             String home = Util.getHome();
-            Alhena.newWindow(home, home);
+            Alhena.newWindow(home, home, null, null);
         }));
 
         fileMenu.add(createMenuItem(I18n.t("closeTabItem"), KeyStroke.getKeyStroke(KeyEvent.VK_W, mod), () -> {
@@ -675,7 +741,7 @@ public final class GeminiFrame extends JFrame {
                             encFile.deleteOnExit();
 
                             String titanUrl = "titan://" + SYNC_SERVER + "/sync;token=alhenasync;mime=application/octet-stream;size=" + encFile.length() + "?hash=" + hash;
-                            fetchURL(titanUrl, encFile, false);
+                            fetchURL(titanUrl, encFile, false, null);
 
                         } catch (Exception ex) {
                             Util.infoDialog(GeminiFrame.this, I18n.t("syncFailedDialog"), I18n.t("syncFailedDialogMsg") + "\n" + ex.getMessage());
@@ -690,7 +756,7 @@ public final class GeminiFrame extends JFrame {
                 try {
                     File file = File.createTempFile("alhenadb", ".enc");
 
-                    fetchURL("gemini://" + SYNC_SERVER + "/sync/", file, false);
+                    fetchURL("gemini://" + SYNC_SERVER + "/sync/", file, false, null);
                     file.deleteOnExit();
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -769,8 +835,7 @@ public final class GeminiFrame extends JFrame {
         }
         aboutMenu.add(createMenuItem("Home", null, () -> {
 
-            String homeDir = System.getProperty("alhena.home");
-            File file = Util.copyFromJar(homeDir);
+            File file = Util.copyFromJar(Alhena.alhenaHome);
             URI fileUri = file.toURI();
 
             fetchURL(fileUri.toString(), false);
@@ -795,17 +860,24 @@ public final class GeminiFrame extends JFrame {
 
         menuBar.add(aboutMenu);
         setJMenuBar(menuBar);
-        add(statusField, BorderLayout.SOUTH);
+        JPanel statusBar = new JPanel(new BorderLayout());
+        int offset = Alhena.isHaiku ? 25 : 5;
+        statusBar.setBorder(new EmptyBorder(5, 5, 5, offset));
+        statusBar.add(statusField, BorderLayout.CENTER);
+        dateField = new JLabel(" ");
+        statusBar.add(dateField, BorderLayout.EAST);
 
-        if (Alhena.windowBounds != null && Util.isOnAnyScreen(Alhena.windowBounds)) {
+        add(statusBar, BorderLayout.SOUTH);
+
+        if (windowBounds != null && Util.isOnAnyScreen(windowBounds)) {
             if (SystemInfo.isMacOS) {
                 EventQueue.invokeLater(() -> {
-                    setBounds(Alhena.windowBounds);
+                    setBounds(windowBounds);
                     setMinimumSize(new Dimension(320, 200));
                 });
                 setMinimumSize(new Dimension(0, 0));
             } else {
-                setBounds(Alhena.windowBounds);
+                setBounds(windowBounds);
                 setMinimumSize(new Dimension(320, 200));
             }
 
@@ -815,10 +887,12 @@ public final class GeminiFrame extends JFrame {
             setMinimumSize(new Dimension(320, 200));
         }
         setVisible(true);
-        if (url != null) {
-            init(url, pb);
-        }
+        if (savedPage == null && url != null) {
 
+            init(url, pb);
+        } else {
+            setPageInfo(savedPage, pb);
+        }
     }
 
     public void configNavPanel(boolean reset) {
@@ -903,7 +977,6 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void goBack() {
-        //showGlassPane(true);
         Page vPage = visiblePage();
         Page rootPage = getRootPage(vPage);
         if (hasPrev(rootPage)) {
@@ -1262,6 +1335,15 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem restoreItem = new JCheckBoxMenuItem(I18n.t("restoreTabsItem"), Alhena.restoreTabs);
+        restoreItem.addItemListener(ae -> {
+
+            Alhena.restoreTabs = !Alhena.restoreTabs;
+
+            DB.insertPref("restoretabs", String.valueOf(Alhena.restoreTabs));
+
+        });
+
         JCheckBoxMenuItem gradientItem = new JCheckBoxMenuItem(I18n.t("gradientBGItem"), Alhena.gradientBG);
         gradientItem.addItemListener(ae -> {
 
@@ -1383,6 +1465,7 @@ public final class GeminiFrame extends JFrame {
             fcItem.setEnabled(false);
             Alhena.systemFileChooser = false;
         }
+        settingsMenu.add(restoreItem);
         settingsMenu.add(new JSeparator());
         settingsMenu.add(smoothItem);
         settingsMenu.add(scrollSizeItem);
@@ -1547,7 +1630,7 @@ public final class GeminiFrame extends JFrame {
         try {
             String url = emojiNameMap.get(setName);
             String fn = url.substring(url.lastIndexOf('/'));
-            File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
+            File emojiFile = new File(Alhena.alhenaHome + File.separatorChar + fn);
             BufferedImage sheetImage = ImageIO.read(emojiFile);
             GeminiTextPane.setSheetImage(sheetImage);
         } catch (IOException ex) {
@@ -1584,7 +1667,7 @@ public final class GeminiFrame extends JFrame {
                     lastSelectedItem = selected;
                 } else {
                     String fn = url.substring(url.lastIndexOf('/'));
-                    File emojiFile = new File(System.getProperty("alhena.home") + File.separatorChar + fn);
+                    File emojiFile = new File(Alhena.alhenaHome + File.separatorChar + fn);
 
                     if (!emojiFile.exists() || Util.getSetSize(setName) != emojiFile.length()) {
 
@@ -1854,7 +1937,7 @@ public final class GeminiFrame extends JFrame {
     // don't leak this from your constructor says IDE
     private void init(String url, Page page) {
         if (CUSTOM_LABELS.contains(url) && !url.equals(INFO_LABEL)) {
-            showCustomPage(url, true, null);
+            showCustomPage(url, true, null, false);
         } else {
             Alhena.processURL(url, page, null, page, false);
         }
@@ -1957,7 +2040,6 @@ public final class GeminiFrame extends JFrame {
                 if (bm.folder().equals("ROOT")) {
 
                     bookmarkMenu.add(createMenuItem(bm.label(), null, () -> {
-                        //fetchURL(bm.url());
                         r.run();
                     }));
                 } else {
@@ -1967,23 +2049,22 @@ public final class GeminiFrame extends JFrame {
                         folders.put(bm.folder(), newFolder);
                     }
                     folders.get(bm.folder()).add(createMenuItem(bm.label(), null, () -> {
-                        //fetchURL(bm.url());
                         r.run();
                     }));
                 }
             });
 
-            // }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
     }
 
     public void fetchURL(String url, boolean searchInput) {
-        fetchURL(url, null, searchInput);
+        fetchURL(url, null, searchInput, null);
     }
 
-    public void fetchURL(String url, File dataFile, boolean searchInput) {
+    public void fetchURL(String url, File dataFile, boolean searchInput, JsonObject savedPage) {
+
         if (CUSTOM_LABELS.contains(url)) {
             return;
         }
@@ -2052,7 +2133,11 @@ public final class GeminiFrame extends JFrame {
                 };
                 pb.runWhenLoading(r);
                 pb.setDataFile(dataFile);
-                Alhena.processURL(url, pb, null, currentPB, searchInput);
+                if (savedPage == null) {
+                    Alhena.processURL(url, pb, null, currentPB, searchInput);
+                } else {
+                    setPageInfo(savedPage, pb);
+                }
 
             } else {
                 int currentTabIdx = tabbedPane.getSelectedIndex();
@@ -2098,15 +2183,42 @@ public final class GeminiFrame extends JFrame {
                 };
                 pb.runWhenLoading(r);
                 pb.setDataFile(dataFile);
-                Alhena.processURL(url, pb, null, currentPB, searchInput);
+                if (savedPage == null) {
+                    Alhena.processURL(url, pb, null, currentPB, searchInput);
+                } else {
+                    setPageInfo(savedPage, pb);
+                }
             }
         } else {
             Page nPage = addPageToHistory(null, currentPB, true);
             nPage.setDataFile(dataFile);
             nPage.runWhenLoading(() -> nPage.setDataFile(null));
-            Alhena.processURL(url, nPage, null, currentPB, searchInput);
+            if (savedPage == null) {
+                Alhena.processURL(url, nPage, null, currentPB, searchInput);
+            } else {
+                setPageInfo(savedPage, nPage);
+            }
 
         }
+    }
+
+    public void setPageInfo(JsonObject page, Page p) {
+        String scheme = URI.create(page.getString("url")).getScheme();
+        switch (scheme) {
+            case "gophers" ->
+                p.setGopher(true, true);
+            case "gopher" ->
+                p.setGopher(true, false);
+            case "spartan" ->
+                p.setSpartan(true);
+            case "nex" ->
+                p.setNex(true);
+            default -> {
+            }
+        }
+        p.setFetchTime(page.getLong("fetchtime"));
+        p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), page.getString("url"), true);
+        p.setScrollPos(page.getInteger("pos"));
     }
 
     public record ThemeInfo(String className, String label, boolean isDark) {
@@ -2202,12 +2314,12 @@ public final class GeminiFrame extends JFrame {
         }).start();
     }
 
-    private void showCustomPage(String label, InfoPageInfo info) {
-        showCustomPage(label, false, info);
+    public void showCustomPage(String label, InfoPageInfo info) {
+        showCustomPage(label, false, info, false);
     }
 
-    private void showCustomPage(String label, boolean inPlace, InfoPageInfo info) { // probably need custom refresh button handling
-        if (info != null) {
+    public void showCustomPage(String label, boolean inPlace, InfoPageInfo info, boolean saved) { // probably need custom refresh button handling
+        if (info != null && !saved) {
             label = INFO_LABEL; // hack
         }
         Page currentPB = visiblePage();
@@ -2350,6 +2462,14 @@ public final class GeminiFrame extends JFrame {
     }
 
     @Override
+    public String getTitle(){
+        if(SystemInfo.isMacOS){
+            return titleLabel.getText();
+        }
+        return super.getTitle();
+    }
+
+    @Override
     public void setTitle(String title) {
         if (title.length() > 70) {
             title = title.substring(0, 70) + "...";
@@ -2360,6 +2480,7 @@ public final class GeminiFrame extends JFrame {
             super.setTitle(title);
         }
         if (mi != null) {
+
             mi.setLabel(title);
         }
         if (tabbedPane != null) {
@@ -2630,7 +2751,7 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    private record InfoPageInfo(String title, String content) {
+    public record InfoPageInfo(String title, String content) {
 
     }
 
@@ -2965,7 +3086,7 @@ public final class GeminiFrame extends JFrame {
         });
     }
 
-    public void newTab(String url) {
+    public void newTab(String url, JsonObject savedPage) {
 
         if (tabbedPane == null) {
             invalidate();
@@ -3103,7 +3224,14 @@ public final class GeminiFrame extends JFrame {
 
         tabbedPane.setSelectedComponent(pb);
 
-        Alhena.processURL(url, pb, null, currentPage, false);
+        //Alhena.processURL(url, pb, null, currentPage, false);
+        if (savedPage == null) {
+            Alhena.processURL(url, pb, null, currentPage, false);
+        } else {
+            setPageInfo(savedPage, pb);
+            // pb.textPane.end(savedPage.getString("content"), savedPage.getBoolean("pfmode"), savedPage.getString("url"), true);
+            // pb.setScrollPos(savedPage.getInteger("pos"));
+        }
 
     }
 
@@ -3204,6 +3332,7 @@ public final class GeminiFrame extends JFrame {
     public void updateComboBox(String s) {
         updateComboBox(new ComboItem(s, null));
     }
+    int testCount = 0;
 
     private void updateComboBox(ComboItem origURL) {
 
@@ -3242,9 +3371,10 @@ public final class GeminiFrame extends JFrame {
             }
 
             textField.getDocument().addDocumentListener(dl);
-
+            dateField.setText(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
         });
     }
+    private DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault());
 
     public void selectComboBoxItem(String s) {
         selectComboBoxItem(new ComboItem(s, null));
