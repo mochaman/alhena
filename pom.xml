@@ -95,7 +95,7 @@
         <dependency>
             <groupId>net.fellbaum</groupId>
             <artifactId>jemoji</artifactId>
-            <version>1.7.5</version>
+            <version>1.7.6</version>
         </dependency>
         <dependency>
             <groupId>uk.co.caprica</groupId>
@@ -105,7 +105,7 @@
         <dependency>
             <groupId>com.twelvemonkeys.imageio</groupId>
             <artifactId>imageio-webp</artifactId>
-            <version>3.12.0</version>
+            <version>3.13.1</version>
         </dependency>
         <dependency>
             <groupId>de.vandermeer</groupId>
