@@ -103,6 +103,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.util.SystemInfo;
 
+import brad.grier.alhena.Alhena.CacheInfo;
 import brad.grier.alhena.DB.Bookmark;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.DBClientCertInfo;
@@ -229,6 +230,26 @@ public final class GeminiFrame extends JFrame {
     );
 
     public JsonObject getAppState() {
+
+        CacheInfo cs = Alhena.getPageCache();
+        ArrayList<Page> prunedPages = new ArrayList<>();
+        long[] curSize = {cs.cacheSize()};
+
+        if (curSize[0] > Alhena.MAX_CACHE) {
+            // prune pages
+            cs.map().entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> {
+                        // oldest pages first
+                        Page p = entry.getValue();
+
+                        if (curSize[0] > Alhena.MAX_CACHE) {
+                            prunedPages.add(p);
+                            curSize[0] -= p.textPane.current().currentPage().length();
+                        }
+
+                    });
+        }
         JsonObject jo = new JsonObject();
         Rectangle bounds = getBounds();
         jo.put("winx", bounds.x);
@@ -237,29 +258,44 @@ public final class GeminiFrame extends JFrame {
         jo.put("winh", bounds.height);
         JsonArray tabArray = new JsonArray();
         if (tabbedPane != null) {
-            jo.put("activeTabIndex", tabbedPane.getSelectedIndex());
 
+            int[] selTabIdx = {tabbedPane.getSelectedIndex()};
             int tabCount = tabbedPane.getTabCount();
-
+        
             for (int i = 0; i < tabCount; i++) {
                 JsonObject tabObject = new JsonObject();
                 Page p = (Page) tabbedPane.getComponentAt(i);
-                tabObject.put("activePageIndex", p.getArrayIndex());
+                int[] curPageIdx = {p.getArrayIndex()}; // selected page in history
                 JsonArray pageArray = new JsonArray();
-
+                int[] pageNum = {0};
                 pageHistoryMap.get(getRootPage(p)).forEach(page -> {
-                    JsonObject jp = new JsonObject();
-                    jp.put("url", page.toString());
-                    jp.put("content", page.textPane.current().currentPage().toString());
-                    jp.put("pfmode", page.textPane.current().pMode());
-                    jp.put("pos", page.getScrollPos());
-                    jp.put("fetchtime", page.getFetchTime());
-                    pageArray.add(jp);
+                    if (!prunedPages.contains(page)) {
+                        JsonObject jp = new JsonObject();
+                        jp.put("url", page.toString());
+                        jp.put("content", page.textPane.current().currentPage().toString());
+                        jp.put("pfmode", page.textPane.current().pMode());
+                        jp.put("pos", page.getScrollPos());
+                        jp.put("fetchtime", page.getFetchTime());
+                        pageArray.add(jp);
+                    } else {
+                        if (pageNum[0] < curPageIdx[0]) {
+                            curPageIdx[0]--;
+                        }
+                    }
+                    pageNum[0]++;
                 });
-                tabObject.put("pages", pageArray);
-                tabArray.add(tabObject);
+                if (pageArray.size() > 0) {
+                    tabObject.put("activePageIndex", curPageIdx[0]);
+                    tabObject.put("pages", pageArray);
+                    tabArray.add(tabObject);
+                }else{
+                    if(tabCount < selTabIdx[0]){
+                        selTabIdx[0]--;
+                    }
+                }
 
             }
+            jo.put("activeTabIndex", selTabIdx[0]);
             jo.put("tabs", tabArray);
         } else {
 
@@ -267,17 +303,27 @@ public final class GeminiFrame extends JFrame {
             JsonObject tabObject = new JsonObject();
 
             pageHistoryMap.entrySet().stream().forEach(entry -> {
-                tabObject.put("activePageIndex", entry.getKey().getArrayIndex());
+
+                int[] curPageIdx = {entry.getKey().getArrayIndex()}; // selected page in history
                 JsonArray pageArray = new JsonArray();
+                int[] pageNum = {0};
                 entry.getValue().forEach(page -> {
-                    JsonObject jp = new JsonObject();
-                    jp.put("url", page.toString());
-                    jp.put("content", page.textPane.current().currentPage().toString());
-                    jp.put("pfmode", page.textPane.current().pMode());
-                    jp.put("pos", page.getScrollPos());
-                    jp.put("fetchtime", page.getFetchTime());
-                    pageArray.add(jp);
+                    if (!prunedPages.contains(page)) {
+                        JsonObject jp = new JsonObject();
+                        jp.put("url", page.toString());
+                        jp.put("content", page.textPane.current().currentPage().toString());
+                        jp.put("pfmode", page.textPane.current().pMode());
+                        jp.put("pos", page.getScrollPos());
+                        jp.put("fetchtime", page.getFetchTime());
+                        pageArray.add(jp);
+                    } else {
+                        if (pageNum[0] < curPageIdx[0]) {
+                            curPageIdx[0]--;
+                        }
+                    }
+                    pageNum[0]++;
                 });
+                tabObject.put("activePageIndex", curPageIdx[0]);
                 tabObject.put("pages", pageArray);
 
             });

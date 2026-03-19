@@ -226,6 +226,8 @@ public class Alhena {
     public static boolean systemFileChooser;
     public static boolean restoreTabs;
     public static String alhenaHome;
+    public final static long MAX_CACHE = 10000000;
+    private static boolean started;
 
     static {
         // just do this once
@@ -239,7 +241,7 @@ public class Alhena {
                 .connectHandler(sock -> {
                     sock.handler(buf -> {
                         String[] furl = {buf.toString()};
-                        System.out.println("open request: " + furl);
+                        System.out.println("open request: " + furl[0]);
 
                         if (allowedSchemes.stream().noneMatch(furl[0]::startsWith)) {
                             try {
@@ -251,9 +253,9 @@ public class Alhena {
 
                         }
                         EventQueue.invokeLater(() -> {
-                            if (frameList.size() > 0) {
+                            if (!frameList.isEmpty()) {
 
-                                GeminiFrame gf = frameList.get(frameList.size() - 1);
+                                GeminiFrame gf = frameList.getLast();
                                 gf.fetchURL(furl[0], false);
                             } else {
                                 // this should only happen on mac where app can be running without open windows
@@ -568,7 +570,7 @@ public class Alhena {
                 desktop.addAppEventListener(
                         (AppReopenedListener) e -> {
                             if (frameList.isEmpty()) {
-                                if (!(restoreTabs && loadState())) {
+                                if (!(restoreTabs && loadState(null, null))) {
                                     String u = Util.getHome();
                                     newWindow(u, u, null, null);
                                 }
@@ -581,12 +583,20 @@ public class Alhena {
                     desktop.setOpenFileHandler((OpenFilesEvent e) -> {
 
                         for (File file : e.getFiles()) {
-                            if (frameList.size() > 0) {
-                                String f = file.toURI().toString();
+                            String f = file.toURI().toString();
+                            if (!frameList.isEmpty()) {
                                 GeminiFrame gf = frameList.get(frameList.size() - 1);
                                 gf.fetchURL(f, false);
                             } else {
-                                pendingFile[0] = file.toURI().toString();
+                                if (started) {
+                                    // started but all windows closed
+                                    if (!(restoreTabs && loadState(f, null))) {
+                                        newWindow(f, f, null, null);
+                                    }
+
+                                } else {
+                                    pendingFile[0] = f;
+                                }
                             }
                             break;
                         }
@@ -671,26 +681,9 @@ public class Alhena {
                 DB.insertPref("theme", theme);
             }
 
-            if (!(restoreTabs && loadState())) {
-
-                String u = Util.getHome();
-                if (pendingFile[0] != null) {
-                    newWindow(pendingFile[0], pendingFile[0], null, null);
-                } else if (args.length == 1) {
-                    String f = args[0];
-                    if (allowedSchemes.stream().noneMatch(f::startsWith)) {
-                        try {
-                            File file = new File(f);
-                            f = file.toURI().toString();
-                        } catch (Exception e) {
-                            f = u; // just open the default
-                        }
-
-                    }
-                    newWindow(f, f, null, null);
-                } else {
-                    newWindow(u, u, null, null);
-                }
+            if (!(restoreTabs && loadState(pendingFile[0], args))) {
+                String u = getStartUrl(pendingFile[0], args);
+                newWindow(u, u, null, null);
             }
 
         });
@@ -699,9 +692,31 @@ public class Alhena {
         // VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
         // vertx = Vertx.vertx(options);
         startStreamingServer();
+        started = true;
     }
 
-    private static boolean loadState() {
+    private static String getStartUrl(String pendingFile, String[] args) {
+        String u = Util.getHome();
+        if (pendingFile != null) {
+            return pendingFile;
+        } else if (args != null && args.length == 1) {
+            String f = args[0];
+            if (allowedSchemes.stream().noneMatch(f::startsWith)) {
+                try {
+                    File file = new File(f);
+                    f = file.toURI().toString();
+                } catch (Exception e) {
+                    f = u; // just open the default
+                }
+
+            }
+            return f;
+        } else {
+            return u;
+        }
+    }
+
+    private static boolean loadState(String pendingFile, String[] args) {
         boolean done = false;
         GeminiFrame[] gf = {null};
         try (var stream = Files.newDirectoryStream(Path.of(alhenaHome), "framestate_*")) {
@@ -713,7 +728,7 @@ public class Alhena {
                 JsonArray tabs = jo.getJsonArray("tabs");
                 int[] tabCount = {0};
                 int selectedTab = jo.getInteger("activeTabIndex");
-
+                int frameCount = frameList.size();
                 tabs.forEach(tabObject -> {
 
                     JsonObject tab = (JsonObject) tabObject;
@@ -766,15 +781,26 @@ public class Alhena {
                     }
                     tabCount[0]++;
                 });
-                if (tabCount[0] > 1 && tabCount[0] != selectedTab) {
-                    int st = selectedTab;
-                    GeminiFrame gfFinal = gf[0];
-                    bg(() -> {
-                        gfFinal.tabbedPane.setSelectedIndex(st);
-                    });
+                if (frameList.size() == frameCount) {
+                    // no pages saved
+                    Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
+                    String u = getStartUrl(pendingFile, args);
 
+                    newWindow(u, u, null, windowBounds);
+                } else {
+                    if (tabCount[0] > 1 && tabCount[0] != selectedTab && gf[0].tabbedPane != null) {
+                        int st = selectedTab;
+                        GeminiFrame gfFinal = gf[0];
+                        bg(() -> {
+                            gfFinal.tabbedPane.setSelectedIndex(st);
+                        });
+
+                    }
                 }
                 done = true;
+            }
+            if (pendingFile != null) {
+                frameList.getLast().fetchURL(pendingFile, false);
             }
         } catch (IOException io) {
             done = false;
@@ -884,6 +910,22 @@ public class Alhena {
         }
     }
 
+    public static record CacheInfo(long cacheSize, HashMap<Long, Page> map) {
+
+    }
+
+    public static CacheInfo getPageCache() {
+        long[] sz = {0};
+        HashMap<Long, Page> map = new HashMap<>();
+        for (GeminiFrame gf : frameList) {
+            gf.forEachPage(page -> {
+                sz[0] += page.textPane.current().currentPage().length();
+                map.put(page.getFetchTime(), page);
+            });
+        }
+        return new CacheInfo(sz[0], map);
+    }
+
     public static void exit(GeminiFrame gf) {
 
         if ((frameList.size() == 1 && !SystemInfo.isMacOS) || gf == null) { // shutting down all windows and exiting
@@ -920,7 +962,8 @@ public class Alhena {
             //gf.shutDown();
             gf.setVisible(false);
             frameList.remove(gf);
-            if (SystemInfo.isMacOS && frameList.isEmpty()) {
+            if (SystemInfo.isMacOS) {
+
                 if (restoreTabs) {
                     deleteFrameState();
 
@@ -4062,16 +4105,16 @@ public class Alhena {
         sb.append(I18n.t("freeMemLabel")).append(": ").append(freeMemory / (1024 * 1024)).append(" MB\n\n");
 
         sb.append(I18n.t("docLabel")).append(": \n");
-        for (GeminiFrame gf : frameList) {
 
-            gf.forEachPage(page -> {
-                StringBuilder sbdoc = page.textPane.current().currentPage();
-                if (sbdoc != null) {
-
+        CacheInfo ci = getPageCache();
+        ci.map().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    // oldest pages first
+                    Page page = entry.getValue();
+                    StringBuilder sbdoc = page.textPane.current().currentPage();
                     sb.append(page.textPane.getDocURLString()).append(": ").append(sbdoc.length()).append(" bytes").append("\n");
-                }
-            });
-        }
+                });
 
         return sb;
     }
