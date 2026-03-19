@@ -259,7 +259,10 @@ public class Alhena {
                                 gf.fetchURL(furl[0], false);
                             } else {
                                 // this should only happen on mac where app can be running without open windows
-                                newWindow(furl[0], furl[0], null, null);
+                                String[] fs = {furl[0]};
+                                if (!(restoreTabs && loadState(null, fs))) {
+                                    newWindow(furl[0], furl[0], null, null);
+                                }
                             }
                         });
 
@@ -585,7 +588,7 @@ public class Alhena {
                         for (File file : e.getFiles()) {
                             String f = file.toURI().toString();
                             if (!frameList.isEmpty()) {
-                                GeminiFrame gf = frameList.get(frameList.size() - 1);
+                                GeminiFrame gf = frameList.getLast();
                                 gf.fetchURL(f, false);
                             } else {
                                 if (started) {
@@ -680,7 +683,15 @@ public class Alhena {
                 theme = "com.formdev.flatlaf.FlatLightLaf";
                 DB.insertPref("theme", theme);
             }
+            if (args.length == 1 && allowedSchemes.stream().noneMatch(args[0]::startsWith)) {
+                try {
+                    File file = new File(args[0]);
+                    args[0] = file.toURI().toString();
+                } catch (Exception e) {
+                    // fallback - can't convert 
+                }
 
+            }
             if (!(restoreTabs && loadState(pendingFile[0], args))) {
                 String u = getStartUrl(pendingFile[0], args);
                 newWindow(u, u, null, null);
@@ -791,9 +802,18 @@ public class Alhena {
                     if (tabCount[0] > 1 && tabCount[0] != selectedTab && gf[0].tabbedPane != null) {
                         int st = selectedTab;
                         GeminiFrame gfFinal = gf[0];
+                        String[] a = args;
+                        args = null;
+                        String pf = pendingFile;
+                        pendingFile = null;
                         bg(() -> {
                             gfFinal.tabbedPane.setSelectedIndex(st);
                             gfFinal.visiblePage().textPane.requestFocusInWindow();
+                            if (pf != null) {
+                                frameList.getLast().fetchURL(pf, false);
+                            } else if (a != null && a.length == 1) {
+                                frameList.getLast().fetchURL(a[0], false);
+                            }
                         });
 
                     }
@@ -802,6 +822,8 @@ public class Alhena {
             }
             if (pendingFile != null) {
                 frameList.getLast().fetchURL(pendingFile, false);
+            } else if (args != null) {
+                frameList.getLast().fetchURL(args[0], false);
             }
         } catch (IOException io) {
             done = false;
