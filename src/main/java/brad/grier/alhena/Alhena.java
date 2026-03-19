@@ -793,6 +793,7 @@ public class Alhena {
                         GeminiFrame gfFinal = gf[0];
                         bg(() -> {
                             gfFinal.tabbedPane.setSelectedIndex(st);
+                            gfFinal.visiblePage().textPane.requestFocusInWindow();
                         });
 
                     }
