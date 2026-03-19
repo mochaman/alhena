@@ -261,7 +261,7 @@ public final class GeminiFrame extends JFrame {
 
             int[] selTabIdx = {tabbedPane.getSelectedIndex()};
             int tabCount = tabbedPane.getTabCount();
-        
+
             for (int i = 0; i < tabCount; i++) {
                 JsonObject tabObject = new JsonObject();
                 Page p = (Page) tabbedPane.getComponentAt(i);
@@ -288,8 +288,8 @@ public final class GeminiFrame extends JFrame {
                     tabObject.put("activePageIndex", curPageIdx[0]);
                     tabObject.put("pages", pageArray);
                     tabArray.add(tabObject);
-                }else{
-                    if(tabCount < selTabIdx[0]){
+                } else {
+                    if (tabCount < selTabIdx[0]) {
                         selTabIdx[0]--;
                     }
                 }
@@ -2249,21 +2249,26 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void setPageInfo(JsonObject page, Page p) {
-        String scheme = URI.create(page.getString("url")).getScheme();
-        switch (scheme) {
-            case "gophers" ->
-                p.setGopher(true, true);
-            case "gopher" ->
-                p.setGopher(true, false);
-            case "spartan" ->
-                p.setSpartan(true);
-            case "nex" ->
-                p.setNex(true);
-            default -> {
+
+        String url = page.getString("url");
+        if (!url.startsWith("alhena:")) {
+
+            String scheme = URI.create(url).getScheme();
+            switch (scheme) {
+                case "gophers" ->
+                    p.setGopher(true, true);
+                case "gopher" ->
+                    p.setGopher(true, false);
+                case "spartan" ->
+                    p.setSpartan(true);
+                case "nex" ->
+                    p.setNex(true);
+                default -> {
+                }
             }
         }
         p.setFetchTime(page.getLong("fetchtime"));
-        p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), page.getString("url"), true);
+        p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), url, true);
         p.setScrollPos(page.getInteger("pos"));
     }
 
