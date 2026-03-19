@@ -822,7 +822,7 @@ public class Alhena {
             }
             if (pendingFile != null) {
                 frameList.getLast().fetchURL(pendingFile, false);
-            } else if (args != null) {
+            } else if (args != null && args.length == 1) {
                 frameList.getLast().fetchURL(args[0], false);
             }
         } catch (IOException io) {
