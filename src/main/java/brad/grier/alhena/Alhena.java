@@ -984,21 +984,17 @@ public class Alhena {
             });
             //gf.shutDown();
             gf.setVisible(false);
-            frameList.remove(gf);
-            if (SystemInfo.isMacOS) {
-
-                if (restoreTabs) {
-                    deleteFrameState();
-
-                    try {
-                        File stateFile = new File(alhenaHome + File.separatorChar + "framestate_0.json");
-                        Files.writeString(stateFile.toPath(), gf.getAppState().encode(), StandardCharsets.UTF_8);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
+            
+            if (SystemInfo.isMacOS && restoreTabs) {
+                deleteFrameState();
+                try {
+                    Path stateFile = Paths.get(alhenaHome, "framestate_0.json");
+                    Files.writeString(stateFile, gf.getAppState().encode(), StandardCharsets.UTF_8);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
                 }
-
             }
+            frameList.remove(gf);
             gf.dispose();
 
             Taskbar taskbar = getTaskbar();
