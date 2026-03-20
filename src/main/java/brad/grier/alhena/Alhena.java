@@ -354,8 +354,9 @@ public class Alhena {
             if (e.getID() == KeyEvent.KEY_RELEASED) {
                 lgp = null;
                 keyDown = false;
-                if (gf.getGlassPane() instanceof LinkGlassPane && !((LinkGlassPane)gf.getGlassPane()).isFixed()) {
-                    gf.getGlassPane().setVisible(false);
+                Component c = gf.getGlassPane();
+                if (c instanceof LinkGlassPane && !((LinkGlassPane)c).isFixed()) {
+                    c.setVisible(false);
                 }
                 sDown = false;
                 return false;
@@ -365,7 +366,7 @@ public class Alhena {
 
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE && !keyDown) {
                     
-                    if (gf.getGlassPane() instanceof LinkGlassPane) {
+                    if (gf.getGlassPane() instanceof LinkGlassPane && gf.getGlassPane().isVisible()) {
                         gf.visiblePage().textPane.resetLGP();
                         e.consume();
                         return true;
