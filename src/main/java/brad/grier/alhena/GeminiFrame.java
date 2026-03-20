@@ -3246,6 +3246,7 @@ public final class GeminiFrame extends JFrame {
                 if (page == null) {
                     return;
                 }
+                page.textPane.resetLGP();
                 if (!page.busy() && getGlassPane().isShowing()) {
                     showGlassPane(false);
                 } else if (page.busy() && !getGlassPane().isShowing()) {
@@ -3363,6 +3364,11 @@ public final class GeminiFrame extends JFrame {
         } else {
             EventQueue.invokeLater(r);
         }
+    }
+
+    @Override
+    public void setGlassPane(Component comp){
+        super.setGlassPane(comp);
     }
 
     // only call on EDT

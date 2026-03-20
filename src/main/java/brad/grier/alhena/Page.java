@@ -96,6 +96,10 @@ public class Page extends JPanel {
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
 
+        scrollPane.getViewport().addChangeListener(e -> {
+            textPane.resetLGP();
+        });
+
         gradientPanel = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -557,10 +561,12 @@ public class Page extends JPanel {
     }
 
     private long fetchTime;
-    public void setFetchTime(long ts){
+
+    public void setFetchTime(long ts) {
         fetchTime = ts;
     }
-    public long getFetchTime(){
+
+    public long getFetchTime() {
         return fetchTime;
     }
 

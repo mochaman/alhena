@@ -354,7 +354,7 @@ public class Alhena {
             if (e.getID() == KeyEvent.KEY_RELEASED) {
                 lgp = null;
                 keyDown = false;
-                if (gf.getGlassPane() instanceof LinkGlassPane) {
+                if (gf.getGlassPane() instanceof LinkGlassPane && !((LinkGlassPane)gf.getGlassPane()).isFixed()) {
                     gf.getGlassPane().setVisible(false);
                 }
                 sDown = false;
@@ -364,6 +364,13 @@ public class Alhena {
                 KeyStroke ks = KeyStroke.getKeyStrokeForEvent(e);
 
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE && !keyDown) {
+                    
+                    if (gf.getGlassPane() instanceof LinkGlassPane) {
+                        gf.visiblePage().textPane.resetLGP();
+                        e.consume();
+                        return true;
+
+                    }
                     keyDown = true;
 
                     if (gf.visiblePage().busy()) {
@@ -460,7 +467,7 @@ public class Alhena {
                         }
 
                         if (lgp == null) {
-                            lgp = new LinkGlassPane(gf.visiblePage().textPane);
+                            lgp = new LinkGlassPane(gf.visiblePage().textPane, false);
                             gf.setGlassPane(lgp);
                             lgp.setVisible(true);
                             gf.repaint();
@@ -4105,7 +4112,6 @@ public class Alhena {
                         } else {
                             pageCache = val * 1000000;
                             DB.insertPref("pagecache", String.valueOf(pageCache));
-                            
 
                             String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
                             message = "## " + m + "\n";

@@ -26,12 +26,17 @@ public class LinkGlassPane extends JComponent {
     private final List<ClickableRange> visibleLinks;
     private final Font f;
     private FontMetrics metrics;
+    private final boolean fixed;
 
-    public LinkGlassPane(GeminiTextPane textPane) {
+    public LinkGlassPane(GeminiTextPane textPane, boolean fixed) {
         this.textPane = textPane;
         f = new Font(textPane.pageStyle.getLinkFontFamily(), textPane.pageStyle.getLinkStyle(), textPane.pageStyle.getLinkSize());
         visibleLinks = textPane.getVisibleLinks();
+        this.fixed = fixed;
+    }
 
+    public boolean isFixed(){
+        return fixed;
     }
 
     @Override

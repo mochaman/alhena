@@ -27,6 +27,8 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.HierarchyBoundsAdapter;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.InputEvent;
@@ -498,6 +500,61 @@ public class GeminiTextPane extends JTextPane {
             });
         }
 
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent ke) {
+
+                if (ke.getKeyCode() == KeyEvent.VK_F && lgp == null) {
+                    lgp = new LinkGlassPane(GeminiTextPane.this, true);
+                    f.setGlassPane(lgp);
+                    lgp.setVisible(true);
+                    //f.repaint();
+                    ke.consume();
+                    return;
+                }
+                if (lgp != null) {
+                    int keyCode = ke.getKeyCode();
+                    int index = -1;
+
+                    if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
+                        index = keyCode - KeyEvent.VK_1;
+                    } // A-Z → indices 9-34
+                    else if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
+                        index = 9 + (keyCode - KeyEvent.VK_A);
+                    }
+
+                    if (index >= 0 && lgp != null) {
+
+                        lgp.setVisible(false);
+                        lgp = null;
+                        clickVisibleLink(index);
+
+                    }
+                }
+            }
+        }
+        );
+        addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                resetLGP();
+            }
+        });
+    }
+
+    public LinkGlassPane lgp;
+
+    public void resetLGP() {
+        if (lgp != null) {
+            lgp.setVisible(false);
+            lgp = null;
+        }
+    }
+
+    @Override
+    public void removeNotify() {
+        super.removeNotify();
+        resetLGP();
     }
 
     private void resized() {
