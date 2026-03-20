@@ -226,7 +226,7 @@ public class Alhena {
     public static boolean systemFileChooser;
     public static boolean restoreTabs;
     public static String alhenaHome;
-    public final static long MAX_CACHE = 10000000;
+    public static long pageCache;
     private static boolean started;
 
     static {
@@ -653,7 +653,8 @@ public class Alhena {
         GeminiTextPane.showSB = map.getOrDefault("showsb", "false").equals("true");
         GeminiTextPane.shadePF = map.getOrDefault("shadepf", "false").equals("true");
         GeminiFrame.ansiAlert = map.getOrDefault("ansialert", "false").equals("true");
-        Alhena.forceWhite = map.getOrDefault("forcewhite", "false").equals("true");
+        forceWhite = map.getOrDefault("forcewhite", "false").equals("true");
+        pageCache = Long.parseLong(map.getOrDefault("pagecache", "10000000"));
         favIcon = map.getOrDefault("favicon", "false").equals("true");
         dataUrl = map.getOrDefault("dataurl", "true").equals("true");
         linkIcons = map.getOrDefault("linkicons", "false").equals("true");
@@ -984,7 +985,7 @@ public class Alhena {
             });
             //gf.shutDown();
             gf.setVisible(false);
-            
+
             if (SystemInfo.isMacOS && restoreTabs) {
                 deleteFrameState();
                 try {
@@ -4017,80 +4018,103 @@ public class Alhena {
                     message = "# scrollbarsize\n### " + I18n.t("scrollbarSizeHeading");
                 case "forcewhite" ->
                     message = "# forcewhite\n### " + I18n.t("forceWhiteHeading");
+                case "pagecache" -> {
+                    message = MessageFormat.format("# pagecache\n" + I18n.t("pageCacheHeading"), pageCache / 1000000);
+                }
                 default -> {
                 }
             }
 
         } else if (cmd.length == 2) {
-            if (cmd[0].equals("scrollbarsize")) {
-                try {
-                    int val = Integer.parseInt(cmd[1]);
-                    if (val < 10 || val > 25) {
-                        message = "## " + I18n.t("sbSizeErrorLabel") + "\n";
-                    } else {
-                        DB.insertPref("scrollbarsize", cmd[1]);
-                        scrollbarSize = val;
-
-                        String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
-                        message = "## " + m + "\n";
-                        if (bigScrollBar) {
-                            bg(() -> {
-                                Alhena.updateFrames(false, false, false, false);
-                            });
-                        }
-                    }
-
-                } catch (NumberFormatException ex) {
-                    message = "## " + I18n.t("numberError") + "\n";
-                }
-
-            } else if (cmd[0].equals("scrollspeed")) {
-                try {
-                    if (cmd[1].equals("default")) {
-                        DB.insertPref("scrollspeed", null);
-                        scrollSpeed = null;
-                        for (GeminiFrame gf : frameList) {
-                            gf.forEachPage(page -> {
-                                page.resetScrollIncrement();
-                            });
-                        }
-                        message = "## scrollspeed " + I18n.t("resetLabel") + "\n";
-                    } else {
+            switch (cmd[0]) {
+                case "scrollbarsize" -> {
+                    try {
                         int val = Integer.parseInt(cmd[1]);
-                        DB.insertPref("scrollspeed", cmd[1]);
-                        scrollSpeed = cmd[1];
-                        for (GeminiFrame gf : frameList) {
-                            gf.forEachPage(page -> {
-                                page.setScrollIncrement(val);
-                            });
+                        if (val < 10 || val > 25) {
+                            message = "## " + I18n.t("sbSizeErrorLabel") + "\n";
+                        } else {
+                            DB.insertPref("scrollbarsize", cmd[1]);
+                            scrollbarSize = val;
+
+                            String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
+                            message = "## " + m + "\n";
+                            if (bigScrollBar) {
+                                bg(() -> {
+                                    Alhena.updateFrames(false, false, false, false);
+                                });
+                            }
                         }
-                        String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
-                        message = "## " + m + "\n";
+
+                    } catch (NumberFormatException ex) {
+                        message = "## " + I18n.t("numberError") + "\n";
                     }
-
-                } catch (NumberFormatException ex) {
-                    message = "## " + I18n.t("numberError") + "\n";
                 }
+                case "scrollspeed" -> {
+                    try {
+                        if (cmd[1].equals("default")) {
+                            DB.insertPref("scrollspeed", null);
+                            scrollSpeed = null;
+                            for (GeminiFrame gf : frameList) {
+                                gf.forEachPage(page -> {
+                                    page.resetScrollIncrement();
+                                });
+                            }
+                            message = "## scrollspeed " + I18n.t("resetLabel") + "\n";
+                        } else {
+                            int val = Integer.parseInt(cmd[1]);
+                            DB.insertPref("scrollspeed", cmd[1]);
+                            scrollSpeed = cmd[1];
+                            for (GeminiFrame gf : frameList) {
+                                gf.forEachPage(page -> {
+                                    page.setScrollIncrement(val);
+                                });
+                            }
+                            String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
+                            message = "## " + m + "\n";
+                        }
 
-            } else if (cmd[0].equals("ansialert")) {
-
-                if (cmd[1].equals("true") || cmd[1].equals("false")) {
-                    DB.insertPref("ansialert", cmd[1]);
-                    GeminiFrame.ansiAlert = cmd[1].equals("true");
-                    String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]);
-                    message = "## ansialert " + m + "\n";
-                } else {
-                    message = "## " + I18n.t("ansiError") + "\n";
+                    } catch (NumberFormatException ex) {
+                        message = "## " + I18n.t("numberError") + "\n";
+                    }
                 }
-            } else if (cmd[0].equals("forcewhite")) {
+                case "ansialert" -> {
+                    if (cmd[1].equals("true") || cmd[1].equals("false")) {
+                        DB.insertPref("ansialert", cmd[1]);
+                        GeminiFrame.ansiAlert = cmd[1].equals("true");
+                        String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]);
+                        message = "## ansialert " + m + "\n";
+                    } else {
+                        message = "## " + I18n.t("ansiError") + "\n";
+                    }
+                }
+                case "forcewhite" -> {
+                    if (cmd[1].equals("true") || cmd[1].equals("false")) {
+                        DB.insertPref("forcewhite", cmd[1]);
+                        Alhena.forceWhite = cmd[1].equals("true");
+                        String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]); // generic "set to string";
+                        message = "## forcewhite " + m + "\n";
+                    } else {
+                        message = "## " + I18n.t("ansiError") + "\n"; // actually a generic true/false message
+                    }
+                }
+                case "pagecache" -> {
+                    try {
+                        int val = Integer.parseInt(cmd[1]);
+                        if (val < 0 || val > 100) {
+                            message = "## " + I18n.t("pcSizeErrorLabel") + "\n";
+                        } else {
+                            pageCache = val * 1000000;
+                            DB.insertPref("pagecache", String.valueOf(pageCache));
+                            
 
-                if (cmd[1].equals("true") || cmd[1].equals("false")) {
-                    DB.insertPref("forcewhite", cmd[1]);
-                    Alhena.forceWhite = cmd[1].equals("true");
-                    String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]); // generic "set to string";
-                    message = "## forcewhite " + m + "\n";
-                } else {
-                    message = "## " + I18n.t("ansiError") + "\n"; // actually a generic true/false message
+                            String m = MessageFormat.format(I18n.t("commandSetMsg"), cmd[0], cmd[1]);
+                            message = "## " + m + "\n";
+                        }
+                    } catch (NumberFormatException ex) {
+                        message = "## " + I18n.t("numberError") + "\n";
+                    }
+                }
+                default -> {
                 }
             }
         }

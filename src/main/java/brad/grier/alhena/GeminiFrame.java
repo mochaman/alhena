@@ -235,7 +235,7 @@ public final class GeminiFrame extends JFrame {
         ArrayList<Page> prunedPages = new ArrayList<>();
         long[] curSize = {cs.cacheSize()};
 
-        if (curSize[0] > Alhena.MAX_CACHE) {
+        if (curSize[0] > Alhena.pageCache) {
             // prune pages
             cs.map().entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
@@ -243,7 +243,7 @@ public final class GeminiFrame extends JFrame {
                         // oldest pages first
                         Page p = entry.getValue();
 
-                        if (curSize[0] > Alhena.MAX_CACHE) {
+                        if (curSize[0] > Alhena.pageCache) {
                             prunedPages.add(p);
                             curSize[0] -= p.textPane.current().currentPage().length();
                         }
