@@ -124,6 +124,7 @@ public class GeminiTextPane extends JTextPane {
     public List<ClickableRange> clickableRegions = new ArrayList<>();
     private int currentCursor = Cursor.DEFAULT_CURSOR;
     private boolean preformattedMode;
+    private boolean originalPfMode;
     private String currentStatus = Alhena.welcomeMessage;
     public static String monospacedFamily;
     private final GeminiFrame f;
@@ -1815,7 +1816,7 @@ public class GeminiTextPane extends JTextPane {
 
         bufferedLine = null; // probably not necessary here
 
-        preformattedMode = pfMode;
+        originalPfMode = preformattedMode = pfMode;
         plainTextMode = pfMode;
         // map to track clickable regions and their actions
         clickableRegions.clear();
@@ -3039,7 +3040,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public CurrentPage current() {
-        return new CurrentPage(pageBuffer, preformattedMode);
+        return new CurrentPage(pageBuffer, originalPfMode);
     }
 
     public static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
