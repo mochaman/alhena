@@ -3301,13 +3301,10 @@ public final class GeminiFrame extends JFrame {
 
         tabbedPane.setSelectedComponent(pb);
 
-        //Alhena.processURL(url, pb, null, currentPage, false);
         if (savedPage == null) {
             Alhena.processURL(url, pb, null, currentPage, false);
         } else {
             setPageInfo(savedPage, pb);
-            // pb.textPane.end(savedPage.getString("content"), savedPage.getBoolean("pfmode"), savedPage.getString("url"), true);
-            // pb.setScrollPos(savedPage.getInteger("pos"));
         }
 
     }
