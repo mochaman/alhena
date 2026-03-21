@@ -1,5 +1,6 @@
 package brad.grier.alhena;
 
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -27,16 +28,22 @@ public class LinkGlassPane extends JComponent {
     private final Font f;
     private FontMetrics metrics;
     private final boolean fixed;
+    private final boolean rightClick;
 
-    public LinkGlassPane(GeminiTextPane textPane, boolean fixed) {
+    public LinkGlassPane(GeminiTextPane textPane, boolean fixed, boolean rightClick) {
         this.textPane = textPane;
         f = new Font(textPane.pageStyle.getLinkFontFamily(), textPane.pageStyle.getLinkStyle(), textPane.pageStyle.getLinkSize());
         visibleLinks = textPane.getVisibleLinks();
         this.fixed = fixed;
+        this.rightClick = rightClick;
     }
 
     public boolean isFixed(){
         return fixed;
+    }
+
+    public boolean isRightClick(){
+        return rightClick;
     }
 
     @Override
@@ -53,6 +60,8 @@ public class LinkGlassPane extends JComponent {
         g2.setFont(f);
         int textWidth = metrics.stringWidth("W");
         int max = Math.min(visibleLinks.size(), 35);
+        Color c = rightClick ? textPane.pageStyle.getTextForeground() : textPane.pageStyle.getLinkColor();
+        g2.setColor(c);
         for (int i = 0; i < max; i++) {
 
             ClickableRange range = visibleLinks.get(i);
@@ -70,8 +79,6 @@ public class LinkGlassPane extends JComponent {
                 } else {
                     label = String.valueOf((char) ('A' + (i - 9))); // A, B, C...
                 }
-
-                g2.setColor(textPane.pageStyle.getLinkColor());
 
                 g2.drawString(label, (int) pt.x - (textWidth) - 10, (int) pt.y + metrics.getAscent() + 1);
 

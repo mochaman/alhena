@@ -468,7 +468,7 @@ public class Alhena {
                         }
 
                         if (lgp == null) {
-                            lgp = new LinkGlassPane(gf.visiblePage().textPane, false);
+                            lgp = new LinkGlassPane(gf.visiblePage().textPane, false, false);
                             gf.setGlassPane(lgp);
                             lgp.setVisible(true);
                             gf.repaint();

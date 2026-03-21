@@ -504,17 +504,16 @@ public class GeminiTextPane extends JTextPane {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent ke) {
-
-                if (ke.getKeyCode() == KeyEvent.VK_F && lgp == null) {
-                    lgp = new LinkGlassPane(GeminiTextPane.this, true);
+                int keyCode = ke.getKeyCode();
+                if ((keyCode == KeyEvent.VK_F || keyCode == KeyEvent.VK_G) && lgp == null) {
+                    lgp = new LinkGlassPane(GeminiTextPane.this, true, keyCode == KeyEvent.VK_G);
                     f.setGlassPane(lgp);
                     lgp.setVisible(true);
-                    //f.repaint();
+
                     ke.consume();
                     return;
                 }
                 if (lgp != null) {
-                    int keyCode = ke.getKeyCode();
                     int index = -1;
 
                     if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
@@ -527,8 +526,13 @@ public class GeminiTextPane extends JTextPane {
                     if (index >= 0 && lgp != null) {
 
                         lgp.setVisible(false);
+                        
+                        if (lgp.isRightClick()) {
+                            rightClickVisibleLink(index);
+                        } else {
+                            clickVisibleLink(index);
+                        }
                         lgp = null;
-                        clickVisibleLink(index);
 
                     }
                 }
@@ -3182,12 +3186,32 @@ public class GeminiTextPane extends JTextPane {
     public List<ClickableRange> getVisibleLinks() {
         List<ClickableRange> visibleList = new ArrayList<>();
         for (ClickableRange cr : clickableRegions) {
-            //System.out.println(cr.url);
             if (isClickableRangeVisible(cr)) {
                 visibleList.add(cr);
             }
         }
         return visibleList;
+    }
+
+    public void rightClickVisibleLink(int linkIdx) {
+        int idx = 0;
+        for (ClickableRange cr : clickableRegions) {
+            if (isClickableRangeVisible(cr)) {
+
+                if (linkIdx == idx) {
+                    long now = System.currentTimeMillis();
+                    Rectangle cb = getCharacterBounds(cr.start, cr.end);
+                    Rectangle newRect = SwingUtilities.convertRectangle(this, cb, this);
+
+                    MouseEvent pressEvent = new MouseEvent(this, MouseEvent.MOUSE_PRESSED, now,
+                            InputEvent.BUTTON3_DOWN_MASK, newRect.x, newRect.y, 1, false, MouseEvent.BUTTON3);
+                    showPopup(pressEvent);
+                    break;
+                } else {
+                    idx++;
+                }
+            }
+        }
     }
 
     public void clickVisibleLink(int linkIdx) {
