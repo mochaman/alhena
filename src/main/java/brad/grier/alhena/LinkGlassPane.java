@@ -18,7 +18,7 @@ import brad.grier.alhena.GeminiTextPane.ClickableRange;
 
 /**
  * GlassPane for displaying link shortcuts
- * 
+ *
  * @author Brad Grier
  */
 public class LinkGlassPane extends JComponent {
@@ -32,17 +32,21 @@ public class LinkGlassPane extends JComponent {
 
     public LinkGlassPane(GeminiTextPane textPane, boolean fixed, boolean rightClick) {
         this.textPane = textPane;
-        f = new Font(textPane.pageStyle.getLinkFontFamily(), textPane.pageStyle.getLinkStyle(), textPane.pageStyle.getLinkSize());
+        if (textPane.originalPfMode) {
+            f = new Font(textPane.pageStyle.getMonoFontFamily(), Font.PLAIN, textPane.pageStyle.getMonoFontSize());
+        } else {
+            f = new Font(textPane.pageStyle.getLinkFontFamily(), textPane.pageStyle.getLinkStyle(), textPane.pageStyle.getLinkSize());
+        }
         visibleLinks = textPane.getVisibleLinks();
         this.fixed = fixed;
         this.rightClick = rightClick;
     }
 
-    public boolean isFixed(){
+    public boolean isFixed() {
         return fixed;
     }
 
-    public boolean isRightClick(){
+    public boolean isRightClick() {
         return rightClick;
     }
 

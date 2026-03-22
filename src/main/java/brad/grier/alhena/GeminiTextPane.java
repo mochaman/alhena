@@ -124,7 +124,7 @@ public class GeminiTextPane extends JTextPane {
     public List<ClickableRange> clickableRegions = new ArrayList<>();
     private int currentCursor = Cursor.DEFAULT_CURSOR;
     private boolean preformattedMode;
-    private boolean originalPfMode;
+    public boolean originalPfMode;
     private String currentStatus = Alhena.welcomeMessage;
     public static String monospacedFamily;
     private final GeminiFrame f;
