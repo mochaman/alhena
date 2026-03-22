@@ -4019,7 +4019,7 @@ public class Alhena {
                 }
                 case "art" -> {
                     String art = GeminiFrame.getArt();
-                    message = "```\n" + Util.colorize(art) + "```\n";
+                    message = "```\n" + art + "```\n";
                     embedArt = true;
                 }
                 case "scrollbarsize" ->
