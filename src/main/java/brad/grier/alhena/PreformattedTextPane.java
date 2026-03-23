@@ -192,7 +192,6 @@ public class PreformattedTextPane extends JTextPane {
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
 
             IndexedEmoji emoji;
-            int cpCount = text.codePointCount(0, text.length());
             // can't iterate by code point without preprocessing first to get name
             for (int i = 0; i < text.length(); i++) {
 
