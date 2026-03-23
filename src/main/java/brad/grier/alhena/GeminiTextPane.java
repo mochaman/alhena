@@ -2225,11 +2225,14 @@ public class GeminiTextPane extends JTextPane {
                 if (ptp != null) {
 
                     ptp.end();
-                    ptp.removeLastChar();
+                    // removeLastChar causes a rendering error on large pf blocks (notably ascii art)
+                    //ptp.removeLastChar();
                     ptp.scrollLeft();
                     ptp = null;
+                } else {
+                    // use else clause to compensate for spacing when ptp.removeLastChar() commented out above
+                    addStyledText("\n", "```", null);
                 }
-                addStyledText("\n", "```", null);
 
             } else { // preformatted mode
 
