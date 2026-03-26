@@ -357,11 +357,45 @@ public class DB {
         return bookmarkList;
     }
 
+    public static List<Bookmark> loadFolderBookmarks(String folder) throws SQLException {
+        ArrayList<Bookmark> bookmarkList = new ArrayList<>();
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("select id, url, label, folder from bookmarks where folder = ?")) {
+            ps.setString(1, folder);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    bookmarkList.add(new Bookmark(rs.getString(3), rs.getString(2), rs.getString(4), rs.getInt(1)));
+                }
+            }
+        }
+        return bookmarkList;
+    }
+
     public static List<Bookmark> loadTopBookmarks() throws SQLException {
         ArrayList<Bookmark> bookmarkList = new ArrayList<>();
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
-
-            try (ResultSet rs = st.executeQuery("select b.id, b.url, b.label, b.folder, count(h.url) as visit_count from bookmarks b join history h on b.url = h.url group by b.id, b.url, b.label, b.folder order by visit_count desc, b.id ASC limit 20")) {
+            String sql = """
+                WITH ranked AS (
+                    SELECT
+                        b.id,
+                        b.url,
+                        b.label,
+                        b.folder,
+                        COUNT(h.url) AS visit_count,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY b.label
+                            ORDER BY COUNT(h.url) DESC, b.id ASC
+                        ) AS rn
+                    FROM bookmarks b
+                    JOIN history h ON b.url = h.url
+                    GROUP BY b.id, b.url, b.label, b.folder
+                )
+                SELECT id, url, label, folder, visit_count
+                FROM ranked
+                WHERE rn = 1
+                ORDER BY visit_count DESC, id ASC
+                LIMIT 20
+            """;
+            try (ResultSet rs = st.executeQuery(sql)) {
                 while (rs.next()) {
                     bookmarkList.add(new Bookmark(rs.getString(3), rs.getString(2), rs.getString(4), rs.getInt(1)));
                 }
@@ -657,7 +691,6 @@ public class DB {
         return label;
     }
 
-
     public static void dumpDB(File outputFile) throws Exception {
         runStatement("DROP TABLE IF EXISTS CACERTS");
         // create a cacerts table and copy the x509certs from cacerts for each host in clientcerts
@@ -731,6 +764,7 @@ public class DB {
         Alhena.gopherProxy = map.getOrDefault("gopherproxy", null);
         Alhena.geminiProxy = map.getOrDefault("geminiproxy", null);
         Alhena.playerCommand = map.getOrDefault("playercommand", null);
+        Alhena.hotFolder = map.getOrDefault("hotfolder", null);
         Alhena.searchUrl = map.getOrDefault("searchurl", null);
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
