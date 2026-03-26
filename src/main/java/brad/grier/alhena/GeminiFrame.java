@@ -594,14 +594,14 @@ public final class GeminiFrame extends JFrame {
         Supplier<List<JComponent>> dynamicMenuSupplier = () -> {
             List<JComponent> items = new ArrayList<>();
             try {
-                List<Bookmark> mList = DB.loadTopBookmarks();
+                List<Bookmark> mList = Alhena.hotFolder == null ? DB.loadTopBookmarks() : DB.loadFolderBookmarks(Alhena.hotFolder);
 
                 mList.stream().forEach(bmark -> {
-                    JMenuItem mi = new JMenuItem(bmark.label());
-                    mi.addActionListener(e -> {
+                    JMenuItem jmi = new JMenuItem(bmark.label());
+                    jmi.addActionListener(e -> {
                         fetchURL(bmark.url(), false);
                     });
-                    items.add(mi);
+                    items.add(jmi);
                 });
             } catch (SQLException ex) {
                 ex.printStackTrace();
@@ -611,7 +611,12 @@ public final class GeminiFrame extends JFrame {
         };
         hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, I18n.t("noHistoryPopupLabel"));
         hotButton.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
-        hotButton.setToolTipText(I18n.t("hotButtonTip"));
+        if (Alhena.hotFolder == null) {
+            hotButton.setToolTipText(I18n.t("hotButtonTip"));
+        } else {
+            String m = MessageFormat.format(I18n.t("hotButtonFolder"), Alhena.hotFolder);
+            hotButton.setToolTipText(m);
+        }
         hotButton.setFont(buttonFont);
 
         configNavPanel(false);
@@ -1345,6 +1350,71 @@ public final class GeminiFrame extends JFrame {
             }
         }));
 
+        settingsMenu.add(createMenuItem(I18n.t("hotButton"), null, () -> {
+            JPanel inlinePanel = new JPanel(new GridLayout(3, 1));
+            inlinePanel.add(new JLabel(I18n.t("hotButtonTxt")));
+            JCheckBox top20CB = new JCheckBox(I18n.t("hotButtonCB"), Alhena.hotFolder == null);
+            inlinePanel.add(top20CB);
+
+            JPanel hotPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JLabel bmrkLabel = new JLabel(I18n.t("bookmrkFolderLabel"));
+            hotPanel.add(bmrkLabel);
+            List<String> folders;
+            try {
+                folders = DB.bookmarkFolders();
+            } catch (SQLException ex) {
+                folders = new ArrayList<>();
+                ex.printStackTrace();
+            }
+
+            if (folders.isEmpty()) {
+                folders.add("ROOT");
+            }
+
+            String[] items = folders.toArray(String[]::new);
+            JComboBox<String> bmrkCombo = new JComboBox<>(items);
+            bmrkCombo.setEditable(false);
+            bmrkCombo.setSelectedIndex(0); // TODO:
+            hotPanel.add(bmrkCombo);
+            inlinePanel.add(hotPanel);
+            bmrkCombo.setEnabled(!top20CB.isSelected());
+            bmrkLabel.setEnabled(!top20CB.isSelected());
+
+            bmrkCombo.setSelectedItem(Alhena.hotFolder);
+            String selItem = (String) bmrkCombo.getSelectedItem();
+            if (selItem != null && !selItem.equals(Alhena.hotFolder)) {
+                bmrkCombo.setSelectedIndex(-1);
+            }
+            top20CB.addActionListener(e -> {
+                boolean selected = top20CB.isSelected();
+                bmrkCombo.setEnabled(!selected);
+                bmrkLabel.setEnabled(!selected);
+
+            });
+
+            Object[] comps = {inlinePanel};
+            Object res = Util.inputDialog2(GeminiFrame.this, I18n.t("hotButton"), comps, null, false);
+            if (res != null) {
+                if (top20CB.isSelected()) {
+                    Alhena.hotFolder = null;
+                    hotButton.setToolTipText(I18n.t("hotButtonTip"));
+                } else {
+                    Alhena.hotFolder = (String) bmrkCombo.getSelectedItem();
+                    if (Alhena.hotFolder == null) {
+                        Util.infoDialog(GeminiFrame.this, I18n.t("infoLabel"), I18n.t("bmAlertkDialogTxt"));
+                        hotButton.setToolTipText(I18n.t("hotButtonTip"));
+                    } else {
+                        String m = MessageFormat.format(I18n.t("hotButtonFolder"), Alhena.hotFolder);
+                        hotButton.setToolTipText(m);
+                    }
+
+                }
+
+                DB.insertPref("hotfolder", Alhena.hotFolder);
+
+            }
+        }));
+
         settingsMenu.add(new JSeparator());
         JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem(I18n.t("smoothScrollingItem"), Alhena.smoothScrolling);
         smoothItem.addItemListener(ae -> {
@@ -1480,20 +1550,6 @@ public final class GeminiFrame extends JFrame {
 
         });
 
-        JMenuItem extPlayerItem = new JMenuItem("External Player");
-        extPlayerItem.addActionListener(ae -> {
-
-            String cmd = Util.inputDialog(GeminiFrame.this, "External Player", "Enter command for external player. Use %1 to indicate URL placement.\nInline VLC must be off.",
-                    false, Alhena.playerCommand == null ? "" : Alhena.playerCommand, null);
-            if (cmd != null) {
-                if (cmd.isBlank()) {
-                    Alhena.playerCommand = null;
-                } else {
-                    Alhena.playerCommand = cmd;
-                }
-                DB.insertPref("playercommand", Alhena.playerCommand);
-            }
-        });
 
         settingsMenu.add(inlineItem);
 
@@ -1533,7 +1589,6 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("geminiproxy", Alhena.geminiProxy);
             }
         });
-        settingsMenu.add(geminiItem);
 
         JMenuItem proxyItem = new JMenuItem(I18n.t("httpProxyItem"));
         proxyItem.addActionListener(ae -> {
@@ -1549,7 +1604,6 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("httpproxy", Alhena.httpProxy);
             }
         });
-        settingsMenu.add(proxyItem);
 
         JMenuItem gopherItem = new JMenuItem(I18n.t("gopherProxyItem"));
         gopherItem.addActionListener(ae -> {
@@ -1565,7 +1619,6 @@ public final class GeminiFrame extends JFrame {
                 DB.insertPref("gopherproxy", Alhena.gopherProxy);
             }
         });
-        settingsMenu.add(gopherItem);
 
         JMenuItem socksItem = new JMenuItem(I18n.t("socksItem"));
         socksItem.addActionListener(ae -> {
@@ -1588,7 +1641,12 @@ public final class GeminiFrame extends JFrame {
                 Alhena.resetConnections();
             }
         });
-        settingsMenu.add(socksItem);
+        JMenu proxyMenu = new JMenu("Networking");
+        proxyMenu.add(geminiItem);
+        proxyMenu.add(proxyItem);
+        proxyMenu.add(gopherItem);
+        proxyMenu.add(socksItem);
+        settingsMenu.add(proxyMenu);
 
         settingsMenu.add(new JSeparator());
         JMenuItem searchItem = new JMenuItem(I18n.t("searchUrlItem"));
@@ -2285,10 +2343,16 @@ public final class GeminiFrame extends JFrame {
             switch (visiblePage.textPane.getDocMode()) {
                 case GeminiTextPane.HISTORY_MODE ->
                     loadHistory(visiblePage.textPane, visiblePage);
-                case GeminiTextPane.BOOKMARK_MODE ->
+                case GeminiTextPane.BOOKMARK_MODE -> {
+                    int sp = visiblePage.getScrollPos();
                     loadBookmarks(visiblePage.textPane, visiblePage);
-                case GeminiTextPane.CERT_MODE ->
+                    visiblePage.setScrollPos(sp);
+                }
+                case GeminiTextPane.CERT_MODE -> {
+                    int sp = visiblePage.getScrollPos();
                     loadCerts(visiblePage.textPane);
+                    visiblePage.setScrollPos(sp);
+                }
                 case GeminiTextPane.SERVER_MODE ->
                     loadServers(visiblePage.textPane, visiblePage);
                 case GeminiTextPane.INFO_MODE -> {
@@ -2316,10 +2380,14 @@ public final class GeminiFrame extends JFrame {
         if (pb.textPane.imageOnly()) {
             return;
         }
-
+        int sp = pb.getScrollPos();
         String url = pb.textPane.getDocURLString();
         CurrentPage res = pb.textPane.current();
         streamChunks(res.currentPage(), 100, url, res.pMode());
+        EventQueue.invokeLater(() -> {
+            pb.setScrollPos(sp);
+        });
+
     }
 
     public void streamChunks(StringBuilder b, int chunkSize, String url, boolean pfMode) {
@@ -3364,7 +3432,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     @Override
-    public void setGlassPane(Component comp){
+    public void setGlassPane(Component comp) {
         super.setGlassPane(comp);
     }
 
