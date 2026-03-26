@@ -208,6 +208,7 @@ public class Alhena {
     public static int scrollbarSize;
     public static boolean smoothScrolling;
     public static boolean macUseNoto;
+    public static String hotFolder;
     private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
     private static final ResourceBundle bundle
             = ResourceBundle.getBundle("MessagesBundle", Locale.getDefault());
@@ -650,6 +651,7 @@ public class Alhena {
         gopherProxy = map.getOrDefault("gopherproxy", null);
         geminiProxy = map.getOrDefault("geminiproxy", null);
         playerCommand = map.getOrDefault("playercommand", null);
+        hotFolder = map.getOrDefault("hotfolder", null);
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
