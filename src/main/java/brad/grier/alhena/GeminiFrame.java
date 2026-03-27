@@ -621,7 +621,8 @@ public final class GeminiFrame extends JFrame {
             List<JComponent> items = new ArrayList<>();
             List<String> headings = visiblePage().textPane.getHeadings();
             headings.forEach(h -> {
-                JMenuItem jmi = new JMenuItem(h);
+                String miLabel = h.length() > 50 ? h.substring(0, 40) + "..." : h;
+                JMenuItem jmi = new JMenuItem(miLabel);
 
                 jmi.addActionListener(e -> {
                     visiblePage().textPane.scrollToHeading(h);
@@ -634,8 +635,6 @@ public final class GeminiFrame extends JFrame {
         outlineButton = new PopupMenuButton("📋", outlineSupplier, "No headers");
         outlineButton.setToolTipText("Document outline");
         outlineButton.setFont(buttonFont);
-
-
 
         configNavPanel(false);
         if (SystemInfo.isMacOS) {
