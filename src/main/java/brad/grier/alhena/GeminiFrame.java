@@ -632,8 +632,8 @@ public final class GeminiFrame extends JFrame {
 
             return items;
         };
-        outlineButton = new PopupMenuButton("📋", outlineSupplier, "No headers");
-        outlineButton.setToolTipText("Document outline");
+        outlineButton = new PopupMenuButton("📋", outlineSupplier, I18n.t("noHeadersTxt"));
+        outlineButton.setToolTipText(I18n.t("docOutlineTip"));
         outlineButton.setFont(buttonFont);
 
         configNavPanel(false);
@@ -3611,5 +3611,13 @@ public final class GeminiFrame extends JFrame {
 
     public void focusOnAddressBar() {
         comboBox.requestFocusInWindow();
+    }
+
+    public void clickHotButton(){
+        hotButton.doClick();
+    }
+
+    public void clickOutlineButton(){
+        outlineButton.doClick();
     }
 }

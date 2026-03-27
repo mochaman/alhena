@@ -356,7 +356,7 @@ public class Alhena {
                 lgp = null;
                 keyDown = false;
                 Component c = gf.getGlassPane();
-                if (c instanceof LinkGlassPane && !((LinkGlassPane)c).isFixed()) {
+                if (c instanceof LinkGlassPane && !((LinkGlassPane) c).isFixed()) {
                     c.setVisible(false);
                 }
                 sDown = false;
@@ -366,7 +366,7 @@ public class Alhena {
                 KeyStroke ks = KeyStroke.getKeyStrokeForEvent(e);
 
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE && !keyDown) {
-                    
+
                     if (gf.getGlassPane() instanceof LinkGlassPane && gf.getGlassPane().isVisible()) {
                         gf.visiblePage().textPane.resetLGP();
                         e.consume();
@@ -408,6 +408,14 @@ public class Alhena {
                     return true;
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_R, MOD))) {
                     gf.refresh();
+                    e.consume();
+                    return true;
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, MOD))) {
+                    gf.clickHotButton();
+                    e.consume();
+                    return true;
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_PERIOD, MOD))) {
+                    gf.clickOutlineButton();
                     e.consume();
                     return true;
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_C, MOD))) {
@@ -488,7 +496,8 @@ public class Alhena {
                 }
             }
             return false; // allow event to be processed
-        });
+        }
+        );
 
         Files.createDirectories(Paths.get(alhenaHome));
         if (!new File(alhenaHome + "/cacerts").exists()) {
