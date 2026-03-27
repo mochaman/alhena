@@ -626,6 +626,8 @@ public final class GeminiFrame extends JFrame {
 
                 jmi.addActionListener(e -> {
                     visiblePage().textPane.scrollToHeading(h);
+                    visiblePage().textPane.requestFocusInWindow();
+                    
                 });
                 items.add(jmi);
             });
