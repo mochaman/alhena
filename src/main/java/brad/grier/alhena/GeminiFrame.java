@@ -130,7 +130,7 @@ public final class GeminiFrame extends JFrame {
     private final JButton favButton;
     public final JButton refreshButton;
     private final JButton homeButton;
-    private final PopupMenuButton hotButton;
+    private final PopupMenuButton hotButton, outlineButton;
     private final JPanel navPanel;
     public static int currentThemeId;
     private final HashMap<Page, ArrayList<Page>> pageHistoryMap = new HashMap<>();
@@ -591,11 +591,10 @@ public final class GeminiFrame extends JFrame {
 
         navPanel = new JPanel(new GridBagLayout());
 
-        Supplier<List<JComponent>> dynamicMenuSupplier = () -> {
+        Supplier<List<JComponent>> hotButtonSupplier = () -> {
             List<JComponent> items = new ArrayList<>();
             try {
                 List<Bookmark> mList = Alhena.hotFolder == null ? DB.loadTopBookmarks() : DB.loadFolderBookmarks(Alhena.hotFolder);
-
                 mList.stream().forEach(bmark -> {
                     JMenuItem jmi = new JMenuItem(bmark.label());
                     jmi.addActionListener(e -> {
@@ -606,11 +605,11 @@ public final class GeminiFrame extends JFrame {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-
             return items;
         };
-        hotButton = new PopupMenuButton("🔥", dynamicMenuSupplier, I18n.t("noHistoryPopupLabel"));
-        hotButton.setFont(new Font("Noto Emoji Regular", Font.PLAIN, 18));
+
+        hotButton = new PopupMenuButton("🔥", hotButtonSupplier, I18n.t("noHistoryPopupLabel"));
+
         if (Alhena.hotFolder == null) {
             hotButton.setToolTipText(I18n.t("hotButtonTip"));
         } else {
@@ -618,6 +617,25 @@ public final class GeminiFrame extends JFrame {
             hotButton.setToolTipText(m);
         }
         hotButton.setFont(buttonFont);
+        Supplier<List<JComponent>> outlineSupplier = () -> {
+            List<JComponent> items = new ArrayList<>();
+            List<String> headings = visiblePage().textPane.getHeadings();
+            headings.forEach(h -> {
+                JMenuItem jmi = new JMenuItem(h);
+
+                jmi.addActionListener(e -> {
+                    visiblePage().textPane.scrollToHeading(h);
+                });
+                items.add(jmi);
+            });
+
+            return items;
+        };
+        outlineButton = new PopupMenuButton("📋", outlineSupplier, "No headers");
+        outlineButton.setToolTipText("Document outline");
+        outlineButton.setFont(buttonFont);
+
+
 
         configNavPanel(false);
         if (SystemInfo.isMacOS) {
@@ -967,6 +985,7 @@ public final class GeminiFrame extends JFrame {
         navPanel.add(comboBox, gridBagConstraints);
         if (!Alhena.compactTB) {
             navPanel.add(hotButton, c);
+            navPanel.add(outlineButton, c);
             navPanel.add(homeButton, c);
 
             GridBagConstraints c1 = new java.awt.GridBagConstraints();
@@ -1549,7 +1568,6 @@ public final class GeminiFrame extends JFrame {
             DB.insertPref("tabscroll", String.valueOf(Alhena.tabScrolling));
 
         });
-
 
         settingsMenu.add(inlineItem);
 

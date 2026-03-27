@@ -53,6 +53,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -174,6 +175,7 @@ public class GeminiTextPane extends JTextPane {
     public static boolean dragToScroll;
     private int printWidth;
     private ArrayList<ClickableRange> openQueue;
+    private LinkedHashMap<String, Integer> headingMap = new LinkedHashMap<>();
 
     public static void setup() {
         String userDefined = System.getenv("ALHENA_MONOFONT");
@@ -526,7 +528,7 @@ public class GeminiTextPane extends JTextPane {
                     if (index >= 0 && lgp != null) {
 
                         lgp.setVisible(false);
-                        
+
                         if (lgp.isRightClick()) {
                             rightClickVisibleLink(index);
                         } else {
@@ -1406,6 +1408,25 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
+    public void scrollToHeading(String heading){
+        int pos = headingMap.get(heading);
+
+        setCaretPosition(pos);
+        EventQueue.invokeLater(() -> {
+            try {
+                Rectangle caretRect = modelToView2D(pos).getBounds();
+                Container parent = getParent();
+                if (parent instanceof JViewport viewport) {
+
+                    int targetY = Math.max(0, caretRect.y);
+                    viewport.setViewPosition(new Point(0, targetY));
+                }
+            } catch (BadLocationException e) {
+
+            }
+        });
+    }
+
     public static void highlight(JTextPane textPane, String pattern) throws BadLocationException {
         Highlighter highlighter = textPane.getHighlighter();
         highlighter.removeAllHighlights();
@@ -1786,6 +1807,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
+
         if (page.isGopherTLS()) {
             docURL = docURL.replace("gopher:/", "gophers:/");
         }
@@ -1824,6 +1846,7 @@ public class GeminiTextPane extends JTextPane {
         plainTextMode = pfMode;
         // map to track clickable regions and their actions
         clickableRegions.clear();
+        headingMap.clear();
         saveRange = null;
         currentCursor = Cursor.DEFAULT_CURSOR;
         currentStatus = null;
@@ -2271,11 +2294,20 @@ public class GeminiTextPane extends JTextPane {
                 }
             }
         } else if (line.startsWith("###")) {
-            addStyledText(line.substring(3).trim(), "###", null);
+            int hstart = doc.getLength();
+            String hl = line.substring(3).trim();
+            addStyledText(hl, "###", null);
+            headingMap.put(hl, hstart);
         } else if (line.startsWith("##")) {
-            addStyledText(line.substring(2).trim(), "##", null);
+            int hstart = doc.getLength();
+            String hl = line.substring(2).trim();
+            addStyledText(hl, "##", null);
+            headingMap.put(hl, hstart);
         } else if (line.startsWith("#")) {
-            addStyledText(line.substring(1).trim(), "#", null);
+            int hstart = doc.getLength();
+            String hl = line.substring(2).trim();
+            addStyledText(hl, "#", null);
+            headingMap.put(hl, hstart);
         } else if (line.startsWith("=>") || (page.isSpartan() && line.startsWith("=: "))) {
             String ll = line.substring(2).trim();
             boolean spartanLink = line.startsWith("=: ");
@@ -3304,6 +3336,14 @@ public class GeminiTextPane extends JTextPane {
         FontMetrics metrics = new Canvas().getFontMetrics(font);
         return new BaselineShiftedIcon(bi, metrics.getDescent() / 2);
 
+    }
+
+    public List<String> getHeadings(){
+        ArrayList<String> hl = new ArrayList<>();
+        headingMap.keySet().forEach(key ->{
+            hl.add(key);
+        });
+        return hl;
     }
 
 }
