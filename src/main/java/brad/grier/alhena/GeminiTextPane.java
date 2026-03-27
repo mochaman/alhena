@@ -2309,7 +2309,7 @@ public class GeminiTextPane extends JTextPane {
             headingMap.put(hl, hstart);
         } else if (line.startsWith("#")) {
             int hstart = doc.getLength();
-            String hl = line.substring(2).trim();
+            String hl = line.substring(1).trim();
             addStyledText(hl, "#", null);
             headingMap.put(hl, hstart);
         } else if (line.startsWith("=>") || (page.isSpartan() && line.startsWith("=: "))) {
