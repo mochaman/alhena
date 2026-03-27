@@ -1050,6 +1050,7 @@ public class GeminiTextPane extends JTextPane {
                         }
                     }
                 }
+                headingMap.replaceAll((key, value) -> value > rg.start ? value - 2 : value);
             }
 
             if (rg.dataUrl) {
@@ -1150,6 +1151,7 @@ public class GeminiTextPane extends JTextPane {
                         }
                     }
                 }
+                headingMap.replaceAll((key, value) -> value > lastClicked.start ? value + 2 : value);
                 lastClicked = null;
             }
 
@@ -1269,6 +1271,8 @@ public class GeminiTextPane extends JTextPane {
                         }
                     }
                 }
+                headingMap.replaceAll((key, value) -> value > lastClicked.start ? value + 2 : value);
+
                 lastClicked.openImage = true;
                 lastClicked = null;
                 if (printing) {
