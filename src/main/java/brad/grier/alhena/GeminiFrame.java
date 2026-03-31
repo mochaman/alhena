@@ -2696,7 +2696,11 @@ public final class GeminiFrame extends JFrame {
                                 setBusy(false, currentPB);
                                 setBusy(true, histPage);
 
-                                tabbedPane.setComponentAt(idx, histPage);
+                                if (currentPB.getParent() instanceof SplitPanel sp) {
+                                     sp.replacePage(currentPB, histPage);
+                                } else {
+                                    tabbedPane.setComponentAt(idx, histPage);
+                                }
                                 refreshNav(histPage);
                             } else {
                                 histPage.runWhenDone(() -> currentPB.setBusy(false));
@@ -2706,7 +2710,11 @@ public final class GeminiFrame extends JFrame {
 
                                 setBusy(false, currentPB);
                                 setBusy(true, histPage);
-                                tabbedPane.setComponentAt(currentTabIdx, histPage);
+                                if (currentPB.getParent() instanceof SplitPanel sp) {
+                                     sp.replacePage(currentPB, histPage);
+                                } else {
+                                    tabbedPane.setComponentAt(currentTabIdx, histPage);
+                                }
                             } else {
                                 histPage.runWhenDone(() -> currentPB.setBusy(false));
                             }
@@ -3464,7 +3472,7 @@ public final class GeminiFrame extends JFrame {
 
             boolean destRight = focusedPage == sp.getLeftComponent();
             Page destPage = destRight ? (Page) sp.getRightComponent() : (Page) sp.getLeftComponent();
-            Page origPage = destPage == sp.getRightComponent() ? (Page)sp.getLeftComponent() : (Page)sp.getRightComponent();
+            Page origPage = destPage == sp.getRightComponent() ? (Page) sp.getLeftComponent() : (Page) sp.getRightComponent();
             sp.setFocusedPage(destPage);
             destPage.textPane.requestFocusInWindow();
             String resolvedURI;
