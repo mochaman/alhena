@@ -3,6 +3,7 @@ package brad.grier.alhena;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
@@ -56,7 +57,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -87,6 +90,7 @@ import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSlider;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.JWindow;
@@ -163,6 +167,7 @@ public final class GeminiFrame extends JFrame {
     private PrinterJob job;
     private JMenu fileMenu;
     private final JMenu viewMenu, aboutMenu;
+    private JMenuItem splitRightItem, splitBottomItem;
 
     // Haiku JVM doesn't allow alt modifier which breaks menu mnemonics
     public boolean haikuMenuShortcut(int keyCode) {
@@ -264,33 +269,38 @@ public final class GeminiFrame extends JFrame {
 
             for (int i = 0; i < tabCount; i++) {
                 JsonObject tabObject = new JsonObject();
-                Page p = (Page) tabbedPane.getComponentAt(i);
-                int[] curPageIdx = {p.getArrayIndex()}; // selected page in history
-                JsonArray pageArray = new JsonArray();
-                int[] pageNum = {0};
-                pageHistoryMap.get(getRootPage(p)).forEach(page -> {
-                    if (!prunedPages.contains(page)) {
-                        JsonObject jp = new JsonObject();
-                        jp.put("url", page.toString());
-                        jp.put("content", page.textPane.current().currentPage().toString());
-                        jp.put("pfmode", page.textPane.current().pMode());
-                        jp.put("pos", page.getScrollPos());
-                        jp.put("fetchtime", page.getFetchTime());
-                        pageArray.add(jp);
-                    } else {
-                        if (pageNum[0] < curPageIdx[0]) {
-                            curPageIdx[0]--;
-                        }
-                    }
-                    pageNum[0]++;
-                });
-                if (pageArray.size() > 0) {
-                    tabObject.put("activePageIndex", curPageIdx[0]);
-                    tabObject.put("pages", pageArray);
+                if (tabbedPane.getComponentAt(i) instanceof SplitPanel sp) {
+                    processSplitView(sp, prunedPages, tabObject);
                     tabArray.add(tabObject);
                 } else {
-                    if (tabCount < selTabIdx[0]) {
-                        selTabIdx[0]--;
+                    Page p = (Page) tabbedPane.getComponentAt(i);
+                    int[] curPageIdx = {p.getArrayIndex()}; // selected page in history
+                    JsonArray pageArray = new JsonArray();
+                    int[] pageNum = {0};
+                    pageHistoryMap.get(getRootPage(p)).forEach(page -> {
+                        if (!prunedPages.contains(page)) {
+                            JsonObject jp = new JsonObject();
+                            jp.put("url", page.toString());
+                            jp.put("content", page.textPane.current().currentPage().toString());
+                            jp.put("pfmode", page.textPane.current().pMode());
+                            jp.put("pos", page.getScrollPos());
+                            jp.put("fetchtime", page.getFetchTime());
+                            pageArray.add(jp);
+                        } else {
+                            if (pageNum[0] < curPageIdx[0]) {
+                                curPageIdx[0]--;
+                            }
+                        }
+                        pageNum[0]++;
+                    });
+                    if (pageArray.size() > 0) {
+                        tabObject.put("activePageIndex", curPageIdx[0]);
+                        tabObject.put("pages", pageArray);
+                        tabArray.add(tabObject);
+                    } else {
+                        if (tabCount < selTabIdx[0]) {
+                            selTabIdx[0]--;
+                        }
                     }
                 }
 
@@ -302,36 +312,99 @@ public final class GeminiFrame extends JFrame {
             jo.put("activeTabIndex", 0);
             JsonObject tabObject = new JsonObject();
 
-            pageHistoryMap.entrySet().stream().forEach(entry -> {
+            if (visiblePage().getParent() instanceof SplitPanel sp) {
+                processSplitView(sp, prunedPages, tabObject);
+                tabArray.add(tabObject);
+                jo.put("tabs", tabArray);
 
-                int[] curPageIdx = {entry.getKey().getArrayIndex()}; // selected page in history
-                JsonArray pageArray = new JsonArray();
-                int[] pageNum = {0};
-                entry.getValue().forEach(page -> {
-                    if (!prunedPages.contains(page)) {
-                        JsonObject jp = new JsonObject();
-                        jp.put("url", page.toString());
-                        jp.put("content", page.textPane.current().currentPage().toString());
-                        jp.put("pfmode", page.textPane.current().pMode());
-                        jp.put("pos", page.getScrollPos());
-                        jp.put("fetchtime", page.getFetchTime());
-                        pageArray.add(jp);
-                    } else {
-                        if (pageNum[0] < curPageIdx[0]) {
-                            curPageIdx[0]--;
+            } else {
+
+                pageHistoryMap.entrySet().stream().forEach(entry -> {
+
+                    int[] curPageIdx = {entry.getKey().getArrayIndex()}; // selected page in history
+                    JsonArray pageArray = new JsonArray();
+                    int[] pageNum = {0};
+                    entry.getValue().forEach(page -> {
+                        if (!prunedPages.contains(page)) {
+
+                            JsonObject jp = new JsonObject();
+                            jp.put("url", page.toString());
+                            jp.put("content", page.textPane.current().currentPage().toString());
+                            jp.put("pfmode", page.textPane.current().pMode());
+                            jp.put("pos", page.getScrollPos());
+                            jp.put("fetchtime", page.getFetchTime());
+                            pageArray.add(jp);
+
+                        } else {
+                            if (pageNum[0] < curPageIdx[0]) {
+                                curPageIdx[0]--;
+                            }
                         }
-                    }
-                    pageNum[0]++;
-                });
-                tabObject.put("activePageIndex", curPageIdx[0]);
-                tabObject.put("pages", pageArray);
+                        pageNum[0]++;
+                    });
+                    tabObject.put("activePageIndex", curPageIdx[0]);
+                    tabObject.put("pages", pageArray);
 
-            });
-            tabArray.add(tabObject);
-            jo.put("tabs", tabArray);
+                });
+                tabArray.add(tabObject);
+                jo.put("tabs", tabArray);
+            }
 
         }
+
         return jo;
+    }
+
+    private void processSplitView(SplitPanel sp, List<Page> prunedPages, JsonObject tabObject) {
+        Page lp = (Page) sp.getLeftComponent();
+        Page rp = (Page) sp.getRightComponent();
+        record PaneRes(int activeIdx, JsonArray pageArray) {
+
+        }
+        Function<Page, PaneRes> f = pg -> {
+            JsonArray pageArray = new JsonArray();
+            int[] pageNum = {0};
+            int[] curPageIdx = {pg.getArrayIndex()}; // selected page in history
+
+            pageHistoryMap.get(getRootPage(pg)).forEach(page -> {
+                if (!prunedPages.contains(page)) {
+                    JsonObject jp = new JsonObject();
+                    jp.put("url", page.toString());
+                    jp.put("content", page.textPane.current().currentPage().toString());
+                    jp.put("pfmode", page.textPane.current().pMode());
+                    jp.put("pos", page.getScrollPos());
+                    jp.put("fetchtime", page.getFetchTime());
+                    pageArray.add(jp);
+                } else {
+                    if (pageNum[0] < curPageIdx[0]) {
+                        curPageIdx[0]--;
+                    }
+                }
+                pageNum[0]++;
+            });
+
+            return new PaneRes(curPageIdx[0], pageArray);
+
+        };
+        PaneRes lPane = f.apply(lp);
+        PaneRes rPane = f.apply(rp);
+        if (lPane.pageArray.isEmpty()) {
+            // everything pruned - now just normal pages
+            tabObject.put("activePageIndex", rPane.activeIdx);
+            tabObject.put("pages", rPane.pageArray); // okay to add empty array if all pruned
+        } else if (rPane.pageArray.isEmpty()) {
+            tabObject.put("activePageIndex", lPane.activeIdx);
+            tabObject.put("pages", lPane.pageArray); // okay to add empty array if all pruned
+        } else {
+            JsonObject svJson = new JsonObject();
+            svJson.put("lidx", lPane.activeIdx);
+            svJson.put("lpages", lPane.pageArray);
+            svJson.put("ridx", rPane.activeIdx);
+            svJson.put("rpages", rPane.pageArray);
+            svJson.put("div", sp.getDividerLocation());
+            svJson.put("orientation", sp.getOrientation());
+            tabObject.put("splitview", svJson);
+        }
     }
 
     public void forEachPage(Consumer<Page> c) {
@@ -493,9 +566,6 @@ public final class GeminiFrame extends JFrame {
             monoFontSize = fontSize = DEFAULT_FONT_SIZE;
         }
 
-        boolean addToHistory = url != null || baseUrl != null;
-        Page pb = newPage(baseUrl, null, addToHistory);
-
         setLayout(new BorderLayout());
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -627,7 +697,7 @@ public final class GeminiFrame extends JFrame {
                 jmi.addActionListener(e -> {
                     visiblePage().textPane.scrollToHeading(h);
                     visiblePage().textPane.requestFocusInWindow();
-                    
+
                 });
                 items.add(jmi);
             });
@@ -658,7 +728,6 @@ public final class GeminiFrame extends JFrame {
             add(navPanel, BorderLayout.NORTH);
         }
 
-        add(pb, BorderLayout.CENTER);
         statusField = new JLabel(" ");
         setTmpStatus(Alhena.welcomeMessage);
 
@@ -889,6 +958,28 @@ public final class GeminiFrame extends JFrame {
             findAgain();
         }));
 
+        viewMenu.add(new JSeparator());
+        splitRightItem = new JMenuItem("Split Right");
+
+        splitRightItem.addActionListener(ev -> {
+            boolean saveSetting = Alhena.useBrowser;
+            Alhena.useBrowser = false;
+            splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT);
+            Alhena.useBrowser = saveSetting;
+        });
+        viewMenu.add(splitRightItem);
+
+        splitBottomItem = new JMenuItem("Split Bottom");
+
+        splitBottomItem.addActionListener(ev -> {
+            boolean saveSetting = Alhena.useBrowser;
+            Alhena.useBrowser = false;
+            splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT);
+            Alhena.useBrowser = saveSetting;
+        });
+
+        viewMenu.add(splitBottomItem);
+
         menuBar.add(viewMenu);
 
         addBookmarks();
@@ -956,13 +1047,73 @@ public final class GeminiFrame extends JFrame {
             setLocationRelativeTo(null);
             setMinimumSize(new Dimension(320, 200));
         }
-        setVisible(true);
-        if (savedPage == null && url != null) {
+        Supplier<Page> r = () -> {
+            boolean addToHistory = url != null || baseUrl != null;
+            Page pb = newPage(baseUrl, null, addToHistory);
+            add(pb, BorderLayout.CENTER);
 
-            init(url, pb);
+            setVisible(true);
+            return pb;
+        };
+
+        if (savedPage == null && url != null) {
+            init(url, r.get());
         } else {
-            setPageInfo(savedPage, pb);
+            if (savedPage.containsKey("lpages")) {
+                restoreSplitView(savedPage);
+
+            } else {
+                setPageInfo(savedPage, r.get());
+            }
         }
+    }
+
+    private void restoreSplitView(JsonObject savedPage) {
+
+        SplitPanel sp = new SplitPanel(this, savedPage.getInteger("orientation"));
+        JsonArray lpages = savedPage.getJsonArray("lpages");
+        JsonArray rpages = savedPage.getJsonArray("rpages");
+        JsonObject lpage = lpages.getJsonObject(0);
+        JsonObject rpage = rpages.getJsonObject(0);
+
+        Page lp = newPage(lpage.getString("url"), null, true);
+        Page rp = newPage(rpage.getString("url"), null, true);
+        sp.setLeftComponent(lp);
+        sp.setRightComponent(rp);
+        sp.setDividerLocation(savedPage.getInteger("div"));
+
+        add(sp, BorderLayout.CENTER);
+        setVisible(true);
+
+        setPageInfo(lpage, lp);
+        setPageInfo(rpage, rp);
+
+        sp.setFocusedPage(lp);
+
+        BiConsumer<Integer, JsonArray> bc = (idx, pages) -> {
+            for (int i = 1; i < pages.size(); i++) {
+                JsonObject pge = pages.getJsonObject(i);
+                String purl = pge.getString("url");
+                if (CUSTOM_LABELS.contains(purl)) {
+                    InfoPageInfo pageInfo = new InfoPageInfo(purl, pge.getString("content"));
+                    showCustomPage(purl, false, pageInfo, true);
+                } else {
+                    fetchURL(purl, null, false, pge);
+                }
+            }
+            int currPageIdx = pages.size() - 1;
+            while (idx < currPageIdx) {
+                goBack();
+                currPageIdx--;
+            }
+        };
+
+        bc.accept(savedPage.getInteger("lidx"), lpages);
+
+        sp.setFocusedPage(rp);
+        bc.accept(savedPage.getInteger("ridx"), rpages);
+
+        ((Page) sp.getLeftComponent()).textPane.requestFocusInWindow();
     }
 
     public void configNavPanel(boolean reset) {
@@ -1005,12 +1156,17 @@ public final class GeminiFrame extends JFrame {
             Page next = next(groupPane);
             String cUrl = next.textPane.getDocURLString();
             updateComboBox(cUrl);
-            if (tabbedPane == null) {
+            if (tabbedPane == null || tabbedPane.getSelectedComponent() instanceof SplitPanel) {
                 invalidate();
-
-                remove(vPage);
-                next.setVisible(true);
-                add(next, BorderLayout.CENTER);
+                Container c = vPage.getParent();
+                if (c instanceof SplitPanel splitPanel) {
+                    next.setVisible(true);
+                    splitPanel.replacePage(vPage, next);
+                } else {
+                    remove(vPage);
+                    next.setVisible(true);
+                    add(next, BorderLayout.CENTER);
+                }
 
                 revalidate();
             } else {
@@ -1054,11 +1210,18 @@ public final class GeminiFrame extends JFrame {
             Page prev = prev(rootPage);
             String cUrl = prev.textPane.getDocURLString();
             updateComboBox(cUrl);
-            if (tabbedPane == null) {
+            if (tabbedPane == null || tabbedPane.getSelectedComponent() instanceof SplitPanel) {
                 invalidate();
-                remove(vPage);
-                prev.setVisible(true);
-                add(prev, BorderLayout.CENTER);
+                Container c = vPage.getParent();
+                if (c instanceof SplitPanel splitPanel) {
+                    prev.setVisible(true);
+                    splitPanel.replacePage(vPage, prev);
+                } else {
+                    remove(vPage);
+                    prev.setVisible(true);
+                    add(prev, BorderLayout.CENTER);
+
+                }
                 revalidate();
 
             } else {
@@ -2195,7 +2358,7 @@ public final class GeminiFrame extends JFrame {
         Page rootPage = getRootPage(currentPB);
         if (rootPage != null) {
 
-            if (tabbedPane == null) {
+            if (tabbedPane == null || tabbedPane.getSelectedComponent() instanceof SplitPanel) {
 
                 Page pb = newPage(currentPB.textPane.getDocURLString(), null, false);
                 boolean[] first = {true};
@@ -2207,7 +2370,7 @@ public final class GeminiFrame extends JFrame {
                         pb.setDataFile(null);
                         Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == visiblePage());
 
-                        if (tabbedPane != null) { // ugh - tab added in interim
+                        if (tabbedPane != null && !(tabbedPane.getSelectedComponent() instanceof SplitPanel)) { // ugh - tab added in interim
                             int idx = tabbedPane.getSelectedIndex();
 
                             if (tabbedPane.getComponentAt(idx) == currentPB) { // make sure we're on the same tab
@@ -2239,11 +2402,13 @@ public final class GeminiFrame extends JFrame {
                             setBusy(false, currentPB);
                             setBusy(true, histPage);
                             invalidate();
-
-                            remove(currentPB);
-
-                            add(histPage, BorderLayout.CENTER);
-
+                            Container c = currentPB.getParent();
+                            if (c instanceof SplitPanel splitPanel) {
+                                splitPanel.replacePage(currentPB, histPage);
+                            } else {
+                                remove(currentPB);
+                                add(histPage, BorderLayout.CENTER);
+                            }
                             revalidate();
                             refreshNav(histPage);
                         } else {
@@ -2328,8 +2493,8 @@ public final class GeminiFrame extends JFrame {
     public void setPageInfo(JsonObject page, Page p) {
 
         String url = page.getString("url");
-        if (!url.startsWith("alhena:")) {
 
+        try {
             String scheme = URI.create(url).getScheme();
             switch (scheme) {
                 case "gophers" ->
@@ -2343,6 +2508,8 @@ public final class GeminiFrame extends JFrame {
                 default -> {
                 }
             }
+        } catch (Exception ex) {
+            // ignore - one of the alhena: or cert urls
         }
         p.setFetchTime(page.getLong("fetchtime"));
         p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), url, true);
@@ -2402,19 +2569,18 @@ public final class GeminiFrame extends JFrame {
         int sp = pb.getScrollPos();
         String url = pb.textPane.getDocURLString();
         CurrentPage res = pb.textPane.current();
-        streamChunks(res.currentPage(), 100, url, res.pMode());
+        streamChunks(res.currentPage(), 100, url, res.pMode(), pb);
         EventQueue.invokeLater(() -> {
             pb.setScrollPos(sp);
         });
 
     }
 
-    public void streamChunks(StringBuilder b, int chunkSize, String url, boolean pfMode) {
+    public void streamChunks(StringBuilder b, int chunkSize, String url, boolean pfMode, Page vp) {
         if (b == null || b.isEmpty()) {
             // showGlassPane(false);
             return;
         }
-        Page vp = visiblePage();
         setBusy(true, vp);
         new Thread(() -> {
             int idx = 0;
@@ -2479,10 +2645,13 @@ public final class GeminiFrame extends JFrame {
                             setBusy(false, currentPB);
                             setBusy(true, histPage);
                             invalidate();
-
-                            remove(currentPB);
-                            add(histPage, BorderLayout.CENTER);
-
+                            Container c = currentPB.getParent();
+                            if (c instanceof SplitPanel splitPanel) {
+                                splitPanel.replacePage(currentPB, histPage);
+                            } else {
+                                remove(currentPB);
+                                add(histPage, BorderLayout.CENTER);
+                            }
                             revalidate();
                             refreshNav(histPage);
                         } else {
@@ -3206,11 +3375,10 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void toggleView(GeminiTextPane textPane, boolean isPlainText) {
-        // showGlassPane(true, textPane);
         String url = textPane.getDocURLString();
         CurrentPage res = textPane.current();
         visiblePage().ignoreStart();
-        streamChunks(res.currentPage(), 100, url, isPlainText);
+        streamChunks(res.currentPage(), 100, url, isPlainText, visiblePage());
     }
 
     public void viewServerCert(GeminiTextPane textPane, URI uri) {
@@ -3249,8 +3417,190 @@ public final class GeminiFrame extends JFrame {
         });
     }
 
-    public void newTab(String url, JsonObject savedPage) {
+    public void removeSplitView() {
+        if (tabbedPane == null) {
+            SplitPanel sp = (SplitPanel) visiblePage().getParent();
+            Page remainingPage;
+            if (visiblePage() == sp.getLeftComponent()) {
+                remainingPage = (Page) sp.getRightComponent();
+                shutdownPage((Page) sp.getLeftComponent());
+            } else {
+                remainingPage = (Page) sp.getLeftComponent();
+                shutdownPage((Page) sp.getRightComponent());
+            }
+            remove(sp);
+            add(remainingPage, BorderLayout.CENTER);
+            revalidate();
+            splitViewChanged(remainingPage);
+            remainingPage.textPane.requestFocusInWindow();
 
+        } else {
+            SplitPanel sp = (SplitPanel) visiblePage().getParent();
+            int idx = tabbedPane.getSelectedIndex();
+            String title = tabbedPane.getTitleAt(idx);
+            Page remainingPage;
+            if (visiblePage() == sp.getLeftComponent()) {
+                remainingPage = (Page) sp.getRightComponent();
+                shutdownPage((Page) sp.getLeftComponent());
+            } else {
+                remainingPage = (Page) sp.getLeftComponent();
+                shutdownPage((Page) sp.getRightComponent());
+            }
+            sp.remove(remainingPage);
+            tabbedPane.remove(idx);
+            tabbedPane.insertTab(title, null, newPage("", null, false), null, idx);
+            tabbedPane.setSelectedIndex(idx);
+            tabbedPane.setComponentAt(idx, remainingPage);
+
+            splitViewChanged(remainingPage);
+            remainingPage.requestFocusInWindow();
+
+        }
+    }
+
+    public void splitView(String url, JsonObject saveSplitView, int orientation) {
+        if (visiblePage().getParent() instanceof SplitPanel sp) {
+            Page focusedPage = sp.getFocusedPage();
+
+            boolean destRight = focusedPage == sp.getLeftComponent();
+            Page destPage = destRight ? (Page) sp.getRightComponent() : (Page) sp.getLeftComponent();
+            Page origPage = destPage == sp.getRightComponent() ? (Page)sp.getLeftComponent() : (Page)sp.getRightComponent();
+            sp.setFocusedPage(destPage);
+            destPage.textPane.requestFocusInWindow();
+            String resolvedURI;
+            if (url.startsWith("alhena:")) {
+                resolvedURI = url;
+            } else {
+                resolvedURI = Util.resolveURI(origPage.textPane.getURI(), url);
+            }
+            if (CUSTOM_LABELS.contains(url)) {
+                showCustomPage(url, null);
+            } else {
+                fetchURL(resolvedURI, false);
+            }
+
+        } else if (tabbedPane != null) {
+            int idx = tabbedPane.getSelectedIndex();
+            Page p = (Page) tabbedPane.getComponentAt(idx);
+            String title = tabbedPane.getTitleAt(idx);
+            Dimension size = p.getSize();
+            tabbedPane.remove(idx);
+
+            tabbedPane.insertTab(title, null, newPage("", null, false), null, idx);
+            tabbedPane.setSelectedIndex(idx);
+
+            SplitPanel sp = new SplitPanel(this, orientation);
+
+            sp.setLeftComponent(p);
+
+            String du = p.textPane.getDocURLString();
+
+            Page pb = newPage(du, null, true);
+
+            pb.setThemeId(currentThemeId);
+            sp.setRightComponent(pb);
+
+            tabbedPane.setComponentAt(idx, sp);
+
+            if (saveSplitView == null) {
+                int span = orientation == JSplitPane.VERTICAL_SPLIT ? size.height : size.width;
+                sp.setDividerLocation((int) (span / 2));
+                Alhena.processURL(url, pb, null, p, false);
+            } else {
+                JsonArray rpages = saveSplitView.getJsonArray("rpages");
+                JsonArray lpages = saveSplitView.getJsonArray("lpages");
+                JsonObject rpage = rpages.getJsonObject(0);
+                setPageInfo(rpage, pb);
+
+                sp.setFocusedPage(p);
+
+                BiConsumer<Integer, JsonArray> bc = (idx2, pages) -> {
+                    for (int i = 1; i < pages.size(); i++) {
+                        JsonObject pge = pages.getJsonObject(i);
+                        String purl = pge.getString("url");
+                        if (CUSTOM_LABELS.contains(purl)) {
+                            InfoPageInfo pageInfo = new InfoPageInfo(purl, pge.getString("content"));
+                            showCustomPage(purl, false, pageInfo, true);
+                        } else {
+                            fetchURL(purl, null, false, pge);
+                        }
+                    }
+                    int currPageIdx = pages.size() - 1;
+                    while (idx2 < currPageIdx) {
+                        goBack();
+                        currPageIdx--;
+                    }
+                };
+
+                bc.accept(saveSplitView.getInteger("lidx"), lpages);
+
+                sp.setFocusedPage(pb);
+                bc.accept(saveSplitView.getInteger("ridx"), rpages);
+                sp.setFocusedPage(p);
+
+                Page leftPage = (Page) sp.getLeftComponent();
+                leftPage.textPane.requestFocusInWindow();
+                if (leftPage.textPane.getDocURLString() != null) {
+                    // if another tab is immediately selected, the request focus doesn't happen - set title here manually
+                    String frameTitle = createTitle(leftPage.textPane.getDocURLString(), leftPage.textPane.getFirstHeading());
+                    setTitle(frameTitle);
+
+                }
+                sp.setDividerLocation(saveSplitView.getInteger("div"));
+            }
+
+        } else {
+            Page p = visiblePage();
+            Dimension size = p.getSize();
+            invalidate();
+            Container c = p.getParent();
+            c.remove(p);
+            SplitPanel sp = new SplitPanel(this, orientation);
+            sp.setLeftComponent(p);
+            String du = p.textPane.getDocURLString();
+            Page pb = newPage(du, null, true);
+            pb.setThemeId(currentThemeId);
+            sp.setRightComponent(pb);
+            c.add(sp, BorderLayout.CENTER);
+            pb.requestFocusInWindow();
+            int span = orientation == JSplitPane.VERTICAL_SPLIT ? size.height : size.width;
+            sp.setDividerLocation((int) (span / 2));
+            //sp.setDividerLocation((int) (width / 2));
+            revalidate();
+
+            Alhena.processURL(url, pb, null, p, false);
+
+        }
+    }
+
+    public void splitViewChanged(Page page) {
+        GeminiTextPane textPane = page.textPane;
+
+        textPane.getDocURL().ifPresentOrElse(title1 -> {
+
+            selectComboBoxItem(title1);
+
+        }, () -> {
+            selectComboBoxItem("");
+        });
+
+        Page rootPage = getRootPage(visiblePage());
+        if (rootPage != null) { // NOT 100% ON THIS
+            backButton.setEnabled(hasPrev(rootPage));
+            forwardButton.setEnabled(hasNext(rootPage));
+        } else {
+            backButton.setEnabled(false);
+            forwardButton.setEnabled(false);
+        }
+        if (textPane.getDocURLString() != null) {
+            String frameTitle = createTitle(textPane.getDocURLString(), textPane.getFirstHeading());
+            setTitle(frameTitle);
+
+        }
+
+    }
+
+    public void newTab(String url, JsonObject savedPage) {
         if (tabbedPane == null) {
             invalidate();
             tabbedPane = new JTabbedPane();
@@ -3281,17 +3631,19 @@ public final class GeminiFrame extends JFrame {
                                 tabbedPane.removeChangeListener(ev);
                                 break; // REMOVES tabbedPanes changeListener but not the L&F changeListener - CAN ORDER CHANGE?
                             }
+                            if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
 
-                            Page page = (Page) tabbedPane.getComponentAt(tabIndex);
-                            page.textPane.closed = true;
-                            removeRootPageAudioPlayers(getRootPage(page));
-                            pageHistoryMap.remove(getRootPage(page));
+                                shutdownPage(page);
+
+                            }
                             tabbedPane.remove(tabIndex);
-                            page = (Page) tabbedPane.getSelectedComponent();
-                            tabbedPane.remove(page);
+
+                            Component c = tabbedPane.getSelectedComponent();
+                            tabbedPane.remove(c);
                             GeminiFrame.this.remove(tabbedPane);
                             tabbedPane = null;
-                            GeminiFrame.this.add(page, BorderLayout.CENTER);
+                            GeminiFrame.this.add(c, BorderLayout.CENTER);
+                            Page page = c instanceof Page ? (Page) c : ((SplitPanel) c).getFocusedPage();
                             String frameTitle = createTitle(page.textPane.getDocURLString(), page.textPane.getFirstHeading());
                             if (frameTitle != null) {
                                 setTitle(frameTitle);
@@ -3311,25 +3663,34 @@ public final class GeminiFrame extends JFrame {
                             }
                             GeminiFrame.this.validate();
                         } else {
-                            Page page = (Page) tabbedPane.getComponentAt(tabIndex);
-                            page.textPane.closed = true;
-                            removeRootPageAudioPlayers(getRootPage(page));
-                            pageHistoryMap.remove(getRootPage(page));
+                            if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
+                                shutdownPage(page);
+
+                            } else { // SplitPanel
+                                SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
+                                shutdownPage((Page) sp.getLeftComponent());
+                                shutdownPage((Page) sp.getRightComponent());
+
+                            }
                             tabbedPane.remove(tabIndex);
                         }
                     });
 
             Page pb = visiblePage();
-
-            remove(pb);
             String ft = createTitle(pb.textPane.getDocURLString(), pb.textPane.getFirstHeading());
-
-            tabbedPane.addTab(abbrev(ft), pb);
+            if (pb.getParent() instanceof SplitPanel) {
+                remove(pb.getParent());
+                tabbedPane.addTab(abbrev(ft), pb.getParent());
+            } else {
+                remove(pb);
+                tabbedPane.addTab(abbrev(ft), pb);
+            }
 
             selectComboBoxItem("");
 
             tabbedPane.addChangeListener(ce -> {
-                Page page = (Page) tabbedPane.getSelectedComponent();
+
+                Page page = visiblePage();
                 if (page == null) {
                     return;
                 }
@@ -3350,7 +3711,15 @@ public final class GeminiFrame extends JFrame {
                     selectComboBoxItem("");
                 });
                 if (page.getThemeId() != currentThemeId) {
-                    refreshFromCache(visiblePage());
+                    Page visP = visiblePage();
+
+                    if (visP.getParent() instanceof SplitPanel sp) {
+                        refreshFromCache((Page) sp.getLeftComponent());
+                        refreshFromCache((Page) sp.getRightComponent());
+                    } else {
+                        refreshFromCache(visP);
+
+                    }
                     page.setThemeId(currentThemeId);
                 }
 
@@ -3389,6 +3758,7 @@ public final class GeminiFrame extends JFrame {
         tabbedPane.setSelectedComponent(pb);
 
         if (savedPage == null) {
+
             Alhena.processURL(url, pb, null, currentPage, false);
         } else {
             setPageInfo(savedPage, pb);
@@ -3404,6 +3774,13 @@ public final class GeminiFrame extends JFrame {
         backButton.setEnabled(hasPrev(rootPage));
         forwardButton.setEnabled(hasNext(rootPage));
         refreshButton.setEnabled(vPane.textPane.getDocURL().isPresent());
+
+    }
+
+    private void shutdownPage(Page page) {
+        page.textPane.closed = true;
+        removeRootPageAudioPlayers(getRootPage(page));
+        pageHistoryMap.remove(getRootPage(page));
 
     }
 
@@ -3537,6 +3914,7 @@ public final class GeminiFrame extends JFrame {
 
             textField.getDocument().addDocumentListener(dl);
             setDateField(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
+            setSplitState();
         });
     }
     private DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault());
@@ -3562,8 +3940,19 @@ public final class GeminiFrame extends JFrame {
         textField.getDocument().addDocumentListener(dl);
         if (visiblePage() != null) {
             setDateField(I18n.t("retrievedText") + " " + dateFormat.format(new Date(visiblePage().getFetchTime())));
+            setSplitState();
         }
 
+    }
+
+    private void setSplitState() {
+        if (SwingUtilities.getAncestorOfClass(SplitPanel.class, visiblePage().textPane) == null) {
+            splitRightItem.setEnabled(true);
+            splitBottomItem.setEnabled(true);
+        } else {
+            splitRightItem.setEnabled(false);
+            splitBottomItem.setEnabled(false);
+        }
     }
 
     public Page visiblePage() {
@@ -3571,8 +3960,13 @@ public final class GeminiFrame extends JFrame {
         Component centerComponent = ((BorderLayout) getContentPane().getLayout()).getLayoutComponent(BorderLayout.CENTER);
         if (centerComponent instanceof JTabbedPane) {
             Component selected = tabbedPane.getSelectedComponent();
-            vPage = (Page) selected;
-
+            if (selected instanceof Page page) {
+                vPage = page;
+            } else {
+                vPage = ((SplitPanel) selected).getFocusedPage();
+            }
+        } else if (centerComponent instanceof SplitPanel splitPanel) {
+            vPage = splitPanel.getFocusedPage();
         } else {
 
             vPage = (Page) centerComponent;
@@ -3615,11 +4009,11 @@ public final class GeminiFrame extends JFrame {
         comboBox.requestFocusInWindow();
     }
 
-    public void clickHotButton(){
+    public void clickHotButton() {
         hotButton.doClick();
     }
 
-    public void clickOutlineButton(){
+    public void clickOutlineButton() {
         outlineButton.doClick();
     }
 }

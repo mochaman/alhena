@@ -763,54 +763,77 @@ public class Alhena {
                 tabs.forEach(tabObject -> {
 
                     JsonObject tab = (JsonObject) tabObject;
-                    int pageIdx = tab.getInteger("activePageIndex");
-
-                    JsonArray pages = tab.getJsonArray("pages");
+                    JsonObject splitView = tab.getJsonObject("splitview");
                     boolean[] firstTab = {true};
-
-                    pages.forEach(pageObject -> {
-                        JsonObject page = (JsonObject) pageObject;
-
-                        String url = page.getString("url");
+                    if (splitView != null) {
                         if (first[0]) {
                             first[0] = false;
                             Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
-                            newWindow(url, url, page, windowBounds);
-
+                            newWindow(null, null, splitView, windowBounds);
                             gf[0] = frameList.getLast();
-
-                        } else if (tabCount[0] == 0) {
-                            // add subsequent pages
-                            if (CUSTOM_LABELS.contains(url)) {
-                                InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
-                                gf[0].showCustomPage(url, false, pageInfo, true);
-                            } else {
-                                gf[0].fetchURL(url, null, false, page);
-                            }
                         } else {
-                            // new tab
-                            if (firstTab[0]) {
-                                firstTab[0] = false;
-                                gf[0].newTab(url, page);
+                            
+                            JsonArray lpages = splitView.getJsonArray("lpages");
+                            JsonObject lpage = lpages.getJsonObject(0);
+                            gf[0].newTab(lpage.getString("url"), lpage);
+                            gf[0].splitView(null, splitView, splitView.getInteger("orientation"));
 
-                            } else {
+                        }
+                        tabCount[0]++;
+                    } else {
+                        int pageIdx = tab.getInteger("activePageIndex");
+
+                        JsonArray pages = tab.getJsonArray("pages");
+
+                        pages.forEach(pageObject -> {
+
+                            JsonObject page = (JsonObject) pageObject;
+
+                            if (page.containsKey("splitview")) {
+                                System.out.println(page);
+                            }
+
+                            String url = page.getString("url");
+                            if (first[0]) {
+                                first[0] = false;
+                                Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
+                                newWindow(url, url, page, windowBounds);
+
+                                gf[0] = frameList.getLast();
+
+                            } else if (tabCount[0] == 0) {
+                                // add subsequent pages
                                 if (CUSTOM_LABELS.contains(url)) {
                                     InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
                                     gf[0].showCustomPage(url, false, pageInfo, true);
                                 } else {
                                     gf[0].fetchURL(url, null, false, page);
                                 }
+                            } else {
+                                // new tab
+                                if (firstTab[0]) {
+                                    firstTab[0] = false;
+                                    gf[0].newTab(url, page);
+
+                                } else {
+                                    if (CUSTOM_LABELS.contains(url)) {
+                                        InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
+                                        gf[0].showCustomPage(url, false, pageInfo, true);
+                                    } else {
+                                        gf[0].fetchURL(url, null, false, page);
+                                    }
+                                }
+
                             }
 
+                        });
+                        int currPageIdx = pages.size() - 1;
+                        while (pageIdx < currPageIdx) {
+                            gf[0].goBack();
+                            currPageIdx--;
                         }
-
-                    });
-                    int currPageIdx = pages.size() - 1;
-                    while (pageIdx < currPageIdx) {
-                        gf[0].goBack();
-                        currPageIdx--;
+                        tabCount[0]++;
                     }
-                    tabCount[0]++;
                 });
                 if (frameList.size() == frameCount) {
                     // no pages saved
@@ -943,9 +966,15 @@ public class Alhena {
                     page.setFavIcon(key, favMap.get(key));
                 }
             });
-
-            jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
-            jf.refreshFromCache(jf.visiblePage());
+            if (jf.visiblePage().getParent() instanceof SplitPanel sp) {
+                ((Page) sp.getLeftComponent()).setThemeId(GeminiFrame.currentThemeId);
+                ((Page) sp.getRightComponent()).setThemeId(GeminiFrame.currentThemeId);
+                jf.refreshFromCache((Page) sp.getLeftComponent());
+                jf.refreshFromCache((Page) sp.getRightComponent());
+            } else {
+                jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
+                jf.refreshFromCache(jf.visiblePage());
+            }
 
             SwingUtilities.updateComponentTreeUI(jf);
             jf.initComboBox(); // combo box loses key listener & mouse listener when theme changes

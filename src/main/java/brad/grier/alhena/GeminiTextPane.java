@@ -71,6 +71,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextPane;
@@ -630,6 +631,7 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private void showPopup(MouseEvent e) {
+        requestFocusInWindow();
         if (doc != null) {
             int pos = viewToModel2D(e.getPoint());
             boolean linkClicked = false;
@@ -653,7 +655,12 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(copyItem);
 
                                 }
-                                String resolvedURI = Util.resolveURI(getURI(), range.url);
+                                String resolvedURI;
+                                if (range.url.startsWith("alhena:")) {
+                                    resolvedURI = range.url;
+                                } else {
+                                    resolvedURI = Util.resolveURI(getURI(), range.url);
+                                }
                                 if (currentMode != STYLE_MODE) {
                                     JMenuItem copyLinkItem = new JMenuItem(I18n.t("copyLinkPopupItem"));
 
@@ -663,17 +670,54 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(copyLinkItem);
 
                                     popupMenu.add(new JSeparator());
-                                    JMenuItem menuItem1 = new JMenuItem(I18n.t("newTabPopupItem"));
+                                    JMenuItem newTabItem = new JMenuItem(I18n.t("newTabPopupItem"));
 
-                                    menuItem1.addActionListener(ev -> {
+                                    newTabItem.addActionListener(ev -> {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
                                         f.newTab(range.url, null);
                                         Alhena.useBrowser = saveSetting;
                                     });
-                                    menuItem1.setEnabled(!range.dataUrl);
-                                    popupMenu.add(menuItem1);
+                                    newTabItem.setEnabled(!range.dataUrl);
+                                    popupMenu.add(newTabItem);
+
+                                    if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) == null) {
+                                        JMenuItem splitRightItem = new JMenuItem("Split Right");
+
+                                        splitRightItem.addActionListener(ev -> {
+                                            // open in new tab with gemtext converter regardless
+                                            boolean saveSetting = Alhena.useBrowser;
+                                            Alhena.useBrowser = false;
+                                            f.splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT);
+                                            Alhena.useBrowser = saveSetting;
+                                        });
+                                        splitRightItem.setEnabled(!range.dataUrl);
+                                        popupMenu.add(splitRightItem);
+
+                                        JMenuItem splitBottomItem = new JMenuItem("Split Bottom");
+
+                                        splitBottomItem.addActionListener(ev -> {
+                                            boolean saveSetting = Alhena.useBrowser;
+                                            Alhena.useBrowser = false;
+                                            f.splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
+                                            Alhena.useBrowser = saveSetting;
+                                        });
+                                        splitBottomItem.setEnabled(!range.dataUrl);
+                                        popupMenu.add(splitBottomItem);
+                                    } else {
+                                        JMenuItem oppositeItem = new JMenuItem("Open Opposite");
+
+                                        oppositeItem.addActionListener(ev -> {
+                                            boolean saveSetting = Alhena.useBrowser;
+                                            Alhena.useBrowser = false;
+                                            f.splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
+                                            Alhena.useBrowser = saveSetting;
+                                        });
+                                        oppositeItem.setEnabled(!range.dataUrl);
+                                        popupMenu.add(oppositeItem);
+                                    }
+
                                     JMenuItem menuItem2 = new JMenuItem(I18n.t("newWindowPopupItem"));
                                     menuItem2.setEnabled(!range.dataUrl);
                                     menuItem2.addActionListener(ev -> {
@@ -965,7 +1009,14 @@ public class GeminiTextPane extends JTextPane {
                         });
                         popupMenu.add(clearItem);
                     }
-
+                    if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) != null) {
+                        popupMenu.add(new JSeparator());
+                        JMenuItem splitItem = new JMenuItem("Close Split View");
+                        splitItem.addActionListener(al -> {
+                            f.removeSplitView();
+                        });
+                        popupMenu.add(splitItem);
+                    }
                     popupMenu.show(e.getComponent(), e.getX(), e.getY());
                 }
             }
@@ -1412,7 +1463,7 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    public void scrollToHeading(String heading){
+    public void scrollToHeading(String heading) {
         int pos = headingMap.get(heading);
 
         setCaretPosition(pos);
@@ -3342,9 +3393,9 @@ public class GeminiTextPane extends JTextPane {
 
     }
 
-    public List<String> getHeadings(){
+    public List<String> getHeadings() {
         ArrayList<String> hl = new ArrayList<>();
-        headingMap.keySet().forEach(key ->{
+        headingMap.keySet().forEach(key -> {
             hl.add(key);
         });
         return hl;
