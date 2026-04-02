@@ -3643,6 +3643,10 @@ public final class GeminiFrame extends JFrame {
 
                                 shutdownPage(page);
 
+                            }else{
+                                SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
+                                shutdownPage((Page) sp.getLeftComponent());
+                                shutdownPage((Page) sp.getRightComponent());
                             }
                             tabbedPane.remove(tabIndex);
 
