@@ -676,7 +676,7 @@ public class GeminiTextPane extends JTextPane {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
-                                        f.newTab(range.url, null);
+                                        f.newTab(range.url, null, null);
                                         Alhena.useBrowser = saveSetting;
                                     });
                                     newTabItem.setEnabled(!range.dataUrl);
@@ -862,7 +862,7 @@ public class GeminiTextPane extends JTextPane {
                                 if (!range.dataUrl) {
                                     boolean saveSetting = Alhena.useBrowser;
                                     Alhena.useBrowser = false;
-                                    f.newTab(range.url, null);
+                                    f.newTab(range.url, null, null);
                                     Alhena.useBrowser = saveSetting;
                                 }
                             }

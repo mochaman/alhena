@@ -307,6 +307,10 @@ public class Alhena {
     }
 
     public static void main(String[] args) throws Exception {
+        // should one want to use BouncyCastle tls provider (and jar in classpath)
+        // Security.insertProviderAt(new BouncyCastleJsseProvider(), 1);
+        // java.util.logging.Logger.getLogger("org.bouncycastle").setLevel(java.util.logging.Level.SEVERE);
+
         // turn off blocked thread warnings - this is not a server
         VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(Integer.MAX_VALUE);
         vertx = Vertx.vertx(options);
@@ -772,10 +776,10 @@ public class Alhena {
                             newWindow(null, null, splitView, windowBounds);
                             gf[0] = frameList.getLast();
                         } else {
-                            
+
                             JsonArray lpages = splitView.getJsonArray("lpages");
                             JsonObject lpage = lpages.getJsonObject(0);
-                            gf[0].newTab(lpage.getString("url"), lpage);
+                            gf[0].newTab(lpage.getString("url"), lpage, null);
                             gf[0].splitView(null, splitView, splitView.getInteger("orientation"));
 
                         }
@@ -813,7 +817,7 @@ public class Alhena {
                                 // new tab
                                 if (firstTab[0]) {
                                     firstTab[0] = false;
-                                    gf[0].newTab(url, page);
+                                    gf[0].newTab(url, page, null);
 
                                 } else {
                                     if (CUSTOM_LABELS.contains(url)) {
@@ -967,10 +971,10 @@ public class Alhena {
                 }
             });
             if (jf.visiblePage().getParent() instanceof SplitPanel sp) {
-                ((Page) sp.getLeftComponent()).setThemeId(GeminiFrame.currentThemeId);
-                ((Page) sp.getRightComponent()).setThemeId(GeminiFrame.currentThemeId);
-                jf.refreshFromCache((Page) sp.getLeftComponent());
-                jf.refreshFromCache((Page) sp.getRightComponent());
+                sp.getLeftPage().setThemeId(GeminiFrame.currentThemeId);
+                sp.getRightPage().setThemeId(GeminiFrame.currentThemeId);
+                jf.refreshFromCache(sp.getLeftPage());
+                jf.refreshFromCache(sp.getRightPage());
             } else {
                 jf.visiblePage().setThemeId(GeminiFrame.currentThemeId);
                 jf.refreshFromCache(jf.visiblePage());
@@ -3013,7 +3017,7 @@ public class Alhena {
                         }
                     }
                 });
-                //connection.cause().printStackTrace();
+                connection.cause().printStackTrace();
                 System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
 
             }
