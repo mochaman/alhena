@@ -683,7 +683,7 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(newTabItem);
 
                                     if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) == null) {
-                                        JMenuItem splitRightItem = new JMenuItem("Split Right");
+                                        JMenuItem splitRightItem = new JMenuItem(I18n.t("splitRightItem"));
 
                                         splitRightItem.addActionListener(ev -> {
                                             // open in new tab with gemtext converter regardless
@@ -695,7 +695,7 @@ public class GeminiTextPane extends JTextPane {
                                         splitRightItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitRightItem);
 
-                                        JMenuItem splitBottomItem = new JMenuItem("Split Bottom");
+                                        JMenuItem splitBottomItem = new JMenuItem(I18n.t("splitBottomItem"));
 
                                         splitBottomItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
@@ -706,7 +706,7 @@ public class GeminiTextPane extends JTextPane {
                                         splitBottomItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitBottomItem);
                                     } else {
-                                        JMenuItem oppositeItem = new JMenuItem("Open Opposite");
+                                        JMenuItem oppositeItem = new JMenuItem(I18n.t("openOppItem"));
 
                                         oppositeItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
@@ -1011,7 +1011,7 @@ public class GeminiTextPane extends JTextPane {
                     }
                     if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) != null) {
                         popupMenu.add(new JSeparator());
-                        JMenuItem splitItem = new JMenuItem("Close Split View");
+                        JMenuItem splitItem = new JMenuItem(I18n.t("closeSplitItem"));
                         splitItem.addActionListener(al -> {
                             f.removeSplitView();
                         });
