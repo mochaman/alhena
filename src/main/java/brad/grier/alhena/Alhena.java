@@ -15,7 +15,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.desktop.AppReopenedListener;
 import java.awt.desktop.OpenFilesEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -186,11 +185,9 @@ public class Alhena {
     public static String searchUrl;
     private static NetClient spartanClient, spartanClientSocks;
     private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
-    private static final int MODIFIER = (InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
     private static final ArrayList<String> cnConfirmedList = new ArrayList<>();
     private static final ArrayList<String> gophersList = new ArrayList<>();
     private static boolean keyDown;
-    private static LinkGlassPane lgp;
     public static boolean allowVLC;
     public static boolean forceWhite;
     public static boolean compactTB;
@@ -357,7 +354,7 @@ public class Alhena {
                 return false;
             }
             if (e.getID() == KeyEvent.KEY_RELEASED) {
-                lgp = null;
+                //lgp = null; PART OF ORIGINAL HOLD TO PEEK
                 keyDown = false;
                 Component c = gf.getGlassPane();
                 if (c instanceof LinkGlassPane && !((LinkGlassPane) c).isFixed()) {
@@ -453,41 +450,45 @@ public class Alhena {
                             return true;
                         }
                     }
-                    if ((e.getModifiersEx() & MODIFIER) == MODIFIER) {
+                    // this is the original hold to peek link shortcut that worked across all operating systems
+                    // unfortunately, it precluded using ctrl+shift for shortcuts and forced comprimises - use 'F' key instead
 
-                        if (!keyDown) {
-                            int keyCode = e.getKeyCode();
-                            int index = -1;
+                    // if ((e.getModifiersEx() & MODIFIER) == MODIFIER) {
 
-                            if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
-                                index = keyCode - KeyEvent.VK_1;
-                            } // A-Z → indices 9-34
-                            else if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
-                                index = 9 + (keyCode - KeyEvent.VK_A);
-                            }
+                    //     if (!keyDown) {
+                    //         int keyCode = e.getKeyCode();
+                    //         int index = -1;
 
-                            if (index >= 0 && lgp != null) {
+                    //         if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
+                    //             index = keyCode - KeyEvent.VK_1;
+                    //         } // A-Z → indices 9-34
+                    //         else if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
+                    //             index = 9 + (keyCode - KeyEvent.VK_A);
+                    //         }
 
-                                keyDown = true;
+                    //         if (index >= 0 && lgp != null) {
 
-                                lgp.setVisible(false);
+                    //             keyDown = true;
 
-                                //lgp = null;
-                                gf.visiblePage().textPane.clickVisibleLink(index);
-                                e.consume();
-                                return true;
+                    //             lgp.setVisible(false);
 
-                            }
-                        }
+                    //             //lgp = null;
+                    //             gf.visiblePage().textPane.clickVisibleLink(index);
+                    //             e.consume();
+                    //             return true;
 
-                        if (lgp == null) {
-                            lgp = new LinkGlassPane(gf.visiblePage().textPane, false, false);
-                            gf.setGlassPane(lgp);
-                            lgp.setVisible(true);
-                            gf.repaint();
-                        }
+                    //         }
+                    //     }
 
-                    } else if (gf.visiblePage().textPane.hasFocus()) {
+                    //     if (lgp == null) {
+                    //         lgp = new LinkGlassPane(gf.visiblePage().textPane, false, false);
+                    //         gf.setGlassPane(lgp);
+                    //         lgp.setVisible(true);
+                    //         gf.repaint();
+                    //     }
+
+                    // } else 
+                    if (gf.visiblePage().textPane.hasFocus()) {
 
                         Runnable r = gf.actionMap.get(ks);
                         if (r != null) {
