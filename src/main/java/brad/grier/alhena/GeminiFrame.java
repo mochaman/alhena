@@ -167,7 +167,7 @@ public final class GeminiFrame extends JFrame {
     private PrinterJob job;
     private JMenu fileMenu;
     private final JMenu viewMenu, aboutMenu;
-    private JMenuItem splitRightItem, splitBottomItem;
+    private JMenuItem splitRightItem, splitBottomItem, closeSplitItem;
     private Component lastTabComponent;
     private ArrayList<Page> lastPageHistory1;
     private ArrayList<Page> lastPageHistory2;
@@ -786,7 +786,7 @@ public final class GeminiFrame extends JFrame {
         }
         fileMenu.add(new JSeparator());
 
-        closeTabItem = createMenuItem("Restore Tab", null, () -> {
+        closeTabItem = createMenuItem(I18n.t("restoreTabItem"), KeyStroke.getKeyStroke(KeyEvent.VK_T, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
             restoreLastTab();
 
         });
@@ -932,7 +932,7 @@ public final class GeminiFrame extends JFrame {
         viewMenu = new JMenu(I18n.t("viewMenu"));
         viewMenu.setMnemonic('V');
 
-        int osMask = Alhena.isHaiku ? (KeyEvent.META_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK) : (mod | KeyEvent.ALT_DOWN_MASK);
+        int osMask = mod | KeyEvent.SHIFT_DOWN_MASK;
         for (String label : CUSTOM_LABELS) {
             KeyStroke ks = null;
             if (!label.equals(INFO_LABEL)) {
@@ -974,26 +974,34 @@ public final class GeminiFrame extends JFrame {
         }));
 
         viewMenu.add(new JSeparator());
-        splitRightItem = new JMenuItem("Split Right");
 
-        splitRightItem.addActionListener(ev -> {
-            boolean saveSetting = Alhena.useBrowser;
-            Alhena.useBrowser = false;
-            splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT);
-            Alhena.useBrowser = saveSetting;
+        splitRightItem = createMenuItem(I18n.t("splitRightItem"), KeyStroke.getKeyStroke(KeyEvent.VK_R, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
+            if (splitRightItem.isEnabled()) {
+                boolean saveSetting = Alhena.useBrowser;
+                Alhena.useBrowser = false;
+                splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT);
+                Alhena.useBrowser = saveSetting;
+            }
         });
         viewMenu.add(splitRightItem);
 
-        splitBottomItem = new JMenuItem("Split Bottom");
-
-        splitBottomItem.addActionListener(ev -> {
-            boolean saveSetting = Alhena.useBrowser;
-            Alhena.useBrowser = false;
-            splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT);
-            Alhena.useBrowser = saveSetting;
+        splitBottomItem = createMenuItem(I18n.t("splitBottomItem"), KeyStroke.getKeyStroke(KeyEvent.VK_B, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
+            if (splitBottomItem.isEnabled()) {
+                boolean saveSetting = Alhena.useBrowser;
+                Alhena.useBrowser = false;
+                splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT);
+                Alhena.useBrowser = saveSetting;
+            }
         });
-
         viewMenu.add(splitBottomItem);
+
+        closeSplitItem = createMenuItem(I18n.t("closeSplitItem"), KeyStroke.getKeyStroke(KeyEvent.VK_X, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
+            if (closeSplitItem.isEnabled()) {
+                removeSplitView();
+            }
+        });
+        closeSplitItem.setEnabled(false);
+        viewMenu.add(closeSplitItem);
 
         menuBar.add(viewMenu);
 
@@ -1317,7 +1325,7 @@ public final class GeminiFrame extends JFrame {
         settingsMenu.add(lightThemeMenu);
         settingsMenu.add(darkThemeMenu);
 
-        int osMask = Alhena.isHaiku ? (KeyEvent.META_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK) : (mod | KeyEvent.ALT_DOWN_MASK);
+        int osMask = mod | KeyEvent.SHIFT_DOWN_MASK;
         settingsMenu.add(createMenuItem(I18n.t("fontItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F, osMask), () -> {
             Font defFont = saveFont != null ? saveFont : new Font("SansSerif", Font.PLAIN, DEFAULT_FONT_SIZE);
             Font font = Util.getFont(GeminiFrame.this, defFont, true, true);
@@ -4031,9 +4039,11 @@ public final class GeminiFrame extends JFrame {
         if (SwingUtilities.getAncestorOfClass(SplitPanel.class, visiblePage().textPane) == null) {
             splitRightItem.setEnabled(true);
             splitBottomItem.setEnabled(true);
+            closeSplitItem.setEnabled(false);
         } else {
             splitRightItem.setEnabled(false);
             splitBottomItem.setEnabled(false);
+            closeSplitItem.setEnabled(true);
         }
     }
 
