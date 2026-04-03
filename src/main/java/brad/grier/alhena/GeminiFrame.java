@@ -288,6 +288,7 @@ public final class GeminiFrame extends JFrame {
                             jp.put("content", page.textPane.current().currentPage().toString());
                             jp.put("pfmode", page.textPane.current().pMode());
                             jp.put("pos", page.getScrollPos());
+                            jp.put("contwidth", page.textPane.getContentWidth());
                             jp.put("fetchtime", page.getFetchTime());
                             pageArray.add(jp);
                         } else {
@@ -336,6 +337,7 @@ public final class GeminiFrame extends JFrame {
                             jp.put("content", page.textPane.current().currentPage().toString());
                             jp.put("pfmode", page.textPane.current().pMode());
                             jp.put("pos", page.getScrollPos());
+                            jp.put("contwidth", page.textPane.getContentWidth());
                             jp.put("fetchtime", page.getFetchTime());
                             pageArray.add(jp);
 
@@ -377,6 +379,7 @@ public final class GeminiFrame extends JFrame {
                     jp.put("content", page.textPane.current().currentPage().toString());
                     jp.put("pfmode", page.textPane.current().pMode());
                     jp.put("pos", page.getScrollPos());
+                    jp.put("contwidth", page.textPane.getContentWidth());
                     jp.put("fetchtime", page.getFetchTime());
                     pageArray.add(jp);
                 } else {
@@ -2523,6 +2526,7 @@ public final class GeminiFrame extends JFrame {
         } catch (Exception ex) {
             // ignore - one of the alhena: or cert urls
         }
+        p.textPane.savedContentWidth = page.getFloat("contwidth");
         p.setFetchTime(page.getLong("fetchtime"));
         p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), url, true);
         p.setScrollPos(page.getInteger("pos"));
@@ -3416,14 +3420,6 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    private void removeRootPageAudioPlayers(Page page) {
-        ArrayList<Page> hPageList = pageHistoryMap.get(page);
-        for (Page p : hPageList) {
-            p.textPane.closePlayers();
-        }
-        page.textPane.closePlayers();
-    }
-
     private void addTabScrolling() {
         tabbedPane.addMouseWheelListener(e -> { // Only respond if the mouse is over the tab headers
             int tabIndex = tabbedPane.getUI().tabForCoordinate(tabbedPane, e.getX(), e.getY());
@@ -3443,10 +3439,10 @@ public final class GeminiFrame extends JFrame {
             Page remainingPage;
             if (visiblePage() == sp.getLeftPage()) {
                 remainingPage = sp.getRightPage();
-                shutdownPage(sp.getLeftPage());
+                shutdownPage(sp.getLeftPage(), false);
             } else {
                 remainingPage = sp.getLeftPage();
-                shutdownPage(sp.getRightPage());
+                shutdownPage(sp.getRightPage(), false);
             }
             remove(sp);
             add(remainingPage, BorderLayout.CENTER);
@@ -3461,10 +3457,10 @@ public final class GeminiFrame extends JFrame {
             Page remainingPage;
             if (visiblePage() == sp.getLeftPage()) {
                 remainingPage = sp.getRightPage();
-                shutdownPage(sp.getLeftPage());
+                shutdownPage(sp.getLeftPage(), false);
             } else {
                 remainingPage = sp.getLeftPage();
-                shutdownPage(sp.getRightPage());
+                shutdownPage(sp.getRightPage(), false);
             }
             sp.remove(remainingPage);
             tabbedPane.remove(idx);
@@ -3653,7 +3649,7 @@ public final class GeminiFrame extends JFrame {
                             }
                             if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
                                 lastPageHistory1 = pageHistoryMap.get(getRootPage(page));
-                                shutdownPage(page);
+                                shutdownPage(page, true);
 
                                 lastTabComponent = page;
 
@@ -3661,8 +3657,8 @@ public final class GeminiFrame extends JFrame {
                                 SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
                                 lastPageHistory1 = pageHistoryMap.get(getRootPage(sp.getLeftPage()));
                                 lastPageHistory2 = pageHistoryMap.get(getRootPage(sp.getRightPage()));
-                                shutdownPage(sp.getLeftPage());
-                                shutdownPage(sp.getRightPage());
+                                shutdownPage(sp.getLeftPage(), true);
+                                shutdownPage(sp.getRightPage(), true);
 
                                 lastTabComponent = sp;
                             }
@@ -3696,14 +3692,14 @@ public final class GeminiFrame extends JFrame {
                         } else {
                             if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
                                 lastPageHistory1 = pageHistoryMap.get(getRootPage(page));
-                                shutdownPage(page);
+                                shutdownPage(page, true);
                                 lastTabComponent = page;
                             } else { // SplitPanel
                                 SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
                                 lastPageHistory1 = pageHistoryMap.get(getRootPage(sp.getLeftPage()));
                                 lastPageHistory2 = pageHistoryMap.get(getRootPage(sp.getRightPage()));
-                                shutdownPage(sp.getLeftPage());
-                                shutdownPage(sp.getRightPage());
+                                shutdownPage(sp.getLeftPage(), true);
+                                shutdownPage(sp.getRightPage(), true);
                                 lastTabComponent = sp;
 
                             }
@@ -3853,9 +3849,19 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void shutdownPage(Page page) {
+    private void shutdownPage(Page page, boolean closeLinks) {
         page.textPane.closed = true;
-        removeRootPageAudioPlayers(getRootPage(page));
+
+        ArrayList<Page> hPageList = pageHistoryMap.get(getRootPage(page));
+
+        for (Page p : hPageList) {
+            if (closeLinks) {
+                p.textPane.closePlayerLinks();
+            } else {
+                p.textPane.closePlayers();
+            }
+        }
+
         pageHistoryMap.remove(getRootPage(page));
 
     }

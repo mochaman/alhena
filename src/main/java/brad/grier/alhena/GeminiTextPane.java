@@ -573,7 +573,7 @@ public class GeminiTextPane extends JTextPane {
         if (doc != null) {
             applyCenteredParagraphStyle();
         }
-
+        savedContentWidth = contentWidth;
         if (ptpList != null) {
             for (PreformattedTextPane ptp : ptpList) {
                 JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, ptp);
@@ -1063,8 +1063,10 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private void removeItemAtIndex(ClickableRange rg) {
-        rg.openImage = false;
-        int index = rg.imageIndex;
+        if (rg != null) {
+            rg.openImage = false;
+        }
+        int index = rg == null ? -1 : rg.imageIndex;
         try {
             Element element = doc.getCharacterElement(index + 1);
             AttributeSet attrs = element.getAttributes();
@@ -1084,27 +1086,31 @@ public class GeminiTextPane extends JTextPane {
                         playerList.remove(removedAp);
                     }
                 }
-
-                doc.remove(index + 1, 2);
-
-                boolean start = false;
-                for (ClickableRange range : clickableRegions) {
-                    if (range == rg) {
-                        start = true;
-                        continue;
-                    }
-                    if (start) {
-                        range.start = range.start - 2;
-                        range.end = range.end - 2;
-                        if (range.imageIndex != -1) {
-                            range.imageIndex = range.imageIndex - 2;
+                if (rg != null) {
+                    doc.remove(index + 1, 2);
+                }else{
+                    doc.remove(0, 1);
+                }
+                if (rg != null) {
+                    boolean start = false;
+                    for (ClickableRange range : clickableRegions) {
+                        if (range == rg) {
+                            start = true;
+                            continue;
+                        }
+                        if (start) {
+                            range.start = range.start - 2;
+                            range.end = range.end - 2;
+                            if (range.imageIndex != -1) {
+                                range.imageIndex = range.imageIndex - 2;
+                            }
                         }
                     }
+                    headingMap.replaceAll((key, value) -> value > rg.start ? value - 2 : value);
                 }
-                headingMap.replaceAll((key, value) -> value > rg.start ? value - 2 : value);
             }
 
-            if (rg.dataUrl) {
+            if (rg != null && rg.dataUrl) {
                 EventQueue.invokeLater(() -> {
                     updateUI();
                     //SwingUtilities.updateComponentTreeUI(GeminiTextPane.this);
@@ -1137,12 +1143,29 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private final ArrayList<MediaComponent> playerList = new ArrayList<>();
+    private final ArrayList<ClickableRange> playerLinkList = new ArrayList<>();
 
     public void closePlayers() {
         for (MediaComponent ap : playerList) {
             ap.dispose();
         }
         playerList.clear();
+        playerLinkList.clear();
+    }
+
+    // called when tab is closed - do this so players are not only disposed but hidden (in case tab is restored)
+    public void closePlayerLinks() {
+        playerLinkList.stream().forEach(cr -> {
+
+            removeItemAtIndex(cr);
+            if (cr != null) {
+                cr.imageIndex = -1;
+            }
+
+        });
+        playerList.clear();
+        playerLinkList.clear();
+
     }
 
     public void pausePlayers() {
@@ -1174,17 +1197,25 @@ public class GeminiTextPane extends JTextPane {
         lastClicked = null;
     }
 
-    private void insertComp(Component c) {
+    private int insertComp(Component c) {
         SimpleAttributeSet apStyle = new SimpleAttributeSet();
         StyleConstants.setComponent(apStyle, c);
-
+        int res = -1;
         try {
             if (lastClicked == null) {
 
                 doc.insertString(0, " ", apStyle);
+                res = 0;
                 imageOnly = true;
+                if (c instanceof MediaComponent) {
+                    playerLinkList.add(null);
+                }
             } else {
+                if (c instanceof MediaComponent) {
+                    playerLinkList.add(lastClicked);
+                }
                 doc.insertString(lastClicked.end + 1, " ", apStyle);
+                res = lastClicked.end + 1;
                 doc.insertString(lastClicked.end + 2, "\n", null); //???
 
                 lastClicked.imageIndex = lastClicked.end;
@@ -1209,6 +1240,7 @@ public class GeminiTextPane extends JTextPane {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+        return res;
 
     }
 
@@ -1228,7 +1260,6 @@ public class GeminiTextPane extends JTextPane {
         }
 
         playerList.add(ap);
-
         insertComp((Component) ap);
         ap.start(path == null ? "http://localhost:" + Alhena.streamingPort + "/stream" : path);
         f.setBusy(false, page);
@@ -1246,9 +1277,12 @@ public class GeminiTextPane extends JTextPane {
     public void insertImage(byte[] imageBytes, boolean curPos, boolean isSVG) {
 
         inserting = true;
+        // if restoring from json saved state, use the saved width because actual width can't be computed
+        // this is necessary for data urls when set to auto open
+        float useContentWidth = savedContentWidth != null ? savedContentWidth : contentWidth;
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
-        int width = (int) contentWidth - 50;
+        int width = (int) useContentWidth - 50;
         BufferedImage image;
         ImageIcon icon = null;
         if (isSVG) {
@@ -1291,7 +1325,6 @@ public class GeminiTextPane extends JTextPane {
 
         SimpleAttributeSet emojiStyle = new SimpleAttributeSet();
         StyleConstants.setIcon(emojiStyle, icon);
-
         try {
             if (curPos) {
                 doc.insertString(doc.getLength(), " ", emojiStyle);
@@ -1341,6 +1374,8 @@ public class GeminiTextPane extends JTextPane {
         f.setBusy(false, page);
 
     }
+
+    public Float savedContentWidth;
 
     public String getFirstHeading() {
         return firstHeading;
@@ -1945,6 +1980,9 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private float contentWidth;
+    public float getContentWidth(){
+        return contentWidth;
+    }
 
     public void addPage(String geminiDoc) {
 
@@ -2091,6 +2129,7 @@ public class GeminiTextPane extends JTextPane {
             ap.dispose();
         }
         playerList.clear();
+        playerLinkList.clear();
 
         emojiProportional = "Noto Emoji";
         if (SystemInfo.isMacOS) {
