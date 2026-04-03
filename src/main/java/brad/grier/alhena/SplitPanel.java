@@ -39,20 +39,27 @@ public class SplitPanel extends JSplitPane {
         faMap.put(p, fa);
     }
 
-    @Override
-    public void setLeftComponent(Component c) {
-        super.setLeftComponent(c);
+    public Page getLeftPage(){
+        return leftPage;
+    }
 
-        leftPage = (Page) c;
+    public Page getRightPage(){
+        return rightPage;
+    }
+
+    public void setLeftPage(Page p) {
+        super.setLeftComponent(p);
+
+        leftPage = p;
         focusedPage = leftPage;
         addPageFocusListener(leftPage);
 
     }
 
-    @Override
-    public void setRightComponent(Component c) {
-        super.setRightComponent(c);
-        rightPage = (Page) c;
+
+    public void setRightPage(Page p) {
+        setRightComponent(p);
+        rightPage = p;
         focusedPage = rightPage;
         addPageFocusListener(rightPage);
 
@@ -71,9 +78,9 @@ public class SplitPanel extends JSplitPane {
         int loc = getDividerLocation();
         //remove(replace); // this happens anyway
         if (replace == leftPage) {
-            setLeftComponent(with);
+            setLeftPage(with);
         } else {
-            setRightComponent(with);
+            setRightPage(with);
         }
         setDividerLocation(loc);
 
