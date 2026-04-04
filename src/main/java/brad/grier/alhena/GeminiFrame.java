@@ -3703,11 +3703,9 @@ public final class GeminiFrame extends JFrame {
                             } else { // SplitPanel
                                 SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
 
-
                                 lastTabInfo = new LastTabInfo(sp, pageHistoryMap.get(getRootPage(sp.getLeftPage())), pageHistoryMap.get(getRootPage(sp.getRightPage())));
                                 shutdownPage(sp.getLeftPage(), true);
                                 shutdownPage(sp.getRightPage(), true);
-
 
                             }
                             closeTabItem.setEnabled(true);
@@ -4050,7 +4048,9 @@ public final class GeminiFrame extends JFrame {
         Component centerComponent = ((BorderLayout) getContentPane().getLayout()).getLayoutComponent(BorderLayout.CENTER);
         if (centerComponent instanceof JTabbedPane) {
             Component selected = tabbedPane.getSelectedComponent();
-            if (selected instanceof Page page) {
+            if (selected == null) {
+                vPage = null;
+            } else if (selected instanceof Page page) {
                 vPage = page;
             } else {
                 vPage = ((SplitPanel) selected).getFocusedPage();
@@ -4117,14 +4117,14 @@ public final class GeminiFrame extends JFrame {
 
     public void setLastTabInfo(LastTabInfo tabInfo) {
         if (tabInfo != null) {
-            if(tabInfo.comp instanceof Page page){
-                
+            if (tabInfo.comp instanceof Page page) {
+
                 page.setFrame(GeminiFrame.this);
-            }else{
-                ((SplitPanel)tabInfo.comp).getLeftPage().setFrame(GeminiFrame.this);
-                ((SplitPanel)tabInfo.comp).getRightPage().setFrame(GeminiFrame.this);
+            } else {
+                ((SplitPanel) tabInfo.comp).getLeftPage().setFrame(GeminiFrame.this);
+                ((SplitPanel) tabInfo.comp).getRightPage().setFrame(GeminiFrame.this);
             }
-            
+
             lastTabInfo = tabInfo;
         }
     }
