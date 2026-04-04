@@ -168,9 +168,7 @@ public final class GeminiFrame extends JFrame {
     private JMenu fileMenu;
     private final JMenu viewMenu, aboutMenu;
     private JMenuItem splitRightItem, splitBottomItem, closeSplitItem;
-    private Component lastTabComponent;
-    private ArrayList<Page> lastPageHistory1;
-    private ArrayList<Page> lastPageHistory2;
+    private LastTabInfo lastTabInfo;
     private JMenuItem closeTabItem;
 
     // Haiku JVM doesn't allow alt modifier which breaks menu mnemonics
@@ -790,7 +788,7 @@ public final class GeminiFrame extends JFrame {
             restoreLastTab();
 
         });
-        closeTabItem.setEnabled(false);
+        closeTabItem.setEnabled(Alhena.lastTabInfo != null && Alhena.lastTabInfo.comp != null);
 
         fileMenu.add(closeTabItem);
 
@@ -2245,6 +2243,7 @@ public final class GeminiFrame extends JFrame {
 
     // don't leak this from your constructor says IDE
     private void init(String url, Page page) {
+        addClickedLink(url);
         if (CUSTOM_LABELS.contains(url) && !url.equals(INFO_LABEL)) {
             showCustomPage(url, true, null, false);
         } else {
@@ -3483,6 +3482,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void splitView(String url, JsonObject saveSplitView, int orientation) {
+        addClickedLink(url);
         if (visiblePage().getParent() instanceof SplitPanel sp) {
             Page focusedPage = sp.getFocusedPage();
 
@@ -3625,6 +3625,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void newTab(String url, JsonObject savedPage, Component restoreComponent) {
+        addClickedLink(url);
         if (tabbedPane == null) {
             invalidate();
             tabbedPane = new JTabbedPane();
@@ -3656,19 +3657,16 @@ public final class GeminiFrame extends JFrame {
                                 break; // REMOVES tabbedPanes changeListener but not the L&F changeListener - CAN ORDER CHANGE?
                             }
                             if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
-                                lastPageHistory1 = pageHistoryMap.get(getRootPage(page));
+                                lastTabInfo = new LastTabInfo(page, pageHistoryMap.get(getRootPage(page)), null);
                                 shutdownPage(page, true);
-
-                                lastTabComponent = page;
 
                             } else {
                                 SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
-                                lastPageHistory1 = pageHistoryMap.get(getRootPage(sp.getLeftPage()));
-                                lastPageHistory2 = pageHistoryMap.get(getRootPage(sp.getRightPage()));
+
+                                lastTabInfo = new LastTabInfo(sp, pageHistoryMap.get(getRootPage(sp.getLeftPage())), pageHistoryMap.get(getRootPage(sp.getRightPage())));
                                 shutdownPage(sp.getLeftPage(), true);
                                 shutdownPage(sp.getRightPage(), true);
 
-                                lastTabComponent = sp;
                             }
                             closeTabItem.setEnabled(true);
                             tabbedPane.remove(tabIndex);
@@ -3699,16 +3697,17 @@ public final class GeminiFrame extends JFrame {
                             GeminiFrame.this.validate();
                         } else {
                             if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
-                                lastPageHistory1 = pageHistoryMap.get(getRootPage(page));
+                                lastTabInfo = new LastTabInfo(page, pageHistoryMap.get(getRootPage(page)), null);
                                 shutdownPage(page, true);
-                                lastTabComponent = page;
+
                             } else { // SplitPanel
                                 SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
-                                lastPageHistory1 = pageHistoryMap.get(getRootPage(sp.getLeftPage()));
-                                lastPageHistory2 = pageHistoryMap.get(getRootPage(sp.getRightPage()));
+
+
+                                lastTabInfo = new LastTabInfo(sp, pageHistoryMap.get(getRootPage(sp.getLeftPage())), pageHistoryMap.get(getRootPage(sp.getRightPage())));
                                 shutdownPage(sp.getLeftPage(), true);
                                 shutdownPage(sp.getRightPage(), true);
-                                lastTabComponent = sp;
+
 
                             }
                             closeTabItem.setEnabled(true);
@@ -3835,24 +3834,23 @@ public final class GeminiFrame extends JFrame {
     }
 
     private void restoreLastTab() {
-        if (lastTabComponent != null) {
-            if (lastTabComponent instanceof Page page) {
+        if (lastTabInfo != null) {
+            if (lastTabInfo.comp instanceof Page page) {
                 page.textPane.closed = false;
-                pageHistoryMap.put(getRootPage(page), lastPageHistory1);
+                pageHistoryMap.put(getRootPage(page), lastTabInfo.pageHistory1);
                 newTab(null, null, page);
 
             } else {
-                SplitPanel sp = (SplitPanel) lastTabComponent;
+                SplitPanel sp = (SplitPanel) lastTabInfo.comp;
                 sp.getLeftPage().textPane.closed = false;
                 sp.getRightPage().textPane.closed = false;
-                pageHistoryMap.put(getRootPage(sp.getLeftPage()), lastPageHistory1);
-                pageHistoryMap.put(getRootPage(sp.getRightPage()), lastPageHistory2);
+                pageHistoryMap.put(getRootPage(sp.getLeftPage()), lastTabInfo.pageHistory1);
+                pageHistoryMap.put(getRootPage(sp.getRightPage()), lastTabInfo.pageHistory2);
                 newTab(null, null, sp);
 
             }
-            lastTabComponent = null;
-            lastPageHistory1 = null;
-            lastPageHistory2 = null;
+            lastTabInfo = null;
+
             closeTabItem.setEnabled(false);
         }
     }
@@ -4107,5 +4105,27 @@ public final class GeminiFrame extends JFrame {
 
     public void clickOutlineButton() {
         outlineButton.doClick();
+    }
+
+    public record LastTabInfo(Component comp, ArrayList<Page> pageHistory1, ArrayList<Page> pageHistory2) {
+
+    }
+
+    public LastTabInfo getLastTabInfo() {
+        return lastTabInfo;
+    }
+
+    public void setLastTabInfo(LastTabInfo tabInfo) {
+        if (tabInfo != null) {
+            if(tabInfo.comp instanceof Page page){
+                
+                page.setFrame(GeminiFrame.this);
+            }else{
+                ((SplitPanel)tabInfo.comp).getLeftPage().setFrame(GeminiFrame.this);
+                ((SplitPanel)tabInfo.comp).getRightPage().setFrame(GeminiFrame.this);
+            }
+            
+            lastTabInfo = tabInfo;
+        }
     }
 }

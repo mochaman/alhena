@@ -129,7 +129,7 @@ public class GeminiTextPane extends JTextPane {
     public boolean originalPfMode;
     private String currentStatus = Alhena.welcomeMessage;
     public static String monospacedFamily;
-    private final GeminiFrame f;
+    private GeminiFrame f;
     // use StringBuilder instead of StringBuffer as only updated in EventDispatch at creation
     private StringBuilder pageBuffer;
     private String docURL;
@@ -177,6 +177,18 @@ public class GeminiTextPane extends JTextPane {
     private int printWidth;
     private ArrayList<ClickableRange> openQueue;
     private LinkedHashMap<String, Integer> headingMap = new LinkedHashMap<>();
+
+    private GeminiFrame f() {
+        GeminiFrame frame = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
+        if(frame != null){
+            return frame;
+        }
+        return f;
+    }
+
+    public void setFrame(GeminiFrame gf){
+        f = gf;
+    }
 
     public static void setup() {
         String userDefined = System.getenv("ALHENA_MONOFONT");
@@ -357,13 +369,13 @@ public class GeminiTextPane extends JTextPane {
                                 SimpleAttributeSet sa = new SimpleAttributeSet();
                                 StyleConstants.setForeground(sa, hoverColor);
 
-                                f.setStatus(range.url);
+                                f().setStatus(range.url);
                                 currentStatus = range.url;
 
                                 doc.setCharacterAttributes(range.start, range.end - range.start, sa, false);
                                 if (saveRange != null) {
 
-                                    SimpleAttributeSet sas = f.isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
+                                    SimpleAttributeSet sas = f().isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
                                     doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
 
                                 }
@@ -379,10 +391,10 @@ public class GeminiTextPane extends JTextPane {
                 // fix this
                 if (!entered && !" ".equals(currentStatus) && currentStatus != null && !currentStatus.equals(Alhena.welcomeMessage)) {
 
-                    f.setStatus(" ");
+                    f().setStatus(" ");
 
                     if (saveRange != null) {
-                        SimpleAttributeSet sas = f.isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
+                        SimpleAttributeSet sas = f().isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
 
                         doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
                         saveRange = null;
@@ -433,10 +445,10 @@ public class GeminiTextPane extends JTextPane {
             public void mouseExited(MouseEvent e) {
                 // duplicate of !entered logic above
                 // links could remain highlighted if located near top or bottom of JTextPane and mouse exits
-                f.setStatus(" ");
+                f().setStatus(" ");
 
                 if (saveRange != null) {
-                    SimpleAttributeSet sas = f.isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
+                    SimpleAttributeSet sas = f().isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
 
                     doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
                     saveRange = null;
@@ -462,9 +474,9 @@ public class GeminiTextPane extends JTextPane {
                         if (matches || vlcType) {
 
                             if (lcName.endsWith(".pem")) {
-                                f.importPem(new URI(getDocURLString()), file);
+                                f().importPem(new URI(getDocURLString()), file);
                             } else {
-                                f.openFile(file);
+                                f().openFile(file);
                             }
                         }
 
@@ -509,14 +521,16 @@ public class GeminiTextPane extends JTextPane {
             public void keyPressed(KeyEvent ke) {
                 int keyCode = ke.getKeyCode();
                 if ((keyCode == KeyEvent.VK_F || keyCode == KeyEvent.VK_G) && lgp == null) {
+
                     lgp = new LinkGlassPane(GeminiTextPane.this, true, keyCode == KeyEvent.VK_G);
-                    f.setGlassPane(lgp);
+                    f().setGlassPane(lgp);
                     lgp.setVisible(true);
 
                     ke.consume();
                     return;
                 }
                 if (lgp != null) {
+
                     int index = -1;
 
                     if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
@@ -676,7 +690,7 @@ public class GeminiTextPane extends JTextPane {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
-                                        f.newTab(range.url, null, null);
+                                        f().newTab(range.url, null, null);
                                         Alhena.useBrowser = saveSetting;
                                     });
                                     newTabItem.setEnabled(!range.dataUrl);
@@ -689,7 +703,7 @@ public class GeminiTextPane extends JTextPane {
                                             // open in new tab with gemtext converter regardless
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
-                                            f.splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT);
+                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         splitRightItem.setEnabled(!range.dataUrl);
@@ -700,7 +714,7 @@ public class GeminiTextPane extends JTextPane {
                                         splitBottomItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
-                                            f.splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         splitBottomItem.setEnabled(!range.dataUrl);
@@ -711,7 +725,7 @@ public class GeminiTextPane extends JTextPane {
                                         oppositeItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
-                                            f.splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         oppositeItem.setEnabled(!range.dataUrl);
@@ -738,7 +752,7 @@ public class GeminiTextPane extends JTextPane {
 
                                         boolean saveBrowser = Alhena.useBrowser;
                                         Alhena.useBrowser = true;
-                                        f.fetchURL(resolvedURI, false);
+                                        f().fetchURL(resolvedURI, false);
                                         Alhena.useBrowser = saveBrowser;
                                     });
 
@@ -752,19 +766,19 @@ public class GeminiTextPane extends JTextPane {
                                         boolean active = range.directive.substring(range.directive.indexOf(",") + 1).equals("true");
                                         JMenuItem exportItem = new JMenuItem(I18n.t("exportPopupItem"));
                                         exportItem.addActionListener(al -> {
-                                            f.exportCert(id, GeminiTextPane.this);
+                                            f().exportCert(id, GeminiTextPane.this);
                                         });
                                         popupMenu.add(exportItem);
                                         String command = active ? I18n.t("deactivatePopupItem") : I18n.t("activatePopupItem");
                                         JMenuItem actionItem = new JMenuItem(command);
                                         actionItem.addActionListener(al -> {
 
-                                            f.toggleCert(id, !active, range.url);
+                                            f().toggleCert(id, !active, range.url);
                                         });
                                         popupMenu.add(actionItem);
                                         JMenuItem delItem = new JMenuItem(I18n.t("deletePopupItem"));
                                         delItem.addActionListener(al -> {
-                                            f.deleteCert(id);
+                                            f().deleteCert(id);
                                         });
                                         popupMenu.add(delItem);
                                     }
@@ -781,7 +795,7 @@ public class GeminiTextPane extends JTextPane {
                                                 JScrollPane jsp = new JScrollPane(jta);
                                                 jsp.setPreferredSize(new Dimension(700, 400));
                                                 Object[] comps = {jsp};
-                                                Util.fancyInfoDialog(f, I18n.t("styleJsonDialog"), comps);
+                                                Util.fancyInfoDialog(f(), I18n.t("styleJsonDialog"), comps);
 
                                             } catch (SQLException ex) {
                                                 ex.printStackTrace();
@@ -791,7 +805,7 @@ public class GeminiTextPane extends JTextPane {
                                         popupMenu.add(jsonItem);
                                         JMenuItem delStyleItem = new JMenuItem(I18n.t("deleteStyleItem"));
                                         delStyleItem.addActionListener(al -> {
-                                            Object r = Util.confirmDialog(f, I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                                            Object r = Util.confirmDialog(f(), I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
                                             if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
                                                 try {
                                                     DB.deleteStyle(Integer.parseInt(range.directive));
@@ -799,7 +813,7 @@ public class GeminiTextPane extends JTextPane {
                                                     ex.printStackTrace();
                                                 }
                                                 Alhena.updateFrames(false, false, false, false);
-                                                EventQueue.invokeLater(() -> f.refresh());
+                                                EventQueue.invokeLater(() -> f().refresh());
                                             }
 
                                         });
@@ -810,14 +824,14 @@ public class GeminiTextPane extends JTextPane {
                                         popupMenu.add(new JSeparator());
                                         JMenuItem forgetItem = new JMenuItem(I18n.t("forgetLinkItem"));
                                         forgetItem.addActionListener(al -> {
-                                            f.deleteFromHistory(range.url, false);
+                                            f().deleteFromHistory(range.url, false);
                                         });
 
                                         popupMenu.add(forgetItem);
                                         JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryItem"));
 
                                         clearItem.addActionListener(al -> {
-                                            f.clearHistory();
+                                            f().clearHistory();
                                         });
                                         popupMenu.add(clearItem);
                                     }
@@ -825,13 +839,13 @@ public class GeminiTextPane extends JTextPane {
                                         popupMenu.add(new JSeparator());
                                         JMenuItem editItem = new JMenuItem(I18n.t("editBookmarkItem"));
                                         editItem.addActionListener(ev -> {
-                                            f.updateBookmark(f, range.directive);
+                                            f().updateBookmark(f(), range.directive);
 
                                         });
                                         popupMenu.add(editItem);
                                         JMenuItem deleteItem = new JMenuItem(I18n.t("deleteBookmarkItem"));
                                         deleteItem.addActionListener(ev -> {
-                                            f.deleteBookmark(f, range.directive);
+                                            f().deleteBookmark(f(), range.directive);
 
                                         });
                                         popupMenu.add(deleteItem);
@@ -862,7 +876,7 @@ public class GeminiTextPane extends JTextPane {
                                 if (!range.dataUrl) {
                                     boolean saveSetting = Alhena.useBrowser;
                                     Alhena.useBrowser = false;
-                                    f.newTab(range.url, null, null);
+                                    f().newTab(range.url, null, null);
                                     Alhena.useBrowser = saveSetting;
                                 }
                             }
@@ -901,7 +915,7 @@ public class GeminiTextPane extends JTextPane {
                         ptMenuItem.setEnabled(!imageOnly);
                         ptMenuItem.addActionListener(al -> {
                             plainTextMode = !plainTextMode;
-                            f.toggleView(GeminiTextPane.this, plainTextMode);
+                            f().toggleView(GeminiTextPane.this, plainTextMode);
                         });
 
                         popupMenu.add(ptMenuItem);
@@ -912,7 +926,7 @@ public class GeminiTextPane extends JTextPane {
                         JMenuItem crtMenuItem = new JMenuItem(I18n.t("viewCertItem"));
                         crtMenuItem.addActionListener(al -> {
 
-                            f.viewServerCert(GeminiTextPane.this, getURI());
+                            f().viewServerCert(GeminiTextPane.this, getURI());
                         });
 
                         popupMenu.add(crtMenuItem);
@@ -956,7 +970,7 @@ public class GeminiTextPane extends JTextPane {
                     JMenuItem saveItem = new JMenuItem(I18n.t("savePageItem"));
                     saveItem.setEnabled(!imageOnly);
                     saveItem.addActionListener(al -> {
-                        f.savePage(GeminiTextPane.this, pageBuffer, currentMode);
+                        f().savePage(GeminiTextPane.this, pageBuffer, currentMode);
                     });
 
                     popupMenu.add(saveItem);
@@ -969,20 +983,20 @@ public class GeminiTextPane extends JTextPane {
                         titanItem.setEnabled(!imageOnly && currentMode == DEFAULT_MODE && uri != null && "gemini".equals(uri.getScheme()));
                         titanItem.addActionListener(al -> {
 
-                            f.editPage();
+                            f().editPage();
                         });
                         popupMenu.add(titanItem);
                         JMenuItem pemItem = new JMenuItem(I18n.t("importPEMPopup"));
                         pemItem.setEnabled(!imageOnly);
                         pemItem.addActionListener(al -> {
-                            f.importPem(getURI(), null);
+                            f().importPem(getURI(), null);
                         });
                         popupMenu.add(pemItem);
 
                         JMenuItem certItem = new JMenuItem(I18n.t("newClientCertPopup"));
                         certItem.setEnabled(!imageOnly);
                         certItem.addActionListener(al -> {
-                            f.createCert(getURI());
+                            f().createCert(getURI());
                         });
                         popupMenu.add(certItem);
                     }
@@ -991,21 +1005,21 @@ public class GeminiTextPane extends JTextPane {
                         popupMenu.add(new JSeparator());
                         JMenuItem newStyleItem = new JMenuItem(I18n.t("stylesItem"));
                         newStyleItem.addActionListener(al -> {
-                            Util.newStyle(f);
+                            Util.newStyle(f());
                         });
                         popupMenu.add(newStyleItem);
                     } else if (currentMode == HISTORY_MODE) {
                         popupMenu.add(new JSeparator());
                         JMenuItem whereItem = new JMenuItem(I18n.t("forgetLinksPopup"));
                         whereItem.addActionListener(al -> {
-                            f.deleteFromHistory(null, true);
+                            f().deleteFromHistory(null, true);
                         });
 
                         popupMenu.add(whereItem);
                         JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryPopup"));
 
                         clearItem.addActionListener(al -> {
-                            f.clearHistory();
+                            f().clearHistory();
                         });
                         popupMenu.add(clearItem);
                     }
@@ -1013,7 +1027,7 @@ public class GeminiTextPane extends JTextPane {
                         popupMenu.add(new JSeparator());
                         JMenuItem splitItem = new JMenuItem(I18n.t("closeSplitItem"));
                         splitItem.addActionListener(al -> {
-                            f.removeSplitView();
+                            f().removeSplitView();
                         });
                         popupMenu.add(splitItem);
                     }
@@ -1088,7 +1102,7 @@ public class GeminiTextPane extends JTextPane {
                 }
                 if (rg != null) {
                     doc.remove(index + 1, 2);
-                }else{
+                } else {
                     doc.remove(0, 1);
                 }
                 if (rg != null) {
@@ -1254,7 +1268,7 @@ public class GeminiTextPane extends JTextPane {
 
         MediaComponent ap;
         if (!Alhena.allowVLC && Alhena.playerCommand != null) {
-            ap = new ExternalPlayer(f);
+            ap = new ExternalPlayer(f());
         } else {
             ap = mime.startsWith("audio") ? new AudioPlayer(session, path != null && session != null) : new VideoPlayer(session);
         }
@@ -1262,7 +1276,7 @@ public class GeminiTextPane extends JTextPane {
         playerList.add(ap);
         insertComp((Component) ap);
         ap.start(path == null ? "http://localhost:" + Alhena.streamingPort + "/stream" : path);
-        f.setBusy(false, page);
+        f().setBusy(false, page);
 
     }
 
@@ -1302,7 +1316,7 @@ public class GeminiTextPane extends JTextPane {
                     image = Util.getImage(null, width, width * 2, svgImage, false);
                     // TODO: needed (maybe)
                     if (image == null) {
-                        f.setBusy(false, page);
+                        f().setBusy(false, page);
                         return;
                     }
                     icon = new ImageIcon(image);
@@ -1317,7 +1331,7 @@ public class GeminiTextPane extends JTextPane {
             image = Util.getImage(imageBytes, scaleWidth, scaleWidth * 2, null, false);
 
             if (image == null) {
-                f.setBusy(false, page);
+                f().setBusy(false, page);
                 return;
             }
             icon = new ImageIcon(image);
@@ -1333,7 +1347,7 @@ public class GeminiTextPane extends JTextPane {
                 doc.insertString(0, " ", emojiStyle);
                 imageOnly = true;
                 if (printing) {
-                    f.printIt(this);
+                    f().printIt(this);
                 }
             } else {
 
@@ -1361,7 +1375,7 @@ public class GeminiTextPane extends JTextPane {
                 lastClicked = null;
                 if (printing) {
                     if (openQueue != null && openQueue.isEmpty()) {
-                        f.printIt(this);
+                        f().printIt(this);
                     }
                     fetchLink(); // when printing, fetch the next open image
 
@@ -1371,7 +1385,7 @@ public class GeminiTextPane extends JTextPane {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        f.setBusy(false, page);
+        f().setBusy(false, page);
 
     }
 
@@ -1569,7 +1583,7 @@ public class GeminiTextPane extends JTextPane {
         }
         JTabbedPane tabbedPane = page.frame().tabbedPane;
         firstHeading = createHeading();
-        String title = f.createTitle(docURL, firstHeading);
+        String title = f().createTitle(docURL, firstHeading);
         if (title != null) {
             if (tabbedPane != null) {
                 for (int i = 0; i < tabbedPane.getTabCount(); i++) {
@@ -1577,8 +1591,8 @@ public class GeminiTextPane extends JTextPane {
                     if (tabbedPane.getComponentAt(i) == page) {
 
                         if (page == tabbedPane.getSelectedComponent()) {
-                            f.updateComboBox(docURL);
-                            f.setTitle(title);
+                            f().updateComboBox(docURL);
+                            f().setTitle(title);
                         } else {
 
                             tabbedPane.setTitleAt(i, title);
@@ -1589,8 +1603,8 @@ public class GeminiTextPane extends JTextPane {
             } else if (page.isVisible()) {
 
                 if (currentMode != INFO_MODE) {
-                    f.updateComboBox(docURL);
-                    f.setTitle(title);
+                    f().updateComboBox(docURL);
+                    f().setTitle(title);
                 }
             }
         }
@@ -1621,10 +1635,10 @@ public class GeminiTextPane extends JTextPane {
                             if (GeminiTextPane.this.isShowing()) {
                                 Runnable r = () -> {
                                     hasAnsi = true;
-                                    f.refreshFromCache(page);
+                                    f().refreshFromCache(page);
                                 };
                                 if (GeminiFrame.ansiAlert) {
-                                    Object res = Util.confirmDialog(f, I18n.t("ansiDialog"), I18n.t("ansiDialogMsg"), JOptionPane.YES_NO_OPTION, null, null);
+                                    Object res = Util.confirmDialog(f(), I18n.t("ansiDialog"), I18n.t("ansiDialogMsg"), JOptionPane.YES_NO_OPTION, null, null);
                                     if (res instanceof Integer result) {
                                         if (result == JOptionPane.YES_OPTION) {
                                             r.run();
@@ -1926,7 +1940,10 @@ public class GeminiTextPane extends JTextPane {
         }
 
         this.docURL = docURL;
-        f.refreshNav(null);
+        GeminiFrame gf = f();
+        if (gf != null) {
+            gf.refreshNav(null);
+        }
 
         pageBuffer = new StringBuilder();
 
@@ -1980,7 +1997,8 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private float contentWidth;
-    public float getContentWidth(){
+
+    public float getContentWidth() {
         return contentWidth;
     }
 
@@ -2287,7 +2305,7 @@ public class GeminiTextPane extends JTextPane {
                 String finalUrl = url;
                 String label = ll.substring(i).trim();
 
-                String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
+                String linkStyle = f().isClickedLink(url) ? "visited" : "=>";
 
                 ClickableRange cr = addStyledText(label.isEmpty() ? url : label, linkStyle,
                         () -> {
@@ -2306,8 +2324,8 @@ public class GeminiTextPane extends JTextPane {
                                 }
 
                             } else {
-                                f.addClickedLink(finalUrl);
-                                f.fetchURL(finalUrl, false);
+                                f().addClickedLink(finalUrl);
+                                f().fetchURL(finalUrl, false);
                             }
 
                         });
@@ -2494,7 +2512,7 @@ public class GeminiTextPane extends JTextPane {
                 }
             }
             label = ll.substring(i).trim();
-            String linkStyle = f.isClickedLink(url) ? "visited" : "=>";
+            String linkStyle = f().isClickedLink(url) ? "visited" : "=>";
 
             ClickableRange cr = addStyledText(label.isEmpty() ? sfx + url.replace("/", "/\u200B") : sfx + label, linkStyle,
                     () -> {
@@ -2504,17 +2522,17 @@ public class GeminiTextPane extends JTextPane {
                             TextEditor textEditor = new TextEditor("", false, GeminiTextPane.this);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
-                            Object res = Util.inputDialog2(f, "Edit", comps, null, true);
+                            Object res = Util.inputDialog2(f(), "Edit", comps, null, true);
                             if (res != null) {
                                 Object result = textEditor.getResult();
                                 if (result instanceof String string) {
                                     if (!string.isBlank()) {
-                                        f.addClickedLink(finalUrl);
-                                        f.fetchURL(finalUrl + "?" + Util.uEncode(string), false);
+                                        f().addClickedLink(finalUrl);
+                                        f().fetchURL(finalUrl + "?" + Util.uEncode(string), false);
                                     }
                                 } else {
-                                    f.addClickedLink(finalUrl);
-                                    f.fetchURL(finalUrl, (File) result, false, null);
+                                    f().addClickedLink(finalUrl);
+                                    f().fetchURL(finalUrl, (File) result, false, null);
                                 }
                             }
 
@@ -2535,18 +2553,18 @@ public class GeminiTextPane extends JTextPane {
 
                             int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
                             boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
-                            f.toggleCert(id, !active, finalUrl);
+                            f().toggleCert(id, !active, finalUrl);
                         } else if (currentMode == STYLE_MODE) {
-                            Util.showStyleEditor(f, Integer.parseInt(directive[0]));
+                            Util.showStyleEditor(f(), Integer.parseInt(directive[0]));
                         } else if (gopherHtml) {
                             String resolvedURI = Util.resolveURI(getURI(), finalUrl);
-                            f.addClickedLink(finalUrl);
+                            f().addClickedLink(finalUrl);
                             char gType = getGopherType(finalUrl);
 
-                            f.fetchURL(resolvedURI.replace("/h/", "/" + gType + "/"), false);
+                            f().fetchURL(resolvedURI.replace("/h/", "/" + gType + "/"), false);
                         } else {
-                            f.addClickedLink(finalUrl);
-                            f.fetchURL(finalUrl, false);
+                            f().addClickedLink(finalUrl);
+                            f().fetchURL(finalUrl, false);
                         }
 
                     });
@@ -2619,7 +2637,7 @@ public class GeminiTextPane extends JTextPane {
         if (mime.startsWith("audio") || mime.startsWith("video")) {
             if (!Alhena.allowVLC) {
                 if (!curPos) {
-                    Util.infoDialog(f, I18n.t("vlcRequiredDialog"), I18n.t("vlcRequiredDialogMsg"));
+                    Util.infoDialog(f(), I18n.t("vlcRequiredDialog"), I18n.t("vlcRequiredDialogMsg"));
                 }
                 return;
             }
@@ -2723,7 +2741,7 @@ public class GeminiTextPane extends JTextPane {
             public void keyPressed(KeyEvent ke) {
                 if (ke.getKeyCode() == KeyEvent.VK_TAB) {
 
-                    JButton fButton = f.backButton.isEnabled() ? f.backButton : f.forwardButton.isEnabled() ? f.forwardButton : f.refreshButton;
+                    JButton fButton = f().backButton.isEnabled() ? f().backButton : f().forwardButton.isEnabled() ? f().forwardButton : f().refreshButton;
 
                     fButton.requestFocusInWindow();
                     pfTextPane.setCaretPosition(pfTextPane.getCaretPosition());
@@ -2766,13 +2784,13 @@ public class GeminiTextPane extends JTextPane {
             @Override
             public void mouseEntered(MouseEvent e) {
                 if (checkScrollingNeeded(sp)) {
-                    f.setTmpStatus(I18n.t("holdToScrollLabel"));
+                    f().setTmpStatus(I18n.t("holdToScrollLabel"));
                 }
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                f.setTmpStatus(" ");
+                f().setTmpStatus(" ");
             }
 
             @Override

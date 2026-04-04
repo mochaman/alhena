@@ -116,6 +116,7 @@ import brad.grier.alhena.DB.CertInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
 import static brad.grier.alhena.GeminiFrame.CUSTOM_LABELS;
 import brad.grier.alhena.GeminiFrame.InfoPageInfo;
+import brad.grier.alhena.GeminiFrame.LastTabInfo;
 import de.vandermeer.asciitable.AsciiTable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -454,39 +455,30 @@ public class Alhena {
                     // unfortunately, it precluded using ctrl+shift for shortcuts and forced comprimises - use 'F' key instead
 
                     // if ((e.getModifiersEx() & MODIFIER) == MODIFIER) {
-
                     //     if (!keyDown) {
                     //         int keyCode = e.getKeyCode();
                     //         int index = -1;
-
                     //         if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
                     //             index = keyCode - KeyEvent.VK_1;
                     //         } // A-Z → indices 9-34
                     //         else if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
                     //             index = 9 + (keyCode - KeyEvent.VK_A);
                     //         }
-
                     //         if (index >= 0 && lgp != null) {
-
                     //             keyDown = true;
-
                     //             lgp.setVisible(false);
-
                     //             //lgp = null;
                     //             gf.visiblePage().textPane.clickVisibleLink(index);
                     //             e.consume();
                     //             return true;
-
                     //         }
                     //     }
-
                     //     if (lgp == null) {
                     //         lgp = new LinkGlassPane(gf.visiblePage().textPane, false, false);
                     //         gf.setGlassPane(lgp);
                     //         lgp.setVisible(true);
                     //         gf.repaint();
                     //     }
-
                     // } else 
                     if (gf.visiblePage().textPane.hasFocus()) {
 
@@ -907,7 +899,10 @@ public class Alhena {
     }
 
     public static void newWindow(String url, String baseUrl, JsonObject page, Rectangle frameBounds) {
-        frameList.add(new GeminiFrame(url, baseUrl, page, frameBounds));
+        GeminiFrame gf = new GeminiFrame(url, baseUrl, page, frameBounds);
+        gf.setLastTabInfo(lastTabInfo);
+        lastTabInfo = null;
+        frameList.add(gf);
         Taskbar taskbar = getTaskbar();
         if (taskbar != null) {
 
@@ -1047,7 +1042,25 @@ public class Alhena {
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
+
             }
+
+            if (SystemInfo.isMacOS && frameList.size() == 1) {
+                // save last tab information 
+                lastTabInfo = gf.getLastTabInfo();
+                if (lastTabInfo != null) {
+                    Component c = lastTabInfo.comp();
+                    if (c instanceof Page page) {
+
+                        page.setFrame(null);
+                    } else {
+                        ((SplitPanel) c).getLeftPage().setFrame(null);
+                        ((SplitPanel) c).getRightPage().setFrame(null);
+                    }
+                }
+
+            }
+
             frameList.remove(gf);
             gf.dispose();
 
@@ -1062,6 +1075,8 @@ public class Alhena {
         }
 
     }
+
+    public static LastTabInfo lastTabInfo;
 
     static private void deleteFrameState() {
         try (var stream = Files.newDirectoryStream(Path.of(alhenaHome), "framestate_*")) {

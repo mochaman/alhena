@@ -87,7 +87,18 @@ public class Page extends JPanel {
         }
     }
 
-    //private final boolean gradient = true;
+    private GeminiFrame f() {
+        GeminiFrame f = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
+        if(f != null){
+            return f;
+        }
+        return frame;
+    }
+
+    public void setFrame(GeminiFrame gf){
+        frame = gf;
+        textPane.setFrame(gf);
+    }
     private void init() {
         scrollPane = new JScrollPane(textPane);
         scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
@@ -297,10 +308,10 @@ public class Page extends JPanel {
     public void setBusy(boolean b) {
 
         if (isShowing()) {
-            if (!b && frame.getGlassPane().isShowing()) {
-                frame.showGlassPane(false);
-            } else if (b && !frame.getGlassPane().isShowing()) {
-                frame.showGlassPane(true);
+            if (!b && f().getGlassPane().isShowing()) {
+                f().showGlassPane(false);
+            } else if (b && !f().getGlassPane().isShowing()) {
+                f().showGlassPane(true);
 
             }
         }
@@ -374,10 +385,10 @@ public class Page extends JPanel {
         JTabbedPane tabbedPane = (JTabbedPane) SwingUtilities.getAncestorOfClass(JTabbedPane.class, this);
         if (tabbedPane != null) {
             if (visible) {
-                if (!busy && frame.getGlassPane().isShowing()) {
-                    frame.showGlassPane(false);
-                } else if (busy && !frame.getGlassPane().isShowing()) {
-                    frame.showGlassPane(true);
+                if (!busy && f().getGlassPane().isShowing()) {
+                    f().showGlassPane(false);
+                } else if (busy && !f().getGlassPane().isShowing()) {
+                    f().showGlassPane(true);
                 }
             }
         }
@@ -389,10 +400,10 @@ public class Page extends JPanel {
         super.addNotify();
         textPane.resetLastClicked();
         EventQueue.invokeLater(() -> {
-            if (!busy && frame.getGlassPane().isShowing()) {
-                frame.showGlassPane(false);
-            } else if (busy && !frame.getGlassPane().isShowing()) {
-                frame.showGlassPane(true);
+            if (!busy && f().getGlassPane().isShowing()) {
+                f().showGlassPane(false);
+            } else if (busy && !f().getGlassPane().isShowing()) {
+                f().showGlassPane(true);
             }
         });
 
@@ -407,9 +418,9 @@ public class Page extends JPanel {
             elapsed = System.currentTimeMillis() - start;
 
             if (protocol != null) {
-                frame.setTmpStatus(elapsed + " ms " + protocol + " " + cipherSuite);
+                f().setTmpStatus(elapsed + " ms " + protocol + " " + cipherSuite);
             } else {
-                frame.setTmpStatus(elapsed + " ms");
+                f().setTmpStatus(elapsed + " ms");
             }
         }
 
@@ -462,7 +473,7 @@ public class Page extends JPanel {
     }
 
     public GeminiFrame frame() {
-        return frame;
+        return f();
     }
 
     public String getUrl() {
