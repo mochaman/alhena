@@ -1753,6 +1753,7 @@ public class Alhena {
                 p.redirectCount = 0;
 
                 bg(() -> {
+                    p.frame().setBusy(false, cPage);
                     p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                 });
                 //connection.cause().printStackTrace();
@@ -1971,6 +1972,7 @@ public class Alhena {
             } else {
 
                 bg(() -> {
+                    p.frame().setBusy(false, cPage);
                     p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                 });
                 System.out.println(I18n.t("failedToConnectMsg") + ": " + connection.cause().getMessage());
@@ -2333,6 +2335,7 @@ public class Alhena {
                 //p.redirectCount = 0;
 
                 bg(() -> {
+                    p.frame().setBusy(false, cPage);
                     p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, finalUrl, true);
                 });
                 //connection.cause().printStackTrace();
@@ -3020,6 +3023,7 @@ public class Alhena {
                 p.redirectCount = 0;
 
                 bg(() -> {
+                    p.frame().setBusy(false, cPage);
                     p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                     String cause = findCauseMessage(connection.cause(), CertificateParsingException.class);
                     if (cause != null) {
