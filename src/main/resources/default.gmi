@@ -9,55 +9,33 @@
 
 Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java. It's also a star in Gemini.
 
-* Modern UI with multiple themes
-* Color emojis
-* ZWJ emoji support
-* Embedded audio and video (with VLC)
-* Inline image viewer
-* ANSI colors on preformatted text
-* Font chooser for proportional text
-* Smooth mouse wheel scrolling
-* Asynchronous networking and file I/O
-* Certificate creation and TOFU management
-* Bookmarks and history
-* Multiple windows and tabs
-* Drag and drop text, image and PEM files
-* Import and Export user data with merge
-* Remote sync with merge
-* Titan upload with ;edit support
-* HTTP and Gopher proxies
-* Full spartan:// support
-* nex:// protocol support
-* gopher protocol
-* Gemtext highlighting in Titan text editor
-* Optional favicon.txt support
-* Printing and PDF support
-* Embedded media and text from data URLs
-* Custom page styles
-* SVG, WEBP and animated GIF support
-* Gradient backgrounds
-* SOCKS5 proxy support
-* Native Gopher
-
 => gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
+=> gemini://ultimatumlabs.com/alhena.gmi Alhena on Gemini
+=> https://github.com/mochaman/alhena Alhena on GitHub
 
 ### 🥽 Ultimatum Labs
-=> gemini://ultimatumlabs.com/alhena.gmi Alhena's home in Geminispace
-=> gemini://ultimatumlabs.com A Gemini server written in asynchronous vert.x
+
+=> gemini://ultimatumlabs.com Author's Gemini Capsule
 => https://ultimatumlabs.com vert.x Web Testbed
 
-### 🔗 Cool Links
+### 🔗 Assorted Links
 => gemini://gemi.dev/ gemi.dev
 => gemini://gemi.dev/cgi-bin/waffle.cgi/ News
 => gemini://gemi.dev/cgi-bin/chilly.cgi/ Weather
 => gemini://gemi.dev/cgi-bin/wp.cgi/ Wikipedia
-=> gemini://gemi.dev/cgi-bin/mines.cgi/ Minesweeper
-=> gemini://astrobotany.mozz.us/ Gardening Game
 => gemini://bbs.geminispace.org/ Gemini BBS
 => gemini://geminiprotocol.net/ About Gemini
+=> gemini://skyjake.fi/~Cosmos/ Cosmos
 => spartan://mozz.us/ Spartan Home
 => gopher://mozz.us/ Mozz Gopher
 => nex://nightfall.city/ Nightfall City
+
+### 🕹️ Games
+=> gemini://gemi.dev/cgi-bin/mines.cgi/ Minesweeper
+=> gemini://astrobotany.mozz.us/ Gardening Game
+=> gemini://ultimatumlabs.com/cgi/zoe Zoe
+=> gemini://crossyword.alanbato.com/ Crossyword
+=> gemini://gemini.smallweb.space:1964/pig/ Pig
 
 ### 🚀 Gemini Capsules
 => gemini://kennedy.gemi.dev/observatory/known-hosts Kennedy
