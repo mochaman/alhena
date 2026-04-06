@@ -1195,12 +1195,8 @@ public final class GeminiFrame extends JFrame {
                 tabbedPane.setComponentAt(idx, next);
             }
 
-            if (next.getThemeId() != currentThemeId) {
-                SwingUtilities.updateComponentTreeUI(next);
-                next.setThemeId(currentThemeId);
-                refreshFromCache(next);
+            updatePageTheme(next);
 
-            }
             setTitle(createTitle(cUrl, next.textPane.getFirstHeading()));
             backButton.setEnabled(hasPrev(groupPane));
             forwardButton.setEnabled(hasNext(groupPane));
@@ -1250,13 +1246,8 @@ public final class GeminiFrame extends JFrame {
                 tabbedPane.setComponentAt(idx, prev);
 
             }
-            if (prev.getThemeId() != currentThemeId) {
+            updatePageTheme(prev);
 
-                SwingUtilities.updateComponentTreeUI(prev);
-                prev.setThemeId(currentThemeId);
-                refreshFromCache(prev);
-
-            }
             setTitle(createTitle(cUrl, prev.textPane.getFirstHeading()));
             backButton.setEnabled(hasPrev(rootPage));
             forwardButton.setEnabled(hasNext(rootPage));
@@ -3787,17 +3778,19 @@ public final class GeminiFrame extends JFrame {
 
         if (restoreComponent != null) {
             if (restoreComponent instanceof Page page) {
-                page.setThemeId(currentThemeId);
                 tabbedPane.addTab("  ", page);
                 tabbedPane.setSelectedComponent(page);
+                updatePageTheme(page);
 
             } else {
                 SplitPanel sp = (SplitPanel) restoreComponent;
-                sp.getLeftPage().setThemeId(currentThemeId);
-                sp.getRightPage().setThemeId(currentThemeId);
                 tabbedPane.addTab("  ", sp);
                 tabbedPane.setSelectedComponent(sp);
-
+                if (sp.getLeftPage().getThemeId() != currentThemeId) {
+                    SwingUtilities.updateComponentTreeUI(sp);
+                    updatePageTheme(sp.getLeftPage());
+                    updatePageTheme(sp.getRightPage());
+                }
             }
 
         } else {
@@ -3818,6 +3811,14 @@ public final class GeminiFrame extends JFrame {
             }
         }
 
+    }
+
+    private void updatePageTheme(Page page) {
+        if (page.getThemeId() != currentThemeId) {
+            SwingUtilities.updateComponentTreeUI(page);
+            page.setThemeId(currentThemeId);
+            refreshFromCache(page);
+        }
     }
 
     public void refreshNav(Page page) {
