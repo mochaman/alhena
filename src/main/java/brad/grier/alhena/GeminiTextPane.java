@@ -180,13 +180,13 @@ public class GeminiTextPane extends JTextPane {
 
     private GeminiFrame f() {
         GeminiFrame frame = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
-        if(frame != null){
+        if (frame != null) {
             return frame;
         }
         return f;
     }
 
-    public void setFrame(GeminiFrame gf){
+    public void setFrame(GeminiFrame gf) {
         f = gf;
     }
 
@@ -690,6 +690,7 @@ public class GeminiTextPane extends JTextPane {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
+                                        doc.setCharacterAttributes(range.start, range.end - range.start, visitedStyle, false);
                                         f().newTab(range.url, null, null);
                                         Alhena.useBrowser = saveSetting;
                                     });
@@ -703,6 +704,7 @@ public class GeminiTextPane extends JTextPane {
                                             // open in new tab with gemtext converter regardless
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
+                                            doc.setCharacterAttributes(range.start, range.end - range.start, visitedStyle, false);
                                             f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT);
                                             Alhena.useBrowser = saveSetting;
                                         });
@@ -714,6 +716,7 @@ public class GeminiTextPane extends JTextPane {
                                         splitBottomItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
+                                            doc.setCharacterAttributes(range.start, range.end - range.start, visitedStyle, false);
                                             f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
                                             Alhena.useBrowser = saveSetting;
                                         });
@@ -3376,6 +3379,7 @@ public class GeminiTextPane extends JTextPane {
                     } else {
                         lastClicked = cr;
                         if (!cr.dataUrl) {
+                            doc.setCharacterAttributes(cr.start, cr.end - cr.start, visitedStyle, false);
                             cr.action.run();
                         }
                     }
