@@ -1837,7 +1837,11 @@ public class Alhena {
                             firstBuffer[0] = false;
                             rcvdData[0] = true;
                             bg(() -> {
-                                p.textPane.updatePage(buffer.toString(), true, origURL, true);
+                                String content = buffer.toString();
+                                if (content.lines().anyMatch(line -> line.length() > 80)) {
+                                    p.textPane.setEditorKit(new StyledEditorKit());
+                                }
+                                p.textPane.updatePage(content, true, origURL, true);
                             });
 
                         } else {
@@ -2058,7 +2062,7 @@ public class Alhena {
                         gophersList.add(sAuth);
                     }
                     NetSocket socket = connection.result();
-                    StreamSession ss = new StreamSession(socket);
+                    //StreamSession ss = new StreamSession(socket);
                     NetSocketInternal socketInternal = (NetSocketInternal) socket;
                     Channel channel = socketInternal.channelHandlerContext().channel();
 
