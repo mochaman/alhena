@@ -2278,8 +2278,12 @@ public class Alhena {
                                 }
                                 case '0' ->
                                     bg(() -> {
-                                        p.textPane.setEditorKit(new StyledEditorKit());
-                                        p.textPane.end(saveBuffer.toString(), true, finalUrl, true);
+                                        String content = saveBuffer.toString();
+                                        if (content.lines().anyMatch(line -> line.length() > 80)) {
+                                            p.textPane.setEditorKit(new StyledEditorKit());
+                                        }
+                                        
+                                        p.textPane.end(content, true, finalUrl, true);
                                         p.frame().setBusy(false, cPage);
                                     });
                                 case '1' -> {
