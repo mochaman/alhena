@@ -5,7 +5,6 @@ package brad.grier.alhena;
 
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 import org.h2.api.Trigger;
@@ -16,12 +15,7 @@ public class HistoryTrigger implements Trigger {
     public void fire(Connection conn, Object[] oldRow, Object[] newRow) throws SQLException {
 
         String insertedUrl = (String) newRow[1];
-        
-        try (PreparedStatement ps = conn.prepareStatement(
-                "UPDATE FEEDS SET READ = TRUE WHERE URL = ?")) {
-            ps.setString(1, insertedUrl);
-            ps.executeUpdate();
-        }
+        DB.markUrlRead(insertedUrl, true);
     }
 
     @Override
