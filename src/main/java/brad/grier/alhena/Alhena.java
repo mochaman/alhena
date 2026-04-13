@@ -716,6 +716,14 @@ public class Alhena {
         });
     }
 
+    public static void showToast(String msg){
+        for(GeminiFrame gf : frameList){
+            if(gf.isActive()){
+                Toast.show(gf, msg);
+            }
+        }
+    }
+
     private static String getStartUrl(String pendingFile, String[] args) {
         String u = Util.getHome();
         if (pendingFile != null) {
