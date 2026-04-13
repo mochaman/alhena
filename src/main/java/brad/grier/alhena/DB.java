@@ -1249,29 +1249,22 @@ public class DB {
         int count = 0;
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
             String sql;
-            if (!all) {
-                //sql = "SELECT ID, SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER FROM FEEDS WHERE READ = FALSE ORDER BY LINKDATE DESC";
-                sql = """
-                    SELECT f.ID, f.SUBSCRIPTION_ID, f.LINKDATE, f.URL, f.LABEL, f.HEADER, s.LABEL AS SUBLABEL
-                    FROM FEEDS f
-                    JOIN SUBSCRIPTIONS s ON f.SUBSCRIPTION_ID = s.ID
-                    WHERE f.READ = FALSE
-                    ORDER BY f.LINKDATE DESC
-                """;
-            } else {
-                sql = """
+
+            sql = """
                     SELECT f.ID, f.SUBSCRIPTION_ID, f.LINKDATE, f.URL, f.LABEL, f.HEADER, f.READ, s.LABEL AS SUBLABEL 
-                    FROM FEEDS f JOIN SUBSCRIPTIONS s ON f.SUBSCRIPTION_ID = s.ID ORDER BY f.LINKDATE DESC
+                    FROM FEEDS f JOIN SUBSCRIPTIONS s ON f.SUBSCRIPTION_ID = s.ID ORDER BY f.LINKDATE DESC, f.READ DESC
                 """;
-            }
+
             try (ResultSet rs = st.executeQuery(sql)) {
                 String saveDate = null;
                 HashSet<String> urlSet = new HashSet<>();
                 StringBuilder sb = new StringBuilder();
                 while (rs.next()) {
-                    count++;
+
                     String url = rs.getString("URL");
-                    if (urlSet.add(url)) {
+                    boolean read = rs.getBoolean("READ");
+                    if ((all || (!all && urlSet.add(url))) && (all || (!all && !read))) {
+                        count++;
                         LocalDate date = rs.getObject("LINKDATE", LocalDate.class);
 
                         String formattedDate = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
@@ -1285,7 +1278,7 @@ public class DB {
 
                         String label = rs.getString("LABEL");
                         String header = rs.getBoolean("HEADER") ? "#" : ">";
-                        boolean visited = all ? rs.getBoolean("READ") : false;
+                        boolean visited = all ? read : false;
                         int visit = visited ? 1 : 0;
                         String subLabel = rs.getString("SUBLABEL");
                         sb.append(subLabel).append("\n=> ").append(id).append(",").append(sId).append(",").append(visit).append(",").append(header).append(":").append(url).append(" ").append(label).append("\n\n");
@@ -1537,7 +1530,7 @@ public class DB {
                 latch.countDown();
             }
             System.out.println("retrieved feed page: " + url);
-            if(feedsUpdated[0]){
+            if (feedsUpdated[0]) {
                 Alhena.showToast("Feeds Updated");
             }
 
@@ -1547,7 +1540,7 @@ public class DB {
             }
             f.getCause().printStackTrace();
         });
-        
+
     }
 
     public static void deleteFeed(int id, GeminiLink link) {
