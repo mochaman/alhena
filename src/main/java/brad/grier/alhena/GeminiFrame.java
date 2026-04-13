@@ -947,7 +947,7 @@ public final class GeminiFrame extends JFrame {
                     ks = KeyStroke.getKeyStroke(KeyEvent.VK_S, osMask);
                 } else if (label.equals(FEEDS_LABEL)) {
                     ks = KeyStroke.getKeyStroke(KeyEvent.VK_2, mod);
-                }else if (label.equals(SUBSCRIPTION_LABEL)) {
+                } else if (label.equals(SUBSCRIPTION_LABEL)) {
                     ks = KeyStroke.getKeyStroke(KeyEvent.VK_3, mod);
                 }
 
@@ -2562,6 +2562,10 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void refresh() {
+        refresh(true);
+    }
+
+    public void refresh(boolean reposition) {
         Page visiblePage = visiblePage();
 
         visiblePage.textPane.getDocURL().ifPresent(cURL -> {
@@ -2572,25 +2576,33 @@ public final class GeminiFrame extends JFrame {
                     int sp = visiblePage.getScrollPos();
                     loadSubscriptions(visiblePage.textPane, visiblePage, null);
                     // use invokeLater because loadFeed uses background thread that posts to EDT
-                    EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
+                    if (reposition) {
+                        EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
+                    }
                 }
                 case GeminiTextPane.FEED_MODE -> {
                     int sp = visiblePage.getScrollPos();
                     loadFeeds(visiblePage.textPane, visiblePage, null);
                     // use invokeLater because loadFeed uses background thread that posts to EDT
-                    EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
+                    if (reposition) {
+                        EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
+                    }
                 }
                 case GeminiTextPane.HISTORY_MODE ->
                     loadHistory(visiblePage.textPane, visiblePage, null);
                 case GeminiTextPane.BOOKMARK_MODE -> {
                     int sp = visiblePage.getScrollPos();
                     loadBookmarks(visiblePage.textPane, visiblePage, null);
-                    visiblePage.setScrollPos(sp);
+                    if (reposition) {
+                        visiblePage.setScrollPos(sp);
+                    }
                 }
                 case GeminiTextPane.CERT_MODE -> {
                     int sp = visiblePage.getScrollPos();
                     loadCerts(visiblePage.textPane, null);
-                    visiblePage.setScrollPos(sp);
+                    if (reposition) {
+                        visiblePage.setScrollPos(sp);
+                    }
                 }
                 case GeminiTextPane.SERVER_MODE ->
                     loadServers(visiblePage.textPane, visiblePage, null);
