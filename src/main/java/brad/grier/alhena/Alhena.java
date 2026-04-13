@@ -4465,6 +4465,7 @@ public class Alhena {
                 });
                 return;
             }
+            System.out.println("connected: " + finalURI.getHost());
             HttpClientRequest req = ar.result();
             //req.putHeader("User-Agent", "Mozilla/5.0 (compatible; Alhena/" + VERSION + "; +https://github.com/mochaman/alhena)");
             req.putHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15");
@@ -4518,6 +4519,7 @@ public class Alhena {
                                 cPage.setBusy(false);
                                 //p.frame().showGlassPane(false);
                             });
+                            System.out.println("connection closed");
                             req.end();
                         }).onFailure(ex -> {
                             ex.printStackTrace();
@@ -4525,6 +4527,7 @@ public class Alhena {
                                 p.textPane.end(I18n.t("webPageErrorMsg") + "\n", true, finalURL, true);
                             });
                             req.end();
+                            System.out.println("connection closed");
                         });
                     } else if (contentType != null && inlineImages && contentType.startsWith("image/")) {
                         File file;
@@ -4553,6 +4556,7 @@ public class Alhena {
                                 resp.endHandler(eh -> {
                                     af.close();
                                     req.end();
+                                    System.out.println("connection closed");
                                     bg(() -> {
 
                                         GeminiTextPane tPane = cPage.textPane;
@@ -4588,6 +4592,7 @@ public class Alhena {
 
                             resp.endHandler(eh -> {
                                 ss.markClosed();
+                                System.out.println("connection closed");
                                 req.end();
                             });
                             bg(() -> {
@@ -4630,6 +4635,7 @@ public class Alhena {
                                     resp.endHandler(eh -> {
                                         af.close();
                                         req.end();
+                                        System.out.println("connection closed");
                                         bg(() -> {
                                             p.frame().showGlassPane(false);
                                             GeminiTextPane tPane = cPage.textPane;
@@ -4663,6 +4669,7 @@ public class Alhena {
                                         resp.endHandler(eh -> {
                                             af.close();
                                             req.end();
+                                            System.out.println("connection closed");
                                             bg(() -> {
                                                 String message = MessageFormat.format(I18n.t("saveCompleteDialogMsg"), file[0].getName());
                                                 Util.infoDialog(p.frame(), I18n.t("saveCompleteDialog"), message);
@@ -4674,6 +4681,7 @@ public class Alhena {
                                 });
                             } else {
                                 req.end();
+                                System.out.println("connection closed");
                                 cPage.setBusy(false);
                                 bg(() -> {
                                     p.frame().showGlassPane(false);
