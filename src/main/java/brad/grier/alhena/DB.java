@@ -1340,17 +1340,6 @@ public class DB {
 
     }
 
-    public static void markFeedItem(int id, boolean read) {
-
-        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE FEEDS SET READ = ? WHERE ID = ?")) {
-            ps.setBoolean(1, read);
-            ps.setInt(2, id);
-            ps.execute();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-    }
 
     public static void updateSubLabel(int id, String label) {
 
@@ -1363,10 +1352,11 @@ public class DB {
         }
     }
 
-    public static void markUrlRead(String url) {
+    public static void markUrlRead(String url, boolean read) {
 
-        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE FEEDS SET READ = TRUE WHERE URL = ?")) {
-            ps.setString(1, url);
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE FEEDS SET READ = ? WHERE URL = ?")) {
+            ps.setBoolean(1, read);
+            ps.setString(2, url);
             ps.execute();
         } catch (Exception ex) {
             ex.printStackTrace();
