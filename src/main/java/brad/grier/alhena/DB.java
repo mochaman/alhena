@@ -25,6 +25,7 @@ import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -203,7 +204,7 @@ public class DB {
                             FOREIGN KEY (SUBSCRIPTION_ID) REFERENCES SUBSCRIPTIONS(ID) 
                             ON DELETE CASCADE
                     );
-                    CREATE INDEX IDX_FEEDS_SUBSCRIPTION_ID ON FEEDS(SUBSCRIPTION_ID);
+                    CREATE INDEX IDX_FEEDS_SUBSCRIPTION_READ ON FEEDS(SUBSCRIPTION_ID, READ);
                     CREATE TRIGGER UPDATE_FEEDS_ON_HISTORY_INSERT
                     AFTER INSERT ON HISTORY
                     FOR EACH ROW
@@ -558,24 +559,33 @@ public class DB {
 
                 Locale systemLocale = Locale.getDefault(); // Get system locale
                 DateFormat groupFormat = DateFormat.getDateInstance(DateFormat.FULL, systemLocale);
+                StringBuilder sb = new StringBuilder();
                 while (rs.next()) {
                     count++;
                     Timestamp ts = rs.getTimestamp(2);
 
                     String formattedDate = groupFormat.format(ts);
                     if (saveDate == null || !saveDate.equals(formattedDate)) {
-                        EventQueue.invokeLater(() -> {
-                            textPane.addPage("\n### " + formattedDate + "\n\n");
-                        });
+                        sb.append("\n### ").append(formattedDate).append("\n\n");
 
                         saveDate = formattedDate;
                     }
                     String l1 = rs.getString(1);
-                    EventQueue.invokeLater(() -> {
-                        textPane.addPage("=> " + l1 + "\n");
-                    });
+                    sb.append("=> ").append(l1).append("\n");
+                    if (count % 20 == 0) {
+                        String data = sb.toString();
+                        EventQueue.invokeLater(() -> {
 
+                            textPane.addPage(data);
+
+                        });
+                        sb.setLength(0);
+                    }
                 }
+
+                EventQueue.invokeLater(() -> {
+                    textPane.addPage(sb.toString());
+                });
             }
         }
         return count;
@@ -1256,33 +1266,48 @@ public class DB {
             }
             try (ResultSet rs = st.executeQuery(sql)) {
                 String saveDate = null;
-
+                HashSet<String> urlSet = new HashSet<>();
+                StringBuilder sb = new StringBuilder();
                 while (rs.next()) {
                     count++;
-                    LocalDate date = rs.getObject("LINKDATE", LocalDate.class);
-
-                    String formattedDate = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
-                            .withLocale(Locale.getDefault()));
-                    if (saveDate == null || !saveDate.equals(formattedDate)) {
-                        EventQueue.invokeLater(() -> {
-                            textPane.addPage("\n## " + formattedDate + "\n\n");
-                        });
-
-                        saveDate = formattedDate;
-                    }
-                    int id = rs.getInt("ID");
-                    int sId = rs.getInt("SUBSCRIPTION_ID");
                     String url = rs.getString("URL");
-                    String label = rs.getString("LABEL");
-                    String header = rs.getBoolean("HEADER") ? "#" : ">";
-                    boolean visited = all ? rs.getBoolean("READ") : false;
-                    int visit = visited ? 1 : 0;
-                    String subLabel = rs.getString("SUBLABEL");
-                    EventQueue.invokeLater(() -> {
-                        textPane.addPage(subLabel + "\n=> " + id + "," + sId + "," + visit + "," + header + ":" + url + " " + label + "\n\n");
-                    });
+                    if (urlSet.add(url)) {
+                        LocalDate date = rs.getObject("LINKDATE", LocalDate.class);
+
+                        String formattedDate = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+                                .withLocale(Locale.getDefault()));
+                        if (saveDate == null || !saveDate.equals(formattedDate)) {
+                            sb.append("\n## ").append(formattedDate).append("\n\n");
+                            saveDate = formattedDate;
+                        }
+                        int id = rs.getInt("ID");
+                        int sId = rs.getInt("SUBSCRIPTION_ID");
+
+                        String label = rs.getString("LABEL");
+                        String header = rs.getBoolean("HEADER") ? "#" : ">";
+                        boolean visited = all ? rs.getBoolean("READ") : false;
+                        int visit = visited ? 1 : 0;
+                        String subLabel = rs.getString("SUBLABEL");
+                        sb.append(subLabel).append("\n=> ").append(id).append(",").append(sId).append(",").append(visit).append(",").append(header).append(":").append(url).append(" ").append(label).append("\n\n");
+                        if (count % 20 == 0) {
+                            String data = sb.toString();
+                            EventQueue.invokeLater(() -> {
+                                textPane.addPage(data);
+                            });
+                            sb.setLength(0);
+
+                            // might be some merit to sleeping this thread so busy spinner can spin
+                            // try {
+                            //     Thread.sleep(10);
+                            // } catch (InterruptedException ex) {
+                            // }
+                        }
+                    }
 
                 }
+                EventQueue.invokeLater(() -> {
+                    textPane.addPage(sb.toString());
+                });
             }
         }
         return count;
@@ -1467,11 +1492,11 @@ public class DB {
                 }
             }
         }
-
+        boolean[] feedsUpdated = {false};
         URI fetchUri = URI.create("gemini://" + URI.create(url).getAuthority()); // needed for socks proxy
         Alhena.getNetClient(fetchUri);
         Alhena.fetchGeminiPage(url, fetchUri, Integer.MAX_VALUE).onSuccess(s -> {
-            if (url.endsWith("atom.xml")) {
+            if (url.endsWith("atom.xml") || url.endsWith("?atom")) {
                 s = Util.convertAtomXml(s, fetchUri.getHost());
             }
             List<GeminiLink> glist;
@@ -1497,12 +1522,14 @@ public class DB {
             savedList.stream()
                     .filter(link -> !finalGlist.contains(link))
                     .forEach(link -> {
+                        feedsUpdated[0] = true;
                         deleteFeed(id, link);
                     });
 
             finalGlist.stream()
                     .filter(link -> !savedList.contains(link))
                     .forEach(link -> {
+                        feedsUpdated[0] = true;
                         insertFeed(id, link);
                     });
 
@@ -1510,6 +1537,9 @@ public class DB {
                 latch.countDown();
             }
             System.out.println("retrieved feed page: " + url);
+            if(feedsUpdated[0]){
+                Alhena.showToast("Feeds Updated");
+            }
 
         }).onFailure(f -> {
             if (latch != null) {
@@ -1517,6 +1547,7 @@ public class DB {
             }
             f.getCause().printStackTrace();
         });
+        
     }
 
     public static void deleteFeed(int id, GeminiLink link) {
