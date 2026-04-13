@@ -871,12 +871,12 @@ public class GeminiTextPane extends JTextPane {
 
                                         });
                                         popupMenu.add(openFeedItem);
-
-                                        JMenuItem markReadItem = new JMenuItem("Mark As Read");
+                                        boolean read = Integer.parseInt(range.directive.split(",", 4)[2]) == 1;
+                                        JMenuItem markReadItem = new JMenuItem(read ? "Mark As Unread" : "Mark As Read");
                                         markReadItem.addActionListener(ev -> {
                                             int id = Integer.parseInt(range.directive.split(",", 2)[0]);
 
-                                            DB.markFeedItem(id, true);
+                                            DB.markFeedItem(id, !read);
                                             f().refresh();
 
                                         });
