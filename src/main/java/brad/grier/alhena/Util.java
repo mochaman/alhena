@@ -73,13 +73,16 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JSlider;
 import javax.swing.JTextArea;
+import javax.swing.JWindow;
 import javax.swing.KeyStroke;
+import javax.swing.Timer;
 import javax.swing.UIDefaults;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -1522,6 +1525,44 @@ public class Util {
             sb.append("=> ").append(url).append(" ").append(updated).append(" ").append(label).append("\n");
         }
         return sb.toString();
+    }
+
+    public static void showToast(JFrame parent, String message) {
+        JWindow toast = new JWindow(parent);
+        toast.setOpacity(1.0f);
+
+        JLabel label = new JLabel(message);
+        label.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        //label.setForeground(Color.WHITE);
+        label.setForeground(UIManager.getColor("TextPane.background"));
+
+        JPanel panel = new JPanel();
+        //panel.setBackground(new Color(50, 50, 50, 220));
+        panel.setBackground(UIManager.getColor("TextPane.foreground"));
+        panel.add(label);
+
+        toast.add(panel);
+        toast.pack();
+
+        int x = parent.getX() + (parent.getWidth() - toast.getWidth()) / 2;
+        int y = parent.getY() + parent.getHeight() - 100;
+        toast.setLocation(x, y);
+        toast.setVisible(true);
+
+        Timer timer = new Timer(50, null);
+        timer.addActionListener(e -> {
+            float opacity = toast.getOpacity() - 0.05f;
+            if (opacity <= 0) {
+                timer.stop();
+                toast.dispose();
+            } else {
+                toast.setOpacity(opacity);
+            }
+        });
+
+        Timer delay = new Timer(2000, e -> timer.start());
+        delay.setRepeats(false);
+        delay.start();
     }
 
 }
