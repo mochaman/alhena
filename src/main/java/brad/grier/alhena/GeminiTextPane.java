@@ -874,10 +874,8 @@ public class GeminiTextPane extends JTextPane {
                                         boolean read = Integer.parseInt(range.directive.split(",", 4)[2]) == 1;
                                         JMenuItem markReadItem = new JMenuItem(read ? "Mark As Unread" : "Mark As Read");
                                         markReadItem.addActionListener(ev -> {
-                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
-
-                                            DB.markFeedItem(id, !read);
-                                            f().refresh();
+                                            DB.markUrlRead(range.url, !read);
+                                            f().refresh(false);
 
                                         });
                                         popupMenu.add(markReadItem);
@@ -887,7 +885,7 @@ public class GeminiTextPane extends JTextPane {
                                             int id = Integer.parseInt(range.directive.split(",", 2)[0]);
 
                                             DB.markOlderFeedRecords(id);
-                                            f().refresh();
+                                            f().refresh(false);
 
                                         });
                                         popupMenu.add(markBelowItem);
@@ -901,7 +899,7 @@ public class GeminiTextPane extends JTextPane {
                                                 if (result == JOptionPane.YES_OPTION) {
 
                                                     DB.unsubscribe(id);
-                                                    f().refresh();
+                                                    f().refresh(false);
                                                 }
                                             }
 
@@ -919,7 +917,7 @@ public class GeminiTextPane extends JTextPane {
                                             String label = Util.inputDialog(f(), "Edit", "Edit label for subscription",
                                                     false, origLabel, null);
                                             if (label != null && !label.isBlank()) {
-                                                if(label.length() > 128){
+                                                if (label.length() > 128) {
                                                     label = label.substring(0, 125) + "...";
                                                 }
                                                 DB.updateSubLabel(id, label);
@@ -1170,13 +1168,13 @@ public class GeminiTextPane extends JTextPane {
                             JMenuItem allReadItem = new JMenuItem("Mark All Read");
                             allReadItem.addActionListener(al -> {
                                 DB.markAllFeeds(true);
-                                f().refresh();
+                                f().refresh(false);
                             });
                             popupMenu.add(allReadItem);
                             JMenuItem allUnreadItem = new JMenuItem("Mark All Unread");
                             allUnreadItem.addActionListener(al -> {
                                 DB.markAllFeeds(false);
-                                f().refresh();
+                                f().refresh(false);
                             });
                             popupMenu.add(allUnreadItem);
                             JMenuItem refreshItem = new JMenuItem("Refresh All Feeds");
@@ -1188,7 +1186,7 @@ public class GeminiTextPane extends JTextPane {
                                     try {
                                         DB.updateFeeds(true);
                                         EventQueue.invokeLater(() -> {
-                                            f().refresh();
+                                            f().refresh(false);
                                             f().setBusy(false, page);
                                         });
                                     } catch (SQLException ex) {
@@ -1203,7 +1201,7 @@ public class GeminiTextPane extends JTextPane {
                             JMenuItem allFeedsItem = new JMenuItem("Show All Feeds");
                             allFeedsItem.addActionListener(al -> {
                                 f().loadAllFeeds = true;
-                                f().refresh();
+                                f().refresh(false);
 
                             });
                             popupMenu.add(allFeedsItem);
@@ -2144,7 +2142,7 @@ public class GeminiTextPane extends JTextPane {
 
                 if (preRedirectUrl != null) {
                     // this is a kludge to mark redirected gemlog feeds as read!
-                    DB.markUrlRead(preRedirectUrl);
+                    DB.markUrlRead(preRedirectUrl, true);
                     preRedirectUrl = null;
                 }
 
@@ -2664,7 +2662,7 @@ public class GeminiTextPane extends JTextPane {
             }
             String url = ll.substring(0, i);
             String[] directive = {null};
-            if (DIRECTIVE_MODES.contains(currentMode)){
+            if (DIRECTIVE_MODES.contains(currentMode)) {
                 int cIdx = url.indexOf(":");
                 directive[0] = url.substring(0, cIdx);
                 url = url.substring(cIdx + 1);
