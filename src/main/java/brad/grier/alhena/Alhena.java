@@ -719,7 +719,7 @@ public class Alhena {
     public static void showToast(String msg){
         for(GeminiFrame gf : frameList){
             if(gf.isActive()){
-                Toast.show(gf, msg);
+                Util.showToast(gf, msg);
             }
         }
     }
