@@ -67,6 +67,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
@@ -173,6 +174,7 @@ public class Alhena {
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg");
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
     public static final List<String> vlcDirectTypes = List.of("application/x-mpegURL", "application/vnd.apple.mpegurl", "application/dash+xml", "audio/x-mpegurl", "audio/x-scpls", "application/xspf+xml");
+    private static final List<String> validFetchHeaders = List.of("20 text/gemini", "20 text/plain", "20 text/xml", "20 application/xml", "20 application/atom+xml");
     public static boolean browsingSupported, mailSupported;
     private static final Map<Integer, NetClient> certMap = Collections.synchronizedMap(new HashMap<>());
     private static final Map<String, Integer> certMapByDomain = Collections.synchronizedMap(new HashMap<>());
@@ -184,6 +186,7 @@ public class Alhena {
     public static String socksProxy;
     public static boolean socksFilter;
     public static String searchUrl;
+    public static Long lastFeedRefresh;
     private static NetClient spartanClient, spartanClientSocks;
     private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private static final ArrayList<String> cnConfirmedList = new ArrayList<>();
@@ -255,12 +258,12 @@ public class Alhena {
                             if (!frameList.isEmpty()) {
 
                                 GeminiFrame gf = frameList.getLast();
-                                gf.fetchURL(furl[0], false);
+                                gf.fetchURL(furl[0], false, null);
                             } else {
                                 // this should only happen on mac where app can be running without open windows
                                 String[] fs = {furl[0]};
                                 if (!(restoreTabs && loadState(null, fs))) {
-                                    newWindow(furl[0], furl[0], null, null);
+                                    newWindow(furl[0], furl[0], null, null, null);
                                 }
                             }
                         });
@@ -396,7 +399,7 @@ public class Alhena {
                     URI uri = gf.visiblePage().textPane().getURI();
                     if (uri.getHost() != null && uri.getScheme() != null) {
                         URI rootURI = URI.create(uri.getScheme() + "://" + uri.getAuthority());
-                        gf.fetchURL(rootURI.toString(), false);
+                        gf.fetchURL(rootURI.toString(), false, null);
                     }
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.ALT_DOWN_MASK)))) {
                     // titan edit
@@ -451,35 +454,6 @@ public class Alhena {
                             return true;
                         }
                     }
-                    // this is the original hold to peek link shortcut that worked across all operating systems
-                    // unfortunately, it precluded using ctrl+shift for shortcuts and forced comprimises - use 'F' key instead
-
-                    // if ((e.getModifiersEx() & MODIFIER) == MODIFIER) {
-                    //     if (!keyDown) {
-                    //         int keyCode = e.getKeyCode();
-                    //         int index = -1;
-                    //         if (keyCode >= KeyEvent.VK_1 && keyCode <= KeyEvent.VK_9) {  // 1-9 → indices 0-8
-                    //             index = keyCode - KeyEvent.VK_1;
-                    //         } // A-Z → indices 9-34
-                    //         else if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
-                    //             index = 9 + (keyCode - KeyEvent.VK_A);
-                    //         }
-                    //         if (index >= 0 && lgp != null) {
-                    //             keyDown = true;
-                    //             lgp.setVisible(false);
-                    //             //lgp = null;
-                    //             gf.visiblePage().textPane.clickVisibleLink(index);
-                    //             e.consume();
-                    //             return true;
-                    //         }
-                    //     }
-                    //     if (lgp == null) {
-                    //         lgp = new LinkGlassPane(gf.visiblePage().textPane, false, false);
-                    //         gf.setGlassPane(lgp);
-                    //         lgp.setVisible(true);
-                    //         gf.repaint();
-                    //     }
-                    // } else 
                     if (gf.visiblePage().textPane.hasFocus()) {
 
                         Runnable r = gf.actionMap.get(ks);
@@ -570,7 +544,7 @@ public class Alhena {
                     menuItem.addActionListener(al -> {
 
                         String home = Util.getHome();
-                        Alhena.newWindow(home, home, null, null);
+                        Alhena.newWindow(home, home, null, null, null);
                     });
 
                     menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, MOD));
@@ -590,7 +564,7 @@ public class Alhena {
                             if (frameList.isEmpty()) {
                                 if (!(restoreTabs && loadState(null, null))) {
                                     String u = Util.getHome();
-                                    newWindow(u, u, null, null);
+                                    newWindow(u, u, null, null, null);
                                 }
                             }
 
@@ -604,12 +578,12 @@ public class Alhena {
                             String f = file.toURI().toString();
                             if (!frameList.isEmpty()) {
                                 GeminiFrame gf = frameList.getLast();
-                                gf.fetchURL(f, false);
+                                gf.fetchURL(f, false, null);
                             } else {
                                 if (started) {
                                     // started but all windows closed
                                     if (!(restoreTabs && loadState(f, null))) {
-                                        newWindow(f, f, null, null);
+                                        newWindow(f, f, null, null, null);
                                     }
 
                                 } else {
@@ -660,6 +634,7 @@ public class Alhena {
         hotFolder = map.getOrDefault("hotfolder", null);
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
+        lastFeedRefresh = Long.valueOf(map.getOrDefault("lastfeedrefresh", "0"));
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
         GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
@@ -711,7 +686,7 @@ public class Alhena {
             }
             if (!(restoreTabs && loadState(pendingFile[0], args))) {
                 String u = getStartUrl(pendingFile[0], args);
-                newWindow(u, u, null, null);
+                newWindow(u, u, null, null, null);
             }
 
         });
@@ -721,6 +696,24 @@ public class Alhena {
         // vertx = Vertx.vertx(options);
         startStreamingServer();
         started = true;
+
+        if (System.currentTimeMillis() - lastFeedRefresh > 3_600_000) {
+            DB.updateFeeds(false);
+        }
+        startFeedTimer();
+
+    }
+
+    private static void startFeedTimer() {
+        vertx.setPeriodic(TimeUnit.MINUTES.toMillis(5), id -> {
+            if (System.currentTimeMillis() - lastFeedRefresh > 3_600_000) {
+                try {
+                    DB.updateFeeds(false);
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
     }
 
     private static String getStartUrl(String pendingFile, String[] args) {
@@ -766,14 +759,14 @@ public class Alhena {
                         if (first[0]) {
                             first[0] = false;
                             Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
-                            newWindow(null, null, splitView, windowBounds);
+                            newWindow(null, null, splitView, windowBounds, null);
                             gf[0] = frameList.getLast();
                         } else {
 
                             JsonArray lpages = splitView.getJsonArray("lpages");
                             JsonObject lpage = lpages.getJsonObject(0);
-                            gf[0].newTab(lpage.getString("url"), lpage, null);
-                            gf[0].splitView(null, splitView, splitView.getInteger("orientation"));
+                            gf[0].newTab(lpage.getString("url"), lpage, null, null);
+                            gf[0].splitView(null, splitView, splitView.getInteger("orientation"), null);
 
                         }
                         tabCount[0]++;
@@ -794,7 +787,7 @@ public class Alhena {
                             if (first[0]) {
                                 first[0] = false;
                                 Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
-                                newWindow(url, url, page, windowBounds);
+                                newWindow(url, url, page, windowBounds, null);
 
                                 gf[0] = frameList.getLast();
 
@@ -804,20 +797,20 @@ public class Alhena {
                                     InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
                                     gf[0].showCustomPage(url, false, pageInfo, true);
                                 } else {
-                                    gf[0].fetchURL(url, null, false, page);
+                                    gf[0].fetchURL(url, null, false, page, null);
                                 }
                             } else {
                                 // new tab
                                 if (firstTab[0]) {
                                     firstTab[0] = false;
-                                    gf[0].newTab(url, page, null);
+                                    gf[0].newTab(url, page, null, null);
 
                                 } else {
                                     if (CUSTOM_LABELS.contains(url)) {
                                         InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
                                         gf[0].showCustomPage(url, false, pageInfo, true);
                                     } else {
-                                        gf[0].fetchURL(url, null, false, page);
+                                        gf[0].fetchURL(url, null, false, page, null);
                                     }
                                 }
 
@@ -837,7 +830,7 @@ public class Alhena {
                     Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
                     String u = getStartUrl(pendingFile, args);
 
-                    newWindow(u, u, null, windowBounds);
+                    newWindow(u, u, null, windowBounds, null);
                 } else {
                     if (tabCount[0] > 1 && tabCount[0] != selectedTab && gf[0].tabbedPane != null) {
                         int st = selectedTab;
@@ -850,9 +843,9 @@ public class Alhena {
                             gfFinal.tabbedPane.setSelectedIndex(st);
                             gfFinal.visiblePage().textPane.requestFocusInWindow();
                             if (pf != null) {
-                                frameList.getLast().fetchURL(pf, false);
+                                frameList.getLast().fetchURL(pf, false, null);
                             } else if (a != null && a.length == 1) {
-                                frameList.getLast().fetchURL(a[0], false);
+                                frameList.getLast().fetchURL(a[0], false, null);
                             }
                         });
 
@@ -861,9 +854,9 @@ public class Alhena {
                 done = true;
             }
             if (pendingFile != null) {
-                frameList.getLast().fetchURL(pendingFile, false);
+                frameList.getLast().fetchURL(pendingFile, false, null);
             } else if (args != null && args.length == 1) {
-                frameList.getLast().fetchURL(args[0], false);
+                frameList.getLast().fetchURL(args[0], false, null);
             }
         } catch (IOException io) {
             done = false;
@@ -877,7 +870,7 @@ public class Alhena {
         MenuItem frameItem = new MenuItem(I18n.t("newWindowItem"));
         frameItem.addActionListener(al -> {
             String home = Util.getHome();
-            newWindow(home, home, null, null);
+            newWindow(home, home, null, null, null);
         });
 
         for (GeminiFrame gf : frameList) {
@@ -898,8 +891,8 @@ public class Alhena {
         return popupMenu;
     }
 
-    public static void newWindow(String url, String baseUrl, JsonObject page, Rectangle frameBounds) {
-        GeminiFrame gf = new GeminiFrame(url, baseUrl, page, frameBounds);
+    public static void newWindow(String url, String baseUrl, JsonObject page, Rectangle frameBounds, String scrollToHeading) {
+        GeminiFrame gf = new GeminiFrame(url, baseUrl, page, frameBounds, scrollToHeading);
         gf.setLastTabInfo(lastTabInfo);
         lastTabInfo = null;
         frameList.add(gf);
@@ -1352,7 +1345,7 @@ public class Alhena {
                         URI finalPunyURI = punyURI;
                         String finalOrigURL = origURL;
                         String finalProxyURL = proxyURL;
-                        fetchGeminiPage(favUrl, favUri).onSuccess(content -> {
+                        fetchGeminiPage(favUrl, favUri, 128).onSuccess(content -> {
 
                             String fi = content.trim();
                             FavIconInfo fiInfo = new FavIconInfo(fi, GeminiTextPane.getFavIcon(fi));
@@ -2282,7 +2275,7 @@ public class Alhena {
                                         if (content.lines().anyMatch(line -> line.length() > 80)) {
                                             p.textPane.setEditorKit(new StyledEditorKit());
                                         }
-                                        
+
                                         p.textPane.end(content, true, finalUrl, true);
                                         p.frame().setBusy(false, cPage);
                                     });
@@ -2519,7 +2512,33 @@ public class Alhena {
 
     }
 
+    public static void handleAtomXML(URI uri, String origURL, Page p, Page cPage) {
+        if (p.redirectCount == 0) {
+            p.frame().setBusy(true, cPage);
+        }
+        URI fetchUri = URI.create("gemini://" + uri.getAuthority()); // needed for socks proxy
+        Alhena.fetchGeminiPage(uri.toString(), fetchUri, Integer.MAX_VALUE).onSuccess(s -> {
+            bg(() -> {
+                p.textPane.end(Util.convertAtomXml(s, uri.getHost()), false, origURL, true);
+            });
+            p.frame().setBusy(false, cPage);
+        }).onFailure(f -> {
+            bg(() -> {
+                p.frame().setBusy(false, cPage);
+                p.textPane.end(new Date() + "\n" + f.toString() + "\n", true, origURL, true);
+            });
+
+            f.printStackTrace();
+            System.out.println(I18n.t("failedToConnectMsg") + ": " + f.getMessage());
+            p.frame().setBusy(false, cPage);
+        });
+    }
+
     private static void gemini(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
+        if (origURL.endsWith("atom.xml") || origURL.endsWith("?atom")) {
+            handleAtomXML(uri, origURL, p, cPage);
+            return;
+        }
         if (p.redirectCount == 0) {
             p.frame().setBusy(true, cPage);
         }
@@ -2842,6 +2861,7 @@ public class Alhena {
                                 p.setTitanEdited(false);
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
                                 p.frame().setTmpStatus("redirect: " + redirectURI);
+                                p.textPane.setPreRedirectUrl(origURL);
                                 p.redirectCount++;
                                 processURL(redirectURI, p, origURL, cPage, false);
                             }
@@ -4040,7 +4060,7 @@ public class Alhena {
         return result;
     }
 
-    private static String resolve(String href, String base) {
+    public static String resolve(String href, String base) {
 
         if (base == null) {
             return href;
@@ -4831,13 +4851,10 @@ public class Alhena {
         }
     }
 
-    private final static int MAX_SIZE = 128; // currently only used for favicons
-
-    public static Future<String> fetchGeminiPage(String url, URI fUri) {
+    //private final static int MAX_SIZE = 128; // currently only used for favicons
+    public static Future<String> fetchGeminiPage(String url, URI fUri, int maxSize) {
         Promise<String> promise = Promise.promise();
-        if (fUri != null) {
 
-        }
         int conType = getSocksProxy(fUri) != null ? -2 : -1;
         URI uri = URI.create(url);
         String host = uri.getHost();
@@ -4868,24 +4885,21 @@ public class Alhena {
             socket.write(url + "\r\n");
 
             Buffer responseBuffer = Buffer.buffer();
-            //socket.handler(buffer -> responseBuffer.appendBuffer(buffer));
+
             socket.handler(buffer -> {
                 responseBuffer.appendBuffer(buffer);
 
-                if (responseBuffer.length() > MAX_SIZE) {
-                    // Close the socket to stop receiving more data
+                if (responseBuffer.length() > maxSize) {
                     socket.close();
-                    String message = MessageFormat.format(I18n.t("docExceedsMsg"), MAX_SIZE);
+                    String message = MessageFormat.format(I18n.t("docExceedsMsg"), maxSize);
                     promise.tryFail(message);
-                    //logger.info("scriptonite file exceeds max size");
                 }
             });
 
             socket.exceptionHandler(promise::fail);
 
             socket.closeHandler(v -> {
-                //if(promise.tryComplete(host))
-                // Response ends — parse header + body
+
                 int headerEnd = responseBuffer.toString().indexOf("\r\n");
                 if (headerEnd == -1) {
                     promise.fail(I18n.t("malformedRespMsg"));
@@ -4895,7 +4909,8 @@ public class Alhena {
                 String header = responseBuffer.getString(0, headerEnd);
                 String body = responseBuffer.getString(headerEnd + 2, responseBuffer.length());
 
-                if (!header.startsWith("20 text/gemini") && !header.startsWith("20 text/plain")) {
+                if (!validFetchHeaders.stream().anyMatch(header.toLowerCase()::startsWith)) {
+                    //if (!header.startsWith("20 text/gemini") && !header.startsWith("20 text/plain") && !header.startsWith("20 text/xml") && !header.startsWith("20 application/xml")) {
                     promise.tryFail(I18n.t("badHeaderMsg") + ": " + header);
                 } else {
                     promise.tryComplete(body);
@@ -4957,6 +4972,7 @@ public class Alhena {
             certMapByDomain.clear();
 
             interrupted.set(false);
+            startFeedTimer();
         }).onFailure(f -> {
             // hmm. should never happen
             f.getCause().printStackTrace();

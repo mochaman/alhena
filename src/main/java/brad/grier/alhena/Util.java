@@ -95,6 +95,10 @@ import org.bouncycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
 import org.bouncycastle.cms.jcajce.JceKeyTransEnvelopedRecipient;
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
 import org.drjekyll.fontchooser.FontChooser;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
 
 import com.bric.colorpicker.ColorPicker;
 import com.formdev.flatlaf.FlatLaf;
@@ -562,9 +566,9 @@ public class Util {
 
     public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter) {
         if (Alhena.systemFileChooser) {
-            
+
             SystemFileChooser fc = new SystemFileChooser();
-            
+
             fc.setDialogTitle(title);
             if (fileName != null) {
                 fc.setSelectedFile(new File(fileName));
@@ -1503,4 +1507,21 @@ public class Util {
         }
         return false;
     }
+
+    public static String convertAtomXml(String xml, String heading) {
+        Document doc = Jsoup.parse(xml, "", Parser.xmlParser());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("# ").append(heading).append("\nConverted to gemlog format to support subscriptions.\n\n");
+
+        for (Element entry : doc.select("entry")) {
+            // String url = entry.select("link[rel=alternate]").attr("href");
+            String url = entry.select("link").attr("href");
+            String label = entry.select("title").text();
+            String updated = entry.select("updated").text().substring(0, 10); // yields yyyy-MM-dd
+            sb.append("=> ").append(url).append(" ").append(updated).append(" ").append(label).append("\n");
+        }
+        return sb.toString();
+    }
+
 }

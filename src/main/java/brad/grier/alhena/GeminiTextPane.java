@@ -53,9 +53,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -145,6 +147,8 @@ public class GeminiTextPane extends JTextPane {
     public final static int INFO_MODE = 4;
     public final static int SERVER_MODE = 5;
     public final static int STYLE_MODE = 6;
+    public final static int FEED_MODE = 7;
+    public final static int SUBSCRIPTION_MODE = 8;
     public int currentMode = DEFAULT_MODE;
 
     private String firstHeading;
@@ -177,6 +181,7 @@ public class GeminiTextPane extends JTextPane {
     private int printWidth;
     private ArrayList<ClickableRange> openQueue;
     private LinkedHashMap<String, Integer> headingMap = new LinkedHashMap<>();
+    private static final Set<Integer> DIRECTIVE_MODES = Set.of(BOOKMARK_MODE, CERT_MODE, STYLE_MODE, FEED_MODE, SUBSCRIPTION_MODE);
 
     private GeminiFrame f() {
         GeminiFrame frame = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
@@ -363,20 +368,20 @@ public class GeminiTextPane extends JTextPane {
                         if (rect != null && rect.contains(e.getPoint())) {
                             entered = true;
 
-                            if (!range.url.equals(currentStatus)) {
+                            if (!range.displayString().equals(currentStatus)) {
                                 // +1 needed since using png for emoji
 
                                 SimpleAttributeSet sa = new SimpleAttributeSet();
                                 StyleConstants.setForeground(sa, hoverColor);
 
-                                f().setStatus(range.url);
-                                currentStatus = range.url;
+                                f().setStatus(range.displayString());
+                                currentStatus = range.displayString();
 
                                 doc.setCharacterAttributes(range.start, range.end - range.start, sa, false);
+
                                 if (saveRange != null) {
 
-                                    SimpleAttributeSet sas = f().isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
-                                    doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
+                                    setLinkStyle();
 
                                 }
                                 saveRange = range;
@@ -394,9 +399,8 @@ public class GeminiTextPane extends JTextPane {
                     f().setStatus(" ");
 
                     if (saveRange != null) {
-                        SimpleAttributeSet sas = f().isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
 
-                        doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
+                        setLinkStyle();
                         saveRange = null;
                     }
                     currentStatus = " ";
@@ -448,9 +452,7 @@ public class GeminiTextPane extends JTextPane {
                 f().setStatus(" ");
 
                 if (saveRange != null) {
-                    SimpleAttributeSet sas = f().isClickedLink(saveRange.url) ? visitedStyle : normalStyle;
-
-                    doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
+                    setLinkStyle();
                     saveRange = null;
                 }
                 currentStatus = " ";
@@ -690,8 +692,9 @@ public class GeminiTextPane extends JTextPane {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
-                                        doc.setCharacterAttributes(range.start, range.end - range.start, visitedStyle, false);
-                                        f().newTab(range.url, null, null);
+                                        clicked(range);
+
+                                        f().newTab(range.url, null, null, range.label == null ? null : range.label);
                                         Alhena.useBrowser = saveSetting;
                                     });
                                     newTabItem.setEnabled(!range.dataUrl);
@@ -704,8 +707,9 @@ public class GeminiTextPane extends JTextPane {
                                             // open in new tab with gemtext converter regardless
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
-                                            doc.setCharacterAttributes(range.start, range.end - range.start, visitedStyle, false);
-                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT);
+                                            clicked(range);
+
+                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT, range.label);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         splitRightItem.setEnabled(!range.dataUrl);
@@ -716,8 +720,9 @@ public class GeminiTextPane extends JTextPane {
                                         splitBottomItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
-                                            doc.setCharacterAttributes(range.start, range.end - range.start, visitedStyle, false);
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
+                                            clicked(range);
+
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         splitBottomItem.setEnabled(!range.dataUrl);
@@ -728,7 +733,7 @@ public class GeminiTextPane extends JTextPane {
                                         oppositeItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT);
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         oppositeItem.setEnabled(!range.dataUrl);
@@ -741,7 +746,7 @@ public class GeminiTextPane extends JTextPane {
                                         // open in new tab with gemtext converter regardless
                                         boolean saveSetting = Alhena.useBrowser;
                                         Alhena.useBrowser = false;
-                                        Alhena.newWindow(range.url, docURL, null, null);
+                                        Alhena.newWindow(range.url, docURL, null, null, range.label);
                                         Alhena.useBrowser = saveSetting;
 
                                     });
@@ -755,7 +760,7 @@ public class GeminiTextPane extends JTextPane {
 
                                         boolean saveBrowser = Alhena.useBrowser;
                                         Alhena.useBrowser = true;
-                                        f().fetchURL(resolvedURI, false);
+                                        f().fetchURL(resolvedURI, false, null);
                                         Alhena.useBrowser = saveBrowser;
                                     });
 
@@ -765,8 +770,9 @@ public class GeminiTextPane extends JTextPane {
                                 switch (currentMode) {
                                     case CERT_MODE -> {
                                         popupMenu.add(new JSeparator());
-                                        int id = Integer.parseInt(range.directive.substring(0, range.directive.indexOf(",")));
-                                        boolean active = range.directive.substring(range.directive.indexOf(",") + 1).equals("true");
+                                        String[] tokens = range.directive.split(",", 3);
+                                        int id = Integer.parseInt(tokens[0]);
+                                        boolean active = tokens[1].equals("true");
                                         JMenuItem exportItem = new JMenuItem(I18n.t("exportPopupItem"));
                                         exportItem.addActionListener(al -> {
                                             f().exportCert(id, GeminiTextPane.this);
@@ -853,6 +859,112 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         popupMenu.add(deleteItem);
                                     }
+                                    case FEED_MODE -> {
+                                        popupMenu.add(new JSeparator());
+                                        JMenuItem openFeedItem = new JMenuItem("Open Feed Page");
+                                        openFeedItem.addActionListener(ev -> {
+                                            String token = range.directive.split(",", 4)[1];
+                                            String pUrl = DB.getFeedUrl(Integer.parseInt(token));
+                                            if (pUrl != null) {
+                                                f().fetchURL(pUrl, false, null);
+                                            }
+
+                                        });
+                                        popupMenu.add(openFeedItem);
+
+                                        JMenuItem markReadItem = new JMenuItem("Mark As Read");
+                                        markReadItem.addActionListener(ev -> {
+                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+
+                                            DB.markFeedItem(id, true);
+                                            f().refresh();
+
+                                        });
+                                        popupMenu.add(markReadItem);
+
+                                        JMenuItem markBelowItem = new JMenuItem("Mark Below As Read");
+                                        markBelowItem.addActionListener(ev -> {
+                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+
+                                            DB.markOlderFeedRecords(id);
+                                            f().refresh();
+
+                                        });
+                                        popupMenu.add(markBelowItem);
+
+                                        JMenuItem unsubscribeItem = new JMenuItem("Unsubscribe");
+                                        unsubscribeItem.addActionListener(ev -> {
+                                            int id = Integer.parseInt(range.directive.split(",", 3)[1]);
+                                            String s = DB.getFeedUrl(id);
+                                            Object r = Util.confirmDialog(f(), "Confirm", "Are you sure you want to unsubscribe from\n" + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                            if (r instanceof Integer result) {
+                                                if (result == JOptionPane.YES_OPTION) {
+
+                                                    DB.unsubscribe(id);
+                                                    f().refresh();
+                                                }
+                                            }
+
+                                        });
+                                        popupMenu.add(unsubscribeItem);
+
+                                    }
+                                    case SUBSCRIPTION_MODE -> {
+                                        popupMenu.add(new JSeparator());
+
+                                        JMenuItem editItem = new JMenuItem("Edit Label");
+                                        editItem.addActionListener(ev -> {
+                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+                                            String origLabel = DB.getSubLabel(id);
+                                            String label = Util.inputDialog(f(), "Edit", "Edit label for subscription",
+                                                    false, origLabel, null);
+                                            if (label != null && !label.isBlank()) {
+                                                if(label.length() > 128){
+                                                    label = label.substring(0, 125) + "...";
+                                                }
+                                                DB.updateSubLabel(id, label);
+                                                f().refresh();
+                                            }
+                                        });
+                                        popupMenu.add(editItem);
+
+                                        JMenuItem markReadItem = new JMenuItem("Mark As Read");
+                                        markReadItem.addActionListener(ev -> {
+                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+
+                                            DB.markSubscriptionRead(id, true);
+
+                                            Util.infoDialog(f(), "Info", "Subscription marked as read.\n" + range.url);
+
+                                        });
+                                        popupMenu.add(markReadItem);
+
+                                        JMenuItem markUnreadItem = new JMenuItem("Mark As Unread");
+                                        markUnreadItem.addActionListener(ev -> {
+                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+                                            DB.markSubscriptionRead(id, false);
+
+                                            Util.infoDialog(f(), "Info", "Subscription marked as unread.\n" + range.url);
+
+                                        });
+                                        popupMenu.add(markUnreadItem);
+
+                                        JMenuItem unsubscribeItem = new JMenuItem("Unsubscribe");
+                                        unsubscribeItem.addActionListener(ev -> {
+                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+                                            String s = DB.getFeedUrl(id);
+                                            Object r = Util.confirmDialog(f(), "Confirm", "Are you sure you want to unsubscribe from\n" + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                            if (r instanceof Integer result) {
+                                                if (result == JOptionPane.YES_OPTION) {
+
+                                                    DB.unsubscribe(id);
+                                                    f().refresh();
+                                                }
+                                            }
+
+                                        });
+                                        popupMenu.add(unsubscribeItem);
+                                    }
                                     default -> {
                                     }
                                 }
@@ -868,6 +980,7 @@ public class GeminiTextPane extends JTextPane {
                                 } else {
                                     lastClicked = range;
                                     if (!range.dataUrl) {
+                                        clicked(range);
                                         range.action.run();
                                     } else {
                                         dataURL(range.url, false);
@@ -879,7 +992,7 @@ public class GeminiTextPane extends JTextPane {
                                 if (!range.dataUrl) {
                                     boolean saveSetting = Alhena.useBrowser;
                                     Alhena.useBrowser = false;
-                                    f().newTab(range.url, null, null);
+                                    f().newTab(range.url, null, null, range.label);
                                     Alhena.useBrowser = saveSetting;
                                 }
                             }
@@ -978,6 +1091,32 @@ public class GeminiTextPane extends JTextPane {
 
                     popupMenu.add(saveItem);
 
+                    if (docURL.startsWith("gemini://")) {
+                        JMenuItem subscribeItem = new JMenuItem("Subscribe");
+                        subscribeItem.setEnabled(!imageOnly);
+                        subscribeItem.addActionListener(al -> {
+                            try {
+                                if (DB.isSubscribed(docURL)) {
+                                    Util.infoDialog(f, "Already Subscribed", "Already subscribed to " + docURL);
+                                } else {
+
+                                    String suggestedName = getFirstHeading();
+                                    if (suggestedName == null) {
+                                        suggestedName = URI.create(docURL).getHost();
+                                    }
+                                    int type = DB.insertSubscribed(docURL, pageBuffer.toString(), suggestedName);
+                                    String tString = type == 1 ? "YYYY-MM-DD Links" : "Headings";
+                                    Util.infoDialog(f, "Subscribed", "Subscribed to " + docURL + "\nSubscription type: " + tString);
+                                }
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+
+                        });
+
+                        popupMenu.add(subscribeItem);
+                    }
+
                     // TODO: When is URI actually null? Investigate.
                     boolean showGeminiItems = !imageOnly && currentMode == DEFAULT_MODE && uri != null && uri.getHost() != null && "gemini".equals(uri.getScheme());
 
@@ -1004,27 +1143,89 @@ public class GeminiTextPane extends JTextPane {
                         popupMenu.add(certItem);
                     }
 
-                    if (currentMode == STYLE_MODE) {
-                        popupMenu.add(new JSeparator());
-                        JMenuItem newStyleItem = new JMenuItem(I18n.t("stylesItem"));
-                        newStyleItem.addActionListener(al -> {
-                            Util.newStyle(f());
-                        });
-                        popupMenu.add(newStyleItem);
-                    } else if (currentMode == HISTORY_MODE) {
-                        popupMenu.add(new JSeparator());
-                        JMenuItem whereItem = new JMenuItem(I18n.t("forgetLinksPopup"));
-                        whereItem.addActionListener(al -> {
-                            f().deleteFromHistory(null, true);
-                        });
+                    switch (currentMode) {
+                        case STYLE_MODE -> {
+                            popupMenu.add(new JSeparator());
+                            JMenuItem newStyleItem = new JMenuItem(I18n.t("stylesItem"));
+                            newStyleItem.addActionListener(al -> {
+                                Util.newStyle(f());
+                            });
+                            popupMenu.add(newStyleItem);
+                        }
+                        case HISTORY_MODE -> {
+                            popupMenu.add(new JSeparator());
+                            JMenuItem whereItem = new JMenuItem(I18n.t("forgetLinksPopup"));
+                            whereItem.addActionListener(al -> {
+                                f().deleteFromHistory(null, true);
+                            });
+                            popupMenu.add(whereItem);
+                            JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryPopup"));
+                            clearItem.addActionListener(al -> {
+                                f().clearHistory();
+                            });
+                            popupMenu.add(clearItem);
+                        }
+                        case FEED_MODE -> {
+                            popupMenu.add(new JSeparator());
+                            JMenuItem allReadItem = new JMenuItem("Mark All Read");
+                            allReadItem.addActionListener(al -> {
+                                DB.markAllFeeds(true);
+                                f().refresh();
+                            });
+                            popupMenu.add(allReadItem);
+                            JMenuItem allUnreadItem = new JMenuItem("Mark All Unread");
+                            allUnreadItem.addActionListener(al -> {
+                                DB.markAllFeeds(false);
+                                f().refresh();
+                            });
+                            popupMenu.add(allUnreadItem);
+                            JMenuItem refreshItem = new JMenuItem("Refresh All Feeds");
+                            refreshItem.addActionListener(al -> {
 
-                        popupMenu.add(whereItem);
-                        JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryPopup"));
+                                f().setBusy(true, page);
+                                Thread.ofVirtual().start(() -> {
+                                    // new Thread(() -> {
+                                    try {
+                                        DB.updateFeeds(true);
+                                        EventQueue.invokeLater(() -> {
+                                            f().refresh();
+                                            f().setBusy(false, page);
+                                        });
+                                    } catch (SQLException ex) {
+                                        ex.printStackTrace();
+                                    }
 
-                        clearItem.addActionListener(al -> {
-                            f().clearHistory();
-                        });
-                        popupMenu.add(clearItem);
+                                });
+
+                            });
+                            popupMenu.add(refreshItem);
+                            popupMenu.add(new JSeparator());
+                            JMenuItem allFeedsItem = new JMenuItem("Show All Feeds");
+                            allFeedsItem.addActionListener(al -> {
+                                f().loadAllFeeds = true;
+                                f().refresh();
+
+                            });
+                            popupMenu.add(allFeedsItem);
+                        }
+                        case SUBSCRIPTION_MODE -> {
+                            popupMenu.add(new JSeparator());
+                            JMenuItem allFeedsItem = new JMenuItem("Unsubscribe All");
+                            allFeedsItem.addActionListener(al -> {
+                                Object r = Util.confirmDialog(f(), "Confirm", "Are you sure you want to unsubscribe from all feeds?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                if (r instanceof Integer result) {
+                                    if (result == JOptionPane.YES_OPTION) {
+
+                                        DB.unsubscribeAll();
+                                        f().refresh();
+                                    }
+                                }
+
+                            });
+                            popupMenu.add(allFeedsItem);
+                        }
+                        default -> {
+                        }
                     }
                     if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) != null) {
                         popupMenu.add(new JSeparator());
@@ -1039,6 +1240,18 @@ public class GeminiTextPane extends JTextPane {
             }
         }
 
+    }
+
+    private void setLinkStyle() {
+        SimpleAttributeSet sas = (currentMode != FEED_MODE && f().isClickedLink(saveRange.url)) || feedVisitedList.contains(saveRange.displayString()) ? visitedStyle : normalStyle;
+        doc.setCharacterAttributes(saveRange.start, saveRange.end - saveRange.start, sas, false);
+    }
+
+    private void clicked(ClickableRange range) {
+        doc.setCharacterAttributes(range.start, range.end - range.start, visitedStyle, false);
+        if (currentMode == FEED_MODE) {
+            feedVisitedList.add(range.displayString());
+        }
     }
 
     @Override
@@ -1630,7 +1843,7 @@ public class GeminiTextPane extends JTextPane {
 
         StringBuilder localBuilder = pageBuffer;
         if (!hasAnsi && localBuilder != null) {
-            new Thread(() -> {
+            Thread.ofVirtual().start(() -> {
 
                 for (int i = 0; i < localBuilder.length(); i++) {
                     if (localBuilder.charAt(i) == 27) {
@@ -1656,7 +1869,7 @@ public class GeminiTextPane extends JTextPane {
                     }
                 }
 
-            }).start();
+            });
         }
     }
 
@@ -1913,6 +2126,12 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setBackground(bStyle, AnsiColor.adjustColor(c, isDark, .2d, .8d, .15d));
     }
 
+    private String preRedirectUrl;
+
+    public void setPreRedirectUrl(String url) {
+        preRedirectUrl = url;
+    }
+
     public void updatePage(String geminiDoc, boolean pfMode, String docURL, boolean newRequest) {
 
         if (page.isGopherTLS()) {
@@ -1922,13 +2141,23 @@ public class GeminiTextPane extends JTextPane {
 
             if (currentMode == DEFAULT_MODE)
             try {
+
+                if (preRedirectUrl != null) {
+                    // this is a kludge to mark redirected gemlog feeds as read!
+                    DB.markUrlRead(preRedirectUrl);
+                    preRedirectUrl = null;
+                }
+
                 DB.insertHistory(docURL, null);
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
         }
-
-        if (docURL.equals(GeminiFrame.HISTORY_LABEL)) {
+        if (docURL.equals(GeminiFrame.SUBSCRIPTION_LABEL)) {
+            currentMode = SUBSCRIPTION_MODE;
+        } else if (docURL.equals(GeminiFrame.FEEDS_LABEL)) {
+            currentMode = FEED_MODE;
+        } else if (docURL.equals(GeminiFrame.HISTORY_LABEL)) {
             currentMode = HISTORY_MODE;
         } else if (docURL.equals(GeminiFrame.BOOKMARK_LABEL)) {
             currentMode = BOOKMARK_MODE;
@@ -1957,6 +2186,7 @@ public class GeminiTextPane extends JTextPane {
         // map to track clickable regions and their actions
         clickableRegions.clear();
         headingMap.clear();
+        feedVisitedList.clear();
         saveRange = null;
         currentCursor = Cursor.DEFAULT_CURSOR;
         currentStatus = null;
@@ -2328,7 +2558,7 @@ public class GeminiTextPane extends JTextPane {
 
                             } else {
                                 f().addClickedLink(finalUrl);
-                                f().fetchURL(finalUrl, false);
+                                f().fetchURL(finalUrl, false, null);
                             }
 
                         });
@@ -2392,7 +2622,7 @@ public class GeminiTextPane extends JTextPane {
 
         } else if (preformattedMode) {
             // huh? Refresh yourself
-            if ((currentMode == BOOKMARK_MODE || currentMode == CERT_MODE || currentMode == STYLE_MODE) && line.startsWith("=>")) {
+            if (DIRECTIVE_MODES.contains(currentMode) && line.startsWith("=>")) {
                 line = "=> " + line.substring(line.indexOf(":") + 1);
             }
             if (ptp != null) {
@@ -2434,7 +2664,7 @@ public class GeminiTextPane extends JTextPane {
             }
             String url = ll.substring(0, i);
             String[] directive = {null};
-            if (currentMode == BOOKMARK_MODE || currentMode == CERT_MODE || currentMode == STYLE_MODE) {
+            if (DIRECTIVE_MODES.contains(currentMode)){
                 int cIdx = url.indexOf(":");
                 directive[0] = url.substring(0, cIdx);
                 url = url.substring(cIdx + 1);
@@ -2515,7 +2745,23 @@ public class GeminiTextPane extends JTextPane {
                 }
             }
             label = ll.substring(i).trim();
-            String linkStyle = f().isClickedLink(url) ? "visited" : "=>";
+
+            String feedAppend = "";
+            if (currentMode == FEED_MODE) {
+
+                int visited = Integer.parseInt(directive[0].split(",", 4)[2]);
+                if (visited == 1) {
+
+                    if (directive[0].endsWith("#")) {
+                        feedAppend = "#" + label;
+                        feedVisitedList.add(url + feedAppend);
+
+                    } else {
+                        feedVisitedList.add(url);
+                    }
+                }
+            }
+            String linkStyle = (currentMode != FEED_MODE && f().isClickedLink(url)) || feedVisitedList.contains(url + feedAppend) ? "visited" : "=>";
 
             ClickableRange cr = addStyledText(label.isEmpty() ? sfx + url.replace("/", "/\u200B") : sfx + label, linkStyle,
                     () -> {
@@ -2531,11 +2777,11 @@ public class GeminiTextPane extends JTextPane {
                                 if (result instanceof String string) {
                                     if (!string.isBlank()) {
                                         f().addClickedLink(finalUrl);
-                                        f().fetchURL(finalUrl + "?" + Util.uEncode(string), false);
+                                        f().fetchURL(finalUrl + "?" + Util.uEncode(string), false, null);
                                     }
                                 } else {
                                     f().addClickedLink(finalUrl);
-                                    f().fetchURL(finalUrl, (File) result, false, null);
+                                    f().fetchURL(finalUrl, (File) result, false, null, null);
                                 }
                             }
 
@@ -2564,10 +2810,10 @@ public class GeminiTextPane extends JTextPane {
                             f().addClickedLink(finalUrl);
                             char gType = getGopherType(finalUrl);
 
-                            f().fetchURL(resolvedURI.replace("/h/", "/" + gType + "/"), false);
+                            f().fetchURL(resolvedURI.replace("/h/", "/" + gType + "/"), false, null);
                         } else {
                             f().addClickedLink(finalUrl);
-                            f().fetchURL(finalUrl, false);
+                            f().fetchURL(finalUrl, false, currentMode == FEED_MODE && directive[0].endsWith("#") ? label : null);
                         }
 
                     });
@@ -2579,6 +2825,12 @@ public class GeminiTextPane extends JTextPane {
             cr.url = url;
             cr.directive = directive[0];
 
+            if (cr.directive != null) {
+                if (cr.directive.endsWith(">")) {
+                    cr.label = null;
+                }
+            }
+
         } else if (line.startsWith(">")) {
             addStyledText(line.substring(1).trim(), ">", null);
         } else if (line.startsWith("* ")) {
@@ -2588,6 +2840,8 @@ public class GeminiTextPane extends JTextPane {
             addStyledText(line, "text", null);
         }
     }
+
+    private HashSet<String> feedVisitedList = new HashSet<>();
 
     private void dataURL(String url, boolean curPos) {
         int scIndex = url.indexOf(";");
@@ -3032,6 +3286,10 @@ public class GeminiTextPane extends JTextPane {
 
             // add range to clickable ranges
             cr = new ClickableRange(start, end, action);
+            if (currentMode == FEED_MODE) {
+                cr.label = text;
+            }
+
             clickableRegions.add(cr);
         }
         int caretPosition = getCaretPosition();
@@ -3136,12 +3394,20 @@ public class GeminiTextPane extends JTextPane {
         int imageIndex = -1;
         boolean dataUrl;
         boolean openImage;
+        String label; // use for scroll to header feed
 
         ClickableRange(int start, int end, Runnable action) {
             this.start = start;
             this.end = end;
             this.action = action;
 
+        }
+
+        public String displayString() {
+            if (label != null) {
+                return url + "#" + label;
+            }
+            return url;
         }
     }
 
@@ -3379,8 +3645,10 @@ public class GeminiTextPane extends JTextPane {
                     } else {
                         lastClicked = cr;
                         if (!cr.dataUrl) {
-                            doc.setCharacterAttributes(cr.start, cr.end - cr.start, visitedStyle, false);
+
+                            clicked(cr);
                             cr.action.run();
+
                         }
                     }
 

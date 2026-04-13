@@ -16,14 +16,20 @@ import java.sql.DatabaseMetaData;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.DateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 
 import org.h2.jdbcx.JdbcConnectionPool;
 
@@ -175,6 +181,40 @@ public class DB {
                     runStatement(con, sql);
 
                 }
+
+                if (!tableExists(con, "SUBSCRIPTIONS")) {
+                    String sql = """
+                    CREATE TABLE SUBSCRIPTIONS (
+                    ID INT AUTO_INCREMENT PRIMARY KEY,
+                    URL VARCHAR(1024) NOT NULL UNIQUE,
+                    LABEL VARCHAR(128),
+                    TYPE TINYINT NOT NULL,
+                    TIME_STAMP TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE FEEDS (
+                        ID INT AUTO_INCREMENT PRIMARY KEY,
+                        SUBSCRIPTION_ID INT NOT NULL,
+                        LINKDATE DATE NOT NULL,
+                        URL VARCHAR(1024) NOT NULL,
+                        LABEL VARCHAR(2048) NOT NULL,
+                        HEADER BOOLEAN NOT NULL,
+                        READ BOOLEAN NOT NULL,
+                        CONSTRAINT FK_SUBSCRIPTION_DATA 
+                            FOREIGN KEY (SUBSCRIPTION_ID) REFERENCES SUBSCRIPTIONS(ID) 
+                            ON DELETE CASCADE
+                    );
+                    CREATE INDEX IDX_FEEDS_SUBSCRIPTION_ID ON FEEDS(SUBSCRIPTION_ID);
+                    CREATE TRIGGER UPDATE_FEEDS_ON_HISTORY_INSERT
+                    AFTER INSERT ON HISTORY
+                    FOR EACH ROW
+                    CALL "brad.grier.alhena.HistoryTrigger";
+                    CREATE TRIGGER UPDATE_FEEDS_ON_HISTORY_UPDATE
+                    AFTER UPDATE ON HISTORY
+                    FOR EACH ROW
+                    CALL "brad.grier.alhena.HistoryTrigger";
+                """;
+                    runStatement(con, sql);
+                }
             }
 
         }
@@ -210,6 +250,7 @@ public class DB {
     // idea here is that history is saved on a daily basis with duplicate entries for any given day
     // rising to the top
     public static void insertHistory(String url, Long tStamp) throws SQLException {
+
         String mergeSql = """
             MERGE INTO history AS h
             USING (SELECT CAST(? AS VARCHAR) AS url, CAST(? AS DATE) AS time_stamp_date, CAST(? AS TIMESTAMP) AS time_stamp) AS src
@@ -508,6 +549,7 @@ public class DB {
     }
 
     public static int loadHistory(GeminiTextPane textPane) throws SQLException {
+
         int count = 0;
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
 
@@ -766,6 +808,7 @@ public class DB {
         Alhena.playerCommand = map.getOrDefault("playercommand", null);
         Alhena.hotFolder = map.getOrDefault("hotfolder", null);
         Alhena.searchUrl = map.getOrDefault("searchurl", null);
+        Alhena.lastFeedRefresh = Long.valueOf(map.getOrDefault("lastfeedrefresh", "0"));
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
         GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
@@ -1072,4 +1115,486 @@ public class DB {
 
     }
 
+    public record GeminiLink(String url, LocalDate date, String label, boolean header) {
+
+        static GeminiLink parseLinks(String line, String baseUrl) {
+            String[] parts = line.substring(2).strip().split("\\s+", 3);
+            String url = Alhena.resolve(parts[0], baseUrl);
+            String label = parts.length == 3 ? parts[2] : url;
+
+            return new GeminiLink(
+                    url,
+                    LocalDate.parse(parts[1]),
+                    label.replaceFirst("^-\\s*", ""),
+                    false
+            );
+        }
+
+        static GeminiLink parseHeader(String header, LocalDate localDate, String url) {
+            return new GeminiLink(url, localDate, header, true);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof GeminiLink other)) {
+                return false;
+            }
+            if (header) {
+                // exclude linkdate from comparison
+                return Objects.equals(url, other.url)
+                        && Objects.equals(label, other.label)
+                        && header == other.header;
+            }
+            return Objects.equals(url, other.url)
+                    && Objects.equals(date, other.date)
+                    && Objects.equals(label, other.label)
+                    && header == other.header;
+        }
+
+        @Override
+        public int hashCode() {
+            if (header) {
+                return Objects.hash(url, label, header);
+            }
+            return Objects.hash(url, date, label, header);
+        }
+    }
+
+    public static int insertSubscribed(String baseUrl, String content, String label) throws SQLException {
+        int type = 1;
+        List<GeminiLink> glist;
+
+        glist = content.lines()
+                .filter(line -> line.startsWith("=>"))
+                .filter(line -> {
+                    String[] parts = line.substring(2).strip().split("\\s+", 3);
+                    return parts.length >= 2 && parts[1].matches("\\d{4}-\\d{2}-\\d{2}");
+                })
+                .map(line -> GeminiLink.parseLinks(line, baseUrl))
+                .toList();
+        if (glist.isEmpty()) {
+            type = 2;
+            LocalDate ld = LocalDate.now();
+            glist = content.lines()
+                    .filter(line -> line.matches("^#{1,3}\\s+.*"))
+                    .map(line -> GeminiLink.parseHeader(line.replaceFirst("^#{1,3}\\s+", ""), ld, baseUrl))
+                    .toList();
+        }
+
+        // 1 - date links, 2 - Headings
+        String sql = "INSERT INTO SUBSCRIPTIONS (URL, LABEL, TYPE) VALUES (?, ?, ?)";
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, baseUrl);
+                ps.setString(2, label);
+                ps.setInt(3, type);
+                ps.executeUpdate();
+                if (type > 0) {
+                    int subscribedId = -1;
+                    try (ResultSet keys = ps.getGeneratedKeys()) {
+                        if (keys.next()) {
+                            subscribedId = keys.getInt(1);
+                            // use subscribedId for child inserts
+                        }
+                    }
+
+                    // if (type == 1) {
+                    String childSql = "INSERT INTO FEEDS (SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER, READ) VALUES (?, ?, ?, ?, ?, ?)";
+
+                    try (var ps1 = con.prepareStatement(childSql)) {
+                        for (GeminiLink link : glist) {
+                            ps1.setInt(1, subscribedId);
+                            ps1.setObject(2, link.date);
+                            ps1.setString(3, link.url);
+                            ps1.setString(4, link.label);
+                            ps1.setBoolean(5, type == 2);
+                            ps1.setBoolean(6, checkHistory(link.url));
+                            ps1.addBatch();
+                        }
+                        ps1.executeBatch();
+                    }
+
+                }
+            }
+        }
+        return type;
+    }
+
+    private static boolean checkHistory(String url) throws SQLException {
+        boolean ret;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT ID FROM HISTORY WHERE URL = ?")) {
+            ps.setString(1, url);
+            try (ResultSet rs = ps.executeQuery()) {
+                ret = rs.next();
+            }
+        }
+        return ret;
+
+    }
+
+    public static int loadFeeds(GeminiTextPane textPane, boolean all) throws SQLException {
+        int count = 0;
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+            String sql;
+            if (!all) {
+                //sql = "SELECT ID, SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER FROM FEEDS WHERE READ = FALSE ORDER BY LINKDATE DESC";
+                sql = """
+                    SELECT f.ID, f.SUBSCRIPTION_ID, f.LINKDATE, f.URL, f.LABEL, f.HEADER, s.LABEL AS SUBLABEL
+                    FROM FEEDS f
+                    JOIN SUBSCRIPTIONS s ON f.SUBSCRIPTION_ID = s.ID
+                    WHERE f.READ = FALSE
+                    ORDER BY f.LINKDATE DESC
+                """;
+            } else {
+                sql = """
+                    SELECT f.ID, f.SUBSCRIPTION_ID, f.LINKDATE, f.URL, f.LABEL, f.HEADER, f.READ, s.LABEL AS SUBLABEL 
+                    FROM FEEDS f JOIN SUBSCRIPTIONS s ON f.SUBSCRIPTION_ID = s.ID ORDER BY f.LINKDATE DESC
+                """;
+            }
+            try (ResultSet rs = st.executeQuery(sql)) {
+                String saveDate = null;
+
+                while (rs.next()) {
+                    count++;
+                    LocalDate date = rs.getObject("LINKDATE", LocalDate.class);
+
+                    String formattedDate = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+                            .withLocale(Locale.getDefault()));
+                    if (saveDate == null || !saveDate.equals(formattedDate)) {
+                        EventQueue.invokeLater(() -> {
+                            textPane.addPage("\n## " + formattedDate + "\n\n");
+                        });
+
+                        saveDate = formattedDate;
+                    }
+                    int id = rs.getInt("ID");
+                    int sId = rs.getInt("SUBSCRIPTION_ID");
+                    String url = rs.getString("URL");
+                    String label = rs.getString("LABEL");
+                    String header = rs.getBoolean("HEADER") ? "#" : ">";
+                    boolean visited = all ? rs.getBoolean("READ") : false;
+                    int visit = visited ? 1 : 0;
+                    String subLabel = rs.getString("SUBLABEL");
+                    EventQueue.invokeLater(() -> {
+                        textPane.addPage(subLabel + "\n=> " + id + "," + sId + "," + visit + "," + header + ":" + url + " " + label + "\n\n");
+                    });
+
+                }
+            }
+        }
+        return count;
+    }
+
+    public static String getFeedUrl(int id) {
+        String url = null;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT URL FROM SUBSCRIPTIONS WHERE ID = ?")) {
+
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    url = rs.getString(1);
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return url;
+
+    }
+
+    public static String getSubLabel(int id) {
+        String label = null;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT LABEL FROM SUBSCRIPTIONS WHERE ID = ?")) {
+
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    label = rs.getString(1);
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return label;
+
+    }
+
+    public static void markFeedItem(int id, boolean read) {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE FEEDS SET READ = ? WHERE ID = ?")) {
+            ps.setBoolean(1, read);
+            ps.setInt(2, id);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void updateSubLabel(int id, String label) {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE SUBSCRIPTIONS SET LABEL = ? WHERE ID = ?")) {
+            ps.setString(1, label);
+            ps.setInt(2, id);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static void markUrlRead(String url) {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE FEEDS SET READ = TRUE WHERE URL = ?")) {
+            ps.setString(1, url);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void markSubscriptionRead(int id, boolean read) {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE FEEDS SET READ = ? WHERE SUBSCRIPTION_ID = ?")) {
+            ps.setBoolean(1, read);
+            ps.setInt(2, id);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void markOlderFeedRecords(int id) {
+        String sql = """
+        UPDATE FEEDS
+            SET READ = TRUE
+            WHERE LINKDATE < (SELECT LINKDATE FROM FEEDS WHERE ID = ?)
+        """;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void markAllFeeds(boolean read) {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("UPDATE FEEDS SET READ = ?")) {
+            ps.setBoolean(1, read);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void unsubscribe(int id) {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("DELETE FROM SUBSCRIPTIONS WHERE ID = ?")) {
+
+            ps.setInt(1, id);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void unsubscribeAll() {
+        try {
+            runStatement("DELETE FROM SUBSCRIPTIONS");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void updateFeeds(boolean block) throws SQLException {
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+            int count = 0;
+
+            try (ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM SUBSCRIPTIONS")) {
+                if (rs.next()) {
+                    count = rs.getInt(1);
+                }
+            }
+            if (count > 0) {
+
+                CountDownLatch latch = null;
+                if (block) {
+                    latch = new CountDownLatch(count);
+                }
+                try (ResultSet rs = st.executeQuery("SELECT ID, URL, TYPE FROM SUBSCRIPTIONS")) {
+
+                    while (rs.next()) {
+                        int id = rs.getInt(1);
+                        String url = rs.getString(2);
+                        int type = rs.getInt(3);
+
+                        refreshSubscription(con, id, url, latch, type);
+
+                    }
+                    if (latch != null) {
+                        try {
+                            latch.await();
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    Alhena.lastFeedRefresh = System.currentTimeMillis();
+                    DB.insertPref("lastfeedrefresh", String.valueOf(Alhena.lastFeedRefresh));
+                }
+            }
+
+        }
+    }
+
+    private static void refreshSubscription(Connection con, int id, String url, CountDownLatch latch, int type) throws SQLException {
+        ArrayList<GeminiLink> savedList = new ArrayList<>();
+        String childSql = "SELECT URL, LINKDATE, LABEL, HEADER FROM FEEDS WHERE SUBSCRIPTION_ID = ?";
+
+        try (var ps1 = con.prepareStatement(childSql)) {
+            ps1.setInt(1, id);
+            try (ResultSet rs1 = ps1.executeQuery()) {
+                while (rs1.next()) {
+                    savedList.add(new GeminiLink(rs1.getString(1), rs1.getObject(2, LocalDate.class), rs1.getString(3), rs1.getBoolean(4)));
+                }
+            }
+        }
+
+        URI fetchUri = URI.create("gemini://" + URI.create(url).getAuthority()); // needed for socks proxy
+        Alhena.getNetClient(fetchUri);
+        Alhena.fetchGeminiPage(url, fetchUri, Integer.MAX_VALUE).onSuccess(s -> {
+            if (url.endsWith("atom.xml")) {
+                s = Util.convertAtomXml(s, fetchUri.getHost());
+            }
+            List<GeminiLink> glist;
+            if (type == 1) {
+                glist = s.lines()
+                        .filter(line -> line.startsWith("=>"))
+                        .filter(line -> {
+                            String[] parts = line.substring(2).strip().split("\\s+", 3);
+                            return parts.length >= 2 && parts[1].matches("\\d{4}-\\d{2}-\\d{2}");
+                        })
+                        .map(line -> GeminiLink.parseLinks(line, url))
+                        .toList();
+            } else {
+                LocalDate ld = LocalDate.now();
+
+                glist = s.lines()
+                        .filter(line -> line.matches("^#{1,3}\\s+.*"))
+                        .map(line -> GeminiLink.parseHeader(line.replaceFirst("^#{1,3}\\s+", ""), ld, url))
+                        .toList();
+            }
+            List<GeminiLink> finalGlist = glist; // for lambda :(
+
+            savedList.stream()
+                    .filter(link -> !finalGlist.contains(link))
+                    .forEach(link -> {
+                        deleteFeed(id, link);
+                    });
+
+            finalGlist.stream()
+                    .filter(link -> !savedList.contains(link))
+                    .forEach(link -> {
+                        insertFeed(id, link);
+                    });
+
+            if (latch != null) {
+                latch.countDown();
+            }
+            System.out.println("retrieved feed page: " + url);
+
+        }).onFailure(f -> {
+            if (latch != null) {
+                latch.countDown();
+            }
+            f.getCause().printStackTrace();
+        });
+    }
+
+    public static void deleteFeed(int id, GeminiLink link) {
+
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("DELETE FROM FEEDS WHERE SUBSCRIPTION_ID = ? AND LINKDATE = ? AND URL = ? AND LABEL = ? AND HEADER = ?")) {
+
+            ps.setInt(1, id);
+            ps.setObject(2, link.date);
+            ps.setString(3, link.url);
+            ps.setString(4, link.label);
+            ps.setBoolean(5, link.header);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static void insertFeed(int id, GeminiLink link) {
+        String sql = "INSERT INTO FEEDS (SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER, READ) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            ps.setObject(2, link.date);
+            ps.setString(3, link.url);
+            ps.setString(4, link.label);
+            ps.setBoolean(5, link.header);
+            ps.setBoolean(6, false);
+            ps.execute();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static boolean isSubscribed(String url) throws SQLException {
+        boolean ret = false;
+        try (Connection con = cp.getConnection(); var ps = con.prepareStatement("SELECT COUNT(*) FROM SUBSCRIPTIONS WHERE URL = ?")) {
+
+            ps.setString(1, url);
+            try (ResultSet rs = ps.executeQuery()) {
+
+                if (rs.next()) {
+                    ret = rs.getInt(1) > 0;
+                }
+            }
+        }
+        return ret;
+    }
+
+    public static int loadSubscriptions(GeminiTextPane textPane) throws SQLException {
+        int count = 0;
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+            String sql = "SELECT ID, URL, LABEL, TYPE FROM SUBSCRIPTIONS ORDER BY TYPE, TIME_STAMP DESC";
+
+            try (ResultSet rs = st.executeQuery(sql)) {
+                Integer saveType = null;
+                while (rs.next()) {
+                    count++;
+
+                    int type = rs.getInt("TYPE");
+
+                    if (saveType == null || !saveType.equals(type)) {
+                        EventQueue.invokeLater(() -> {
+                            textPane.addPage("\n### " + (type == 1 ? "Gemlog" : "Heading") + "\n\n");
+                        });
+
+                        saveType = type;
+                    }
+                    int id = rs.getInt("ID");
+                    String url = rs.getString("URL");
+                    String label = rs.getString("LABEL");
+                    EventQueue.invokeLater(() -> {
+                        textPane.addPage("=> " + id + ":" + url + " " + label + "\n");
+                    });
+
+                }
+            }
+        }
+        return count;
+    }
 }
