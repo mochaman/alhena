@@ -1509,7 +1509,7 @@ public class GeminiTextPane extends JTextPane {
         inserting = true;
         // if restoring from json saved state, use the saved width because actual width can't be computed
         // this is necessary for data urls when set to auto open
-        float useContentWidth = savedContentWidth != null ? savedContentWidth : contentWidth;
+        float useContentWidth = savedContentWidth != null && savedContentWidth > 0.0 ? savedContentWidth : contentWidth;
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
         int width = (int) useContentWidth - 50;
