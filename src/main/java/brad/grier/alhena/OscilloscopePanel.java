@@ -15,7 +15,7 @@ public class OscilloscopePanel extends Visualizer {
     private boolean paused;
     private BufferedImage trailBuffer;
     private int scanLinePos = 0;
-    
+
     // Classic phosphor green
     private static final Color PHOSPHOR_GREEN = new Color(57, 255, 20);
     private static final Color GRID_COLOR = new Color(57, 255, 20, 30);
@@ -28,9 +28,12 @@ public class OscilloscopePanel extends Visualizer {
 
     @Override
     public void updateSamples(short[] newSamples) {
-        samples = newSamples;
-        scanLinePos = (scanLinePos + 2) % getHeight();
-        repaint();
+        int h = getHeight();
+        if (h > 0) {
+            samples = newSamples;
+            scanLinePos = (scanLinePos + 2) % h;
+            repaint();
+        }
     }
 
     @Override
@@ -47,19 +50,19 @@ public class OscilloscopePanel extends Visualizer {
     @Override
     protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
-        
+
         int w = getWidth();
         int h = getHeight();
-        
+
         // Initialize trail buffer if needed
         if (trailBuffer == null || trailBuffer.getWidth() != w || trailBuffer.getHeight() != h) {
             trailBuffer = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         }
-        
+
         if (paused) {
             return;
         }
-        
+
         if (samples.length == 0) {
             return;
         }
@@ -98,18 +101,18 @@ public class OscilloscopePanel extends Visualizer {
 
     private void drawGrid(Graphics2D g2d, int w, int h) {
         g2d.setColor(GRID_COLOR);
-        
+
         // Vertical lines
         int gridSpacing = 20;
         for (int x = 0; x < w; x += gridSpacing) {
             g2d.drawLine(x, 0, x, h);
         }
-        
+
         // Horizontal lines
         for (int y = 0; y < h; y += gridSpacing) {
             g2d.drawLine(0, y, w, y);
         }
-        
+
         // Center lines (brighter)
         g2d.setColor(new Color(57, 255, 20, 60));
         g2d.drawLine(w / 2, 0, w / 2, h);
@@ -119,39 +122,39 @@ public class OscilloscopePanel extends Visualizer {
     private void drawWaveform(Graphics2D g2d, int w, int h) {
         int mid = h / 2;
         int step = Math.max(1, samples.length / w);
-        
+
         // Draw the main waveform with glow
         for (int pass = 0; pass < 3; pass++) {
             float alpha = pass == 0 ? 0.3f : (pass == 1 ? 0.6f : 1.0f);
             int thickness = pass == 0 ? 5 : (pass == 1 ? 3 : 1);
-            
+
             g2d.setColor(new Color(
-                PHOSPHOR_GREEN.getRed(),
-                PHOSPHOR_GREEN.getGreen(),
-                PHOSPHOR_GREEN.getBlue(),
-                (int) (255 * alpha)
+                    PHOSPHOR_GREEN.getRed(),
+                    PHOSPHOR_GREEN.getGreen(),
+                    PHOSPHOR_GREEN.getBlue(),
+                    (int) (255 * alpha)
             ));
-            g2d.setStroke(new java.awt.BasicStroke(thickness, 
-                java.awt.BasicStroke.CAP_ROUND, 
-                java.awt.BasicStroke.JOIN_ROUND));
-            
+            g2d.setStroke(new java.awt.BasicStroke(thickness,
+                    java.awt.BasicStroke.CAP_ROUND,
+                    java.awt.BasicStroke.JOIN_ROUND));
+
             int prevX = 0;
             int prevY = mid;
-            
+
             for (int i = 0; i < samples.length; i += step) {
                 int x = (i / step);
-                
+
                 // Normalize sample to screen coordinates
                 float normalized = samples[i] / 32768.0f;
                 int y = mid - (int) (normalized * (h / 2) * 0.8f);
-                
+
                 if (i > 0) {
                     g2d.drawLine(prevX, prevY, x, y);
                 }
-                
+
                 prevX = x;
                 prevY = y;
-                
+
                 if (x >= w) {
                     break;
                 }
