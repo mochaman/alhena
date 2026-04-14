@@ -716,9 +716,9 @@ public class Alhena {
         });
     }
 
-    public static void showToast(String msg){
-        for(GeminiFrame gf : frameList){
-            if(gf.isActive()){
+    public static void showToast(String msg) {
+        for (GeminiFrame gf : frameList) {
+            if (gf.isActive()) {
                 Util.showToast(gf, msg);
             }
         }
@@ -3312,7 +3312,7 @@ public class Alhena {
     // need to reset if sock5 setting changed changed for domain
     public static void closeNetClientByDomain(String domain) {
 
-        Integer id = certMapByDomain.get(domain);
+        Integer id = certMapByDomain.remove(domain);
         if (id != null) {
             NetClient nc = certMap.get(id);
             nc.close();
