@@ -86,6 +86,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -671,7 +672,16 @@ public final class GeminiFrame extends JFrame {
         Supplier<List<JComponent>> hotButtonSupplier = () -> {
             List<JComponent> items = new ArrayList<>();
             try {
-                List<Bookmark> mList = Alhena.hotFolder == null ? DB.loadTopBookmarks() : DB.loadFolderBookmarks(Alhena.hotFolder);
+                List<Bookmark> mList = switch (Alhena.hotButtonType) {
+                    case 1 ->
+                        DB.loadTopBookmarks();
+                    case 0 ->
+                        DB.loadFolderBookmarks(Alhena.hotFolder);
+                    case 2 ->
+                        DB.loadUnreadFeeds();
+                    default ->
+                        List.of();
+                };
                 mList.stream().forEach(bmark -> {
                     JMenuItem jmi = new JMenuItem(bmark.label());
                     jmi.addActionListener(e -> {
@@ -687,18 +697,22 @@ public final class GeminiFrame extends JFrame {
 
         hotButton = new PopupMenuButton("🔥", hotButtonSupplier, I18n.t("noHistoryPopupLabel"));
 
-        if (Alhena.hotFolder == null) {
-            hotButton.setToolTipText(I18n.t("hotButtonTip"));
-        } else {
-            String m = MessageFormat.format(I18n.t("hotButtonFolder"), Alhena.hotFolder);
-            hotButton.setToolTipText(m);
+        switch (Alhena.hotButtonType) {
+            case 1 ->
+                hotButton.setToolTipText(I18n.t("hotButtonTip"));
+            case 2 ->
+                hotButton.setToolTipText("Display unread feeds");
+            default -> {
+                String m = MessageFormat.format(I18n.t("hotButtonFolder"), Alhena.hotFolder);
+                hotButton.setToolTipText(m);
+            }
         }
         hotButton.setFont(buttonFont);
         Supplier<List<JComponent>> outlineSupplier = () -> {
             List<JComponent> items = new ArrayList<>();
             List<String> headings = visiblePage().textPane.getHeadings();
             headings.forEach(h -> {
-                String miLabel = h.length() > 50 ? h.substring(0, 40) + "..." : h;
+                String miLabel = Util.truncate(h, 40);
                 JMenuItem jmi = new JMenuItem(miLabel);
 
                 jmi.addActionListener(e -> {
@@ -1551,15 +1565,24 @@ public final class GeminiFrame extends JFrame {
             }
         }));
 
-        settingsMenu.add(createMenuItem(I18n.t("hotButton"), null, () -> {
-            JPanel inlinePanel = new JPanel(new GridLayout(3, 1));
+        settingsMenu.add(createMenuItem(I18n.t("hotButton"), KeyStroke.getKeyStroke(KeyEvent.VK_H, osMask), () -> {
+            JPanel inlinePanel = new JPanel(new GridLayout(4, 1));
             inlinePanel.add(new JLabel(I18n.t("hotButtonTxt")));
-            JCheckBox top20CB = new JCheckBox(I18n.t("hotButtonCB"), Alhena.hotFolder == null);
+            JRadioButton top20CB = new JRadioButton(I18n.t("hotButtonCB"), Alhena.hotButtonType == 1);
             inlinePanel.add(top20CB);
 
-            JPanel hotPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            JLabel bmrkLabel = new JLabel(I18n.t("bookmrkFolderLabel"));
-            hotPanel.add(bmrkLabel);
+            JRadioButton feedsCB = new JRadioButton("Unread Feeds", Alhena.hotButtonType == 2);
+            inlinePanel.add(feedsCB);
+
+            JPanel hotPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            JRadioButton bmrkCB = new JRadioButton(I18n.t("bookmrkFolderLabel"), Alhena.hotButtonType == 0);
+            hotPanel.add(bmrkCB);
+
+            ButtonGroup bg = new ButtonGroup();
+            bg.add(top20CB);
+            bg.add(feedsCB);
+            bg.add(bmrkCB);
+
             List<String> folders;
             try {
                 folders = DB.bookmarkFolders();
@@ -1578,30 +1601,44 @@ public final class GeminiFrame extends JFrame {
             bmrkCombo.setSelectedIndex(0); // TODO:
             hotPanel.add(bmrkCombo);
             inlinePanel.add(hotPanel);
-            bmrkCombo.setEnabled(!top20CB.isSelected());
-            bmrkLabel.setEnabled(!top20CB.isSelected());
+            bmrkCombo.setEnabled(bmrkCB.isSelected());
 
             bmrkCombo.setSelectedItem(Alhena.hotFolder);
             String selItem = (String) bmrkCombo.getSelectedItem();
             if (selItem != null && !selItem.equals(Alhena.hotFolder)) {
                 bmrkCombo.setSelectedIndex(-1);
             }
+
+            bmrkCB.addActionListener(e -> {
+                boolean selected = bmrkCB.isSelected();
+                bmrkCombo.setEnabled(selected);
+            });
             top20CB.addActionListener(e -> {
                 boolean selected = top20CB.isSelected();
                 bmrkCombo.setEnabled(!selected);
-                bmrkLabel.setEnabled(!selected);
 
             });
-
+            feedsCB.addActionListener(e -> {
+                boolean selected = feedsCB.isSelected();
+                bmrkCombo.setEnabled(!selected);
+            });
             Object[] comps = {inlinePanel};
             Object res = Util.inputDialog2(GeminiFrame.this, I18n.t("hotButton"), comps, null, false);
             if (res != null) {
                 if (top20CB.isSelected()) {
                     Alhena.hotFolder = null;
+                    Alhena.hotButtonType = 1;
                     hotButton.setToolTipText(I18n.t("hotButtonTip"));
+                } else if (feedsCB.isSelected()) {
+                    Alhena.hotFolder = null;
+                    Alhena.hotButtonType = 2;
+                    hotButton.setToolTipText("Display unread feeds");
+
                 } else {
+                    Alhena.hotButtonType = 0;
                     Alhena.hotFolder = (String) bmrkCombo.getSelectedItem();
                     if (Alhena.hotFolder == null) {
+                        Alhena.hotButtonType = 1;
                         Util.infoDialog(GeminiFrame.this, I18n.t("infoLabel"), I18n.t("bmAlertkDialogTxt"));
                         hotButton.setToolTipText(I18n.t("hotButtonTip"));
                     } else {
@@ -1610,7 +1647,7 @@ public final class GeminiFrame extends JFrame {
                     }
 
                 }
-
+                DB.insertPref("hotbuttontype", String.valueOf(Alhena.hotButtonType));
                 DB.insertPref("hotfolder", Alhena.hotFolder);
 
             }
@@ -2864,9 +2901,8 @@ public final class GeminiFrame extends JFrame {
 
     @Override
     public void setTitle(String title) {
-        if (title.length() > 70) {
-            title = title.substring(0, 70) + "...";
-        }
+        title = Util.truncate(title, 70);
+
         if (SystemInfo.isMacOS) {
             titleLabel.setText(title);
         } else {
@@ -4245,9 +4281,8 @@ public final class GeminiFrame extends JFrame {
             t = t.substring(t.indexOf(":/") + 2); // file:/
         }
         int maxChars = Alhena.compactTB ? 10 : 30;
-        if (t.length() > maxChars) {
-            t = t.substring(0, maxChars) + "...";
-        }
+        t = Util.truncate(t, maxChars);
+
         return t;
     }
 

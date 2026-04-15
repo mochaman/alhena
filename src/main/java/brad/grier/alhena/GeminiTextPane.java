@@ -917,9 +917,8 @@ public class GeminiTextPane extends JTextPane {
                                             String label = Util.inputDialog(f(), "Edit", "Edit label for subscription",
                                                     false, origLabel, null);
                                             if (label != null && !label.isBlank()) {
-                                                if (label.length() > 128) {
-                                                    label = label.substring(0, 125) + "...";
-                                                }
+                                                label = Util.truncate(label, 125);
+  
                                                 DB.updateSubLabel(id, label);
                                                 f().refresh();
                                             }

@@ -210,6 +210,7 @@ public class Alhena {
     public static boolean smoothScrolling;
     public static boolean macUseNoto;
     public static String hotFolder;
+    public static int hotButtonType;
     private static final HashMap<String, FavIconInfo> favMap = new HashMap<>();
     private static final ResourceBundle bundle
             = ResourceBundle.getBundle("MessagesBundle", Locale.getDefault());
@@ -632,6 +633,8 @@ public class Alhena {
         geminiProxy = map.getOrDefault("geminiproxy", null);
         playerCommand = map.getOrDefault("playercommand", null);
         hotFolder = map.getOrDefault("hotfolder", null);
+        hotButtonType = Integer.parseInt(map.getOrDefault("hotbuttontype", hotFolder == null ? "1" : "0"));
+
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
         lastFeedRefresh = Long.valueOf(map.getOrDefault("lastfeedrefresh", "0"));
@@ -3437,7 +3440,7 @@ public class Alhena {
             bg.add(pcButton);
 
             Object[] comps = new Object[5];
-            String uriText = uri.toString().length() > 70 ? uri.toString().substring(0, 70) + "..." : uri.toString();
+            String uriText = Util.truncate(uri.toString(), 70);
             String sMsg = MessageFormat.format(I18n.t("certReqDialogServerMsg"), uriText);
             comps[0] = serverMsg + sMsg;
             comps[1] = cnField;

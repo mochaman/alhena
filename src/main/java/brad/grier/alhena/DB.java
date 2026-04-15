@@ -817,6 +817,7 @@ public class DB {
         Alhena.geminiProxy = map.getOrDefault("geminiproxy", null);
         Alhena.playerCommand = map.getOrDefault("playercommand", null);
         Alhena.hotFolder = map.getOrDefault("hotfolder", null);
+        Alhena.hotButtonType = Integer.parseInt(map.getOrDefault("hotbuttontype", Alhena.hotFolder == null ? "1" : "0"));
         Alhena.searchUrl = map.getOrDefault("searchurl", null);
         Alhena.lastFeedRefresh = Long.valueOf(map.getOrDefault("lastfeedrefresh", "0"));
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
@@ -1245,6 +1246,35 @@ public class DB {
 
     }
 
+    public static List<Bookmark> loadUnreadFeeds() {
+        ArrayList<Bookmark> bookmarkList = new ArrayList<>();
+        try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+            String sql;
+
+            sql = """
+                    SELECT f.ID, f.SUBSCRIPTION_ID, f.LINKDATE, f.URL, f.LABEL, f.HEADER, f.READ, s.LABEL AS SUBLABEL 
+                    FROM FEEDS f JOIN SUBSCRIPTIONS s ON f.SUBSCRIPTION_ID = s.ID ORDER BY f.LINKDATE DESC, f.READ DESC
+                """;
+
+            try (ResultSet rs = st.executeQuery(sql)) {
+                HashSet<String> urlSet = new HashSet<>();
+                while (rs.next()) {
+
+                    String url = rs.getString("URL");
+                    boolean read = rs.getBoolean("READ");
+                    if (urlSet.add(url) && !read) {
+                        String label = Util.truncate(rs.getString("LABEL"), 40);
+                        bookmarkList.add(new Bookmark(label, url, null, rs.getInt("ID")));
+                    }
+
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return bookmarkList;
+    }
+
     public static int loadFeeds(GeminiTextPane textPane, boolean all) throws SQLException {
         int count = 0;
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
@@ -1339,7 +1369,6 @@ public class DB {
         return label;
 
     }
-
 
     public static void updateSubLabel(int id, String label) {
 
