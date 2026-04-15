@@ -1506,8 +1506,8 @@ public class DB {
                         } else {
                             summary = "No Feed Changes";
                         }
+                        EventQueue.invokeLater(() -> Alhena.showToast(summary));
 
-                        Alhena.showToast(summary);
                     } catch (InterruptedException ex) {
                         ex.printStackTrace();
                     }
