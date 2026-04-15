@@ -31,6 +31,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.h2.jdbcx.JdbcConnectionPool;
 
@@ -43,6 +45,10 @@ public class DB {
 
     private static JdbcConnectionPool cp;
     public static String VERSION = "2";
+    // atomic variables for subscriptions/feeds
+    private static final AtomicBoolean running = new AtomicBoolean(false);
+    private static final AtomicInteger feedsInserted = new AtomicInteger(0);
+    private static final AtomicInteger feedsDeleted = new AtomicInteger(0);
 
     public static record CertInfo(String fingerPrint, Timestamp expires, Timestamp lastModified) {
 
@@ -1452,7 +1458,13 @@ public class DB {
 
     }
 
-    public static void updateFeeds(boolean block) throws SQLException {
+    public static void updateFeeds() throws SQLException {
+        if (!running.compareAndSet(false, true)) {
+            return; // already running
+        }
+        feedsInserted.set(0);
+        feedsDeleted.set(0);
+
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
             int count = 0;
 
@@ -1464,9 +1476,9 @@ public class DB {
             if (count > 0) {
 
                 CountDownLatch latch = null;
-                if (block) {
-                    latch = new CountDownLatch(count);
-                }
+
+                latch = new CountDownLatch(count);
+
                 try (ResultSet rs = st.executeQuery("SELECT ID, URL, TYPE FROM SUBSCRIPTIONS")) {
 
                     while (rs.next()) {
@@ -1477,13 +1489,29 @@ public class DB {
                         refreshSubscription(con, id, url, latch, type);
 
                     }
-                    if (latch != null) {
-                        try {
-                            latch.await();
-                        } catch (InterruptedException ex) {
-                            ex.printStackTrace();
+                    try {
+                        latch.await();
+                        running.set(false);
+
+                        int inserted = feedsInserted.get();
+                        int deleted = feedsDeleted.get();
+                        String summary;
+                        if (inserted > 0 && deleted > 0) {
+                            summary = "New Feeds: %d, Feeds Removed: %d".formatted(inserted, deleted);
+                        } else if (inserted > 0 && deleted == 0) {
+                            summary = "New Feeds: %d".formatted(inserted);
+                        } else if (inserted == 0 && deleted > 0) {
+                            summary = "Feeds Removed: %d".formatted(deleted);
+
+                        } else {
+                            summary = "No Feed Changes";
                         }
+
+                        Alhena.showToast(summary);
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
                     }
+
                     Alhena.lastFeedRefresh = System.currentTimeMillis();
                     DB.insertPref("lastfeedrefresh", String.valueOf(Alhena.lastFeedRefresh));
                 }
@@ -1493,6 +1521,7 @@ public class DB {
     }
 
     private static void refreshSubscription(Connection con, int id, String url, CountDownLatch latch, int type) throws SQLException {
+
         ArrayList<GeminiLink> savedList = new ArrayList<>();
         String childSql = "SELECT URL, LINKDATE, LABEL, HEADER FROM FEEDS WHERE SUBSCRIPTION_ID = ?";
 
@@ -1504,7 +1533,7 @@ public class DB {
                 }
             }
         }
-        boolean[] feedsUpdated = {false};
+
         URI fetchUri = URI.create("gemini://" + URI.create(url).getAuthority()); // needed for socks proxy
         Alhena.getNetClient(fetchUri);
         Alhena.fetchGeminiPage(url, fetchUri, Integer.MAX_VALUE).onSuccess(s -> {
@@ -1534,25 +1563,44 @@ public class DB {
             savedList.stream()
                     .filter(link -> !finalGlist.contains(link))
                     .forEach(link -> {
-                        feedsUpdated[0] = true;
+
+                        feedsDeleted.addAndGet(1);
                         deleteFeed(id, link);
                     });
 
             finalGlist.stream()
                     .filter(link -> !savedList.contains(link))
                     .forEach(link -> {
-                        feedsUpdated[0] = true;
+                        //feedsInserted[0]++;
+                        feedsInserted.addAndGet(1);
                         insertFeed(id, link);
                     });
 
+            // if (feedsInserted[0] > 0) {
+            //     feedInsertedResults.put(url, feedsInserted[0]);
+            // }
+            // if(feedsDeleted[0] > 0){
+            //     feedDeletedResults.put(url, feedsDeleted[0]);
+            // }
+            // if (feedsInserted[0] && feedsDeleted[0]) {
+            //     feedResults.put(url, 2);
+            // } else if (feedsInserted[0] && !feedsDeleted[0]) {
+            //     feedResults.put(url, 1);
+            // } else if (!feedsInserted[0] && feedsDeleted[0]) {
+            //     feedResults.put(url, 0);
+            // }
             if (latch != null) {
                 latch.countDown();
             }
-            System.out.println("retrieved feed page: " + url);
-            if (feedsUpdated[0]) {
-                Alhena.showToast("Feeds Updated");
-            }
+            System.out.println("retrieved feed: " + url);
 
+            // if (feedsInserted[0] && feedsDeleted[0]) {
+            //     Alhena.showToast("Feeds Inserted And Removed");
+            // } else if (feedsInserted[0] && !feedsDeleted[0]) {
+            //     Alhena.showToast("Feeds Inserted");
+            // } else if (!feedsInserted[0] && feedsDeleted[0]) {
+            //     Alhena.showToast("Feeds Removed");
+            // }
         }).onFailure(f -> {
             if (latch != null) {
                 latch.countDown();

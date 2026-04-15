@@ -1183,7 +1183,7 @@ public class GeminiTextPane extends JTextPane {
                                 Thread.ofVirtual().start(() -> {
                                     // new Thread(() -> {
                                     try {
-                                        DB.updateFeeds(true);
+                                        DB.updateFeeds();
                                         EventQueue.invokeLater(() -> {
                                             f().refresh(false);
                                             f().setBusy(false, page);

@@ -701,7 +701,14 @@ public class Alhena {
         started = true;
 
         if (System.currentTimeMillis() - lastFeedRefresh > 3_600_000) {
-            DB.updateFeeds(false);
+            Thread.ofVirtual().start(() -> {
+                try {
+                    DB.updateFeeds();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            });
+
         }
         startFeedTimer();
 
@@ -710,11 +717,14 @@ public class Alhena {
     private static void startFeedTimer() {
         vertx.setPeriodic(TimeUnit.MINUTES.toMillis(5), id -> {
             if (System.currentTimeMillis() - lastFeedRefresh > 3_600_000) {
-                try {
-                    DB.updateFeeds(false);
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
+                Thread.ofVirtual().start(() -> {
+                    try {
+                        DB.updateFeeds();
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                });
+
             }
         });
     }
