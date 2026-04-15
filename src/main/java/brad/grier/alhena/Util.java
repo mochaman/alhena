@@ -1560,7 +1560,7 @@ public class Util {
             }
         });
 
-        Timer delay = new Timer(2000, e -> timer.start());
+        Timer delay = new Timer(3000, e -> timer.start());
         delay.setRepeats(false);
         delay.start();
     }
