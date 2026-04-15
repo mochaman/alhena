@@ -104,6 +104,9 @@ import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.commonmark.node.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -231,6 +234,8 @@ public class Alhena {
     public static String alhenaHome;
     public static long pageCache;
     private static boolean started;
+    private static final Parser parser = Parser.builder().build();
+    private static final HtmlRenderer renderer = HtmlRenderer.builder().build();
 
     static {
         // just do this once
@@ -1483,6 +1488,7 @@ public class Alhena {
                 Buffer saveBuffer = Buffer.buffer();
                 Buffer htmlBuffer = Buffer.buffer();
                 boolean[] isHtml = {false};
+                boolean[] isMarkdown = {false};
                 boolean[] error = {false};
                 int[] lineEnd = {0};
                 Buffer[] charIncompleteBuffer = {Buffer.buffer()};
@@ -1554,7 +1560,13 @@ public class Alhena {
                                         htmlBuffer.appendString(chunk);
                                     }
                                     isHtml[0] = true;
-
+                                } else if (mime.equals("text/markdown")) {
+                                    final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
+                                    if (chunk.length() > 0) {
+                                        htmlBuffer.appendString(chunk);
+                                    }
+                                    isHtml[0] = true;
+                                    isMarkdown[0] = true;
                                 } else if (!isSVGExt[0] && (mime.startsWith("text/") || isAscii(saveBuffer.slice(i + 1, saveBuffer.length())))) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     bg(() -> {
@@ -1746,7 +1758,7 @@ public class Alhena {
                         if (p.redirectCount == 0) {
                             if (isHtml[0]) {
 
-                                String content = convertHtmlToGemtext(htmlBuffer.toString(), null);
+                                String content = isMarkdown[0] ? convertHtmlToGemtext(markdownToHtml(htmlBuffer.toString()), null) : convertHtmlToGemtext(htmlBuffer.toString(), null);
                                 bg(() -> {
                                     p.textPane.gopherHtml = true;
                                     p.textPane.end(content, false, origURL, true);
@@ -2682,6 +2694,7 @@ public class Alhena {
 
                 boolean[] error = {false};
                 boolean[] isHtml = {false};
+                boolean[] isMarkdown = {false};
                 int[] hLength = {0};
                 Buffer[] charIncompleteBuffer = {Buffer.buffer()};
                 // Handle the response
@@ -2773,6 +2786,12 @@ public class Alhena {
                                             htmlBuffer.appendString(chunk);
                                         }
                                         isHtml[0] = true;
+                                    } else if (mime.equals("text/markdown")) {
+                                        if (chunk.length() > 0) {
+                                            htmlBuffer.appendString(chunk);
+                                        }
+                                        isHtml[0] = true;
+                                        isMarkdown[0] = true;
                                     } else {
                                         bg(() -> {
                                             p.textPane.updatePage(chunk, true, origURL, true);
@@ -3022,12 +3041,18 @@ public class Alhena {
                             bg(() -> {
 
                                 if (isHtml[0]) {
+                                    String content;
+                                    if (isMarkdown[0]) {
+                                        content = markdownToHtml(htmlBuffer.toString());
 
-                                    String content = convertHtmlToGemtext(htmlBuffer.toString(), null);
+                                    } else {
+                                        content = htmlBuffer.toString();
+                                    }
+
+                                    String finalContent = convertHtmlToGemtext(content, null);
                                     bg(() -> {
-                                        // p.setGopher(false);
                                         p.textPane.gopherHtml = true;
-                                        p.textPane.end(content, false, origURL, true);
+                                        p.textPane.end(finalContent, false, origURL, true);
                                     });
                                 } else if (titanEdit[0]) {
 
@@ -4300,7 +4325,13 @@ public class Alhena {
 
             File file = new File(fileUrl.toURI());
             if (file.exists()) {
+                boolean md = false;
                 String mimeExt = MimeMapping.getMimeTypeForFilename(url);
+                if (mimeExt == null && url.toLowerCase().endsWith(".md")) {
+                    mimeExt = "text/markdown";
+                    md = true;
+                }
+                boolean finalmd = md;
                 boolean html = !useBrowser && mimeExt != null && mimeExt.equals("text/html");
                 boolean vlcType = (allowVLC || playerCommand != null) && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
@@ -4311,7 +4342,7 @@ public class Alhena {
 
                     String fUrl = url;
                     p.frame().setBusy(true, cPage);
-                    boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini") || html);
+                    boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini") || html || finalmd);
                     if (!isImage && !vlcType) {
                         p.textPane.updatePage("", pformatted, fUrl, true);
                     }
@@ -4342,7 +4373,7 @@ public class Alhena {
                                     if (isImage) {
                                         saveBuffer.appendBuffer(buffer);
                                     } else {
-                                        if (html) {
+                                        if (html || finalmd) {
                                             saveBuffer.appendBuffer(buffer);
                                         } else {
                                             bg(() -> {
@@ -4376,6 +4407,8 @@ public class Alhena {
                                     } else {
                                         if (html) {
                                             p.textPane.end(convertHtmlToGemtext(saveBuffer.toString(), fUrl), false, fUrl, true);
+                                        } else if (finalmd) {
+                                            p.textPane.end(convertHtmlToGemtext(markdownToHtml(saveBuffer.toString()), fUrl), false, fUrl, true);
                                         } else {
                                             bg(() -> {
                                                 p.textPane.end();
@@ -5019,6 +5052,11 @@ public class Alhena {
             // throws an exception on getTaskbar
         }
         return null;
+    }
+
+    public static String markdownToHtml(String markdown) {
+        Node document = parser.parse(markdown);
+        return renderer.render(document);
     }
 
 }

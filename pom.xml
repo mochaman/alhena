@@ -31,6 +31,11 @@
             <artifactId>bcpkix-jdk18on</artifactId>
             <version>1.80</version>
         </dependency>   
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark</artifactId>
+            <version>0.24.0</version>
+        </dependency>
         <!-- include the following for native-image only -->   
         <!---
         <dependency>
