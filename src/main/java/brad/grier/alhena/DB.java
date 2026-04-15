@@ -1571,40 +1571,16 @@ public class DB {
             finalGlist.stream()
                     .filter(link -> !savedList.contains(link))
                     .forEach(link -> {
-                        //feedsInserted[0]++;
                         feedsInserted.addAndGet(1);
                         insertFeed(id, link);
                     });
 
-            // if (feedsInserted[0] > 0) {
-            //     feedInsertedResults.put(url, feedsInserted[0]);
-            // }
-            // if(feedsDeleted[0] > 0){
-            //     feedDeletedResults.put(url, feedsDeleted[0]);
-            // }
-            // if (feedsInserted[0] && feedsDeleted[0]) {
-            //     feedResults.put(url, 2);
-            // } else if (feedsInserted[0] && !feedsDeleted[0]) {
-            //     feedResults.put(url, 1);
-            // } else if (!feedsInserted[0] && feedsDeleted[0]) {
-            //     feedResults.put(url, 0);
-            // }
-            if (latch != null) {
-                latch.countDown();
-            }
+            latch.countDown();
+
             System.out.println("retrieved feed: " + url);
 
-            // if (feedsInserted[0] && feedsDeleted[0]) {
-            //     Alhena.showToast("Feeds Inserted And Removed");
-            // } else if (feedsInserted[0] && !feedsDeleted[0]) {
-            //     Alhena.showToast("Feeds Inserted");
-            // } else if (!feedsInserted[0] && feedsDeleted[0]) {
-            //     Alhena.showToast("Feeds Removed");
-            // }
         }).onFailure(f -> {
-            if (latch != null) {
-                latch.countDown();
-            }
+            latch.countDown();
             f.getCause().printStackTrace();
         });
 
