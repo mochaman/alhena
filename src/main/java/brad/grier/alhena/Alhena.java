@@ -4640,6 +4640,7 @@ public class Alhena {
                                         }
 
                                         p.frame().showGlassPane(false);
+                                        cPage.setBusy(false);
                                     });
                                 });
                             }
