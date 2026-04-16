@@ -150,8 +150,8 @@ public final class GeminiFrame extends JFrame {
     public static final String INFO_LABEL = I18n.t("infoLabel");
     public static final String SERVERS_LABEL = I18n.t("serversItem");
     public static final String STYLES_LABEL = I18n.t("stylesMgrItem");
-    public static final String FEEDS_LABEL = "Feeds";
-    public static final String SUBSCRIPTION_LABEL = "Subscriptions";
+    public static final String FEEDS_LABEL = I18n.t("feedsItem");
+    public static final String SUBSCRIPTION_LABEL = I18n.t("subsItem");
     public static final List<String> CUSTOM_LABELS = List.of(HISTORY_LABEL, BOOKMARK_LABEL, CERT_LABEL, INFO_LABEL, SERVERS_LABEL, STYLES_LABEL, SUBSCRIPTION_LABEL, FEEDS_LABEL); // make immutable
     public static String proportionalFamily = "SansSerif";
     public static final int DEFAULT_FONT_SIZE = 20;
@@ -696,17 +696,8 @@ public final class GeminiFrame extends JFrame {
         };
 
         hotButton = new PopupMenuButton("🔥", hotButtonSupplier, I18n.t("noHistoryPopupLabel"));
+        setHotButtonToolTip();
 
-        switch (Alhena.hotButtonType) {
-            case 1 ->
-                hotButton.setToolTipText(I18n.t("hotButtonTip"));
-            case 2 ->
-                hotButton.setToolTipText("Display unread feeds");
-            default -> {
-                String m = MessageFormat.format(I18n.t("hotButtonFolder"), Alhena.hotFolder);
-                hotButton.setToolTipText(m);
-            }
-        }
         hotButton.setFont(buttonFont);
         Supplier<List<JComponent>> outlineSupplier = () -> {
             List<JComponent> items = new ArrayList<>();
@@ -1107,6 +1098,21 @@ public final class GeminiFrame extends JFrame {
                 setPageInfo(savedPage, r.get());
             }
         }
+    }
+
+    public String setHotButtonToolTip() {
+        switch (Alhena.hotButtonType) {
+            case 1 ->
+                hotButton.setToolTipText(I18n.t("hotButtonTip"));
+            case 2 ->
+                hotButton.setToolTipText(I18n.t("ureadFeedsTip"));
+            default -> {
+                String s = Alhena.hotFolder == null ? "" : Alhena.hotFolder;
+                String m = MessageFormat.format(I18n.t("hotButtonFolder"), s);
+                hotButton.setToolTipText(m);
+            }
+        }
+        return hotButton.getToolTipText();
     }
 
     private void restoreSplitView(JsonObject savedPage) {
@@ -1571,7 +1577,7 @@ public final class GeminiFrame extends JFrame {
             JRadioButton top20CB = new JRadioButton(I18n.t("hotButtonCB"), Alhena.hotButtonType == 1);
             inlinePanel.add(top20CB);
 
-            JRadioButton feedsCB = new JRadioButton("Unread Feeds", Alhena.hotButtonType == 2);
+            JRadioButton feedsCB = new JRadioButton(I18n.t("ureadFeedsRadio"), Alhena.hotButtonType == 2);
             inlinePanel.add(feedsCB);
 
             JPanel hotPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -1626,25 +1632,17 @@ public final class GeminiFrame extends JFrame {
             Object res = Util.inputDialog2(GeminiFrame.this, I18n.t("hotButton"), comps, null, false);
             if (res != null) {
                 if (top20CB.isSelected()) {
-                    Alhena.hotFolder = null;
                     Alhena.hotButtonType = 1;
-                    hotButton.setToolTipText(I18n.t("hotButtonTip"));
                 } else if (feedsCB.isSelected()) {
-                    Alhena.hotFolder = null;
                     Alhena.hotButtonType = 2;
-                    hotButton.setToolTipText("Display unread feeds");
-
                 } else {
                     Alhena.hotButtonType = 0;
                     Alhena.hotFolder = (String) bmrkCombo.getSelectedItem();
                     if (Alhena.hotFolder == null) {
                         Alhena.hotButtonType = 1;
                         Util.infoDialog(GeminiFrame.this, I18n.t("infoLabel"), I18n.t("bmAlertkDialogTxt"));
-                        hotButton.setToolTipText(I18n.t("hotButtonTip"));
-                    } else {
-                        String m = MessageFormat.format(I18n.t("hotButtonFolder"), Alhena.hotFolder);
-                        hotButton.setToolTipText(m);
-                    }
+                    } 
+                    setHotButtonToolTip();
 
                 }
                 DB.insertPref("hotbuttontype", String.valueOf(Alhena.hotButtonType));
@@ -3132,8 +3130,8 @@ public final class GeminiFrame extends JFrame {
         if (info != null) {
             textPane.end(info.content, false, FEEDS_LABEL, false);
         } else {
-            String heading = loadAllFeeds ? "# All Feeds\n" : "# Unread Feeds\n";
-            textPane.updatePage(heading + "Right-click on feed links and page for more feed options.\n\n", false, FEEDS_LABEL, true);
+            String heading = loadAllFeeds ? I18n.t("allFeedsHeader") : I18n.t("unreadFeedsHeader");
+            textPane.updatePage(heading + I18n.t("feedsHeader"), false, FEEDS_LABEL, true);
             Thread.ofVirtual().start(() -> {
                 //new Thread(() -> {
                 int[] count = {0};
@@ -3174,7 +3172,7 @@ public final class GeminiFrame extends JFrame {
             textPane.end(info.content, false, SUBSCRIPTION_LABEL, false);
         } else {
             //String heading = loadAllFeeds ? "# All Feeds\n" : "# Unread Feeds\n";
-            textPane.updatePage("# Subscriptions\nRight-click on links and page for more options.\n", false, SUBSCRIPTION_LABEL, true);
+            textPane.updatePage(I18n.t("subsHeader"), false, SUBSCRIPTION_LABEL, true);
             Thread.ofVirtual().start(() -> {
                 //new Thread(() -> {
                 int[] count = {0};

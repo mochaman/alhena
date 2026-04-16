@@ -861,7 +861,7 @@ public class GeminiTextPane extends JTextPane {
                                     }
                                     case FEED_MODE -> {
                                         popupMenu.add(new JSeparator());
-                                        JMenuItem openFeedItem = new JMenuItem("Open Feed Page");
+                                        JMenuItem openFeedItem = new JMenuItem(I18n.t("openFeedItem"));
                                         openFeedItem.addActionListener(ev -> {
                                             String token = range.directive.split(",", 4)[1];
                                             String pUrl = DB.getFeedUrl(Integer.parseInt(token));
@@ -872,7 +872,7 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         popupMenu.add(openFeedItem);
                                         boolean read = Integer.parseInt(range.directive.split(",", 4)[2]) == 1;
-                                        JMenuItem markReadItem = new JMenuItem(read ? "Mark As Unread" : "Mark As Read");
+                                        JMenuItem markReadItem = new JMenuItem(read ? I18n.t("markAsUnreadItem") : I18n.t("markAsReadItem"));
                                         markReadItem.addActionListener(ev -> {
                                             DB.markUrlRead(range.url, !read);
                                             f().refresh(false);
@@ -880,7 +880,7 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         popupMenu.add(markReadItem);
 
-                                        JMenuItem markBelowItem = new JMenuItem("Mark Below As Read");
+                                        JMenuItem markBelowItem = new JMenuItem(I18n.t("markBelowItem"));
                                         markBelowItem.addActionListener(ev -> {
                                             int id = Integer.parseInt(range.directive.split(",", 2)[0]);
 
@@ -890,11 +890,11 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         popupMenu.add(markBelowItem);
 
-                                        JMenuItem unsubscribeItem = new JMenuItem("Unsubscribe");
+                                        JMenuItem unsubscribeItem = new JMenuItem(I18n.t("unsubscribeItem"));
                                         unsubscribeItem.addActionListener(ev -> {
                                             int id = Integer.parseInt(range.directive.split(",", 3)[1]);
                                             String s = DB.getFeedUrl(id);
-                                            Object r = Util.confirmDialog(f(), "Confirm", "Are you sure you want to unsubscribe from\n" + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                            Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubMsg") + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                                             if (r instanceof Integer result) {
                                                 if (result == JOptionPane.YES_OPTION) {
 
@@ -910,11 +910,11 @@ public class GeminiTextPane extends JTextPane {
                                     case SUBSCRIPTION_MODE -> {
                                         popupMenu.add(new JSeparator());
 
-                                        JMenuItem editItem = new JMenuItem("Edit Label");
+                                        JMenuItem editItem = new JMenuItem(I18n.t("editLabelItem"));
                                         editItem.addActionListener(ev -> {
                                             int id = Integer.parseInt(range.directive.split(",", 2)[0]);
                                             String origLabel = DB.getSubLabel(id);
-                                            String label = Util.inputDialog(f(), "Edit", "Edit label for subscription",
+                                            String label = Util.inputDialog(f(), I18n.t("editLabelDialog"), I18n.t("editLabelMsg"),
                                                     false, origLabel, null);
                                             if (label != null && !label.isBlank()) {
                                                 label = Util.truncate(label, 125);
@@ -925,32 +925,32 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         popupMenu.add(editItem);
 
-                                        JMenuItem markReadItem = new JMenuItem("Mark As Read");
+                                        JMenuItem markReadItem = new JMenuItem(I18n.t("markAsReadItem"));
                                         markReadItem.addActionListener(ev -> {
                                             int id = Integer.parseInt(range.directive.split(",", 2)[0]);
 
                                             DB.markSubscriptionRead(id, true);
 
-                                            Util.infoDialog(f(), "Info", "Subscription marked as read.\n" + range.url);
+                                            Util.infoDialog(f(), I18n.t("infoLabel"), I18n.t("subMarkedReadMsg") + range.url);
 
                                         });
                                         popupMenu.add(markReadItem);
 
-                                        JMenuItem markUnreadItem = new JMenuItem("Mark As Unread");
+                                        JMenuItem markUnreadItem = new JMenuItem(I18n.t("markAsUnreadItem"));
                                         markUnreadItem.addActionListener(ev -> {
                                             int id = Integer.parseInt(range.directive.split(",", 2)[0]);
                                             DB.markSubscriptionRead(id, false);
 
-                                            Util.infoDialog(f(), "Info", "Subscription marked as unread.\n" + range.url);
+                                            Util.infoDialog(f(), I18n.t("infoLabel"), I18n.t("subMarkedUnreadMsg") + range.url);
 
                                         });
                                         popupMenu.add(markUnreadItem);
 
-                                        JMenuItem unsubscribeItem = new JMenuItem("Unsubscribe");
+                                        JMenuItem unsubscribeItem = new JMenuItem(I18n.t("unsubscribeItem"));
                                         unsubscribeItem.addActionListener(ev -> {
                                             int id = Integer.parseInt(range.directive.split(",", 2)[0]);
                                             String s = DB.getFeedUrl(id);
-                                            Object r = Util.confirmDialog(f(), "Confirm", "Are you sure you want to unsubscribe from\n" + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                            Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubMsg") + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                                             if (r instanceof Integer result) {
                                                 if (result == JOptionPane.YES_OPTION) {
 
@@ -1089,12 +1089,12 @@ public class GeminiTextPane extends JTextPane {
                     popupMenu.add(saveItem);
 
                     if (docURL.startsWith("gemini://")) {
-                        JMenuItem subscribeItem = new JMenuItem("Subscribe");
+                        JMenuItem subscribeItem = new JMenuItem(I18n.t("subscribeItem"));
                         subscribeItem.setEnabled(!imageOnly);
                         subscribeItem.addActionListener(al -> {
                             try {
                                 if (DB.isSubscribed(docURL)) {
-                                    Util.infoDialog(f, "Already Subscribed", "Already subscribed to " + docURL);
+                                    Util.infoDialog(f, I18n.t("infoLabel"), "Already subscribed to " + docURL);
                                 } else {
 
                                     String suggestedName = getFirstHeading();
@@ -1103,7 +1103,7 @@ public class GeminiTextPane extends JTextPane {
                                     }
                                     int type = DB.insertSubscribed(docURL, pageBuffer.toString(), suggestedName);
                                     String tString = type == 1 ? "YYYY-MM-DD Links" : "Headings";
-                                    Util.infoDialog(f, "Subscribed", "Subscribed to " + docURL + "\nSubscription type: " + tString);
+                                    Util.infoDialog(f, I18n.t("infoLabel"), "Subscribed to " + docURL + "\nSubscription type: " + tString);
                                 }
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
@@ -1164,19 +1164,19 @@ public class GeminiTextPane extends JTextPane {
                         }
                         case FEED_MODE -> {
                             popupMenu.add(new JSeparator());
-                            JMenuItem allReadItem = new JMenuItem("Mark All Read");
+                            JMenuItem allReadItem = new JMenuItem(I18n.t("markAllReadItem"));
                             allReadItem.addActionListener(al -> {
                                 DB.markAllFeeds(true);
                                 f().refresh(false);
                             });
                             popupMenu.add(allReadItem);
-                            JMenuItem allUnreadItem = new JMenuItem("Mark All Unread");
+                            JMenuItem allUnreadItem = new JMenuItem(I18n.t("markAllUnreadItem"));
                             allUnreadItem.addActionListener(al -> {
                                 DB.markAllFeeds(false);
                                 f().refresh(false);
                             });
                             popupMenu.add(allUnreadItem);
-                            JMenuItem refreshItem = new JMenuItem("Refresh All Feeds");
+                            JMenuItem refreshItem = new JMenuItem(I18n.t("refreshAllFeedsItem"));
                             refreshItem.addActionListener(al -> {
 
                                 f().setBusy(true, page);
@@ -1197,7 +1197,7 @@ public class GeminiTextPane extends JTextPane {
                             });
                             popupMenu.add(refreshItem);
                             popupMenu.add(new JSeparator());
-                            JMenuItem allFeedsItem = new JMenuItem("Show All Feeds");
+                            JMenuItem allFeedsItem = new JMenuItem(I18n.t("showAllFeedsItem"));
                             allFeedsItem.addActionListener(al -> {
                                 f().loadAllFeeds = true;
                                 f().refresh(false);
@@ -1207,9 +1207,9 @@ public class GeminiTextPane extends JTextPane {
                         }
                         case SUBSCRIPTION_MODE -> {
                             popupMenu.add(new JSeparator());
-                            JMenuItem allFeedsItem = new JMenuItem("Unsubscribe All");
+                            JMenuItem allFeedsItem = new JMenuItem(I18n.t("unsubAllItem"));
                             allFeedsItem.addActionListener(al -> {
-                                Object r = Util.confirmDialog(f(), "Confirm", "Are you sure you want to unsubscribe from all feeds?", JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                                Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubAllMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
                                 if (r instanceof Integer result) {
                                     if (result == JOptionPane.YES_OPTION) {
 

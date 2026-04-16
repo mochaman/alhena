@@ -1522,7 +1522,7 @@ public class Util {
         Document doc = Jsoup.parse(xml, "", Parser.xmlParser());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("# ").append(heading).append("\nConverted to gemlog format to support subscriptions.\n\n");
+        sb.append("# ").append(heading).append(I18n.t("feedCvtMsg"));
 
         for (Element entry : doc.select("entry")) {
             // String url = entry.select("link[rel=alternate]").attr("href");
@@ -1554,11 +1554,11 @@ public class Util {
 
         JLabel label = new JLabel(message);
         label.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        //label.setForeground(Color.WHITE);
+
         label.setForeground(UIManager.getColor("TextPane.background"));
 
         JPanel panel = new JPanel();
-        //panel.setBackground(new Color(50, 50, 50, 220));
+
         panel.setBackground(UIManager.getColor("TextPane.foreground"));
         panel.add(label);
 

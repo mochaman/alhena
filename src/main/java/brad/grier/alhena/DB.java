@@ -1496,14 +1496,14 @@ public class DB {
                         int deleted = feedsDeleted.get();
                         String summary;
                         if (inserted > 0 && deleted > 0) {
-                            summary = "New Feeds: %d, Feeds Removed: %d".formatted(inserted, deleted);
+                            summary = I18n.t("combinedSummary").formatted(inserted, deleted);
                         } else if (inserted > 0 && deleted == 0) {
-                            summary = "New Feeds: %d".formatted(inserted);
+                            summary = I18n.t("newFeedsSummary").formatted(inserted);
                         } else if (inserted == 0 && deleted > 0) {
-                            summary = "Feeds Removed: %d".formatted(deleted);
+                            summary = I18n.t("removedFeedsSummary").formatted(deleted);
 
                         } else {
-                            summary = "No Feed Changes";
+                            summary = I18n.t("noChangeSummary");
                         }
                         EventQueue.invokeLater(() -> Alhena.showToast(summary));
 
