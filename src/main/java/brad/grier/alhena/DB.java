@@ -1298,7 +1298,11 @@ public class DB {
 
                     String url = rs.getString("URL");
                     boolean read = rs.getBoolean("READ");
-                    if ((all || (!all && urlSet.add(url))) && (all || (!all && !read))) {
+                    boolean isHeader = rs.getBoolean("HEADER");
+                    String label = rs.getString("LABEL");
+                    String testUrl = isHeader ? url + label : url;
+
+                    if (all || (urlSet.add(testUrl) && !read)) {
                         count++;
                         LocalDate date = rs.getObject("LINKDATE", LocalDate.class);
 
@@ -1311,8 +1315,7 @@ public class DB {
                         int id = rs.getInt("ID");
                         int sId = rs.getInt("SUBSCRIPTION_ID");
 
-                        String label = rs.getString("LABEL");
-                        String header = rs.getBoolean("HEADER") ? "#" : ">";
+                        String header = isHeader ? "#" : ">";
                         boolean visited = all ? read : false;
                         int visit = visited ? 1 : 0;
                         String subLabel = rs.getString("SUBLABEL");
@@ -1323,12 +1326,6 @@ public class DB {
                                 textPane.addPage(data);
                             });
                             sb.setLength(0);
-
-                            // might be some merit to sleeping this thread so busy spinner can spin
-                            // try {
-                            //     Thread.sleep(10);
-                            // } catch (InterruptedException ex) {
-                            // }
                         }
                     }
 
