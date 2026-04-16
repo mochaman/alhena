@@ -55,6 +55,7 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Scanner;
@@ -1512,6 +1513,12 @@ public class Util {
     }
 
     public static String convertAtomXml(String xml, String heading) {
+
+        String trimmed = xml.strip();
+        if (!trimmed.contains("<feed") || !trimmed.contains("http://www.w3.org/2005/Atom")) {
+            return null;
+        }
+
         Document doc = Jsoup.parse(xml, "", Parser.xmlParser());
 
         StringBuilder sb = new StringBuilder();
@@ -1519,10 +1526,24 @@ public class Util {
 
         for (Element entry : doc.select("entry")) {
             // String url = entry.select("link[rel=alternate]").attr("href");
-            String url = entry.select("link").attr("href");
+            // String url = entry.select("link").attr("href");
+            Element linkEl = entry.selectFirst("link[rel=alternate]");
+            if (linkEl == null) {
+                linkEl = entry.selectFirst("link[href]");
+            }
+
+            String url = linkEl != null ? linkEl.attr("href") : "";
             String label = entry.select("title").text();
-            String updated = entry.select("updated").text().substring(0, 10); // yields yyyy-MM-dd
-            sb.append("=> ").append(url).append(" ").append(updated).append(" ").append(label).append("\n");
+            //String updated = entry.select("updated").text().substring(0, 10); // yields yyyy-MM-dd
+            String updatedRaw = entry.select("updated").text();
+            String updated;
+            try {
+                updated = updatedRaw.substring(0, 10); // yyyy-MM-dd
+                LocalDate.parse(updated); // validates format
+                sb.append("=> ").append(url).append(" ").append(updated).append(" ").append(label).append("\n");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         return sb.toString();
     }

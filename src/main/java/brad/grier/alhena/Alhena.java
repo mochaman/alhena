@@ -2545,33 +2545,7 @@ public class Alhena {
 
     }
 
-    public static void handleAtomXML(URI uri, String origURL, Page p, Page cPage) {
-        if (p.redirectCount == 0) {
-            p.frame().setBusy(true, cPage);
-        }
-        URI fetchUri = URI.create("gemini://" + uri.getAuthority()); // needed for socks proxy
-        Alhena.fetchGeminiPage(uri.toString(), fetchUri, Integer.MAX_VALUE).onSuccess(s -> {
-            bg(() -> {
-                p.textPane.end(Util.convertAtomXml(s, uri.getHost()), false, origURL, true);
-            });
-            p.frame().setBusy(false, cPage);
-        }).onFailure(f -> {
-            bg(() -> {
-                p.frame().setBusy(false, cPage);
-                p.textPane.end(new Date() + "\n" + f.toString() + "\n", true, origURL, true);
-            });
-
-            f.printStackTrace();
-            System.out.println(I18n.t("failedToConnectMsg") + ": " + f.getMessage());
-            p.frame().setBusy(false, cPage);
-        });
-    }
-
     private static void gemini(NetClient client, URI uri, Page p, String origURL, Page cPage, String proxyURL) {
-        if (origURL.endsWith("atom.xml") || origURL.endsWith("?atom")) {
-            handleAtomXML(uri, origURL, p, cPage);
-            return;
-        }
         if (p.redirectCount == 0) {
             p.frame().setBusy(true, cPage);
         }
@@ -2694,6 +2668,7 @@ public class Alhena {
 
                 boolean[] error = {false};
                 boolean[] isHtml = {false};
+                boolean[] isAtom = {false};
                 boolean[] isMarkdown = {false};
                 int[] hLength = {0};
                 Buffer[] charIncompleteBuffer = {Buffer.buffer()};
@@ -2777,6 +2752,13 @@ public class Alhena {
 
                                         });
                                     }
+                                } else if (origURL.endsWith(".xml") || (mime.startsWith("text") && mime.contains("xml"))) {
+                                    final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
+                                    if (chunk.length() > 0) {
+                                        htmlBuffer.appendString(chunk);
+                                    }
+                                    isHtml[0] = true; // not really re-using the buffer
+                                    isAtom[0] = true;
                                 } else if (mime.startsWith("text/")) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     if (titanEdit[0]) {
@@ -3041,18 +3023,30 @@ public class Alhena {
                             bg(() -> {
 
                                 if (isHtml[0]) {
-                                    String content;
-                                    if (isMarkdown[0]) {
-                                        content = markdownToHtml(htmlBuffer.toString());
+                                    String[] content = {null};
+                                    if (isAtom[0]) {
+                                        String xml = htmlBuffer.toString();
+                                        content[0] = Util.convertAtomXml(xml, uri.getHost());
+                                        if (content[0] == null) {
+                                            // not an atom feed
+                                            bg(() -> {
+                                                p.textPane.end(xml, true, origURL, true);
+                                            });
+                                            return;
 
+                                        }
                                     } else {
-                                        content = htmlBuffer.toString();
+                                        if (isMarkdown[0]) {
+                                            content[0] = markdownToHtml(htmlBuffer.toString());
+
+                                        } else {
+                                            content[0] = htmlBuffer.toString();
+                                        }
                                     }
 
-                                    String finalContent = convertHtmlToGemtext(content, null);
                                     bg(() -> {
                                         p.textPane.gopherHtml = true;
-                                        p.textPane.end(finalContent, false, origURL, true);
+                                        p.textPane.end(content[0], false, origURL, true);
                                     });
                                 } else if (titanEdit[0]) {
 
@@ -4331,7 +4325,9 @@ public class Alhena {
                     mimeExt = "text/markdown";
                     md = true;
                 }
+
                 boolean finalmd = md;
+                boolean xml = mimeExt != null && mimeExt.equals("application/xml");
                 boolean html = !useBrowser && mimeExt != null && mimeExt.equals("text/html");
                 boolean vlcType = (allowVLC || playerCommand != null) && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
                 boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
@@ -4373,7 +4369,7 @@ public class Alhena {
                                     if (isImage) {
                                         saveBuffer.appendBuffer(buffer);
                                     } else {
-                                        if (html || finalmd) {
+                                        if (html || finalmd || xml) {
                                             saveBuffer.appendBuffer(buffer);
                                         } else {
                                             bg(() -> {
@@ -4405,15 +4401,24 @@ public class Alhena {
                                         });
 
                                     } else {
-                                        if (html) {
-                                            p.textPane.end(convertHtmlToGemtext(saveBuffer.toString(), fUrl), false, fUrl, true);
-                                        } else if (finalmd) {
-                                            p.textPane.end(convertHtmlToGemtext(markdownToHtml(saveBuffer.toString()), fUrl), false, fUrl, true);
-                                        } else {
-                                            bg(() -> {
+                                        bg(() -> {
+                                            if (xml) {
+                                                String data = saveBuffer.toString();
+                                                String x = Util.convertAtomXml(data, fUrl);
+                                               
+                                                if (x == null) {
+                                                    p.textPane.end(data, false, fUrl, true);
+                                                } else {
+                                                    p.textPane.end(x, false, fUrl, true);
+                                                }
+                                            } else if (html) {
+                                                p.textPane.end(convertHtmlToGemtext(saveBuffer.toString(), fUrl), false, fUrl, true);
+                                            } else if (finalmd) {
+                                                p.textPane.end(convertHtmlToGemtext(markdownToHtml(saveBuffer.toString()), fUrl), false, fUrl, true);
+                                            } else {
                                                 p.textPane.end();
-                                            });
-                                        }
+                                            }
+                                        });
                                     }
 
                                     asyncFile.close();

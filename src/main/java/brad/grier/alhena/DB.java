@@ -1218,7 +1218,6 @@ public class DB {
                         }
                     }
 
-                    // if (type == 1) {
                     String childSql = "INSERT INTO FEEDS (SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER, READ) VALUES (?, ?, ?, ?, ?, ?)";
 
                     try (var ps1 = con.prepareStatement(childSql)) {
@@ -1537,9 +1536,10 @@ public class DB {
         URI fetchUri = URI.create("gemini://" + URI.create(url).getAuthority()); // needed for socks proxy
         Alhena.getNetClient(fetchUri);
         Alhena.fetchGeminiPage(url, fetchUri, Integer.MAX_VALUE).onSuccess(s -> {
-            if (url.endsWith("atom.xml") || url.endsWith("?atom")) {
-                s = Util.convertAtomXml(s, fetchUri.getHost());
-            }
+
+            String xml = Util.convertAtomXml(s, fetchUri.getHost());
+            s = xml == null ? s : xml;
+
             List<GeminiLink> glist;
             if (type == 1) {
                 glist = s.lines()
