@@ -3036,11 +3036,12 @@ public class Alhena {
 
                                         }
                                     } else {
+                                        
                                         if (isMarkdown[0]) {
-                                            content[0] = markdownToHtml(htmlBuffer.toString());
+                                            content[0] = convertHtmlToGemtext(markdownToHtml(htmlBuffer.toString()), null);
 
                                         } else {
-                                            content[0] = htmlBuffer.toString();
+                                            content[0] = convertHtmlToGemtext(htmlBuffer.toString(), null);
                                         }
                                     }
 
