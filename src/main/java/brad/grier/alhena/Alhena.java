@@ -407,10 +407,14 @@ public class Alhena {
                         URI rootURI = URI.create(uri.getScheme() + "://" + uri.getAuthority());
                         gf.fetchURL(rootURI.toString(), false, null);
                     }
-                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, (MOD | KeyEvent.ALT_DOWN_MASK)))) {
-                    // titan edit
-                    gf.editPage();
-                    e.consume();
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
+
+                    hotButtonType++;
+                    if (hotButtonType > 2) {
+                        hotButtonType = 0;
+                    }
+                    DB.insertPref("hotbuttontype", String.valueOf(hotButtonType));
+                    gf.setTmpStatus(I18n.t("hotButtonToastPrefix") + " " + gf.setHotButtonToolTip());
                     return true;
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_E, MOD))) {
                     // titan edit
@@ -3036,7 +3040,7 @@ public class Alhena {
 
                                         }
                                     } else {
-                                        
+
                                         if (isMarkdown[0]) {
                                             content[0] = convertHtmlToGemtext(markdownToHtml(htmlBuffer.toString()), null);
 
@@ -4406,7 +4410,7 @@ public class Alhena {
                                             if (xml) {
                                                 String data = saveBuffer.toString();
                                                 String x = Util.convertAtomXml(data, fUrl);
-                                               
+
                                                 if (x == null) {
                                                     p.textPane.end(data, false, fUrl, true);
                                                 } else {
