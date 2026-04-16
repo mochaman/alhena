@@ -2756,7 +2756,7 @@ public class Alhena {
 
                                         });
                                     }
-                                } else if (origURL.endsWith(".xml") || (mime.startsWith("text") && mime.contains("xml"))) {
+                                } else if (origURL.endsWith(".xml") || (mime.startsWith("text") && mime.contains("xml") || mime.equals("application/atom+xml"))) {
                                     final String chunk = saveBuffer.getString(i + 1, saveBuffer.length(), "UTF-8");
                                     if (chunk.length() > 0) {
                                         htmlBuffer.appendString(chunk);
