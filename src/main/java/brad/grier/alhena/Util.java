@@ -1549,16 +1549,21 @@ public class Util {
     }
 
     public static void showToast(JFrame parent, String message) {
+        GraphicsDevice gd = parent.getGraphicsConfiguration().getDevice();
+        boolean translucencySupported = gd.isWindowTranslucencySupported(
+                GraphicsDevice.WindowTranslucency.TRANSLUCENT
+        );
+
         JWindow toast = new JWindow(parent);
-        toast.setOpacity(1.0f);
+        if (translucencySupported) {
+            toast.setOpacity(1.0f);
+        }
 
         JLabel label = new JLabel(message);
         label.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-
         label.setForeground(UIManager.getColor("TextPane.background"));
 
         JPanel panel = new JPanel();
-
         panel.setBackground(UIManager.getColor("TextPane.foreground"));
         panel.add(label);
 
@@ -1572,12 +1577,17 @@ public class Util {
 
         Timer timer = new Timer(50, null);
         timer.addActionListener(e -> {
-            float opacity = toast.getOpacity() - 0.05f;
-            if (opacity <= 0) {
+            if (translucencySupported) {
+                float opacity = toast.getOpacity() - 0.05f;
+                if (opacity <= 0) {
+                    timer.stop();
+                    toast.dispose();
+                } else {
+                    toast.setOpacity(opacity);
+                }
+            } else {
                 timer.stop();
                 toast.dispose();
-            } else {
-                toast.setOpacity(opacity);
             }
         });
 
