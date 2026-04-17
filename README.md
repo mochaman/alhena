@@ -42,6 +42,8 @@
 - External media players
 - Option to save tab and window state
 - Horizontal and vertical Split View support
+- Gemlog and atom subscriptions
+- Markdown documents converted to Gemtext
 
 ## 🎨 Design
 
@@ -87,22 +89,22 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT required (except for the Basic install). The platform specific installs each include a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_linux_aarch64.tgz) untar and run 'Alhena' script
-- [Linux deb amd64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_amd64.deb) Debian amd64 package
-- [Linux deb arm64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_arm64.deb) Debian arm64 package
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_freebsd_x64.tgz) untar and run script
-- [Haiku x64](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_haiku_x64.tgz) untar and run script
-- [Basic](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-5.5.5_nojava.zip) JAVA_HOME must point to Java 21+ directory. Run via .bat or .sh scripts.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_linux_aarch64.tgz) untar and run 'Alhena' script
+- [Linux deb amd64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_amd64.deb) Debian amd64 package
+- [Linux deb arm64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_arm64.deb) Debian arm64 package
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_freebsd_x64.tgz) untar and run script
+- [Haiku x64](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_haiku_x64.tgz) untar and run script
+- [Basic](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-5.5.6_nojava.zip) JAVA_HOME must point to Java 21+ directory. Run via .bat or .sh scripts.
 
 ## ⚙️ GraalVM Native Image
 
 An experimental version of Alhena compiled with GraalVM native-image is available for Linux glibc x64. Run via the alhena.sh script. Remote sync and printing are not supported. Feedback welcome. More information is available in the included readme.
 
-- [Native Linux](https://github.com/mochaman/alhena/releases/download/v5.5.5/alhena-native-5.5.5_linux_glibc_x64.tar.gz) untar and run 'alhena.sh'
+- [Native Linux](https://github.com/mochaman/alhena/releases/download/v5.5.6/alhena-native-5.5.6_linux_glibc_x64.tar.gz) untar and run 'alhena.sh'
 
 ## 🐳 Docker
 
