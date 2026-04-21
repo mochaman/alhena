@@ -53,6 +53,10 @@ import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.text.MessageFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
@@ -4290,6 +4294,11 @@ public class Alhena {
         sb.append(I18n.t("totalMemLabel")).append(": ").append(totalMemory / (1024 * 1024)).append(" MB\n");
         sb.append(I18n.t("allocMemLabel")).append(": ").append(allocatedMemory / (1024 * 1024)).append(" MB\n");
         sb.append(I18n.t("freeMemLabel")).append(": ").append(freeMemory / (1024 * 1024)).append(" MB\n\n");
+
+        String formatted = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.ofEpochMilli(lastFeedRefresh));
+        sb.append("Last Feed Refresh: ").append(formatted).append("\n\n");
 
         sb.append(I18n.t("docLabel")).append(": \n");
 
