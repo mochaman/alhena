@@ -125,7 +125,9 @@ import brad.grier.alhena.DB.ClientCertInfo;
 import static brad.grier.alhena.GeminiFrame.CUSTOM_LABELS;
 import brad.grier.alhena.GeminiFrame.InfoPageInfo;
 import brad.grier.alhena.GeminiFrame.LastTabInfo;
+import de.vandermeer.asciitable.AT_Row;
 import de.vandermeer.asciitable.AsciiTable;
+import de.vandermeer.skb.interfaces.transformers.textformat.TextAlignment;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -4086,7 +4088,12 @@ public class Alhena {
 
                 // fallback if empty
                 if (sb.isEmpty()) {
-                    sb.append(cell.text());
+                    String cellText = cell.wholeText();
+
+                    if (!cellText.isBlank()) {
+                        cellText = cellText.replace("\n", "<br>");
+                    }
+                    sb.append(cellText);
                 }
 
                 cellTexts.add(sb.toString().trim());
@@ -4099,7 +4106,9 @@ public class Alhena {
                 cellTexts = cellTexts.subList(0, expectedColumns);
             }
 
-            at.addRow(cellTexts.toArray());
+            AT_Row rw = at.addRow(cellTexts.toArray());
+            rw.setTextAlignment(TextAlignment.LEFT);
+
             at.addRule();
         }
 
