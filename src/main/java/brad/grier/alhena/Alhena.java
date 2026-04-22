@@ -1225,7 +1225,12 @@ public class Alhena {
                     } else {
                         //  corner case - no host but there's a scheme - is this legal?
                         // spartan://greatfractal.com/
-                        url = prevURI.resolve(URI.create(checkURI.getPath())).toString();
+                        try {
+                            url = prevURI.resolve(URI.create(checkURI.getPath())).toString();
+                        } catch (Exception ex) {
+                            p.textPane.end(I18n.t("invalidAddressMsg") + ": " + url + "\n", true, url, true);
+                            return;
+                        }
                     }
 
                 }
@@ -4128,14 +4133,21 @@ public class Alhena {
             Path path = Paths.get(href);
             hrefUri = path.toUri();
         } else {
-            hrefUri = URI.create(href);
+            
+            try{
+                hrefUri = URI.create(href);
+            }catch(Exception ex){
+                // this is probably a rare occurance
+                hrefUri = URI.create(href.replace("\n", "").replace("\r", "").trim());
+            }
+            
         }
 
         if (hrefUri.isAbsolute()) {
             if (base.startsWith("file:")) {
                 return href.replace(" ", "%20");
             } else {
-                return href;
+                return hrefUri.toString();
             }
         }
         URI baseUri = URI.create(base);
