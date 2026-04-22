@@ -1578,7 +1578,9 @@ public class DB {
 
         }).onFailure(f -> {
             latch.countDown();
-            f.getCause().printStackTrace();
+            if (f.getCause() != null) {
+                f.getCause().printStackTrace();
+            }
         });
 
     }
