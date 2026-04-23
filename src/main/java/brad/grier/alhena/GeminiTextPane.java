@@ -918,7 +918,7 @@ public class GeminiTextPane extends JTextPane {
                                                     false, origLabel, null);
                                             if (label != null && !label.isBlank()) {
                                                 label = Util.truncate(label, 125);
-  
+
                                                 DB.updateSubLabel(id, label);
                                                 f().refresh();
                                             }
@@ -1726,9 +1726,9 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public void scrollToHeading(String heading) {
-        
+
         Integer pos = headingMap.get(heading);
-        if(pos == null){
+        if (pos == null) {
             return;
         }
 
@@ -2423,20 +2423,18 @@ public class GeminiTextPane extends JTextPane {
         StyleConstants.setItalic(h3Style, (pageStyle.getHeader3Style() & Font.ITALIC) != 0);
         StyleConstants.setFontSize(h3Style, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE + 17 : pageStyle.getHeader3Size()); // 32
 
-        Style linkStyle;
+        Style linkStyle = doc.addStyle("=>", h1Style);
         if (page.isNex() || page.isGopher()) {
-            linkStyle = doc.addStyle("=>", h1Style);
             StyleConstants.setFontFamily(linkStyle, monospacedFamily);
             StyleConstants.setFontSize(linkStyle, gfMonoFontSize);
         } else {
-            linkStyle = doc.addStyle("=>", h1Style);
-            StyleConstants.setUnderline(linkStyle, pageStyle.getLinkUnderline());
             StyleConstants.setFontFamily(linkStyle, pageStyle.getLinkFontFamily());
-            StyleConstants.setBold(linkStyle, (pageStyle.getLinkStyle() & Font.BOLD) != 0);
-            StyleConstants.setItalic(linkStyle, (pageStyle.getLinkStyle() & Font.ITALIC) != 0);
             StyleConstants.setFontSize(linkStyle, printing ? ViewBasedTextPanePrinter.MONOSPACED_SIZE : pageStyle.getLinkSize());
 
         }
+        StyleConstants.setUnderline(linkStyle, pageStyle.getLinkUnderline());
+        StyleConstants.setBold(linkStyle, (pageStyle.getLinkStyle() & Font.BOLD) != 0);
+        StyleConstants.setItalic(linkStyle, (pageStyle.getLinkStyle() & Font.ITALIC) != 0);
         StyleConstants.setForeground(linkStyle, linkColor);
 
         Style clickedStyle = doc.addStyle("visited", linkStyle);
@@ -2766,15 +2764,15 @@ public class GeminiTextPane extends JTextPane {
 
             String origLabel;
             String lbl;
-            if(label.isEmpty()){
+            if (label.isEmpty()) {
                 origLabel = url.replace("/", "/\u200B");
                 lbl = sfx + origLabel;
-            }else{
+            } else {
                 origLabel = label;
                 lbl = sfx + label;
             }
 
-            ClickableRange cr = addStyledText(lbl, linkStyle, 
+            ClickableRange cr = addStyledText(lbl, linkStyle,
                     () -> {
 
                         if (spartanLink) {
