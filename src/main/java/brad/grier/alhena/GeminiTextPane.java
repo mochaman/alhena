@@ -2777,7 +2777,7 @@ public class GeminiTextPane extends JTextPane {
 
                         if (spartanLink) {
 
-                            TextEditor textEditor = new TextEditor("", false, GeminiTextPane.this);
+                            TextEditor textEditor = new TextEditor("", false, docURL);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
                             Object res = Util.inputDialog2(f(), "Edit", comps, null, true);

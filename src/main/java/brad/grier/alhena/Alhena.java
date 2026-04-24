@@ -1279,7 +1279,7 @@ public class Alhena {
                 File titanFile = null;
                 String titanText = null;
                 String token;
-                TextEditor textEditor = new TextEditor("", true, cPage.textPane);
+                TextEditor textEditor = new TextEditor("", true, url);
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
                 Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
@@ -3065,8 +3065,7 @@ public class Alhena {
                                         p.textPane.end(content[0], false, origURL, true);
                                     });
                                 } else if (titanEdit[0]) {
-
-                                    TextEditor textEditor = new TextEditor(titanSB.toString(), true, cPage.textPane);
+                                    TextEditor textEditor = new TextEditor(titanSB.toString(), true, origURL);
                                     Object[] comps = new Object[1];
                                     comps[0] = textEditor;
                                     Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);

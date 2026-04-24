@@ -11,6 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.net.URI;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -45,6 +47,9 @@ import org.fife.ui.rtextarea.SearchEngine;
 
 import com.formdev.flatlaf.util.SystemInfo;
 
+import brad.grier.alhena.DB.StyleInfo;
+import io.vertx.core.json.JsonObject;
+
 /**
  * Panel with tabs for a text editor and file chooser. Used for Spartan and
  * Titan uploads.
@@ -64,10 +69,10 @@ public class TextEditor extends JPanel implements ActionListener {
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private JMenuItem findItem;
     private JMenuItem findNextItem;
-    private GeminiTextPane textPane;
+    private String url;
 
-    public TextEditor(String text, boolean token, GeminiTextPane textPane) {
-        this.textPane = textPane;
+    public TextEditor(String text, boolean token, String url) {
+        this.url = url.replace("titan://", "gemini://");
         setLayout(new BorderLayout(0, 10));
         tabbedPane = new JTabbedPane();
         JPanel editorPanel = new JPanel(new BorderLayout());
@@ -242,9 +247,34 @@ public class TextEditor extends JPanel implements ActionListener {
         }
     }
 
+    private PageTheme getPageStyle(String url) {
+        String dbTheme = Alhena.theme;
+
+        StyleInfo dbStyle = null;
+        try {
+            URI u = URI.create(url);
+            if (u != null) {
+                dbStyle = DB.getStyle(url, u.getAuthority(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        JsonObject customTheme;
+        if (dbStyle != null) {
+            customTheme = new JsonObject(dbStyle.style());
+        } else {
+            customTheme = new JsonObject();
+        }
+        PageTheme pageTheme = GeminiTextPane.getDefaultTheme(UIManager.getDefaults());
+        pageTheme.fromJson(customTheme);
+
+        return pageTheme;
+
+    }
+
     public final void applyFlatLafColors(RSyntaxTextArea textArea) {
         SyntaxScheme scheme = textArea.getSyntaxScheme();
-        PageTheme pageStyle = textPane.pageStyle;
+        PageTheme pageStyle = getPageStyle(url);
         //Color bg = UIManager.getColor("TextArea.background");
         Color bg = pageStyle.getPageBackground();
         //Color fg = UIManager.getColor("TextArea.foreground");
@@ -275,14 +305,12 @@ public class TextEditor extends JPanel implements ActionListener {
         scheme.getStyle(TokenTypes.COMMENT_EOL).foreground = pageStyle.getQuoteForeground();
         Font qFont = new Font(pageStyle.getQuoteFontFamily(), pageStyle.getQuoteStyle(), 16);
         scheme.getStyle(TokenTypes.COMMENT_EOL).font = qFont;
-        
-
 
         //Color pfText = AnsiColor.adjustColor(isDark ? Color.GRAY.brighter() : Color.GRAY.darker(), isDark, .1, .9, .2);
         //Font monoF = new Font(GeminiTextPane.monospacedFamily, Font.PLAIN, 16);
         Font monoF = new Font(pageStyle.getMonoFontFamily(), Font.PLAIN, 16);
         scheme.getStyle(TokenTypes.COMMENT_MULTILINE).foreground = pageStyle.getMonoFontColor();
-        
+
         scheme.getStyle(TokenTypes.COMMENT_MULTILINE).font = monoF;
         scheme.getStyle(TokenTypes.LITERAL_STRING_DOUBLE_QUOTE).foreground = pageStyle.getMonoFontColor(); // contents
         scheme.getStyle(TokenTypes.LITERAL_STRING_DOUBLE_QUOTE).font = monoF;
@@ -292,7 +320,6 @@ public class TextEditor extends JPanel implements ActionListener {
 
         textArea.repaint();
     }
-
 
     private boolean forward;
 
