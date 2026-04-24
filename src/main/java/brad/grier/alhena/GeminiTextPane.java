@@ -2780,7 +2780,9 @@ public class GeminiTextPane extends JTextPane {
                             TextEditor textEditor = new TextEditor("", false, docURL);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
+                            f().titanEditorOpen = true;
                             Object res = Util.inputDialog2(f(), "Edit", comps, null, true);
+                            f().titanEditorOpen = false;
                             if (res != null) {
                                 Object result = textEditor.getResult();
                                 if (result instanceof String string) {

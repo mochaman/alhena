@@ -1282,7 +1282,9 @@ public class Alhena {
                 TextEditor textEditor = new TextEditor("", true, url);
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
+                p.frame().titanEditorOpen = true;
                 Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
+                p.frame().titanEditorOpen = false;
                 if (res == null) {
 
                     return;
@@ -3068,8 +3070,10 @@ public class Alhena {
                                     TextEditor textEditor = new TextEditor(titanSB.toString(), true, origURL);
                                     Object[] comps = new Object[1];
                                     comps[0] = textEditor;
+                                    p.frame().titanEditorOpen = true;
                                     Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
-
+                                    System.out.println("returning");
+                                    p.frame().titanEditorOpen = false;
                                     if (res != null) {
                                         Object rsp = textEditor.getResult();
                                         p.setTitanEdited(true);

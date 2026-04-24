@@ -173,6 +173,7 @@ public final class GeminiFrame extends JFrame {
     private JMenuItem splitRightItem, splitBottomItem, closeSplitItem;
     private LastTabInfo lastTabInfo;
     private JMenuItem closeTabItem;
+    public boolean titanEditorOpen;
 
     // Haiku JVM doesn't allow alt modifier which breaks menu mnemonics
     public boolean haikuMenuShortcut(int keyCode) {
@@ -1641,7 +1642,7 @@ public final class GeminiFrame extends JFrame {
                     if (Alhena.hotFolder == null) {
                         Alhena.hotButtonType = 1;
                         Util.infoDialog(GeminiFrame.this, I18n.t("infoLabel"), I18n.t("bmAlertkDialogTxt"));
-                    } 
+                    }
                     setHotButtonToolTip();
 
                 }
@@ -1925,13 +1926,16 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void editPage() {
-        Page vp = visiblePage();
-        URI uri = vp.textPane.getURI();
-        if (uri.getScheme() != null && uri.getScheme().equals("gemini")) {
-            String port = uri.getPort() != -1 ? ":" + uri.getPort() : "";
-            String query = uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery();
-            String editUrl = "titan://" + uri.getHost() + port + uri.getPath() + ";edit" + query;
-            fetchURL(editUrl, false, null);
+
+        if (!titanEditorOpen) {
+            Page vp = visiblePage();
+            URI uri = vp.textPane.getURI();
+            if (uri.getScheme() != null && uri.getScheme().equals("gemini")) {
+                String port = uri.getPort() != -1 ? ":" + uri.getPort() : "";
+                String query = uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery();
+                String editUrl = "titan://" + uri.getHost() + port + uri.getPath() + ";edit" + query;
+                fetchURL(editUrl, false, null);
+            }
         }
     }
 
