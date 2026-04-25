@@ -686,7 +686,8 @@ public final class GeminiFrame extends JFrame {
                 mList.stream().forEach(bmark -> {
                     JMenuItem jmi = new JMenuItem(Util.truncate(bmark.label(), 40));
                     jmi.addActionListener(e -> {
-                        if (((Boolean)bmark.userObject())) {
+                        Object uo = bmark.userObject();
+                        if (uo != null && ((Boolean)bmark.userObject())) {
                             fetchURL(bmark.url(), false, bmark.label());
                         } else {
                             fetchURL(bmark.url(), false, null);
