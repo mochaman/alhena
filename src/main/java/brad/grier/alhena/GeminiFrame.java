@@ -684,9 +684,13 @@ public final class GeminiFrame extends JFrame {
                         List.of();
                 };
                 mList.stream().forEach(bmark -> {
-                    JMenuItem jmi = new JMenuItem(bmark.label());
+                    JMenuItem jmi = new JMenuItem(Util.truncate(bmark.label(), 40));
                     jmi.addActionListener(e -> {
-                        fetchURL(bmark.url(), false, null);
+                        if (((Boolean)bmark.userObject())) {
+                            fetchURL(bmark.url(), false, bmark.label());
+                        } else {
+                            fetchURL(bmark.url(), false, null);
+                        }
                     });
                     items.add(jmi);
                 });

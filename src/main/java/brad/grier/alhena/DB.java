@@ -388,7 +388,7 @@ public class DB {
         }
     }
 
-    public record Bookmark(String label, String url, String folder, int id) {
+    public record Bookmark(String label, String url, String folder, int id, Object userObject) {
 
     }
 
@@ -398,7 +398,7 @@ public class DB {
 
             try (ResultSet rs = st.executeQuery("SELECT LABEL, URL, FOLDER, ID FROM BOOKMARKS ORDER BY TIME_STAMP ASC")) {
                 while (rs.next()) {
-                    bookmarkList.add(new Bookmark(rs.getString(1), rs.getString(2), rs.getString(3), rs.getInt(4)));
+                    bookmarkList.add(new Bookmark(rs.getString(1), rs.getString(2), rs.getString(3), rs.getInt(4), null));
                 }
             }
         }
@@ -411,7 +411,7 @@ public class DB {
             ps.setString(1, folder);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    bookmarkList.add(new Bookmark(rs.getString(3), rs.getString(2), rs.getString(4), rs.getInt(1)));
+                    bookmarkList.add(new Bookmark(rs.getString(3), rs.getString(2), rs.getString(4), rs.getInt(1), null));
                 }
             }
         }
@@ -445,7 +445,7 @@ public class DB {
             """;
             try (ResultSet rs = st.executeQuery(sql)) {
                 while (rs.next()) {
-                    bookmarkList.add(new Bookmark(rs.getString(3), rs.getString(2), rs.getString(4), rs.getInt(1)));
+                    bookmarkList.add(new Bookmark(rs.getString(3), rs.getString(2), rs.getString(4), rs.getInt(1), null));
                 }
             }
         }
@@ -490,7 +490,7 @@ public class DB {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    bm = new Bookmark(rs.getString(1), rs.getString(2), rs.getString(3), id);
+                    bm = new Bookmark(rs.getString(1), rs.getString(2), rs.getString(3), id, null);
                 }
             }
         }
@@ -1264,12 +1264,13 @@ public class DB {
             try (ResultSet rs = st.executeQuery(sql)) {
                 HashSet<String> urlSet = new HashSet<>();
                 while (rs.next()) {
-
+                    String label = rs.getString("LABEL");
                     String url = rs.getString("URL");
                     boolean read = rs.getBoolean("READ");
-                    if (urlSet.add(url) && !read) {
-                        String label = Util.truncate(rs.getString("LABEL"), 40);
-                        bookmarkList.add(new Bookmark(label, url, null, rs.getInt("ID")));
+                    boolean isHeader = rs.getBoolean("HEADER");
+                    String testUrl = isHeader ? url + label : url;
+                    if (urlSet.add(testUrl) && !read) {
+                        bookmarkList.add(new Bookmark(label, url, null, rs.getInt("ID"), isHeader));
                     }
 
                 }

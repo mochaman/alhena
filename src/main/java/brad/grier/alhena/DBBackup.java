@@ -98,7 +98,7 @@ public class DBBackup {
             try (ResultSet rs = ps.executeQuery("SELECT LABEL, URL, FOLDER, TIME_STAMP FROM BOOKMARKS")) {
                 while (rs.next()) {
                     try {
-                        Bookmark bmark = new Bookmark(rs.getString(1), rs.getString(2), rs.getString(3), 0);
+                        Bookmark bmark = new Bookmark(rs.getString(1), rs.getString(2), rs.getString(3), 0, null);
                         Timestamp ts = rs.getTimestamp(4);
                         boolean exists = bList.stream()
                                 .anyMatch(b -> b.label().equals(bmark.label()) && b.url().equals(bmark.url()) && b.folder().equals(bmark.folder()));
