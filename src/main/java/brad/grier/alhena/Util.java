@@ -1548,13 +1548,18 @@ public class Util {
         return sb.toString();
     }
 
-    public static void showToast(JFrame parent, String message) {
+    public static boolean translucencySupported(JFrame parent){
         GraphicsDevice gd = parent.getGraphicsConfiguration().getDevice();
         boolean translucencySupported = gd.isWindowTranslucencySupported(
                 GraphicsDevice.WindowTranslucency.TRANSLUCENT
         );
+        return translucencySupported;
+    }
+
+    public static void showToast(JFrame parent, String message) {
 
         JWindow toast = new JWindow(parent);
+        boolean translucencySupported = translucencySupported(parent);
         if (translucencySupported) {
             toast.setOpacity(1.0f);
         }
