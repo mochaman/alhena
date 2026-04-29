@@ -73,6 +73,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -195,7 +196,7 @@ public class Alhena {
     public static String socksProxy;
     public static boolean socksFilter;
     public static String searchUrl;
-    public static Long lastFeedRefresh;
+    public static AtomicLong lastFeedRefresh = new AtomicLong();
     private static NetClient spartanClient, spartanClientSocks;
     private static final int MOD = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private static final ArrayList<String> cnConfirmedList = new ArrayList<>();
@@ -413,6 +414,8 @@ public class Alhena {
                         URI rootURI = URI.create(uri.getScheme() + "://" + uri.getAuthority());
                         gf.fetchURL(rootURI.toString(), false, null);
                     }
+                } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_2, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
+                    updateFeeds();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
 
                     hotButtonType++;
@@ -652,7 +655,7 @@ public class Alhena {
 
         searchUrl = map.getOrDefault("searchurl", null);
         macUseNoto = map.getOrDefault("macusenoto", "false").equals("true");
-        lastFeedRefresh = Long.valueOf(map.getOrDefault("lastfeedrefresh", "0"));
+        lastFeedRefresh.set(Long.parseLong(map.getOrDefault("lastfeedrefresh", "0")));
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
         GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
@@ -715,35 +718,39 @@ public class Alhena {
         startStreamingServer();
         started = true;
 
-        if (System.currentTimeMillis() - lastFeedRefresh > 3_600_000) {
-            Thread.ofVirtual().start(() -> {
-                try {
-                    DB.updateFeeds();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            });
-
-        }
         startFeedTimer();
 
     }
 
     private static void startFeedTimer() {
-        vertx.setPeriodic(TimeUnit.MINUTES.toMillis(5), id -> {
-            if (System.currentTimeMillis() - lastFeedRefresh > 3_600_000) {
-                Thread.ofVirtual().start(() -> {
-                    try {
-                        DB.updateFeeds();
-                    } catch (SQLException ex) {
-                        ex.printStackTrace();
-                    }
-                });
-
+        vertx.setPeriodic(TimeUnit.MINUTES.toMillis(2), id -> {
+            if (System.currentTimeMillis() - lastFeedRefresh.get() > 3_600_000) {
+                updateFeeds();
             }
         });
     }
 
+    private static void updateFeeds() {
+        
+        Thread.ofVirtual().start(() -> {
+            try {
+                DB.updateFeeds();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+    }
+
+    // only call on EDT
+    public static void showMessage(String msg) {
+        for (GeminiFrame gf : frameList) {
+            if (gf.isActive()) {
+                gf.setTmpStatus(msg);
+            }
+        }
+    }
+
+    // only call on EDT
     public static void showToast(String msg) {
         for (GeminiFrame gf : frameList) {
             if (gf.isActive()) {
@@ -4321,9 +4328,9 @@ public class Alhena {
 
         String formatted = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                 .withZone(ZoneId.systemDefault())
-                .format(Instant.ofEpochMilli(lastFeedRefresh));
-                
-        if (lastFeedRefresh > 0) {
+                .format(Instant.ofEpochMilli(lastFeedRefresh.get()));
+
+        if (lastFeedRefresh.get() > 0) {
             sb.append("Last Feed Refresh: ").append(formatted).append("\n\n");
         }
 

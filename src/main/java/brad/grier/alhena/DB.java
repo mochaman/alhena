@@ -825,7 +825,7 @@ public class DB {
         Alhena.hotFolder = map.getOrDefault("hotfolder", null);
         Alhena.hotButtonType = Integer.parseInt(map.getOrDefault("hotbuttontype", Alhena.hotFolder == null ? "1" : "0"));
         Alhena.searchUrl = map.getOrDefault("searchurl", null);
-        Alhena.lastFeedRefresh = Long.valueOf(map.getOrDefault("lastfeedrefresh", "0"));
+        Alhena.lastFeedRefresh.set(Long.parseLong(map.getOrDefault("lastfeedrefresh", "0")));
         int contentP = Integer.parseInt(map.getOrDefault("contentwidth", "80"));
         GeminiTextPane.contentPercentage = (float) ((float) contentP / 100f);
         GeminiTextPane.wrapPF = map.getOrDefault("linewrappf", "false").equals("true");
@@ -1459,6 +1459,7 @@ public class DB {
         if (!running.compareAndSet(false, true)) {
             return; // already running
         }
+        EventQueue.invokeLater(() -> Alhena.showMessage(I18n.t("refreshingFeedsMsg")));
         feedsInserted.set(0);
         feedsDeleted.set(0);
 
@@ -1509,8 +1510,8 @@ public class DB {
                         ex.printStackTrace();
                     }
 
-                    Alhena.lastFeedRefresh = System.currentTimeMillis();
-                    DB.insertPref("lastfeedrefresh", String.valueOf(Alhena.lastFeedRefresh));
+                    Alhena.lastFeedRefresh.set(System.currentTimeMillis());
+                    DB.insertPref("lastfeedrefresh", String.valueOf(Alhena.lastFeedRefresh.get()));
                 }
             }
 
@@ -1575,10 +1576,11 @@ public class DB {
 
             latch.countDown();
 
-            System.out.println("retrieved feed: " + url);
+            System.out.println("feed: " + url);
 
         }).onFailure(f -> {
             latch.countDown();
+            System.out.println("failed feed: " + url);
             if (f.getCause() != null) {
                 f.getCause().printStackTrace();
             }
