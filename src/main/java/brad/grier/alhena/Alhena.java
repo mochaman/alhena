@@ -4136,14 +4136,14 @@ public class Alhena {
             Path path = Paths.get(href);
             hrefUri = path.toUri();
         } else {
-            
-            try{
+
+            try {
                 hrefUri = URI.create(href);
-            }catch(Exception ex){
+            } catch (Exception ex) {
                 // this is probably a rare occurance
                 hrefUri = URI.create(href.replace("\n", "").replace("\r", "").trim());
             }
-            
+
         }
 
         if (hrefUri.isAbsolute()) {
@@ -4322,7 +4322,10 @@ public class Alhena {
         String formatted = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                 .withZone(ZoneId.systemDefault())
                 .format(Instant.ofEpochMilli(lastFeedRefresh));
-        sb.append("Last Feed Refresh: ").append(formatted).append("\n\n");
+                
+        if (lastFeedRefresh > 0) {
+            sb.append("Last Feed Refresh: ").append(formatted).append("\n\n");
+        }
 
         sb.append(I18n.t("docLabel")).append(": \n");
 
