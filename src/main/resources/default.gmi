@@ -7,7 +7,7 @@
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝
 ```
 
-Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java. It's also a star in Gemini.
+Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java.
 
 => gemini://ultimatumlabs.com/alhenafaq.gmi Alhena FAQ
 => gemini://ultimatumlabs.com/alhena.gmi Alhena on Gemini
@@ -16,14 +16,16 @@ Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java. It's also a star 
 ### 🥽 Ultimatum Labs
 
 => gemini://ultimatumlabs.com Author's Gemini Capsule
+=> gemini://ultimatumlabs.com/scriptonite/gemini%3A%2F%2Fultimatumlabs.com%2Fmovie.gmi GeminiMDB
 => https://ultimatumlabs.com vert.x Web Testbed
 
-### 🔗 Assorted Links
-=> gemini://gemi.dev/ gemi.dev
+### 🔗 Links
+=> gemini://gemi.dev/ Gemi.dev
 => gemini://gemi.dev/cgi-bin/waffle.cgi/ News
 => gemini://gemi.dev/cgi-bin/chilly.cgi/ Weather
 => gemini://gemi.dev/cgi-bin/wp.cgi/ Wikipedia
 => gemini://bbs.geminispace.org/ Gemini BBS
+=> gemini://station.martinrue.com/ Station
 => gemini://geminiprotocol.net/ About Gemini
 => gemini://skyjake.fi/~Cosmos/ Cosmos
 => spartan://mozz.us/ Spartan Home
@@ -32,10 +34,10 @@ Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java. It's also a star 
 
 ### 🕹️ Games
 => gemini://gemi.dev/cgi-bin/mines.cgi/ Minesweeper
-=> gemini://astrobotany.mozz.us/ Gardening Game
+=> gemini://astrobotany.mozz.us/ Astrobotony
 => gemini://ultimatumlabs.com/cgi/zoe Zoe
 => gemini://crossyword.alanbato.com/ Crossyword
-=> gemini://gemini.smallweb.space:1964/pig/ Pig
+=> gemini://gemini.smallweb.space:1964/pig/ Pig!
 
 ### 🚀 Gemini Capsules
 => gemini://kennedy.gemi.dev/observatory/known-hosts Kennedy
