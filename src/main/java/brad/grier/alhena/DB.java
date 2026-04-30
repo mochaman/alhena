@@ -235,8 +235,9 @@ public class DB {
     }
 
     public static void runStatement(String sql) throws SQLException {
-        runStatement(cp.getConnection(), sql);
-
+        try (Connection con = cp.getConnection()) {
+            runStatement(con, sql);
+        }
     }
 
     private static void runStatement(Connection connection, String sql) throws SQLException {
@@ -1237,6 +1238,47 @@ public class DB {
             }
         }
         return type;
+    }
+
+    public static int insertSubscription(String url, String label, int type, Timestamp ts) throws SQLException {
+        String sql = "INSERT INTO SUBSCRIPTIONS (URL, LABEL, TYPE, TIME_STAMP) VALUES (?, ?, ?, ?)";
+        int subscribedId = -1;
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, url);
+                ps.setString(2, label);
+                ps.setInt(3, type);
+                ps.setTimestamp(4, ts);
+                ps.executeUpdate();
+
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        subscribedId = keys.getInt(1);
+                        // use subscribedId for child inserts
+                    }
+                }
+
+            }
+        }
+        return subscribedId;
+    }
+
+    public static void insertFeed(int subID, LocalDate localDate, String url, String label, boolean header, boolean read) throws SQLException {
+        String sql = "INSERT INTO FEEDS (SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER, READ) VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (Connection con = cp.getConnection()) {
+            try (var ps = con.prepareStatement(sql)) {
+
+                ps.setInt(1, subID);
+                ps.setObject(2, localDate);
+                ps.setString(3, url);
+                ps.setString(4, label);
+                ps.setBoolean(5, header);
+                ps.setBoolean(6, read);
+
+                ps.executeUpdate();
+            }
+        }
     }
 
     private static boolean checkHistory(String url) throws SQLException {

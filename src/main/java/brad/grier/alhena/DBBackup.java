@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 
@@ -20,7 +21,7 @@ import brad.grier.alhena.DB.DBClientCertInfo;
 
 /**
  * Create a second db for merge
- * 
+ *
  * @author Brad Grier
  */
 public class DBBackup {
@@ -50,7 +51,7 @@ public class DBBackup {
             st.execute("RUNSCRIPT FROM '" + inputFile + "' COMPRESSION ZIP");
         }
 
-        if(version == 1){
+        if (version == 1) {
             DB.initV2(cp); // update older verstion
         }
 
@@ -60,8 +61,13 @@ public class DBBackup {
             mergeServerCerts();
             mergeClientCerts();
 
-            if(DB.tableExists(cp.getConnection(), "STYLES")){
+            if (DB.tableExists(cp.getConnection(), "STYLES")) {
                 mergeStyles();
+            }
+
+            if (DB.tableExists(cp.getConnection(), "SUBSCRIPTIONS")) {
+                mergeSubs();
+
             }
 
             if (DB.tableExists(cp.getConnection(), "CACERTS")) { // for some backward compatibility
@@ -182,6 +188,35 @@ public class DBBackup {
             }
         }
 
+    }
+
+    public static void mergeSubs() throws SQLException {
+
+        try (Connection con = cp.getConnection(); var ps = con.createStatement(); var ps2 = con.createStatement()) {  // separate statement for inner query
+
+            try (ResultSet rs = ps.executeQuery("SELECT ID, URL, LABEL, TYPE, TIME_STAMP FROM SUBSCRIPTIONS")) {
+                while (rs.next()) {
+                    int id = rs.getInt(1);
+                    String url = rs.getString(2);
+                    String label = rs.getString(3);
+                    int type = rs.getInt(4);
+                    Timestamp ts = rs.getTimestamp(5);
+                    if (!DB.isSubscribed(url)) {
+                        int subId = DB.insertSubscription(url, label, type, ts);
+                        try (var rs1 = ps2.executeQuery("SELECT LINKDATE, URL, LABEL, HEADER, READ FROM FEEDS WHERE SUBSCRIPTION_ID = " + id)) {
+                            while (rs1.next()) {
+                                LocalDate date = rs1.getObject(1, LocalDate.class);
+                                String feedUrl = rs1.getString(2);
+                                String feedLabel = rs1.getString(3);
+                                boolean header = rs1.getBoolean(4);
+                                boolean read = rs1.getBoolean(5);
+                                DB.insertFeed(subId, date, feedUrl, feedLabel, header, read);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 }
