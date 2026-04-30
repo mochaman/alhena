@@ -15,6 +15,8 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.desktop.AppReopenedListener;
 import java.awt.desktop.OpenFilesEvent;
+import java.awt.desktop.SystemSleepEvent;
+import java.awt.desktop.SystemSleepListener;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -179,6 +181,7 @@ public class Alhena {
     public static String welcomeMessage;
     public final static String VERSION = "5.5.6";
     private static final AtomicBoolean interrupted = new AtomicBoolean();
+    private static final AtomicBoolean systemAsleep = new AtomicBoolean();
     // remove vlc extensions and let MimeMapper decide
     public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg");
     public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg");
@@ -552,6 +555,20 @@ public class Alhena {
                 mailSupported = true;
             }
 
+            // not all systems fire this - works on macbook pro
+            desktop.addAppEventListener(new SystemSleepListener() {
+                @Override
+                public void systemAboutToSleep(SystemSleepEvent e) {
+                    systemAsleep.set(true);
+                }
+
+                @Override
+                public void systemAwoke(SystemSleepEvent e) {
+                    systemAsleep.set(false);
+                }
+
+            });
+
             if (SystemInfo.isMacOS) {
 
                 if (desktop.isSupported(Desktop.Action.APP_MENU_BAR)) {
@@ -724,14 +741,14 @@ public class Alhena {
 
     private static void startFeedTimer() {
         vertx.setPeriodic(TimeUnit.MINUTES.toMillis(2), id -> {
-            if (System.currentTimeMillis() - lastFeedRefresh.get() > 3_600_000) {
+            if (!systemAsleep.get() && (System.currentTimeMillis() - lastFeedRefresh.get() > 3_600_000)) {
                 updateFeeds();
             }
         });
     }
 
     private static void updateFeeds() {
-        
+
         Thread.ofVirtual().start(() -> {
             try {
                 DB.updateFeeds();
