@@ -63,7 +63,6 @@ import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.InputMap;
-import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -3004,39 +3003,14 @@ public class GeminiTextPane extends JTextPane {
         pfTextPane.setFocusTraversalKeysEnabled(false);
         EventQueue.invokeLater(() -> pfTextPane.setCaretPosition(0));
 
-        pfTextPane.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent ke) {
-                if (ke.getKeyCode() == KeyEvent.VK_TAB) {
-
-                    JButton fButton = f().backButton.isEnabled() ? f().backButton : f().forwardButton.isEnabled() ? f().forwardButton : f().refreshButton;
-
-                    fButton.requestFocusInWindow();
-                    pfTextPane.setCaretPosition(pfTextPane.getCaretPosition());
-                    pfTextPane.setFocusTraversalKeysEnabled(false);
-                }
-                GeminiTextPane.this.dispatchEvent(ke);
-
-            }
-
-            @Override
-            public void keyReleased(KeyEvent ke) {
-                GeminiTextPane.this.dispatchEvent(ke);
-            }
-
-            @Override
-            public void keyTyped(KeyEvent ke) {
-                GeminiTextPane.this.dispatchEvent(ke);
-            }
-
-        });
-
         pfTextPane.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (dragToScroll) {
                     lastScreen = e.getLocationOnScreen();
                     pressTime = System.currentTimeMillis();
+                } else {
+                    GeminiTextPane.this.requestFocusInWindow();
                 }
             }
 
