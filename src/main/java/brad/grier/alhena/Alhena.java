@@ -3119,7 +3119,7 @@ public class Alhena {
                                     comps[0] = textEditor;
                                     p.frame().titanEditorOpen = true;
                                     Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
-                                    System.out.println("returning");
+                                    
                                     p.frame().titanEditorOpen = false;
                                     if (res != null) {
                                         Object rsp = textEditor.getResult();
