@@ -11,6 +11,7 @@ import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.swing.UIManager;
@@ -129,6 +130,10 @@ public class AsciiImage {
         int lineNum = 0;
         for (String line : lines) {
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(line);
+            HashMap<Integer, IndexedEmoji> emojiAtIndex = new HashMap<>();
+            for (IndexedEmoji e : emojis) {
+                emojiAtIndex.put(e.getCharIndex(), e);
+            }
             IndexedEmoji emoji;
 
             int x = 0;
@@ -141,7 +146,7 @@ public class AsciiImage {
 
                 // font.canDisplay test means use the font's version of this character instead of the emoji version
                 // often this fixes assumptions made by page designers about character width (weather, etc)
-                if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null && !font.canDisplay(c)) {
+                if ((emoji = emojiAtIndex.get(i)) != null && !font.canDisplay(c)) {
 
                     int charWidth = emojiMetrics.stringWidth(emoji.getEmoji().getEmoji());
 

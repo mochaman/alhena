@@ -114,8 +114,10 @@ import brad.grier.alhena.DB.StyleInfo;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.fellbaum.jemoji.IndexedEmoji;
+import net.fellbaum.jemoji.Qualification;
 
 /**
  *
@@ -3080,6 +3082,12 @@ public class GeminiTextPane extends JTextPane {
     private List<PreformattedTextPane> ptpList;
     private SimpleAttributeSet emojiStyle1 = new SimpleAttributeSet();
 
+    public static boolean hasTextVariationSelector(String text, int index) {
+        int charCount = Character.charCount(text.codePointAt(index));
+        int nextIndex = index + charCount;
+        return nextIndex < text.length() && text.charAt(nextIndex) == '\uFE0E';
+    }
+
     private ClickableRange addStyledText(String text, String styleName, Runnable action, String origLabel) {
 
         Style style = doc.getStyle(styleName);
@@ -3096,16 +3104,22 @@ public class GeminiTextPane extends JTextPane {
             int imgSize = fontSize + (pfText ? 4 : 0);
 
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
+            HashMap<Integer, IndexedEmoji> emojiAtIndex = new HashMap<>();
+            for (IndexedEmoji e : emojis) {
+                emojiAtIndex.put(e.getCharIndex(), e);
+            }
 
-            IndexedEmoji emoji;
             // can't iterate by code point without preprocessing first to get name
+            int emojiListIdx = 0;
             for (int i = 0; i < text.length(); i++) {
+                IndexedEmoji emoji = emojiAtIndex.get(i);
 
-                if ((emoji = isEmoji(emojis, i)) != null) {
-                    //emojiIdx++;
+                if (emoji != null) {
+                    Emoji emj = emoji.getEmoji();
+                    boolean unqualified = (emj.hasVariationSelectors() && hasTextVariationSelector(text, i)) || emj.getQualification() == Qualification.UNQUALIFIED;
                     if (action != null && Alhena.linkIcons && i == 0) {
                         //ImageIcon icon = new ImageIcon(image);
-                        String em = emoji.getEmoji().getEmoji();
+                        String em = emj.getEmoji();
                         ImageIcon icon;
                         icon = switch (em) {
                             case "🌐" ->
@@ -3145,34 +3159,37 @@ public class GeminiTextPane extends JTextPane {
                         }
 
                         i++;
-                    } else if (sheetImage != null) {
+                    } else if (sheetImage != null || unqualified) {
 
-                        String key = getEmojiHex(emoji);
-
-                        Point p = emojiSheetMap.get(key);
                         ImageIcon icon = null;
+                        if (!unqualified) {
+                            String key = getEmojiHex(emoji);
+                            Point p = emojiSheetMap.get(key);
+                            if (p != null) {
+                                icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
+                            } else {
+                                int dashIdx = key.indexOf('-');
+                                if (dashIdx != -1) {
 
-                        if (p != null) {
-                            icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
-                        } else {
-                            int dashIdx = key.indexOf('-');
-                            if (dashIdx != -1) {
-
-                                p = emojiSheetMap.get(key.substring(0, dashIdx));
-                                if (p != null) {
-                                    icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
+                                    p = emojiSheetMap.get(key.substring(0, dashIdx));
+                                    if (p != null) {
+                                        icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
+                                    }
                                 }
                             }
                         }
+
                         if (icon == null) {
                             // copyright symbol for example
                             char[] chars = Character.toChars(text.codePointAt(i));
 
                             int eci = emoji.getEndCharIndex();
-                            int emojiSize = eci - emoji.getCharIndex();
+                            
+                            //int emojiSize = eci - emoji.getCharIndex();
+                            //int emojiSize = chars.length;
 
                             // advance past emoji
-                            i += (emojiSize - 1);
+                            i += (chars.length - 1);
 
                             // check for variation selector
                             if (eci < text.length()) {
@@ -3215,7 +3232,7 @@ public class GeminiTextPane extends JTextPane {
                         }
                     } else {
                         StyleConstants.setFontFamily(style, emojiProportional);
-                        insertString(doc.getLength(), unescapeUnicode(emoji.getEmoji().getUnicode()), style);
+                        insertString(doc.getLength(), unescapeUnicode(emj.getUnicode()), style);
 
                         int eci = emoji.getEndCharIndex();
                         int emojiSize = eci - emoji.getCharIndex();
@@ -3242,17 +3259,18 @@ public class GeminiTextPane extends JTextPane {
                         }
                     }
                 } else {
-                    IndexedEmoji nextEmoji = null;
-                    for (IndexedEmoji em : emojis) {
-                        if (em.getCharIndex() > i) {
-                            nextEmoji = em;
-                            break;
-                        }
+
+                    while (emojiListIdx < emojis.size() && emojis.get(emojiListIdx).getCharIndex() <= i) {
+                        emojiListIdx++;
                     }
+
+                    int nextEmojiIdx = (emojiListIdx < emojis.size())
+                            ? emojis.get(emojiListIdx).getCharIndex()
+                            : -1;
                     StyleConstants.setFontFamily(style, fontFamily);
-                    if (nextEmoji != null) {
-                        insertString(doc.getLength(), text.substring(i, nextEmoji.getCharIndex()), style);
-                        i = nextEmoji.getCharIndex() - 1;
+                    if (nextEmojiIdx != -1) {
+                        insertString(doc.getLength(), text.substring(i, nextEmojiIdx), style);
+                        i = nextEmojiIdx - 1;
                     } else {
                         insertString(doc.getLength(), text.substring(i), style);
                         break;
@@ -3285,7 +3303,6 @@ public class GeminiTextPane extends JTextPane {
         }
 
         setCaretPosition(caretPosition); // prevent scrolling as content added
-
         return cr;
     }
 
@@ -3306,15 +3323,6 @@ public class GeminiTextPane extends JTextPane {
             }
         }
         return sb.toString();
-    }
-
-    public static IndexedEmoji isEmoji(List<IndexedEmoji> emojiList, int idx) {
-        for (IndexedEmoji emo : emojiList) {
-            if (emo.getCharIndex() == idx) {
-                return emo;
-            }
-        }
-        return null;
     }
 
     public static String getEmojiHex(IndexedEmoji emo) {
@@ -3665,7 +3673,8 @@ public class GeminiTextPane extends JTextPane {
         }
         IndexedEmoji emoji;
         ImageIcon icon = null;
-        if ((emoji = isEmoji(emojis, 0)) != null) {
+        if (!emojis.isEmpty() && emojis.get(0).getCharIndex() == 0) {
+            emoji = emojis.get(0);
             if (sheetImage != null) {
 
                 String key = getEmojiHex(emoji);

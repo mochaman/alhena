@@ -8,6 +8,7 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.swing.ImageIcon;
@@ -33,8 +34,10 @@ import com.techsenger.ansi4j.core.api.spi.ParserFactoryConfig;
 import com.techsenger.ansi4j.core.api.spi.ParserFactoryService;
 import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
+import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.fellbaum.jemoji.IndexedEmoji;
+import net.fellbaum.jemoji.Qualification;
 
 public class PreformattedTextPane extends JTextPane {
 
@@ -183,36 +186,42 @@ public class PreformattedTextPane extends JTextPane {
         int start = doc.getLength();
 
         if (!(hasAnsi && styleName.equals("```")) && EmojiManager.containsAnyEmoji(text)) {
-
             String fontFamily = StyleConstants.getFontFamily(style);
-            int fontSize = StyleConstants.getFontSize(style);
+            int fs = StyleConstants.getFontSize(style);
 
             SimpleAttributeSet emojiStyle = new SimpleAttributeSet(style);
 
             List<IndexedEmoji> emojis = EmojiManager.extractEmojisInOrderWithIndex(text);
+            HashMap<Integer, IndexedEmoji> emojiAtIndex = new HashMap<>();
+            for (IndexedEmoji e : emojis) {
+                emojiAtIndex.put(e.getCharIndex(), e);
+            }
 
-            IndexedEmoji emoji;
             // can't iterate by code point without preprocessing first to get name
+            int emojiListIdx = 0;
             for (int i = 0; i < text.length(); i++) {
-
-                if ((emoji = GeminiTextPane.isEmoji(emojis, i)) != null) {
-
-                    if (GeminiTextPane.sheetImage != null) {
-
-                        String key = GeminiTextPane.getEmojiHex(emoji);
-
-                        Point p = GeminiTextPane.emojiSheetMap.get(key);
+                IndexedEmoji emoji = emojiAtIndex.get(i);
+                if (emoji != null) {
+                    Emoji emj = emoji.getEmoji();
+                    boolean unqualified = (emj.hasVariationSelectors() && GeminiTextPane.hasTextVariationSelector(text, i)) || emj.getQualification() == Qualification.UNQUALIFIED;
+                    if (GeminiTextPane.sheetImage != null || unqualified) {
                         ImageIcon icon = null;
-                        int imgSize = fontSize + 4;
-                        if (p != null) {
-                            icon = GeminiTextPane.extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
-                        } else {
-                            int dashIdx = key.indexOf('-');
-                            if (dashIdx != -1) {
+                        if (!unqualified) {
+                            String key = GeminiTextPane.getEmojiHex(emoji);
 
-                                p = GeminiTextPane.emojiSheetMap.get(key.substring(0, dashIdx));
-                                if (p != null) {
-                                    icon = GeminiTextPane.extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
+                            Point p = GeminiTextPane.emojiSheetMap.get(key);
+
+                            int imgSize = fs + 4;
+                            if (p != null) {
+                                icon = GeminiTextPane.extractSprite(p.x, p.y, 64, imgSize, imgSize, fs);
+                            } else {
+                                int dashIdx = key.indexOf('-');
+                                if (dashIdx != -1) {
+
+                                    p = GeminiTextPane.emojiSheetMap.get(key.substring(0, dashIdx));
+                                    if (p != null) {
+                                        icon = GeminiTextPane.extractSprite(p.x, p.y, 64, imgSize, imgSize, fs);
+                                    }
                                 }
                             }
                         }
@@ -268,7 +277,7 @@ public class PreformattedTextPane extends JTextPane {
                         }
                     } else {
                         StyleConstants.setFontFamily(style, emojiProportional);
-                        insertString(doc.getLength(), GeminiTextPane.unescapeUnicode(emoji.getEmoji().getUnicode()), style);
+                        insertString(doc.getLength(), GeminiTextPane.unescapeUnicode(emj.getUnicode()), style);
 
                         int eci = emoji.getEndCharIndex();
                         int emojiSize = eci - emoji.getCharIndex();
@@ -284,7 +293,7 @@ public class PreformattedTextPane extends JTextPane {
                                 eci += Character.charCount(nextCodePoint);
                                 if (eci < text.length()) { // optomize common scenario
                                     if (emojis.indexOf(emoji) == emojis.size() - 1) { // this is last emoji
-                                    
+
                                         StyleConstants.setFontFamily(style, fontFamily);
                                         insertString(doc.getLength(), text.substring(eci), style);
                                         break;
@@ -295,11 +304,22 @@ public class PreformattedTextPane extends JTextPane {
 
                     }
                 } else {
+                    
+                    while (emojiListIdx < emojis.size() && emojis.get(emojiListIdx).getCharIndex() <= i) {
+                        emojiListIdx++;
+                    }
 
+                    int nextEmojiIdx = (emojiListIdx < emojis.size())
+                            ? emojis.get(emojiListIdx).getCharIndex()
+                            : -1;
                     StyleConstants.setFontFamily(style, fontFamily);
-
-                    insertString(doc.getLength(), String.valueOf(text.charAt(i)), style);
-
+                    if (nextEmojiIdx != -1) {
+                        insertString(doc.getLength(), text.substring(i, nextEmojiIdx), style);
+                        i = nextEmojiIdx - 1;
+                    } else {
+                        insertString(doc.getLength(), text.substring(i), style);
+                        break;
+                    }
                 }
             }
             StyleConstants.setFontFamily(style, fontFamily);
