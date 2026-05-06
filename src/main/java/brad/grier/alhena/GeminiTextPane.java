@@ -1797,7 +1797,21 @@ public class GeminiTextPane extends JTextPane {
         }
         // hack to fix inline image positioning when an image link is the very last line in the document
         if (doc != null) {
-            processLine(" \n");
+            // previous hack inserted a newline (not ideal because it could be selected)
+            // this hack inserts a single character and then deletes it which also fixes the image positioning problem
+            // furthermore, inserting the special character 𝗔 forces all characters with a symbol variation selector to be rendered
+            // correctly as symbols instead of fallback emojis on MacOS (strange but true - see the ☕ character)
+            SimpleAttributeSet hidden = new SimpleAttributeSet();
+            StyleConstants.setFontSize(hidden, 1); // nearly invisible
+            int i = doc.getLength();
+            insertString(i, "𝗔", hidden);
+            try {
+                doc.remove(i, 1);
+            } catch (BadLocationException ex) {
+                System.getLogger(GeminiTextPane.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+            }
+
+            //processLine(" \n");
         }
         JTabbedPane tabbedPane = page.frame().tabbedPane;
         firstHeading = createHeading();
