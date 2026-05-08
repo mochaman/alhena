@@ -248,6 +248,7 @@ public class Alhena {
     private static boolean started;
     private static final Parser parser = Parser.builder().build();
     private static final HtmlRenderer renderer = HtmlRenderer.builder().build();
+    public static boolean stateLoaded = true;
 
     static {
         // just do this once
@@ -821,6 +822,7 @@ public class Alhena {
     }
 
     private static boolean loadState(String pendingFile, String[] args) {
+        stateLoaded = false;
         boolean done = false;
         GeminiFrame[] gf = {null};
         try (var stream = Files.newDirectoryStream(Path.of(alhenaHome), "framestate_*")) {
@@ -862,11 +864,8 @@ public class Alhena {
 
                             JsonObject page = (JsonObject) pageObject;
 
-                            if (page.containsKey("splitview")) {
-                                System.out.println(page);
-                            }
-
                             String url = page.getString("url");
+
                             if (first[0]) {
                                 first[0] = false;
                                 Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
@@ -878,7 +877,11 @@ public class Alhena {
                                 // add subsequent pages
                                 if (CUSTOM_LABELS.contains(url)) {
                                     InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
-                                    gf[0].showCustomPage(url, false, pageInfo, true);
+                                    Boolean showing = page.getBoolean("showing");
+                                    if (showing == null) {
+                                        showing = true;
+                                    }
+                                    gf[0].showCustomPage(url, false, pageInfo, true, showing, page.getLong("fetchtime"), page.getInteger("pos"));
                                 } else {
                                     gf[0].fetchURL(url, null, false, page, null);
                                 }
@@ -891,7 +894,11 @@ public class Alhena {
                                 } else {
                                     if (CUSTOM_LABELS.contains(url)) {
                                         InfoPageInfo pageInfo = new InfoPageInfo(url, page.getString("content"));
-                                        gf[0].showCustomPage(url, false, pageInfo, true);
+                                        Boolean showing = page.getBoolean("showing");
+                                        if (showing == null) {
+                                            showing = true;
+                                        }
+                                        gf[0].showCustomPage(url, false, pageInfo, true, showing, page.getLong("fetchtime"), page.getInteger("pos"));
                                     } else {
                                         gf[0].fetchURL(url, null, false, page, null);
                                     }
@@ -944,7 +951,9 @@ public class Alhena {
         } catch (IOException io) {
             done = false;
         }
+        stateLoaded = true;
         return done;
+
     }
 
     private static PopupMenu createPopupMenu() {
@@ -1086,6 +1095,7 @@ public class Alhena {
             }
 
             for (GeminiFrame jf : frameList) {
+                List<Page> showList = jf.getVisiblePages();
                 jf.setVisible(false);
                 jf.forEachPage(page -> {
                     page.textPane().closePlayers();
@@ -1094,7 +1104,7 @@ public class Alhena {
                 if (restoreTabs) {
                     try {
                         File stateFile = new File(alhenaHome + File.separatorChar + "framestate_" + i + ".json");
-                        Files.writeString(stateFile.toPath(), jf.getAppState().encode(), StandardCharsets.UTF_8);
+                        Files.writeString(stateFile.toPath(), jf.getAppState(showList).encode(), StandardCharsets.UTF_8);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
@@ -1108,13 +1118,14 @@ public class Alhena {
                 page.textPane().closePlayers();
             });
             //gf.shutDown();
+            List<Page> showList = gf.getVisiblePages();
             gf.setVisible(false);
 
             if (SystemInfo.isMacOS && restoreTabs) {
                 deleteFrameState();
                 try {
                     Path stateFile = Paths.get(alhenaHome, "framestate_0.json");
-                    Files.writeString(stateFile, gf.getAppState().encode(), StandardCharsets.UTF_8);
+                    Files.writeString(stateFile, gf.getAppState(showList).encode(), StandardCharsets.UTF_8);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
@@ -3119,7 +3130,7 @@ public class Alhena {
                                     comps[0] = textEditor;
                                     p.frame().titanEditorOpen = true;
                                     Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
-                                    
+
                                     p.frame().titanEditorOpen = false;
                                     if (res != null) {
                                         Object rsp = textEditor.getResult();

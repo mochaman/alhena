@@ -240,7 +240,19 @@ public final class GeminiFrame extends JFrame {
             Map.entry("FlatMTDraculaIJTheme", new ThemeInfo("com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTDraculaIJTheme", "Dracula Material", true))
     );
 
-    public JsonObject getAppState() {
+    public List<Page> getVisiblePages() {
+        var showList = new ArrayList<Page>();
+        pageHistoryMap.entrySet().stream().forEach(entry -> {
+            entry.getValue().forEach(page -> {
+                if (page.isShowing()) {
+                    showList.add(page);
+                }
+            });
+        });
+        return showList;
+    }
+
+    public JsonObject getAppState(List<Page> showList) {
 
         CacheInfo cs = Alhena.getPageCache();
         ArrayList<Page> prunedPages = new ArrayList<>();
@@ -276,7 +288,7 @@ public final class GeminiFrame extends JFrame {
             for (int i = 0; i < tabCount; i++) {
                 JsonObject tabObject = new JsonObject();
                 if (tabbedPane.getComponentAt(i) instanceof SplitPanel sp) {
-                    processSplitView(sp, prunedPages, tabObject);
+                    processSplitView(sp, prunedPages, tabObject, showList);
                     tabArray.add(tabObject);
                 } else {
                     Page p = (Page) tabbedPane.getComponentAt(i);
@@ -287,6 +299,7 @@ public final class GeminiFrame extends JFrame {
                         if (!prunedPages.contains(page)) {
                             JsonObject jp = new JsonObject();
                             jp.put("url", page.toString());
+                            jp.put("showing", showList.contains(page));
                             jp.put("content", page.textPane.current().currentPage().toString());
                             jp.put("pfmode", page.textPane.current().pMode());
                             jp.put("pos", page.getScrollPos());
@@ -320,7 +333,7 @@ public final class GeminiFrame extends JFrame {
             JsonObject tabObject = new JsonObject();
 
             if (visiblePage().getParent() instanceof SplitPanel sp) {
-                processSplitView(sp, prunedPages, tabObject);
+                processSplitView(sp, prunedPages, tabObject, showList);
                 tabArray.add(tabObject);
                 jo.put("tabs", tabArray);
 
@@ -336,6 +349,7 @@ public final class GeminiFrame extends JFrame {
 
                             JsonObject jp = new JsonObject();
                             jp.put("url", page.toString());
+                            jp.put("showing", showList.contains(page));
                             jp.put("content", page.textPane.current().currentPage().toString());
                             jp.put("pfmode", page.textPane.current().pMode());
                             jp.put("pos", page.getScrollPos());
@@ -363,7 +377,7 @@ public final class GeminiFrame extends JFrame {
         return jo;
     }
 
-    private void processSplitView(SplitPanel sp, List<Page> prunedPages, JsonObject tabObject) {
+    private void processSplitView(SplitPanel sp, List<Page> prunedPages, JsonObject tabObject, List<Page> showList) {
         Page lp = sp.getLeftPage();
         Page rp = sp.getRightPage();
         record PaneRes(int activeIdx, JsonArray pageArray) {
@@ -378,6 +392,7 @@ public final class GeminiFrame extends JFrame {
                 if (!prunedPages.contains(page)) {
                     JsonObject jp = new JsonObject();
                     jp.put("url", page.toString());
+                    jp.put("showing", showList.contains(page));
                     jp.put("content", page.textPane.current().currentPage().toString());
                     jp.put("pfmode", page.textPane.current().pMode());
                     jp.put("pos", page.getScrollPos());
@@ -687,7 +702,7 @@ public final class GeminiFrame extends JFrame {
                     JMenuItem jmi = new JMenuItem(Util.truncate(bmark.label(), 40));
                     jmi.addActionListener(e -> {
                         Object uo = bmark.userObject();
-                        if (uo != null && ((Boolean)uo)) {
+                        if (uo != null && ((Boolean) uo)) {
                             fetchURL(bmark.url(), false, bmark.label());
                         } else {
                             fetchURL(bmark.url(), false, null);
@@ -1149,7 +1164,11 @@ public final class GeminiFrame extends JFrame {
                 String purl = pge.getString("url");
                 if (CUSTOM_LABELS.contains(purl)) {
                     InfoPageInfo pageInfo = new InfoPageInfo(purl, pge.getString("content"));
-                    showCustomPage(purl, false, pageInfo, true);
+                    Boolean showing = pge.getBoolean("showing");
+                    if (showing == null) {
+                        showing = true;
+                    }
+                    showCustomPage(purl, false, pageInfo, true, showing, pge.getLong("fetchtime"), pge.getInteger("pos"));
                 } else {
                     fetchURL(purl, null, false, pge, null);
                 }
@@ -1215,16 +1234,25 @@ public final class GeminiFrame extends JFrame {
                 if (c instanceof SplitPanel splitPanel) {
                     next.setVisible(true);
                     splitPanel.replacePage(vPage, next);
+                    if (Alhena.stateLoaded) {
+                        next.textPane.restoreFromCache();
+                    }
                 } else {
                     remove(vPage);
                     next.setVisible(true);
                     add(next, BorderLayout.CENTER);
+                    if (Alhena.stateLoaded) {
+                        next.textPane.restoreFromCache();
+                    }
                 }
 
                 revalidate();
             } else {
                 int idx = tabbedPane.getSelectedIndex();
                 tabbedPane.setComponentAt(idx, next);
+                if (Alhena.stateLoaded) {
+                    next.textPane.restoreFromCache();
+                }
             }
 
             updatePageTheme(next);
@@ -1265,10 +1293,16 @@ public final class GeminiFrame extends JFrame {
                 if (c instanceof SplitPanel splitPanel) {
                     prev.setVisible(true);
                     splitPanel.replacePage(vPage, prev);
+                    if (Alhena.stateLoaded) {
+                        prev.textPane.restoreFromCache();
+                    }
                 } else {
                     remove(vPage);
                     prev.setVisible(true);
                     add(prev, BorderLayout.CENTER);
+                    if (Alhena.stateLoaded) {
+                        prev.textPane.restoreFromCache();
+                    }
 
                 }
                 revalidate();
@@ -1276,6 +1310,9 @@ public final class GeminiFrame extends JFrame {
             } else {
                 int idx = tabbedPane.getSelectedIndex();
                 tabbedPane.setComponentAt(idx, prev);
+                if (Alhena.stateLoaded) {
+                    prev.textPane.restoreFromCache();
+                }
 
             }
             updatePageTheme(prev);
@@ -2287,7 +2324,7 @@ public final class GeminiFrame extends JFrame {
         addClickedLink(url);
         if (CUSTOM_LABELS.contains(url) && !url.equals(INFO_LABEL)) {
             EventQueue.invokeLater(() -> {
-                showCustomPage(url, true, null, false);
+                showCustomPage(url, true, null, false, true, null, -1);
             });
 
         } else {
@@ -2550,6 +2587,8 @@ public final class GeminiFrame extends JFrame {
                                 histPage.runWhenDone(() -> currentPB.setBusy(false));
                             }
                         }
+                        String frameTitle = createTitle(histPage.textPane.getDocURLString(), histPage.textPane.getFirstHeading());
+                        setTitle(frameTitle);
 
                     }
                 };
@@ -2597,8 +2636,14 @@ public final class GeminiFrame extends JFrame {
         }
         p.textPane.savedContentWidth = page.getFloat("contwidth");
         p.setFetchTime(page.getLong("fetchtime"));
-        p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), url, false);
-        p.setScrollPos(page.getInteger("pos"));
+        Boolean showing = page.getBoolean("showing");
+        if (showing == null || showing) {
+            p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), url, false);
+            p.setScrollPos(page.getInteger("pos"));
+        } else {
+            p.textPane.cachePage(page.getString("content"), page.getBoolean("pfmode"), url, page.getInteger("pos"));
+        }
+
     }
 
     public record ThemeInfo(String className, String label, boolean isDark) {
@@ -2618,7 +2663,7 @@ public final class GeminiFrame extends JFrame {
             switch (visiblePage.textPane.getDocMode()) {
                 case GeminiTextPane.SUBSCRIPTION_MODE -> {
                     int sp = visiblePage.getScrollPos();
-                    loadSubscriptions(visiblePage.textPane, visiblePage, null);
+                    loadSubscriptions(visiblePage.textPane, visiblePage, null, true, -1);
                     // use invokeLater because loadFeed uses background thread that posts to EDT
                     if (reposition) {
                         EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
@@ -2626,34 +2671,34 @@ public final class GeminiFrame extends JFrame {
                 }
                 case GeminiTextPane.FEED_MODE -> {
                     int sp = visiblePage.getScrollPos();
-                    loadFeeds(visiblePage.textPane, visiblePage, null);
+                    loadFeeds(visiblePage.textPane, visiblePage, null, true, -1);
                     // use invokeLater because loadFeed uses background thread that posts to EDT
                     if (reposition) {
                         EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
                     }
                 }
                 case GeminiTextPane.HISTORY_MODE ->
-                    loadHistory(visiblePage.textPane, visiblePage, null);
+                    loadHistory(visiblePage.textPane, visiblePage, null, true, -1);
                 case GeminiTextPane.BOOKMARK_MODE -> {
                     int sp = visiblePage.getScrollPos();
-                    loadBookmarks(visiblePage.textPane, visiblePage, null);
+                    loadBookmarks(visiblePage.textPane, visiblePage, null, true, -1);
                     if (reposition) {
                         visiblePage.setScrollPos(sp);
                     }
                 }
                 case GeminiTextPane.CERT_MODE -> {
                     int sp = visiblePage.getScrollPos();
-                    loadCerts(visiblePage.textPane, null);
+                    loadCerts(visiblePage.textPane, visiblePage, null, true, -1);
                     if (reposition) {
                         visiblePage.setScrollPos(sp);
                     }
                 }
                 case GeminiTextPane.SERVER_MODE ->
-                    loadServers(visiblePage.textPane, visiblePage, null);
+                    loadServers(visiblePage.textPane, visiblePage, null, true, -1);
                 case GeminiTextPane.INFO_MODE -> {
                 }
                 case GeminiTextPane.STYLE_MODE ->
-                    loadStyles(visiblePage.textPane, null);
+                    loadStyles(visiblePage.textPane, visiblePage, null, true, -1);
                 case GeminiTextPane.DEFAULT_MODE -> {
                     if (!cURL.isEmpty()) {
                         visiblePage.setStart();
@@ -2678,14 +2723,14 @@ public final class GeminiFrame extends JFrame {
         int sp = pb.getScrollPos();
         String url = pb.textPane.getDocURLString();
         CurrentPage res = pb.textPane.current();
-        streamChunks(res.currentPage(), 100, url, res.pMode(), pb);
+        streamChunks(res.currentPage(), 100, url, res.pMode(), pb, -1);
         EventQueue.invokeLater(() -> {
             pb.setScrollPos(sp);
         });
 
     }
 
-    public void streamChunks(StringBuilder b, int chunkSize, String url, boolean pfMode, Page vp) {
+    public void streamChunks(StringBuilder b, int chunkSize, String url, boolean pfMode, Page vp, int pos) {
         if (b == null || b.isEmpty()) {
             // showGlassPane(false);
             return;
@@ -2722,6 +2767,7 @@ public final class GeminiFrame extends JFrame {
                 vp.textPane.end();
                 backButton.setEnabled(hasPrev(groupPane));
                 forwardButton.setEnabled(hasNext(groupPane));
+                vp.setScrollPos(pos);
                 setBusy(false, vp);
             });
 
@@ -2729,10 +2775,11 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void showCustomPage(String label, InfoPageInfo info) {
-        showCustomPage(label, false, info, false);
+        showCustomPage(label, false, info, false, true, null, -1);
     }
 
-    public void showCustomPage(String label, boolean inPlace, InfoPageInfo info, boolean saved) { // probably need custom refresh button handling
+    public void showCustomPage(String label, boolean inPlace, InfoPageInfo info, boolean saved,
+            boolean showing, Long fetchTime, int pos) { // probably need custom refresh button handling
         if (info != null && !saved) {
             label = INFO_LABEL; // hack
         }
@@ -2744,6 +2791,9 @@ public final class GeminiFrame extends JFrame {
             if (tabbedPane == null) {
 
                 Page pb = newPage(label, null, false);
+                if (fetchTime != null) {
+                    pb.setFetchTime(fetchTime);
+                }
                 pb.ignoreStart();
                 boolean[] first = {true};
                 Runnable r = () -> {
@@ -2772,27 +2822,30 @@ public final class GeminiFrame extends JFrame {
                 };
                 pb.runWhenLoading(r);
                 if (label.equals(SUBSCRIPTION_LABEL)) {
-                    loadSubscriptions(pb.textPane, pb, info);
+                    loadSubscriptions(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(FEEDS_LABEL)) {
-                    loadFeeds(pb.textPane, pb, info);
+                    loadFeeds(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(HISTORY_LABEL)) {
-                    loadHistory(pb.textPane, pb, info);
+                    loadHistory(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(BOOKMARK_LABEL)) {
-                    loadBookmarks(pb.textPane, pb, info);
+                    loadBookmarks(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(CERT_LABEL)) {
-                    loadCerts(pb.textPane, info);
+                    loadCerts(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(INFO_LABEL)) {
                     loadInfo(pb.textPane, info);
                 } else if (label.equals(SERVERS_LABEL)) {
-                    loadServers(pb.textPane, pb, info);
+                    loadServers(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(STYLES_LABEL)) {
-                    loadStyles(pb.textPane, info);
+                    loadStyles(pb.textPane, pb, info, showing, pos);
                 }
 
             } else {
                 int currentTabIdx = tabbedPane.getSelectedIndex();
 
                 Page pb = newPage(label, null, false);
+                if (fetchTime != null) {
+                    pb.setFetchTime(fetchTime);
+                }
                 pb.ignoreStart();
                 boolean[] first = {true};
                 Runnable r = () -> {
@@ -2839,21 +2892,21 @@ public final class GeminiFrame extends JFrame {
                 pb.runWhenLoading(r);
 
                 if (label.equals(SUBSCRIPTION_LABEL)) {
-                    loadSubscriptions(pb.textPane, pb, info);
+                    loadSubscriptions(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(FEEDS_LABEL)) {
-                    loadFeeds(pb.textPane, pb, info);
+                    loadFeeds(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(HISTORY_LABEL)) {
-                    loadHistory(pb.textPane, pb, info);
+                    loadHistory(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(BOOKMARK_LABEL)) {
-                    loadBookmarks(pb.textPane, pb, info);
+                    loadBookmarks(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(CERT_LABEL)) {
-                    loadCerts(pb.textPane, info);
+                    loadCerts(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(INFO_LABEL)) {
                     loadInfo(pb.textPane, info);
                 } else if (label.equals(SERVERS_LABEL)) {
-                    loadServers(pb.textPane, pb, info);
+                    loadServers(pb.textPane, pb, info, showing, pos);
                 } else if (label.equals(STYLES_LABEL)) {
-                    loadStyles(pb.textPane, info);
+                    loadStyles(pb.textPane, pb, info, showing, pos);
                 }
 
             }
@@ -2861,23 +2914,26 @@ public final class GeminiFrame extends JFrame {
             Page visiblePB = visiblePage(); // empty page (new tab/window)
             visiblePB.ignoreStart();
             Page nPage = !inPlace ? addPageToHistory(null, visiblePB, true) : visiblePB;
+            if (fetchTime != null) {
+                nPage.setFetchTime(fetchTime);
+            }
 
             if (label.equals(SUBSCRIPTION_LABEL)) {
-                loadSubscriptions(nPage.textPane, null, info);
+                loadSubscriptions(nPage.textPane, null, info, showing, pos);
             } else if (label.equals(FEEDS_LABEL)) {
-                loadFeeds(nPage.textPane, null, info);
+                loadFeeds(nPage.textPane, null, info, showing, pos);
             } else if (label.equals(HISTORY_LABEL)) {
-                loadHistory(nPage.textPane, null, info);
+                loadHistory(nPage.textPane, null, info, showing, pos);
             } else if (label.equals(BOOKMARK_LABEL)) {
-                loadBookmarks(nPage.textPane, null, info);
+                loadBookmarks(nPage.textPane, nPage, info, showing, pos);
             } else if (label.equals(CERT_LABEL)) {
-                loadCerts(nPage.textPane, info);
+                loadCerts(nPage.textPane, nPage, info, showing, pos);
             } else if (label.equals(INFO_LABEL)) {
                 loadInfo(nPage.textPane, info);
             } else if (label.equals(SERVERS_LABEL)) {
-                loadServers(nPage.textPane, null, info);
+                loadServers(nPage.textPane, null, info, showing, pos);
             } else if (label.equals(STYLES_LABEL)) {
-                loadStyles(nPage.textPane, info);
+                loadStyles(nPage.textPane, nPage, info, showing, pos);
             }
             setTitle(label);
 
@@ -2928,14 +2984,21 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void loadBookmarks(GeminiTextPane textPane, Page p, InfoPageInfo info) {
+    private void loadBookmarks(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         try {
             if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
 
                 tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), BOOKMARK_LABEL);
             }
             if (info != null) {
-                textPane.end(info.content, false, BOOKMARK_LABEL, false);
+                if (showing) {
+                    textPane.end(info.content, false, BOOKMARK_LABEL, false);
+                    if (pos != -1) {
+                        p.setScrollPos(pos);
+                    }
+                } else {
+                    textPane.cachePage(info.content, false, BOOKMARK_LABEL, pos);
+                }
             } else {
                 List<Bookmark> bookmarks = DB.loadBookmarks();
                 if (!bookmarks.isEmpty()) {
@@ -2972,14 +3035,21 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void loadCerts(GeminiTextPane textPane, InfoPageInfo info) {
+    private void loadCerts(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         try {
             if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
 
                 tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), CERT_LABEL);
             }
             if (info != null) {
-                textPane.end(info.content, false, CERT_LABEL, false);
+                if (showing) {
+                    textPane.end(info.content, false, CERT_LABEL, false);
+                    if (pos != -1) {
+                        p.setScrollPos(pos);
+                    }
+                } else {
+                    textPane.cachePage(info.content, false, CERT_LABEL, pos);
+                }
             } else {
                 List<DBClientCertInfo> certs = DB.loadCerts();
                 if (!certs.isEmpty()) {
@@ -3024,14 +3094,21 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void loadStyles(GeminiTextPane textPane, InfoPageInfo info) {
+    private void loadStyles(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         try {
             if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
 
                 tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), STYLES_LABEL);
             }
             if (info != null) {
-                textPane.end(info.content, false, STYLES_LABEL, false);
+                if (showing) {
+                    textPane.end(info.content, false, STYLES_LABEL, false);
+                    if (pos != -1) {
+                        p.setScrollPos(pos);
+                    }
+                } else {
+                    textPane.cachePage(info.content, false, STYLES_LABEL, pos);
+                }
             } else {
                 List<PageStyleInfo> styles = DB.loadStyles();
                 if (!styles.isEmpty()) {
@@ -3089,7 +3166,7 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    private void loadHistory(GeminiTextPane textPane, Page p, InfoPageInfo info) {
+    private void loadHistory(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         setBusy(true, p);
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
@@ -3097,7 +3174,14 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), HISTORY_LABEL);
         }
         if (info != null) {
-            textPane.end(info.content, false, HISTORY_LABEL, false);
+            if (showing) {
+                textPane.end(info.content, false, HISTORY_LABEL, false);
+                if (pos != -1) {
+                    p.setScrollPos(pos);
+                }
+            } else {
+                textPane.cachePage(info.content, false, HISTORY_LABEL, pos);
+            }
         } else {
             textPane.updatePage(I18n.t("historyHeading"), false, HISTORY_LABEL, true);
             Thread.ofVirtual().start(() -> {
@@ -3129,7 +3213,7 @@ public final class GeminiFrame extends JFrame {
 
     public boolean loadAllFeeds = false;
 
-    private void loadFeeds(GeminiTextPane textPane, Page p, InfoPageInfo info) {
+    private void loadFeeds(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         setBusy(true, p);
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
@@ -3137,7 +3221,14 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), FEEDS_LABEL);
         }
         if (info != null) {
-            textPane.end(info.content, false, FEEDS_LABEL, false);
+            if (showing) {
+                textPane.end(info.content, false, FEEDS_LABEL, false);
+                if (pos != -1) {
+                    p.setScrollPos(pos);
+                }
+            } else {
+                textPane.cachePage(info.content, false, FEEDS_LABEL, pos);
+            }
         } else {
             String heading = loadAllFeeds ? I18n.t("allFeedsHeader") : I18n.t("unreadFeedsHeader");
             textPane.updatePage(heading + I18n.t("feedsHeader"), false, FEEDS_LABEL, true);
@@ -3170,7 +3261,7 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void loadSubscriptions(GeminiTextPane textPane, Page p, InfoPageInfo info) {
+    private void loadSubscriptions(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         setBusy(true, p);
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
@@ -3178,7 +3269,14 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), SUBSCRIPTION_LABEL);
         }
         if (info != null) {
-            textPane.end(info.content, false, SUBSCRIPTION_LABEL, false);
+            if (showing) {
+                textPane.end(info.content, false, SUBSCRIPTION_LABEL, false);
+                if (pos != -1) {
+                    p.setScrollPos(pos);
+                }
+            } else {
+                textPane.cachePage(info.content, false, SUBSCRIPTION_LABEL, pos);
+            }
         } else {
             //String heading = loadAllFeeds ? "# All Feeds\n" : "# Unread Feeds\n";
             textPane.updatePage(I18n.t("subsHeader"), false, SUBSCRIPTION_LABEL, true);
@@ -3254,7 +3352,7 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    private void loadServers(GeminiTextPane textPane, Page p, InfoPageInfo info) {
+    private void loadServers(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         setBusy(true, p);
 
         if (tabbedPane != null) { // TODO: might not do anything (see runnable that makes visible)
@@ -3262,7 +3360,14 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), SERVERS_LABEL);
         }
         if (info != null) {
-            textPane.end(info.content, false, SERVERS_LABEL, false);
+            if (showing) {
+                textPane.end(info.content, false, SERVERS_LABEL, false);
+                if (pos != -1) {
+                    p.setScrollPos(pos);
+                }
+            } else {
+                textPane.cachePage(info.content, false, SERVERS_LABEL, pos);
+            }
         } else {
             textPane.updatePage(I18n.t("serversHeading"), false, SERVERS_LABEL, true);
             Thread.ofVirtual().start(() -> {
@@ -3607,7 +3712,7 @@ public final class GeminiFrame extends JFrame {
         String url = textPane.getDocURLString();
         CurrentPage res = textPane.current();
         visiblePage().ignoreStart();
-        streamChunks(res.currentPage(), 100, url, isPlainText, visiblePage());
+        streamChunks(res.currentPage(), 100, url, isPlainText, visiblePage(), -1);
     }
 
     public void viewServerCert(GeminiTextPane textPane, URI uri) {
@@ -3745,7 +3850,11 @@ public final class GeminiFrame extends JFrame {
                         String purl = pge.getString("url");
                         if (CUSTOM_LABELS.contains(purl)) {
                             InfoPageInfo pageInfo = new InfoPageInfo(purl, pge.getString("content"));
-                            showCustomPage(purl, false, pageInfo, true);
+                            Boolean showing = pge.getBoolean("showing");
+                            if (showing == null) {
+                                showing = true;
+                            }
+                            showCustomPage(purl, false, pageInfo, true, showing, pge.getLong("fetchtime"), pge.getInteger("pos"));
                         } else {
                             fetchURL(purl, null, false, pge, scrollToHeading);
                         }
@@ -3764,6 +3873,7 @@ public final class GeminiFrame extends JFrame {
                 sp.setFocusedPage(p);
 
                 Page leftPage = sp.getLeftPage();
+                sp.setFocusedPage(leftPage);
                 leftPage.textPane.requestFocusInWindow();
                 if (leftPage.textPane.getDocURLString() != null) {
                     // if another tab is immediately selected, the request focus doesn't happen - set title here manually
@@ -3879,7 +3989,15 @@ public final class GeminiFrame extends JFrame {
                             GeminiFrame.this.remove(tabbedPane);
                             tabbedPane = null;
                             GeminiFrame.this.add(c, BorderLayout.CENTER);
+
                             Page page = c instanceof Page ? (Page) c : ((SplitPanel) c).getFocusedPage();
+                            if (page.getParent() instanceof SplitPanel sp) {
+                                sp.getRightPage().textPane.restoreFromCache();
+                                sp.getLeftPage().textPane.restoreFromCache();
+
+                            } else {
+                                page.textPane.restoreFromCache();
+                            }
                             String frameTitle = createTitle(page.textPane.getDocURLString(), page.textPane.getFirstHeading());
                             if (frameTitle != null) {
                                 setTitle(frameTitle);
@@ -3942,6 +4060,16 @@ public final class GeminiFrame extends JFrame {
                 }
 
                 GeminiTextPane textPane = page.textPane;
+
+                if (Alhena.stateLoaded) {
+                    if (page.getParent() instanceof SplitPanel sp) {
+                        sp.getRightPage().textPane.restoreFromCache();
+                        sp.getLeftPage().textPane.restoreFromCache();
+
+                    } else {
+                        textPane.restoreFromCache();
+                    }
+                }
 
                 textPane.getDocURL().ifPresentOrElse(title1 -> {
 

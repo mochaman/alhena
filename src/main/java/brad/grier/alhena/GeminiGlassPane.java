@@ -67,6 +67,9 @@ public class GeminiGlassPane extends JComponent implements ActionListener {
 
     public void start() {
         //spinnerColor = UIManager.getBoolean("laf.dark") ? Color.WHITE : Color.BLACK;
+        if (gf.visiblePage() == null) {
+            return;
+        }
         if (gf.visiblePage().textPane.pageStyle != null) {
             spinnerColor = gf.visiblePage().textPane.pageStyle.getSpinnerColor();
         } else {

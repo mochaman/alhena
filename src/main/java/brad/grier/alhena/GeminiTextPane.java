@@ -183,7 +183,11 @@ public class GeminiTextPane extends JTextPane {
     private ArrayList<ClickableRange> openQueue;
     private LinkedHashMap<String, Integer> headingMap = new LinkedHashMap<>();
     private static final Set<Integer> DIRECTIVE_MODES = Set.of(BOOKMARK_MODE, CERT_MODE, STYLE_MODE, FEED_MODE, SUBSCRIPTION_MODE);
-
+    private StringBuilder cacheContent;
+    private boolean cacheMode;
+    private String cacheUrl;
+    private int cacheScrollPos;
+    
     private GeminiFrame f() {
         GeminiFrame frame = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
         if (frame != null) {
@@ -3198,10 +3202,9 @@ public class GeminiTextPane extends JTextPane {
                             char[] chars = Character.toChars(text.codePointAt(i));
 
                             int eci = emoji.getEndCharIndex();
-                            
+
                             //int emojiSize = eci - emoji.getCharIndex();
                             //int emojiSize = chars.length;
-
                             // advance past emoji
                             i += (chars.length - 1);
 
@@ -3467,6 +3470,9 @@ public class GeminiTextPane extends JTextPane {
     }
 
     public CurrentPage current() {
+        if (cacheContent != null) {
+            return new CurrentPage(cacheContent, cacheMode);
+        }
         return new CurrentPage(pageBuffer, originalPfMode);
     }
 
@@ -3736,6 +3742,49 @@ public class GeminiTextPane extends JTextPane {
             hl.add(key);
         });
         return hl;
+    }
+
+    public void cachePage(String content, boolean pfMode, String url, int scrollPos) {
+        //System.out.println("caching: " + url);
+        cacheContent = new StringBuilder(content);
+        cacheMode = pfMode;
+        cacheUrl = url;
+        docURL = url;
+        cacheScrollPos = scrollPos;
+        String title = docURL;
+        if (f().tabbedPane != null) {
+            int i = f().tabbedPane.getSelectedIndex();
+            f().tabbedPane.setTitleAt(i, title);
+        }
+
+        if (page != null) {
+            page.loading();
+        }
+    }
+
+    public void restoreFromCache() {
+        if (cacheContent != null) {
+            // System.out.println("restoring: " + docURL);
+            if (cacheContent.length() > 2048) {
+                //end(cacheContent, cacheMode, cacheUrl, false);
+                f().streamChunks(cacheContent, 100, cacheUrl, cacheMode, page, cacheScrollPos);
+            } else {
+                end(cacheContent.toString(), cacheMode, cacheUrl, false);
+                if (cacheScrollPos != -1) {
+                    page.setScrollPos(cacheScrollPos);
+                }
+            }
+            cacheContent = null;
+            cacheUrl = null;
+        }
+    }
+
+    public int getPageSize() {
+        if (cacheContent != null) {
+            return cacheContent.length();
+        } else {
+            return pageBuffer.length();
+        }
     }
 
 }
