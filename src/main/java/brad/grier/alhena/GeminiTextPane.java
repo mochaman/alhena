@@ -187,7 +187,7 @@ public class GeminiTextPane extends JTextPane {
     private boolean cacheMode;
     private String cacheUrl;
     private int cacheScrollPos;
-    
+
     private GeminiFrame f() {
         GeminiFrame frame = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
         if (frame != null) {
@@ -3756,7 +3756,7 @@ public class GeminiTextPane extends JTextPane {
             int i = f().tabbedPane.getSelectedIndex();
             f().tabbedPane.setTitleAt(i, title);
         }
-
+        page.ignoreStart();
         if (page != null) {
             page.loading();
         }
