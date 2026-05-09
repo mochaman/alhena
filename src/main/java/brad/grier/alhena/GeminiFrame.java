@@ -3750,11 +3750,14 @@ public final class GeminiFrame extends JFrame {
             Page remainingPage;
             if (visiblePage() == sp.getLeftPage()) {
                 remainingPage = sp.getRightPage();
+                lastTabInfo = new LastTabInfo(sp.getLeftPage(), pageHistoryMap.get(getRootPage(sp.getLeftPage())), null);
                 shutdownPage(sp.getLeftPage(), false);
             } else {
                 remainingPage = sp.getLeftPage();
+                lastTabInfo = new LastTabInfo(sp.getRightPage(), pageHistoryMap.get(getRootPage(sp.getRightPage())), null);
                 shutdownPage(sp.getRightPage(), false);
             }
+            closeTabItem.setEnabled(true);
             remove(sp);
             add(remainingPage, BorderLayout.CENTER);
             revalidate();
@@ -3768,11 +3771,14 @@ public final class GeminiFrame extends JFrame {
             Page remainingPage;
             if (visiblePage() == sp.getLeftPage()) {
                 remainingPage = sp.getRightPage();
+                lastTabInfo = new LastTabInfo(sp.getLeftPage(), pageHistoryMap.get(getRootPage(sp.getLeftPage())), null);
                 shutdownPage(sp.getLeftPage(), false);
             } else {
                 remainingPage = sp.getLeftPage();
+                lastTabInfo = new LastTabInfo(sp.getRightPage(), pageHistoryMap.get(getRootPage(sp.getRightPage())), null);
                 shutdownPage(sp.getRightPage(), false);
             }
+            closeTabItem.setEnabled(true);
             sp.remove(remainingPage);
             tabbedPane.remove(idx);
             tabbedPane.insertTab(title, null, newPage("", null, false), null, idx);
