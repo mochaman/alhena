@@ -707,6 +707,20 @@ public class GeminiTextPane extends JTextPane {
 
                                     if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) == null) {
                                         JMenuItem splitRightItem = new JMenuItem(I18n.t("splitRightItem"));
+                                        JMenuItem splitLeftItem = new JMenuItem(I18n.t("splitLeftItem"));
+
+                                        splitLeftItem.addActionListener(ev -> {
+                                            // open in new tab with gemtext converter regardless
+                                            boolean saveSetting = Alhena.useBrowser;
+                                            Alhena.useBrowser = false;
+                                            clicked(range);
+
+                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT, range.label, true);
+                                            Alhena.useBrowser = saveSetting;
+                                        });
+                                        splitLeftItem.setEnabled(!range.dataUrl);
+                                        popupMenu.add(splitLeftItem);
+
 
                                         splitRightItem.addActionListener(ev -> {
                                             // open in new tab with gemtext converter regardless
@@ -714,11 +728,25 @@ public class GeminiTextPane extends JTextPane {
                                             Alhena.useBrowser = false;
                                             clicked(range);
 
-                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT, range.label);
+                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT, range.label, false);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         splitRightItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitRightItem);
+
+                                        JMenuItem splitTopItem = new JMenuItem(I18n.t("splitTopItem"));
+
+                                        splitTopItem.addActionListener(ev -> {
+                                            boolean saveSetting = Alhena.useBrowser;
+                                            Alhena.useBrowser = false;
+                                            clicked(range);
+
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, true);
+                                            Alhena.useBrowser = saveSetting;
+                                        });
+                                        splitTopItem.setEnabled(!range.dataUrl);
+                                        popupMenu.add(splitTopItem);
+
 
                                         JMenuItem splitBottomItem = new JMenuItem(I18n.t("splitBottomItem"));
 
@@ -727,7 +755,7 @@ public class GeminiTextPane extends JTextPane {
                                             Alhena.useBrowser = false;
                                             clicked(range);
 
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label);
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, false);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         splitBottomItem.setEnabled(!range.dataUrl);
@@ -738,7 +766,7 @@ public class GeminiTextPane extends JTextPane {
                                         oppositeItem.addActionListener(ev -> {
                                             boolean saveSetting = Alhena.useBrowser;
                                             Alhena.useBrowser = false;
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label);
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, false);
                                             Alhena.useBrowser = saveSetting;
                                         });
                                         oppositeItem.setEnabled(!range.dataUrl);

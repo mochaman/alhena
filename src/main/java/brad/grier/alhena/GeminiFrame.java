@@ -170,7 +170,7 @@ public final class GeminiFrame extends JFrame {
     private PrinterJob job;
     private JMenu fileMenu;
     private final JMenu viewMenu, aboutMenu;
-    private JMenuItem splitRightItem, splitBottomItem, closeSplitItem;
+    private JMenuItem splitRightItem, splitLeftItem, splitBottomItem, splitTopItem, closeSplitItem;
     private LastTabInfo lastTabInfo;
     private JMenuItem closeTabItem;
     public boolean titanEditorOpen;
@@ -1006,21 +1006,41 @@ public final class GeminiFrame extends JFrame {
 
         viewMenu.add(new JSeparator());
 
+        splitLeftItem = createMenuItem(I18n.t("splitLeftItem"), KeyStroke.getKeyStroke(KeyEvent.VK_E, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
+            if (splitLeftItem.isEnabled()) {
+                boolean saveSetting = Alhena.useBrowser;
+                Alhena.useBrowser = false;
+                splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT, null, true);
+                Alhena.useBrowser = saveSetting;
+            }
+        });
+        viewMenu.add(splitLeftItem);
+
         splitRightItem = createMenuItem(I18n.t("splitRightItem"), KeyStroke.getKeyStroke(KeyEvent.VK_R, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
             if (splitRightItem.isEnabled()) {
                 boolean saveSetting = Alhena.useBrowser;
                 Alhena.useBrowser = false;
-                splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT, null);
+                splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT, null, false);
                 Alhena.useBrowser = saveSetting;
             }
         });
         viewMenu.add(splitRightItem);
 
+        splitTopItem = createMenuItem(I18n.t("splitTopItem"), KeyStroke.getKeyStroke(KeyEvent.VK_G, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
+            if (splitTopItem.isEnabled()) {
+                boolean saveSetting = Alhena.useBrowser;
+                Alhena.useBrowser = false;
+                splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT, null, true);
+                Alhena.useBrowser = saveSetting;
+            }
+        });
+        viewMenu.add(splitTopItem);
+        
         splitBottomItem = createMenuItem(I18n.t("splitBottomItem"), KeyStroke.getKeyStroke(KeyEvent.VK_B, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
             if (splitBottomItem.isEnabled()) {
                 boolean saveSetting = Alhena.useBrowser;
                 Alhena.useBrowser = false;
-                splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT, null);
+                splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT, null, false);
                 Alhena.useBrowser = saveSetting;
             }
         });
@@ -3791,7 +3811,7 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
-    public void splitView(String url, JsonObject saveSplitView, int orientation, String scrollToHeading) {
+    public void splitView(String url, JsonObject saveSplitView, int orientation, String scrollToHeading, boolean flip) {
         addClickedLink(url);
         if (visiblePage().getParent() instanceof SplitPanel sp) {
             Page focusedPage = sp.getFocusedPage();
@@ -3825,14 +3845,19 @@ public final class GeminiFrame extends JFrame {
 
             SplitPanel sp = new SplitPanel(this, orientation);
 
-            sp.setLeftPage(p);
-
+            // sp.setLeftPage(p);
             String du = p.textPane.getDocURLString();
 
             Page pb = newPage(du, null, true);
 
             pb.setThemeId(currentThemeId);
-            sp.setRightPage(pb);
+            if (flip) {
+                sp.setLeftPage(pb);
+                sp.setRightPage(p);
+            } else {
+                sp.setLeftPage(p);
+                sp.setRightPage(pb);
+            }
 
             tabbedPane.setComponentAt(idx, sp);
 
@@ -3898,11 +3923,17 @@ public final class GeminiFrame extends JFrame {
             Container c = p.getParent();
             c.remove(p);
             SplitPanel sp = new SplitPanel(this, orientation);
-            sp.setLeftPage(p);
+            // sp.setLeftPage(p);
             String du = p.textPane.getDocURLString();
             Page pb = newPage(du, null, true);
             pb.setThemeId(currentThemeId);
-            sp.setRightPage(pb);
+            if (flip) {
+                sp.setLeftPage(pb);
+                sp.setRightPage(p);                
+            } else {
+                sp.setLeftPage(p);
+                sp.setRightPage(pb);
+            }
             c.add(sp, BorderLayout.CENTER);
             pb.requestFocusInWindow();
             int span = orientation == JSplitPane.VERTICAL_SPLIT ? size.height : size.width;
@@ -4385,10 +4416,14 @@ public final class GeminiFrame extends JFrame {
         if (SwingUtilities.getAncestorOfClass(SplitPanel.class, visiblePage().textPane) == null) {
             splitRightItem.setEnabled(true);
             splitBottomItem.setEnabled(true);
+            splitTopItem.setEnabled(true);
+            splitLeftItem.setEnabled(true);
             closeSplitItem.setEnabled(false);
         } else {
             splitRightItem.setEnabled(false);
             splitBottomItem.setEnabled(false);
+            splitTopItem.setEnabled(false);
+            splitLeftItem.setEnabled(false);
             closeSplitItem.setEnabled(true);
         }
     }

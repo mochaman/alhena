@@ -851,7 +851,7 @@ public class Alhena {
                             JsonArray lpages = splitView.getJsonArray("lpages");
                             JsonObject lpage = lpages.getJsonObject(0);
                             gf[0].newTab(lpage.getString("url"), lpage, null, null);
-                            gf[0].splitView(null, splitView, splitView.getInteger("orientation"), null);
+                            gf[0].splitView(null, splitView, splitView.getInteger("orientation"), null, false);
 
                         }
                         tabCount[0]++;
