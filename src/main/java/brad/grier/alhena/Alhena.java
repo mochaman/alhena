@@ -1506,7 +1506,7 @@ public class Alhena {
         if (sClient == null) {
 
             NetClientOptions options = new NetClientOptions()
-                    .setConnectTimeout(60000)
+                    .setConnectTimeout(15_000)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
             if (proxyOptions != null) {
                 options.setProxyOptions(proxyOptions);
@@ -1874,7 +1874,7 @@ public class Alhena {
         if (sClient == null) {
 
             NetClientOptions options = new NetClientOptions()
-                    .setConnectTimeout(60000)
+                    .setConnectTimeout(15_000)
                     .setSsl(false).setHostnameVerificationAlgorithm("");
             if (proxyOptions != null) {
                 options.setProxyOptions(proxyOptions);
@@ -2097,7 +2097,7 @@ public class Alhena {
             if (sClient == null) {
 
                 NetClientOptions options = new NetClientOptions()
-                        .setConnectTimeout(60000)
+                        .setConnectTimeout(15_000)
                         .setSsl(false).setHostnameVerificationAlgorithm("");
                 if (proxyOptions != null) {
                     options.setProxyOptions(proxyOptions);
@@ -3440,8 +3440,8 @@ public class Alhena {
                 if (!certMap.containsKey(genId)) { // default connection
 
                     NetClientOptions options = new NetClientOptions()
-                            .setConnectTimeout(60000)
-                            .setSslHandshakeTimeout(30)
+                            .setConnectTimeout(15_000)
+                            .setSslHandshakeTimeout(15)
                             .setSsl(true) // Gemini uses TLS   
                             .setTrustAll(true)
                             .setHostnameVerificationAlgorithm("");
