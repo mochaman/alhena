@@ -257,7 +257,7 @@ public final class GeminiFrame extends JFrame {
         CacheInfo cs = Alhena.getPageCache();
         ArrayList<Page> prunedPages = new ArrayList<>();
         long[] curSize = {cs.cacheSize()};
-
+        System.out.println("page cache size: " + curSize[0]);
         if (curSize[0] > Alhena.pageCache) {
             // prune pages
             cs.map().entrySet().stream()
@@ -268,6 +268,7 @@ public final class GeminiFrame extends JFrame {
 
                         if (curSize[0] > Alhena.pageCache) {
                             prunedPages.add(p);
+                            System.out.println("pruning: " + p.getUrl());
                             curSize[0] -= p.textPane.current().currentPage().length();
                         }
 
