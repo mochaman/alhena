@@ -33,11 +33,13 @@ Alhena is a Gemini/Gopher/Spartan/Nex browser written in Java.
 => nex://nightfall.city/ Nightfall City
 
 ### 🕹️ Games
+=> gemini://gemini.patatas.ca/gobble Gobble
 => gemini://gemi.dev/cgi-bin/mines.cgi/ Minesweeper
 => gemini://astrobotany.mozz.us/ Astrobotony
 => gemini://ultimatumlabs.com/cgi/zoe Zoe
 => gemini://crossyword.alanbato.com/ Crossyword
 => gemini://gemini.smallweb.space:1964/pig/ Pig!
+=> gopher://worldofsolitaire.com:70/1/games Gopher Solitaire
 
 ### 🚀 Gemini Capsules
 => gemini://kennedy.gemi.dev/observatory/known-hosts Kennedy
