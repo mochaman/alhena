@@ -51,6 +51,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -58,6 +59,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -269,16 +271,16 @@ public class GeminiTextPane extends JTextPane {
             for (int i = 0; i < emojiArray.size(); i++) {
                 JsonObject jo = emojiArray.getJsonObject(i);
 
-                emojiSheetMap.put(jo.getString("unified"), new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
+                emojiSheetMap.put(normalizeEmojiKey(jo.getString("unified")), new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
                 String nonQualified = jo.getString("non_qualified");
                 if (nonQualified != null) {
-                    emojiSheetMap.put(nonQualified, new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
+                    emojiSheetMap.put(normalizeEmojiKey(nonQualified), new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
                 }
                 JsonObject skinVariations = jo.getJsonObject("skin_variations");
                 if (skinVariations != null) {
                     skinVariations.forEach(entry -> {
                         JsonObject variation = (JsonObject) entry.getValue();
-                        emojiSheetMap.put(variation.getString("unified"), new Point(variation.getInteger("sheet_x"), variation.getInteger("sheet_y")));
+                        emojiSheetMap.put(normalizeEmojiKey(variation.getString("unified")), new Point(variation.getInteger("sheet_x"), variation.getInteger("sheet_y")));
                     });
 
                 }
@@ -287,6 +289,13 @@ public class GeminiTextPane extends JTextPane {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static String normalizeEmojiKey(String key) {
+
+        return Arrays.stream(key.split("-"))
+                .map(s -> Integer.toHexString(Integer.parseInt(s, 16)))
+                .collect(Collectors.joining("-")).toUpperCase();
     }
 
     // IBM Plex Mono works for proper alignment too
@@ -721,7 +730,6 @@ public class GeminiTextPane extends JTextPane {
                                         splitLeftItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitLeftItem);
 
-
                                         splitRightItem.addActionListener(ev -> {
                                             // open in new tab with gemtext converter regardless
                                             boolean saveSetting = Alhena.useBrowser;
@@ -746,7 +754,6 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         splitTopItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitTopItem);
-
 
                                         JMenuItem splitBottomItem = new JMenuItem(I18n.t("splitBottomItem"));
 
