@@ -2308,8 +2308,24 @@ public class GeminiTextPane extends JTextPane {
         } else {
             int lastNl = geminiDoc.lastIndexOf("\n");
             if (lastNl == -1) {
-                // no newlines at all save
-                bufferedLine = geminiDoc;
+                // no newlines at all  
+                Element elem = doc.getCharacterElement(doc.getLength() - 1);
+                String ts = (String) elem.getAttributes().getAttribute(StyleConstants.NameAttribute);
+
+                if ((geminiDoc.startsWith("=>") && !ts.equals("=>")) || (geminiDoc.startsWith("```")
+                        && !ts.equals("```")) || (geminiDoc.startsWith(">") && !ts.equals(">")) || (geminiDoc.startsWith("* ")
+                        && !ts.equals("*")) || (geminiDoc.startsWith("#") && !ts.startsWith("#"))) {
+                    bufferedLine = geminiDoc;
+                } else {
+
+                    switch (ts) {
+                        case "text", ">", "*", "#", "##", "###" ->
+                            addStyledText(geminiDoc, ts, null, null, false);
+                        default ->
+                            bufferedLine = geminiDoc;  // "=>" or "```" so buffer whole line
+                    }
+                }
+
             } else {
                 bufferedLine = geminiDoc.substring(lastNl + 1);
                 geminiDoc.substring(0, lastNl + 1).lines().forEach(line -> {
@@ -2614,11 +2630,11 @@ public class GeminiTextPane extends JTextPane {
                                 f().fetchURL(finalUrl, false, null);
                             }
 
-                        }, lbl);
+                        }, lbl, true);
                 cr.url = url;
 
             } else {
-                addStyledText(line, "```", null, null); // no action so origlabel not needed
+                addStyledText(line, "```", null, null, true); // no action so origlabel not needed
             }
             return;
         }
@@ -2652,24 +2668,24 @@ public class GeminiTextPane extends JTextPane {
                     ptp = null;
                 } else {
                     // use else clause to compensate for spacing when ptp.removeLastChar() commented out above
-                    addStyledText("\n", "```", null, null);
+                    addStyledText("\n", "```", null, null, true);
                 }
 
             } else { // preformatted mode
 
                 if (asciiImage && !printing) {
                     if (!embedPF) {
-                        addStyledText("", "```", null, null);
+                        addStyledText("", "```", null, null, true);
                     }
                     asciiSB = new StringBuilder();
                 }
                 if (embedPF && !printing) {
 
-                    addStyledText("\n", "```", null, null);
+                    addStyledText("\n", "```", null, null, true);
                     ptp = createTextComponent(true);
 
                 } else {
-                    addStyledText("\n", "```", null, null);
+                    addStyledText("\n", "```", null, null, true);
                 }
             }
 
@@ -2688,23 +2704,23 @@ public class GeminiTextPane extends JTextPane {
                 if (asciiSB != null) {
                     asciiSB.append(line).append('\n');
                 } else {
-                    addStyledText(line, "```", null, null);
+                    addStyledText(line, "```", null, null, true);
                 }
             }
         } else if (line.startsWith("###")) {
             int hstart = doc.getLength();
             String hl = line.substring(3).trim();
-            addStyledText(hl, "###", null, null);
+            addStyledText(hl, "###", null, null, true);
             headingMap.put(hl, hstart);
         } else if (line.startsWith("##")) {
             int hstart = doc.getLength();
             String hl = line.substring(2).trim();
-            addStyledText(hl, "##", null, null);
+            addStyledText(hl, "##", null, null, true);
             headingMap.put(hl, hstart);
         } else if (line.startsWith("#")) {
             int hstart = doc.getLength();
             String hl = line.substring(1).trim();
-            addStyledText(hl, "#", null, null);
+            addStyledText(hl, "#", null, null, true);
             headingMap.put(hl, hstart);
         } else if (line.startsWith("=>") || (page.isSpartan() && line.startsWith("=: "))) {
             String ll = line.substring(2).trim();
@@ -2881,7 +2897,7 @@ public class GeminiTextPane extends JTextPane {
                             f().fetchURL(finalUrl, false, currentMode == FEED_MODE && directive[0].endsWith("#") ? label : null);
                         }
 
-                    }, origLabel);
+                    }, origLabel, true);
             if (Alhena.dataUrl && dataUrl) { // auto view
                 dataURL(url, true);
                 cr.imageIndex = cr.end;
@@ -2897,12 +2913,12 @@ public class GeminiTextPane extends JTextPane {
             }
 
         } else if (line.startsWith(">")) {
-            addStyledText(line.substring(1).trim(), ">", null, null);
+            addStyledText(line.substring(1).trim(), ">", null, null, true);
         } else if (line.startsWith("* ")) {
-            addStyledText("• " + line.substring(1).trim(), "*", null, null);
+            addStyledText("• " + line.substring(1).trim(), "*", null, null, true);
 
         } else {
-            addStyledText(line, "text", null, null);
+            addStyledText(line, "text", null, null, true);
         }
     }
 
@@ -2976,7 +2992,7 @@ public class GeminiTextPane extends JTextPane {
 
                 if (curPos) {
                     insertComp((Component) ap, doc.getLength());
-                    addStyledText("", "```", null, null);
+                    addStyledText("", "```", null, null, true);
                 } else {
                     insertComp((Component) ap);
                 }
@@ -3123,7 +3139,7 @@ public class GeminiTextPane extends JTextPane {
         sp.setMaximumSize(new Dimension((int) contentWidth, Integer.MAX_VALUE));
         if (curPos) {
             insertComp(sp, doc.getLength());
-            addStyledText("", "```", null, null);
+            addStyledText("", "```", null, null, true);
         } else {
             sp.setFocusable(false);
             insertComp(sp);
@@ -3141,8 +3157,7 @@ public class GeminiTextPane extends JTextPane {
         return nextIndex < text.length() && text.charAt(nextIndex) == '\uFE0E';
     }
 
-    private ClickableRange addStyledText(String text, String styleName, Runnable action, String origLabel) {
-
+    private ClickableRange addStyledText(String text, String styleName, Runnable action, String origLabel, boolean newLine) {
         Style style = doc.getStyle(styleName);
 
         ClickableRange cr = null;
@@ -3347,14 +3362,17 @@ public class GeminiTextPane extends JTextPane {
 
             clickableRegions.add(cr);
         }
-        int caretPosition = getCaretPosition();
-        try {
-            doc.insertString(doc.getLength(), "\n", style);
-        } catch (BadLocationException ex) {
-            ex.printStackTrace();
-        }
+        if (newLine) {
+            int caretPosition = getCaretPosition();
 
-        setCaretPosition(caretPosition); // prevent scrolling as content added
+            try {
+                doc.insertString(doc.getLength(), "\n", style);
+            } catch (BadLocationException ex) {
+                ex.printStackTrace();
+            }
+
+            setCaretPosition(caretPosition); // prevent scrolling as content added
+        }
         return cr;
     }
 
