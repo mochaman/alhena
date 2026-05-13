@@ -423,11 +423,15 @@ public class Alhena {
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_2, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
                     updateFeeds();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0)) || ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, KeyEvent.SHIFT_DOWN_MASK))) {
-
+                    if(gf.popupShowing()){
+                        return false;
+                    }
                     KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 
                     Component focusOwner = kfm.getFocusOwner();
+
                     Container root = focusOwner.getFocusCycleRootAncestor();
+
                     while (root != null && !(root instanceof JFrame)) {
                         focusOwner = root;
                         root = root.getFocusCycleRootAncestor();

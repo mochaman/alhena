@@ -2133,6 +2133,10 @@ public final class GeminiFrame extends JFrame {
     private DocumentListener dl;
     private JWindow popup;
 
+    public boolean popupShowing(){
+        return popup != null && popup.isShowing();
+    }
+
     public void initComboBox() {
         if (popup != null) {
             popup.dispose();
