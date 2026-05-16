@@ -1263,7 +1263,7 @@ public class Util {
             } else {
                 pt = GeminiTextPane.getDefaultTheme(UIManager.getDefaults());
             }
-            String styleName = "Scope: " + psi.scope() + ", Value: " + psi.scopeValue() + ", Theme: " + psi.theme();
+            String styleName = I18n.t("styleScopeLabel") + " " + psi.scope() + ", " + I18n.t("styleValueLabel") + " " + psi.scopeValue() + ", " + I18n.t("styleThemeLabel") + " " + psi.theme();
             StylePicker sp = new StylePicker(pt, apt, ui, styleName);
             Object[] cmps = {sp};
             JButton okButton = new JButton(I18n.t("okLabel"));

@@ -1240,7 +1240,7 @@ public class Alhena {
         try {
             checkURI = new URI(url);
         } catch (URISyntaxException ex) {
-            p.frame().setTmpStatus("Sanitizing URL");
+            p.frame().setTmpStatus(I18n.t("sanitizingMsg"));
             String msg = ex.getMessage();
             int badCharIdx = ex.getIndex();
             if (badCharIdx != -1) {
@@ -1758,7 +1758,7 @@ public class Alhena {
                                 String prt = port[0] == 300 ? "" : (":" + port[0]);
                                 // can redirect return full path?
                                 String redirect = "spartan://" + uri.getHost() + prt + redirectPath;
-                                p.frame().setTmpStatus("redirect: " + redirect);
+                                p.frame().setTmpStatus(I18n.t("redirectStatusMsg") + " " + redirect);
                                 processURL(redirect, p, origURL, cPage, false);
                             }
                             case '4', '5' -> {
@@ -2723,9 +2723,8 @@ public class Alhena {
                             connection.result().write(txt).onFailure(ex -> {
                                 connection.result().close();
                                 bg(() -> {
-                                    p.textPane.end("Error sending text", false, origURL, true);
+                                    p.textPane.end(I18n.t("errorSendingMsg"), false, origURL, true);
                                 });
-                                return;
                             });
                         }
                     } else if (p.getDataFile() != null) {
@@ -2961,7 +2960,7 @@ public class Alhena {
                                 }
                                 p.setTitanEdited(false);
                                 String redirectURI = saveBuffer.getString(3, i - 1).trim();
-                                p.frame().setTmpStatus("redirect: " + redirectURI);
+                                p.frame().setTmpStatus(I18n.t("redirectStatusMsg") + " " + redirectURI);
                                 p.textPane.setPreRedirectUrl(origURL);
                                 p.redirectCount++;
                                 processURL(redirectURI, p, origURL, cPage, false);
@@ -3176,7 +3175,7 @@ public class Alhena {
                     p.textPane.end(new Date() + "\n" + connection.cause().toString() + "\n", true, origURL, true);
                     String cause = findCauseMessage(connection.cause(), CertificateParsingException.class);
                     if (cause != null) {
-                        Util.infoDialog(p.frame(), "Certificate Error", cause, JOptionPane.ERROR_MESSAGE);
+                        Util.infoDialog(p.frame(), I18n.t("certErrorDialog"), cause, JOptionPane.ERROR_MESSAGE);
                     } else {
                         cause = findCauseMessage(connection.cause(), SSLHandshakeException.class);
 
@@ -3295,8 +3294,8 @@ public class Alhena {
                 DB.upsertCert(host, fp, ts, null);   // TOFU  
             } else if (!fp.equals(dbFingerprint)) {
                 if (expires.after(new Date())) {
-                    return new CertTest("Server certificate has changed without expiring.\n\n" + host + "\nSaved Expiration: "
-                            + expires + "\nNew Expiration: " + new java.sql.Timestamp(cert.getNotAfter().getTime()) + "\n", badHost, cn);
+                    return new CertTest(I18n.t("certChangedWarning") + "\n\n" + host + "\n" + I18n.t("savedExpirationDate") + " "
+                            + expires + "\n" + I18n.t("newExpirationDate") + " " + new java.sql.Timestamp(cert.getNotAfter().getTime()) + "\n", badHost, cn);
                 } else {
                     // update record
                     saveCert(host, cert);
@@ -3892,10 +3891,10 @@ public class Alhena {
                     TableResult result = processTable(element, host);
                     StringBuilder sb = new StringBuilder(result.asciiTable);
                     if (result.links.size() > 0) {
-                        sb.append("Table Links\n");
+                        sb.append(I18n.t("tableLinksTxt")).append("\n");
                     }
                     for (String link : result.links) {
-                        sb.append(link).append("\n");
+                        sb.append(link).append("\n");         
                     }
                     if (result.links.size() > 0) {
                         sb.append("\u200B\n");

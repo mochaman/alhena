@@ -263,7 +263,7 @@ public class StylePicker extends JPanel {
         contentPanel.add(Box.createVerticalStrut(5));
         //saveFont = new Font(pageTheme.getHeader3FontFamily(), Font.PLAIN, pageTheme.getHeader3Size());
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        JButton fontButton = new JButton("Font");
+        JButton fontButton = new JButton(I18n.t("fontItem"));
         fontButton.addActionListener(al -> {
             Font f = switch (selectedLine) {
                 case "#" ->
@@ -864,7 +864,7 @@ public class StylePicker extends JPanel {
 
             return resetItems;
         };
-        PopupMenuButton resetButton = new PopupMenuButton("Reset", resetSupplier, "");
+        PopupMenuButton resetButton = new PopupMenuButton(I18n.t("resetLabel"), resetSupplier, "");
         buttonPanel.add(resetButton);
         textPanel = new JPanel() {
             @Override

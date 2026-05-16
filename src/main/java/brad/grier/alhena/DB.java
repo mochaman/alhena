@@ -1691,7 +1691,7 @@ public class DB {
 
                     if (saveType == null || !saveType.equals(type)) {
                         EventQueue.invokeLater(() -> {
-                            textPane.addPage("\n### " + (type == 1 ? "Gemlog" : "Heading") + "\n\n");
+                            textPane.addPage("\n### " + (type == 1 ? I18n.t("gemlogLabel") : I18n.t("headingLabel")) + "\n\n");
                         });
 
                         saveType = type;

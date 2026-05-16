@@ -1063,12 +1063,12 @@ public final class GeminiFrame extends JFrame {
         aboutMenu = new JMenu(I18n.t("helpMenu"));
         aboutMenu.setMnemonic('H');
         if (!SystemInfo.isMacOS) {
-            aboutMenu.add(createMenuItem("About", null, () -> {
+            aboutMenu.add(createMenuItem(I18n.t("aboutItem"), null, () -> {
                 Util.showAbout(GeminiFrame.this);
 
             }));
         }
-        aboutMenu.add(createMenuItem("Home", null, () -> {
+        aboutMenu.add(createMenuItem(I18n.t("homeItem"), null, () -> {
 
             File file = Util.copyFromJar(Alhena.alhenaHome);
             URI fileUri = file.toURI();
@@ -1077,19 +1077,19 @@ public final class GeminiFrame extends JFrame {
 
         }));
 
-        aboutMenu.add(createMenuItem("Changes", null, () -> {
+        aboutMenu.add(createMenuItem(I18n.t("changesItem"), null, () -> {
             fetchURL("gemini://ultimatumlabs.com/alhena_changes.gmi", false, null);
         }));
 
-        aboutMenu.add(createMenuItem("FAQ", null, () -> {
+        aboutMenu.add(createMenuItem(I18n.t("faqItem"), null, () -> {
             fetchURL("gemini://ultimatumlabs.com/alhenafaq.gmi", false, null);
         }));
 
-        aboutMenu.add(createMenuItem("Details", null, () -> {
+        aboutMenu.add(createMenuItem(I18n.t("detailsItem"), null, () -> {
             fetchURL("alhena:info", false, null);
         }));
 
-        aboutMenu.add(createMenuItem("Commands", null, () -> {
+        aboutMenu.add(createMenuItem(I18n.t("commandsItem"), null, () -> {
             fetchURL("alhena:", false, null);
         }));
 
@@ -1940,7 +1940,7 @@ public final class GeminiFrame extends JFrame {
                 Alhena.resetConnections();
             }
         });
-        JMenu proxyMenu = new JMenu("Networking");
+        JMenu proxyMenu = new JMenu(I18n.t("networkingMenu"));
         proxyMenu.add(geminiItem);
         proxyMenu.add(proxyItem);
         proxyMenu.add(gopherItem);
@@ -2133,7 +2133,7 @@ public final class GeminiFrame extends JFrame {
     private DocumentListener dl;
     private JWindow popup;
 
-    public boolean popupShowing(){
+    public boolean popupShowing() {
         return popup != null && popup.isShowing();
     }
 
@@ -3148,12 +3148,17 @@ public final class GeminiFrame extends JFrame {
                         types.get(psi.scope()).add(psi);
 
                     });
-
-                    Stream.of("GLOBAL", "SCHEME", "DOMAIN", "URL") // process in order
+                    Map<String, String> typeMap = new LinkedHashMap<>();
+                    typeMap.put("GLOBAL", "globalLabel");
+                    typeMap.put("SCHEME", "schemeLabel");
+                    typeMap.put("DOMAIN", "domainLabel");
+                    typeMap.put("URL", "urlLabel");
+                    typeMap.keySet().stream()
+                            //Stream.of("GLOBAL", "SCHEME", "DOMAIN", "URL") // process in order
                             .filter(types::containsKey) // Ensure key exists
                             .forEach(type -> {
 
-                                textPane.addPage("\n## " + type + "\n");
+                                textPane.addPage("\n## " + I18n.t(typeMap.get(type)) + "\n");
                                 types.get(type).forEach(style -> {
                                     String theme = style.theme();
                                     textPane.addPage("\n=> " + style.id() + ":" + style.id() + " [" + style.scopeValue() + "][" + theme + "]\n");
@@ -3933,7 +3938,7 @@ public final class GeminiFrame extends JFrame {
             pb.setThemeId(currentThemeId);
             if (flip) {
                 sp.setLeftPage(pb);
-                sp.setRightPage(p);                
+                sp.setRightPage(p);
             } else {
                 sp.setLeftPage(p);
                 sp.setRightPage(pb);
