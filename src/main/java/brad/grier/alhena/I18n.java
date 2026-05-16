@@ -29,6 +29,7 @@ public class I18n {
 
     private static void loadBundle() {
         Locale locale = (forcedLocale != null) ? forcedLocale : Locale.getDefault();
+        Locale.setDefault(locale);
         bundle = ResourceBundle.getBundle("MessagesBundle", locale);
     }
 }
