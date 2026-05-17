@@ -3435,8 +3435,8 @@ public final class GeminiFrame extends JFrame {
             if (res instanceof Integer result) {
                 if (result == JOptionPane.YES_OPTION) {
                     DB.deleteBookmark(bmId);
+                    refresh(true);
                     Alhena.updateFrames(true, false, false, false);
-                    EventQueue.invokeLater(() -> refresh());
 
                 }
 
