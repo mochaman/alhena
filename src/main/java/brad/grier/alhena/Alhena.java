@@ -423,7 +423,7 @@ public class Alhena {
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_2, (MOD | KeyEvent.SHIFT_DOWN_MASK)))) {
                     updateFeeds();
                 } else if (ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0)) || ks.equals(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, KeyEvent.SHIFT_DOWN_MASK))) {
-                    if(gf.popupShowing()){
+                    if (gf.popupShowing()) {
                         return false;
                     }
                     KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -3894,7 +3894,7 @@ public class Alhena {
                         sb.append(I18n.t("tableLinksTxt")).append("\n");
                     }
                     for (String link : result.links) {
-                        sb.append(link).append("\n");         
+                        sb.append(link).append("\n");
                     }
                     if (result.links.size() > 0) {
                         sb.append("\u200B\n");
@@ -4226,19 +4226,44 @@ public class Alhena {
         }
         return false;
     }
+    private static volatile Map<String, String> CMD_MAP;
+
+    private static Map<String, String> getCmdMap() {
+        if (CMD_MAP == null) {
+            synchronized (Alhena.class) {
+                if (CMD_MAP == null) {
+                    CMD_MAP = buildTypeMap();
+                }
+            }
+        }
+        return CMD_MAP;
+    }
+
+    private static Map<String, String> buildTypeMap() {
+        Map<String, String> map = new HashMap<>();
+        map.put(I18n.t("ansialertCmd"), "ansialert");
+        map.put(I18n.t("scrollspeedCmd"), "scrollspeed");
+        map.put(I18n.t("infoCmd"), "info");
+        map.put(I18n.t("artCmd"), "art");
+        map.put(I18n.t("scrollbarsizeCmd"), "scrollbarsize");
+        map.put(I18n.t("forcewhiteCmd"), "forcewhite");
+        map.put(I18n.t("pagecacheCmd"), "pagecache");
+        return Collections.unmodifiableMap(map);
+    }
 
     private static void processCommand(String url, Page p) {
+
         boolean plainText = false;
         boolean embedArt = false;
         String[] cmd = url.substring(url.indexOf(':') + 1).split("=");
         String message = "# " + I18n.t("commandsHeading");
         if (cmd.length == 1) {
 
-            switch (cmd[0]) {
+            switch (getCmdMap().getOrDefault(cmd[0], "")) {
                 case "ansialert" ->
-                    message = "# ansialert\n### " + I18n.t("ansiAlertHeading");
+                    message = "# " + I18n.t("ansialertCmd") + "\n### " + I18n.t("ansiAlertHeading");
                 case "scrollspeed" ->
-                    message = "# scrollspeed\n### " + I18n.t("scrollSpeedHeading");
+                    message = "# " + I18n.t("scrollspeedCmd") + "\n### " + I18n.t("scrollSpeedHeading");
                 case "info" -> {
                     plainText = true;
                     message = getAlhenaInfo().toString();
@@ -4249,18 +4274,18 @@ public class Alhena {
                     embedArt = true;
                 }
                 case "scrollbarsize" ->
-                    message = "# scrollbarsize\n### " + I18n.t("scrollbarSizeHeading");
+                    message = "# " + I18n.t("scrollbarsizeCmd") + "\n### " + I18n.t("scrollbarSizeHeading");
                 case "forcewhite" ->
-                    message = "# forcewhite\n### " + I18n.t("forceWhiteHeading");
+                    message = "# " + I18n.t("forcewhiteCmd") + "\n### " + I18n.t("forceWhiteHeading");
                 case "pagecache" -> {
-                    message = MessageFormat.format("# pagecache\n" + I18n.t("pageCacheHeading"), pageCache / 1000000);
+                    message = MessageFormat.format("# " + I18n.t("pagecacheCmd") + "\n" + I18n.t("pageCacheHeading"), pageCache / 1000000);
                 }
                 default -> {
                 }
             }
 
         } else if (cmd.length == 2) {
-            switch (cmd[0]) {
+            switch (getCmdMap().getOrDefault(cmd[0], "")) {
                 case "scrollbarsize" -> {
                     try {
                         int val = Integer.parseInt(cmd[1]);
@@ -4285,7 +4310,7 @@ public class Alhena {
                 }
                 case "scrollspeed" -> {
                     try {
-                        if (cmd[1].equals("default")) {
+                        if (cmd[1].equals(I18n.t("defaultCmdTxt"))) {
                             DB.insertPref("scrollspeed", null);
                             scrollSpeed = null;
                             for (GeminiFrame gf : frameList) {
@@ -4293,7 +4318,7 @@ public class Alhena {
                                     page.resetScrollIncrement();
                                 });
                             }
-                            message = "## scrollspeed " + I18n.t("resetLabel") + "\n";
+                            message = "## " + I18n.t("scrollspeedCmd") + " " + I18n.t("resetLabel") + "\n";
                         } else {
                             int val = Integer.parseInt(cmd[1]);
                             DB.insertPref("scrollspeed", cmd[1]);
@@ -4312,21 +4337,21 @@ public class Alhena {
                     }
                 }
                 case "ansialert" -> {
-                    if (cmd[1].equals("true") || cmd[1].equals("false")) {
+                    if (cmd[1].equals(I18n.t("trueCmdTxt")) || cmd[1].equals(I18n.t("falseCmdTxt"))) {
                         DB.insertPref("ansialert", cmd[1]);
-                        GeminiFrame.ansiAlert = cmd[1].equals("true");
+                        GeminiFrame.ansiAlert = cmd[1].equals(I18n.t("trueCmdTxt"));
                         String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]);
-                        message = "## ansialert " + m + "\n";
+                        message = "## " + I18n.t("ansialertCmd") + " " + m + "\n";
                     } else {
                         message = "## " + I18n.t("ansiError") + "\n";
                     }
                 }
                 case "forcewhite" -> {
-                    if (cmd[1].equals("true") || cmd[1].equals("false")) {
+                    if (cmd[1].equals(I18n.t("trueCmdTxt")) || cmd[1].equals(I18n.t("falseCmdTxt"))) {
                         DB.insertPref("forcewhite", cmd[1]);
-                        Alhena.forceWhite = cmd[1].equals("true");
+                        Alhena.forceWhite = cmd[1].equals(I18n.t("trueCmdTxt"));
                         String m = MessageFormat.format(I18n.t("ansiSetMsg"), cmd[1]); // generic "set to string";
-                        message = "## forcewhite " + m + "\n";
+                        message = "## " + I18n.t("forcewhiteCmd") + " " + m + "\n";
                     } else {
                         message = "## " + I18n.t("ansiError") + "\n"; // actually a generic true/false message
                     }
@@ -4385,7 +4410,7 @@ public class Alhena {
                 .format(Instant.ofEpochMilli(lastFeedRefresh.get()));
 
         if (lastFeedRefresh.get() > 0) {
-            sb.append("Last Feed Refresh: ").append(formatted).append("\n\n");
+            sb.append(I18n.t("lastFeedRefreshText")).append(" ").append(formatted).append("\n\n");
         }
 
         sb.append(I18n.t("docLabel")).append(": \n");
