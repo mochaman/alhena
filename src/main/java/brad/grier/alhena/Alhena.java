@@ -1910,21 +1910,21 @@ public class Alhena {
 
                 String path = uri.getPath();
 
-                if (inlineImages && imageExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext))) {
+                String adjPath = path.length() > 1 && path.endsWith("/") ? path.substring(0, path.length() -1) : path;
+                if (inlineImages && imageExtensions.stream().anyMatch(ext -> adjPath.toLowerCase().endsWith(ext))){ 
                     imageStartIdx[0] = 0;
                 }
-                boolean isSVG = origURL.toLowerCase().endsWith(".svg");
+                boolean isSVG = adjPath.toLowerCase().endsWith(".svg");
 
-                boolean isText = txtExtensions.stream().anyMatch(ext -> origURL.toLowerCase().endsWith(ext));
-                String mimeFromExt = MimeMapping.getMimeTypeForFilename(origURL);
+                boolean isText = txtExtensions.stream().anyMatch(ext -> adjPath.toLowerCase().endsWith(ext));
+                String mimeFromExt = MimeMapping.getMimeTypeForFilename(adjPath);
                 boolean isMedia = mimeFromExt != null && (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video"));
-                connection.result().write(path.equals("/") ? "\n" : path + "\n");
+                connection.result().write(path.equals("/") ? "/\n" : path + "\n");
 
                 Buffer saveBuffer = Buffer.buffer();
                 boolean[] rcvdData = {false};
                 // Handle the response
                 connection.result().handler(buffer -> {
-
                     if (imageStartIdx[0] != -1) {
                         if (!rcvdData[0]) {
                             rcvdData[0] = true;
