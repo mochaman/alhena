@@ -270,17 +270,25 @@ public class GeminiTextPane extends JTextPane {
             JsonArray emojiArray = new JsonArray(content);
             for (int i = 0; i < emojiArray.size(); i++) {
                 JsonObject jo = emojiArray.getJsonObject(i);
+                int x = (jo.getInteger("sheet_x") * 66) + 1;
+                int y = (jo.getInteger("sheet_y") * 66) + 1;
 
-                emojiSheetMap.put(normalizeEmojiKey(jo.getString("unified")), new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
+                emojiSheetMap.put(toHtmlHexKey(jo.getString("unified")), new Point(x, y));
                 String nonQualified = jo.getString("non_qualified");
                 if (nonQualified != null) {
-                    emojiSheetMap.put(normalizeEmojiKey(nonQualified), new Point(jo.getInteger("sheet_x"), jo.getInteger("sheet_y")));
+                    emojiSheetMap.put(toHtmlHexKey(nonQualified), new Point(x, y));
                 }
                 JsonObject skinVariations = jo.getJsonObject("skin_variations");
                 if (skinVariations != null) {
                     skinVariations.forEach(entry -> {
                         JsonObject variation = (JsonObject) entry.getValue();
-                        emojiSheetMap.put(normalizeEmojiKey(variation.getString("unified")), new Point(variation.getInteger("sheet_x"), variation.getInteger("sheet_y")));
+                        int x1 = (variation.getInteger("sheet_x") * 66) + 1;
+                        int y1 = (variation.getInteger("sheet_y") * 66) + 1;
+                        emojiSheetMap.put(toHtmlHexKey(variation.getString("unified")), new Point(x1, y1));
+                        String varNonQualified = variation.getString("non_qualified");
+                        if (varNonQualified != null) {
+                            emojiSheetMap.put(toHtmlHexKey(varNonQualified), new Point(x1, y1));
+                        }
                     });
 
                 }
@@ -291,11 +299,10 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static String normalizeEmojiKey(String key) {
-
-        return Arrays.stream(key.split("-"))
-                .map(s -> Integer.toHexString(Integer.parseInt(s, 16)))
-                .collect(Collectors.joining("-")).toUpperCase();
+    private static String toHtmlHexKey(String k) {
+        return Arrays.stream(k.split("-"))
+                .map(s -> "&#x" + Integer.toHexString(Integer.parseInt(s, 16)).toUpperCase() + ";")
+                .collect(Collectors.joining());
     }
 
     // IBM Plex Mono works for proper alignment too
@@ -3231,15 +3238,17 @@ public class GeminiTextPane extends JTextPane {
 
                         ImageIcon icon = null;
                         if (!unqualified) {
-                            String key = getEmojiHex(emoji);
+                            String key = emoji.getEmoji().getHtmlHexadecimalCode();
+
                             Point p = emojiSheetMap.get(key);
                             if (p != null) {
                                 icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
                             } else {
-                                int dashIdx = key.indexOf('-');
-                                if (dashIdx != -1) {
 
-                                    p = emojiSheetMap.get(key.substring(0, dashIdx));
+                                int splitIdx = key.indexOf(';');
+                                if (splitIdx != -1) {
+                                    
+                                    p = emojiSheetMap.get(key.substring(0, splitIdx + 1));
                                     if (p != null) {
                                         icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
                                     }
@@ -3395,12 +3404,6 @@ public class GeminiTextPane extends JTextPane {
         return sb.toString();
     }
 
-    public static String getEmojiHex(IndexedEmoji emo) {
-
-        String code = emo.getEmoji().getHtmlHexadecimalCode().replace("&#x", "").replace(";", "-");
-        return code.substring(0, code.length() - 1);
-
-    }
 
     private void insertString(int length, String txt, AttributeSet style) {
         try {
@@ -3531,10 +3534,7 @@ public class GeminiTextPane extends JTextPane {
 
     public static ImageIcon extractSprite(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
 
-        int x = (sheetX * (sheetSize + 2)) + 1;
-        int y = (sheetY * (sheetSize + 2)) + 1;
-
-        BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
+        BufferedImage bi = sheetImage.getSubimage(sheetX, sheetY, sheetSize, sheetSize);
         //Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
         Image scaledImg = Util.getImage(null, width, height, bi, true);
 
@@ -3543,10 +3543,7 @@ public class GeminiTextPane extends JTextPane {
 
     public static Image extractSpriteImage(int sheetX, int sheetY, int sheetSize, int width, int height, int fontSize) {
 
-        int x = (sheetX * (sheetSize + 2)) + 1;
-        int y = (sheetY * (sheetSize + 2)) + 1;
-
-        BufferedImage bi = sheetImage.getSubimage(x, y, sheetSize, sheetSize);
+        BufferedImage bi = sheetImage.getSubimage(sheetX, sheetY, sheetSize, sheetSize);
         Image scaledImg = Util.getImage(null, width, height, bi, true);
         //Image scaledImg = bi.getScaledInstance(width, height, Image.SCALE_SMOOTH);
 
@@ -3750,18 +3747,16 @@ public class GeminiTextPane extends JTextPane {
             emoji = emojis.get(0);
             if (sheetImage != null) {
 
-                String key = getEmojiHex(emoji);
-
+                String key = emoji.getEmoji().getHtmlHexadecimalCode();
                 Point p = emojiSheetMap.get(key);
 
                 int imgSize = Page.ICON_SIZE + 4;
                 if (p != null) {
                     icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, Page.ICON_SIZE);
                 } else {
-                    int dashIdx = key.indexOf('-');
-                    if (dashIdx != -1) {
-
-                        p = emojiSheetMap.get(key.substring(0, dashIdx));
+                    int splitIdx = key.indexOf(';');
+                    if (splitIdx != -1) {
+                        p = emojiSheetMap.get(key.substring(0, splitIdx + 1));
                         if (p != null) {
                             icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, Page.ICON_SIZE);
                         }

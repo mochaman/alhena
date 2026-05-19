@@ -167,7 +167,7 @@ public class AsciiImage {
 
                     if (GeminiTextPane.sheetImage != null && !override) {
 
-                        String key = GeminiTextPane.getEmojiHex(emoji);
+                        String key = emoji.getEmoji().getHtmlHexadecimalCode();
 
                         Point p = GeminiTextPane.emojiSheetMap.get(key);
                         Image icon = null;
@@ -175,10 +175,9 @@ public class AsciiImage {
                         if (p != null) {
                             icon = GeminiTextPane.extractSpriteImage(p.x, p.y, 64, imgSize, imgSize, fontSize);
                         } else {
-                            int dashIdx = key.indexOf('-');
-                            if (dashIdx != -1) {
-
-                                p = GeminiTextPane.emojiSheetMap.get(key.substring(0, dashIdx));
+                            int splitIdx = key.indexOf(';');
+                            if (splitIdx != -1) {
+                                p = GeminiTextPane.emojiSheetMap.get(key.substring(0, splitIdx + 1));
                                 if (p != null) {
                                     icon = GeminiTextPane.extractSpriteImage(p.x, p.y, 64, imgSize, imgSize, fontSize);
                                 }

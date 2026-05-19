@@ -207,7 +207,7 @@ public class PreformattedTextPane extends JTextPane {
                     if (GeminiTextPane.sheetImage != null || unqualified) {
                         ImageIcon icon = null;
                         if (!unqualified) {
-                            String key = GeminiTextPane.getEmojiHex(emoji);
+                            String key = emoji.getEmoji().getHtmlHexadecimalCode();
 
                             Point p = GeminiTextPane.emojiSheetMap.get(key);
 
@@ -215,10 +215,9 @@ public class PreformattedTextPane extends JTextPane {
                             if (p != null) {
                                 icon = GeminiTextPane.extractSprite(p.x, p.y, 64, imgSize, imgSize, fs);
                             } else {
-                                int dashIdx = key.indexOf('-');
-                                if (dashIdx != -1) {
-
-                                    p = GeminiTextPane.emojiSheetMap.get(key.substring(0, dashIdx));
+                                int splitIdx = key.indexOf(';');
+                                if (splitIdx != -1) {
+                                    p = GeminiTextPane.emojiSheetMap.get(key.substring(0, splitIdx + 1));
                                     if (p != null) {
                                         icon = GeminiTextPane.extractSprite(p.x, p.y, 64, imgSize, imgSize, fs);
                                     }
@@ -304,7 +303,7 @@ public class PreformattedTextPane extends JTextPane {
 
                     }
                 } else {
-                    
+
                     while (emojiListIdx < emojis.size() && emojis.get(emojiListIdx).getCharIndex() <= i) {
                         emojiListIdx++;
                     }
