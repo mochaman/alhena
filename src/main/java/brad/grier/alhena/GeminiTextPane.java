@@ -2342,23 +2342,26 @@ public class GeminiTextPane extends JTextPane {
                 bufferedLine = geminiDoc.substring(lastNl + 1);
 
                 completeLines.lines().forEach(line -> processLine(line));
-
                 // classify the incomplete line remainder
                 if (!bufferedLine.isEmpty()) {
-                    int[] classification = classifyPartialLine(bufferedLine);
-                    switch (classification[0]) {
-                        case AMBIGUOUS, BUFFER -> {
-                        } // keep in bufferedLine
-                        case STREAM -> {
-                            char first = bufferedLine.charAt(0);
-                            String style = switch (first) {
-                                case '>' ->
-                                    ">";
-                                default ->
-                                    "text";
-                            };
-                            addStyledText(bufferedLine, style, null, null, false);
-                            bufferedLine = null;
+                    if (preformattedMode) {
+                        // always buffer inside a ``` block, wait for \n
+                    } else {
+                        int[] classification = classifyPartialLine(bufferedLine);
+                        switch (classification[0]) {
+                            case AMBIGUOUS, BUFFER -> {
+                            }
+                            case STREAM -> {
+                                char first = bufferedLine.charAt(0);
+                                String style = switch (first) {
+                                    case '>' ->
+                                        ">";
+                                    default ->
+                                        "text";
+                                };
+                                addStyledText(bufferedLine, style, null, null, false);
+                                bufferedLine = null;
+                            }
                         }
                     }
                 } else {
@@ -2379,7 +2382,7 @@ public class GeminiTextPane extends JTextPane {
     private int[] classifyPartialLine(String partial) {
 
         if (partial.isEmpty()) {
-            
+
             return new int[]{AMBIGUOUS};
         }
 
