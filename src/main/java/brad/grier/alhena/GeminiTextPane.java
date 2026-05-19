@@ -2308,46 +2308,129 @@ public class GeminiTextPane extends JTextPane {
             geminiDoc = bufferedLine + geminiDoc;
             bufferedLine = null;
         }
+
         if (geminiDoc.endsWith("\n")) {
-
-            geminiDoc.lines().forEach(line -> processLine(line)); // no way to know if a line is the last line
-
+            geminiDoc.lines().forEach(line -> processLine(line));
         } else {
             int lastNl = geminiDoc.lastIndexOf("\n");
             if (lastNl == -1) {
-                // no newlines at all  
-                Element elem = doc.getCharacterElement(doc.getLength() - 1);
-                String ts = (String) elem.getAttributes().getAttribute(StyleConstants.NameAttribute);
-
-                if ((geminiDoc.startsWith("=>") && !ts.equals("=>")) || (geminiDoc.startsWith("```")
-                        && !ts.equals("```")) || (geminiDoc.startsWith(">") && !ts.equals(">")) || (geminiDoc.startsWith("* ")
-                        && !ts.equals("*")) || (geminiDoc.startsWith("#") && !ts.startsWith("#"))) {
-                    bufferedLine = geminiDoc;
+                if (preformattedMode) {
+                    bufferedLine = geminiDoc; // always buffer, wait for \n
                 } else {
-
-                    switch (ts) {
-                        case "text", ">", "*", "#", "##", "###" ->
-                            addStyledText(geminiDoc, ts, null, null, false);
-                        default ->
-                            bufferedLine = geminiDoc;  // "=>" or "```" so buffer whole line
+                    // no newlines at all
+                    int[] classification = classifyPartialLine(geminiDoc);
+                    switch (classification[0]) {
+                        case AMBIGUOUS, BUFFER ->
+                            bufferedLine = geminiDoc;
+                        case STREAM -> {
+                            String style;
+                            char first = geminiDoc.charAt(0);
+                            style = switch (first) {
+                                case '>' ->
+                                    ">";
+                                default ->
+                                    "text";
+                            };
+                            addStyledText(geminiDoc, style, null, null, false);
+                            // bufferedLine stays null - subsequent chars stream directly
+                        }
                     }
                 }
-
             } else {
+                // process all complete lines
+                String completeLines = geminiDoc.substring(0, lastNl + 1);
                 bufferedLine = geminiDoc.substring(lastNl + 1);
-                geminiDoc.substring(0, lastNl + 1).lines().forEach(line -> {
-                    processLine(line); // no way to know if a line is the last line
-                });
-            }
 
+                completeLines.lines().forEach(line -> processLine(line));
+
+                // classify the incomplete line remainder
+                if (!bufferedLine.isEmpty()) {
+                    int[] classification = classifyPartialLine(bufferedLine);
+                    switch (classification[0]) {
+                        case AMBIGUOUS, BUFFER -> {
+                        } // keep in bufferedLine
+                        case STREAM -> {
+                            char first = bufferedLine.charAt(0);
+                            String style = switch (first) {
+                                case '>' ->
+                                    ">";
+                                default ->
+                                    "text";
+                            };
+                            addStyledText(bufferedLine, style, null, null, false);
+                            bufferedLine = null;
+                        }
+                    }
+                } else {
+                    bufferedLine = null;
+                }
+            }
         }
 
         if (page != null) {
             page.loading();
         }
-
     }
 
+    private static final int AMBIGUOUS = 0;
+    private static final int BUFFER = 1;
+    private static final int STREAM = 2;
+
+    private int[] classifyPartialLine(String partial) {
+
+        if (partial.isEmpty()) {
+            
+            return new int[]{AMBIGUOUS};
+        }
+
+        char first = partial.charAt(0);
+        switch (first) {
+            case '=' -> {
+                if (partial.length() == 1) {
+                    return new int[]{AMBIGUOUS};
+                }
+                if (partial.charAt(1) == '>') {
+                    return new int[]{BUFFER}; // "=>" confirmed link
+
+                }
+                return new int[]{STREAM, 0}; // "=x" confirmed plain text
+            }
+            case '`' -> {
+                if (partial.length() < 3) {
+                    return new int[]{AMBIGUOUS};
+                }
+                return new int[]{BUFFER}; // "```" confirmed
+            }
+            case '#' -> {
+                if (partial.length() == 1) {
+                    return new int[]{AMBIGUOUS};
+                }
+                if (partial.charAt(1) == '#') {
+                    if (partial.length() == 2) {
+                        return new int[]{AMBIGUOUS};
+                    }
+                    return new int[]{BUFFER}; // "###" or "##x" confirmed heading
+                }
+                return new int[]{BUFFER}; // "#x" confirmed heading
+            }
+            case '>' -> {
+                return new int[]{STREAM, 0}; // confirmed blockquote, streamable
+            }
+            case '*' -> {
+                if (partial.length() == 1) {
+                    return new int[]{AMBIGUOUS};
+                }
+                if (partial.charAt(1) == ' ') {
+                    return new int[]{BUFFER}; // "* " list item
+
+                }
+                return new int[]{STREAM, 0}; // "*x" plain text
+            }
+            default -> {
+                return new int[]{STREAM, 0}; // confirmed plain text
+            }
+        }
+    }
     private String emojiProportional;
     private int customFontSize;
     private boolean isDark;
@@ -3247,7 +3330,7 @@ public class GeminiTextPane extends JTextPane {
 
                                 int splitIdx = key.indexOf(';');
                                 if (splitIdx != -1) {
-                                    
+
                                     p = emojiSheetMap.get(key.substring(0, splitIdx + 1));
                                     if (p != null) {
                                         icon = extractSprite(p.x, p.y, 64, imgSize, imgSize, fontSize);
@@ -3403,7 +3486,6 @@ public class GeminiTextPane extends JTextPane {
         }
         return sb.toString();
     }
-
 
     private void insertString(int length, String txt, AttributeSet style) {
         try {
