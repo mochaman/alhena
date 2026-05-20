@@ -1910,14 +1910,13 @@ public class Alhena {
 
                 String path = uri.getPath();
 
-                String adjPath = path.length() > 1 && path.endsWith("/") ? path.substring(0, path.length() -1) : path;
-                if (inlineImages && imageExtensions.stream().anyMatch(ext -> adjPath.toLowerCase().endsWith(ext))){ 
+                if (inlineImages && imageExtensions.stream().anyMatch(ext -> path.toLowerCase().endsWith(ext))){ 
                     imageStartIdx[0] = 0;
                 }
-                boolean isSVG = adjPath.toLowerCase().endsWith(".svg");
+                boolean isSVG = path.toLowerCase().endsWith(".svg");
 
-                boolean isText = txtExtensions.stream().anyMatch(ext -> adjPath.toLowerCase().endsWith(ext));
-                String mimeFromExt = MimeMapping.getMimeTypeForFilename(adjPath);
+                boolean isText = txtExtensions.stream().anyMatch(ext -> path.toLowerCase().endsWith(ext));
+                String mimeFromExt = MimeMapping.getMimeTypeForFilename(path);
                 boolean isMedia = mimeFromExt != null && (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video"));
                 connection.result().write(path.equals("/") ? "/\n" : path + "\n");
 
@@ -1937,7 +1936,7 @@ public class Alhena {
                         }
                         saveBuffer.appendBuffer(buffer);
                         cPage.frame().setTmpStatus(Util.bytesDecimal(saveBuffer.length()));
-                    } else if (isText || path.lastIndexOf('.') == -1) {
+                    } else if (isText || path.endsWith("/")) {
                         if (firstBuffer[0]) {
                             firstBuffer[0] = false;
                             rcvdData[0] = true;
