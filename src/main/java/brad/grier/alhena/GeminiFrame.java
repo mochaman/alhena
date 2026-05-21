@@ -104,6 +104,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.StyledEditorKit;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.util.SystemInfo;
@@ -2654,6 +2655,21 @@ public final class GeminiFrame extends JFrame {
         }
     }
 
+    private void gopherLineWrapCheck(String url, JsonObject page, Page p) {
+        String path = URI.create(url).getPath();
+
+        if (!path.equals("/")) {
+            char type = path.charAt(1);
+            if (type == '0') {
+                String content = page.getString("content");
+                // this matches code in gopher() method in Alhena
+                if (content.lines().anyMatch(line -> line.length() > 110)) {
+                    p.textPane.setEditorKit(new StyledEditorKit());
+                }
+            }
+        }
+    }
+
     public void setPageInfo(JsonObject page, Page p) {
 
         String url = page.getString("url");
@@ -2661,14 +2677,23 @@ public final class GeminiFrame extends JFrame {
         try {
             String scheme = URI.create(url).getScheme();
             switch (scheme) {
-                case "gophers" ->
+                case "gophers" -> {
+                    gopherLineWrapCheck(url, page, p);
                     p.setGopher(true, true);
-                case "gopher" ->
+                }
+                case "gopher" -> {
+                    gopherLineWrapCheck(url, page, p);
                     p.setGopher(true, false);
+                }
                 case "spartan" ->
                     p.setSpartan(true);
-                case "nex" ->
+                case "nex" -> {
                     p.setNex(true);
+                    String content = page.getString("content");
+                    if (content.lines().anyMatch(line -> line.length() > 80)) {
+                        p.textPane.setEditorKit(new StyledEditorKit());
+                    }
+                }
                 default -> {
                 }
             }
