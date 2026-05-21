@@ -1035,7 +1035,7 @@ public final class GeminiFrame extends JFrame {
             }
         });
         viewMenu.add(splitTopItem);
-        
+
         splitBottomItem = createMenuItem(I18n.t("splitBottomItem"), KeyStroke.getKeyStroke(KeyEvent.VK_B, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
             if (splitBottomItem.isEnabled()) {
                 boolean saveSetting = Alhena.useBrowser;
@@ -1127,6 +1127,15 @@ public final class GeminiFrame extends JFrame {
             add(pb, BorderLayout.CENTER);
 
             setVisible(true);
+
+            // do this so alhena doesn't open behind the terminal when launching from command line on macos
+            if (SystemInfo.isMacOS) {
+                setAlwaysOnTop(true);
+                toFront();
+                requestFocus();
+                setAlwaysOnTop(false);
+            }
+
             return pb;
         };
 
@@ -1173,6 +1182,13 @@ public final class GeminiFrame extends JFrame {
 
         add(sp, BorderLayout.CENTER);
         setVisible(true);
+        // do this so alhena doesn't open behind the terminal when launching from command line on macos
+        if (SystemInfo.isMacOS) {
+            setAlwaysOnTop(true);
+            toFront();
+            requestFocus();
+            setAlwaysOnTop(false);
+        }
 
         setPageInfo(lpage, lp);
         setPageInfo(rpage, rp);
