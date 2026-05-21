@@ -2383,7 +2383,7 @@ public class Alhena {
                                 case '0' ->
                                     bg(() -> {
                                         String content = saveBuffer.toString();
-                                        if (content.lines().anyMatch(line -> line.length() > 80)) {
+                                        if (content.lines().anyMatch(line -> line.length() > 110)) {
                                             p.textPane.setEditorKit(new StyledEditorKit());
                                         }
 
