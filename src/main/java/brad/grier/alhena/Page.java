@@ -2,6 +2,7 @@ package brad.grier.alhena;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.GradientPaint;
@@ -89,16 +90,17 @@ public class Page extends JPanel {
 
     private GeminiFrame f() {
         GeminiFrame f = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
-        if(f != null){
+        if (f != null) {
             return f;
         }
         return frame;
     }
 
-    public void setFrame(GeminiFrame gf){
+    public void setFrame(GeminiFrame gf) {
         frame = gf;
         textPane.setFrame(gf);
     }
+
     private void init() {
         scrollPane = new JScrollPane(textPane);
         scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
@@ -394,18 +396,26 @@ public class Page extends JPanel {
         }
 
     }
+    private boolean skipAddNotify;
+
+    // wrapper page is just a placeholder for hidden tab components - skip extra addNotify logic
+    public void skipAddNotify() {
+        skipAddNotify = true;
+    }
 
     @Override
     public void addNotify() {
         super.addNotify();
-        textPane.resetLastClicked();
-        EventQueue.invokeLater(() -> {
-            if (!busy && f().getGlassPane().isShowing()) {
-                f().showGlassPane(false);
-            } else if (busy && !f().getGlassPane().isShowing()) {
-                f().showGlassPane(true);
-            }
-        });
+        if (!skipAddNotify) {
+            textPane.resetLastClicked();
+            EventQueue.invokeLater(() -> {
+                if (!busy && f().getGlassPane().isShowing()) {
+                    f().showGlassPane(false);
+                } else if (busy && !f().getGlassPane().isShowing()) {
+                    f().showGlassPane(true);
+                }
+            });
+        }
 
     }
 
@@ -579,6 +589,16 @@ public class Page extends JPanel {
 
     public long getFetchTime() {
         return fetchTime;
+    }
+
+    private Component wrappedComp;
+
+    public void setWrappedComp(Component c) {
+        wrappedComp = c;
+    }
+
+    public Component getWrappedComp() {
+        return wrappedComp;
     }
 
 }

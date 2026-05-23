@@ -289,11 +289,18 @@ public final class GeminiFrame extends JFrame {
 
             for (int i = 0; i < tabCount; i++) {
                 JsonObject tabObject = new JsonObject();
-                if (tabbedPane.getComponentAt(i) instanceof SplitPanel sp) {
+                Component c = tabbedPane.getComponentAt(i);
+                if (c instanceof Page wp) {
+                    Component wc = wp.getWrappedComp();
+                    if (wc != null) {
+                        c = wc;
+                    }
+                }
+                if (c instanceof SplitPanel sp) {
                     processSplitView(sp, prunedPages, tabObject, showList);
                     tabArray.add(tabObject);
                 } else {
-                    Page p = (Page) tabbedPane.getComponentAt(i);
+                    Page p = (Page) c;
                     int[] curPageIdx = {p.getArrayIndex()}; // selected page in history
                     JsonArray pageArray = new JsonArray();
                     int[] pageNum = {0};
@@ -4025,6 +4032,8 @@ public final class GeminiFrame extends JFrame {
 
     }
 
+    private int prevIndex;
+
     public void newTab(String url, JsonObject savedPage, Component restoreComponent, String scrollToHeading) {
         addClickedLink(url);
         if (tabbedPane == null) {
@@ -4050,19 +4059,28 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.putClientProperty("JTabbedPane.tabCloseCallback",
                     (IntConsumer) tabIndex -> {
                         // close tab here
+
                         if (tabbedPane.getTabCount() == 2) {
+                            prevIndex = 0;
                             GeminiFrame.this.invalidate();
                             ChangeListener[] cl = tabbedPane.getChangeListeners();
                             for (ChangeListener ev : cl) {
                                 tabbedPane.removeChangeListener(ev);
                                 break; // REMOVES tabbedPanes changeListener but not the L&F changeListener - CAN ORDER CHANGE?
                             }
-                            if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
+                            Component csi = tabbedPane.getComponentAt(tabIndex); // tab we're closing
+                            if (csi instanceof Page wp) {
+                                Component wc = wp.getWrappedComp();
+                                if (wc != null) {
+                                    csi = wc;
+                                }
+                            }
+                            if (csi instanceof Page page) {
                                 lastTabInfo = new LastTabInfo(page, pageHistoryMap.get(getRootPage(page)), null);
                                 shutdownPage(page, true);
 
                             } else {
-                                SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
+                                SplitPanel sp = (SplitPanel) csi;
 
                                 lastTabInfo = new LastTabInfo(sp, pageHistoryMap.get(getRootPage(sp.getLeftPage())), pageHistoryMap.get(getRootPage(sp.getRightPage())));
                                 shutdownPage(sp.getLeftPage(), true);
@@ -4076,6 +4094,13 @@ public final class GeminiFrame extends JFrame {
                             tabbedPane.remove(c);
                             GeminiFrame.this.remove(tabbedPane);
                             tabbedPane = null;
+                            if (c instanceof Page wp) {
+                                Component wc = wp.getWrappedComp();
+                                if (wc != null) {
+                                    c = wc;
+                                }
+                            }
+                            c.setVisible(true);
                             GeminiFrame.this.add(c, BorderLayout.CENTER);
 
                             Page page = c instanceof Page ? (Page) c : ((SplitPanel) c).getFocusedPage();
@@ -4105,7 +4130,14 @@ public final class GeminiFrame extends JFrame {
                             }
                             GeminiFrame.this.validate();
                         } else {
-                            if (tabbedPane.getComponentAt(tabIndex) instanceof Page page) {
+                            Component c = tabbedPane.getComponentAt(tabIndex);
+                            if (c instanceof Page wp) {
+                                Component wc = wp.getWrappedComp();
+                                if (wc != null) {
+                                    c = wc;
+                                }
+                            }
+                            if (c instanceof Page page) {
                                 lastTabInfo = new LastTabInfo(page, pageHistoryMap.get(getRootPage(page)), null);
                                 shutdownPage(page, true);
 
@@ -4137,8 +4169,28 @@ public final class GeminiFrame extends JFrame {
             tabbedPane.addChangeListener(ce -> {
 
                 Page page = visiblePage();
+
                 if (page == null) {
                     return;
+                }
+                if (prevIndex != tabbedPane.getTabCount()) {
+                    Component previousTab = tabbedPane.getComponentAt(prevIndex);
+                    Page emptyPage = new Page(null, this, null, currentThemeId);
+                    emptyPage.setWrappedComp(previousTab);
+                    emptyPage.skipAddNotify();
+                    tabbedPane.setComponentAt(prevIndex, emptyPage);
+
+                }
+                Component wc = page.getWrappedComp();
+                if (wc != null) {
+                    if (wc instanceof SplitPanel sp) {
+                        
+                        page = sp.getFocusedPage();
+                    } else {
+                        page = (Page) wc;
+
+                    }
+                    tabbedPane.setComponentAt(tabbedPane.getSelectedIndex(), wc);
                 }
                 page.textPane.resetLGP();
                 if (!page.busy() && getGlassPane().isShowing()) {
@@ -4195,7 +4247,8 @@ public final class GeminiFrame extends JFrame {
                 } else {
                     setTitle("New Tab");
                 }
-
+                // update for next event
+                prevIndex = tabbedPane.getSelectedIndex();
             });
 
             add(tabbedPane, BorderLayout.CENTER);
