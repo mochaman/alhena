@@ -29,8 +29,6 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.awt.event.HierarchyBoundsAdapter;
-import java.awt.event.HierarchyEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -513,10 +511,6 @@ public class GeminiTextPane extends JTextPane {
             }
         });
 
-        // componentResized doesn't fire after going fullscreen (mac), showing and then hiding an inline image and then exiting fullscreen
-        // hierarchylistener does fire but more often so only do this on mac
-        boolean useHierarchyListener = SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported;
-
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentShown(ComponentEvent e) {
@@ -525,19 +519,9 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void componentResized(ComponentEvent e) {
-                if (!useHierarchyListener) {
-                    resized();
-                }
+                resized();
             }
         });
-        if (useHierarchyListener) {
-            addHierarchyBoundsListener(new HierarchyBoundsAdapter() {
-                @Override
-                public void ancestorResized(HierarchyEvent e) {
-                    resized();
-                }
-            });
-        }
 
         addKeyListener(new KeyAdapter() {
             @Override
