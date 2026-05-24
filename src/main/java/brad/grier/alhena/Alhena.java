@@ -33,7 +33,10 @@ import java.net.IDN;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -1313,7 +1316,16 @@ public class Alhena {
         }
 
         if (origURL.startsWith("file:/")) {
-            handleFile(origURL, p, cPage);
+            if (url.endsWith(".zip") || url.endsWith(".gpub")) {
+                zipToGemtext(origURL, p, cPage);
+            } else if (url.contains(".zip/")) {
+                handleZip(origURL, p, cPage, false);
+            } else if (url.contains(".gpub/")) {
+                handleZip(origURL, p, cPage, true);
+
+            } else {
+                handleFile(origURL, p, cPage);
+            }
             return;
         }
 
@@ -1910,7 +1922,7 @@ public class Alhena {
 
                 String path = uri.getPath();
 
-                if (inlineImages && imageExtensions.stream().anyMatch(ext -> path.toLowerCase().endsWith(ext))){ 
+                if (inlineImages && imageExtensions.stream().anyMatch(ext -> path.toLowerCase().endsWith(ext))) {
                     imageStartIdx[0] = 0;
                 }
                 boolean isSVG = path.toLowerCase().endsWith(".svg");
@@ -4433,6 +4445,163 @@ public class Alhena {
             gf.forEachPage(page -> {
                 page.textPane.pausePlayers();
             });
+        }
+    }
+
+    private static void zipToGemtext(String url, Page p, Page cPage) {
+        String filePart = URLDecoder.decode(url.replaceFirst("^file:/+", "/"), StandardCharsets.UTF_8);
+        p.frame().setBusy(true, cPage);
+        vertx.executeBlocking(promise -> {
+            try {
+                StringBuilder sb = new StringBuilder();
+                sb.append("# ").append(Path.of(filePart).getFileName()).append("\n\n");
+
+                try (FileSystem fs = FileSystems.newFileSystem(Path.of(filePart))) {
+                    Files.walk(fs.getPath("/"))
+                            .filter(l -> !Files.isDirectory(l))
+                            .sorted()
+                            .forEach(l -> {
+                                // build a file:/ url by inserting the inner path after .zip
+                                String innerPath = l.toString(); // e.g. /folder/index.txt
+                                String fileUrl = url + innerPath;
+                                String label = innerPath.startsWith("/") ? innerPath.substring(1) : innerPath;
+                                sb.append("=> ").append(fileUrl).append(" ").append(label).append("\n");
+                            });
+                }
+                promise.complete(sb.toString());
+            } catch (IOException e) {
+                promise.fail(e);
+            }
+        }, result -> {
+            if (result.succeeded()) {
+                String page = (String) result.result();
+                bg(() -> {
+                    p.textPane.end(page, false, url, true);
+                });
+
+            } else {
+                bg(() -> {
+                    p.textPane.end("## " + I18n.t("errorOpeningMsg") + "\n", false, url, true);
+                });
+            }
+        });
+    }
+
+    private static void handleZip(String url, Page p, Page cPage, boolean gpub) {
+        String filePart = URLDecoder.decode(url.replaceFirst("^file:/+", "/"), StandardCharsets.UTF_8);
+        String zipFilePath, innerFile;
+        if (gpub) {
+            zipFilePath = filePart.substring(0, filePart.indexOf(".gpub/") + 5);
+            innerFile = filePart.substring(filePart.indexOf(".gpub/") + 6);
+        } else {
+            zipFilePath = filePart.substring(0, filePart.indexOf(".zip/") + 4);
+            innerFile = filePart.substring(filePart.indexOf(".zip/") + 5);
+        }
+
+        boolean md = false;
+        String mimeExt = MimeMapping.getMimeTypeForFilename(url);
+        if (mimeExt == null && url.toLowerCase().endsWith(".md")) {
+            mimeExt = "text/markdown";
+            md = true;
+        }
+
+        boolean finalmd = md;
+        boolean xml = mimeExt != null && mimeExt.equals("application/xml");
+        boolean html = !useBrowser && mimeExt != null && mimeExt.equals("text/html");
+        boolean vlcType = (allowVLC || playerCommand != null) && (url.toLowerCase().endsWith(".opus") || (mimeExt != null && (mimeExt.startsWith("audio") || mimeExt.startsWith("video"))));
+        boolean matches = fileExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+        boolean isImage = imageExtensions.stream().anyMatch(url.toLowerCase()::endsWith);
+        boolean isSVG = isImage && url.toLowerCase().endsWith(".svg");
+
+        boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini") || html || finalmd);
+        String finalMime = mimeExt;
+        if (matches || vlcType) {
+            p.frame().setBusy(true, cPage);
+            vertx.executeBlocking(promise -> {
+                try {
+                    FileSystem zipFs = FileSystems.newFileSystem(Path.of(zipFilePath));
+                    byte[] bytes = Files.readAllBytes(zipFs.getPath(innerFile));
+                    zipFs.close();
+                    promise.complete(bytes);
+                } catch (IOException e) {
+                    promise.fail(e);
+                }
+            }, result -> {
+
+                if (result.succeeded()) {
+
+                    byte[] bytes = (byte[]) result.result();
+                    if (vlcType) {
+                        try {
+                            File file = File.createTempFile("alhena", "media");
+                            file.deleteOnExit();
+                            Files.write(file.toPath(), bytes);
+                            String mt = finalMime;
+                            if (url.toLowerCase().endsWith(".opus")) {
+                                mt = "audio/opus"; // .opus files are not in MimeMapper
+                            }
+
+                            if (cPage.textPane.awatingImage()) {
+                                cPage.textPane.insertMediaPlayer(file.getAbsolutePath(), mt, null);
+                            } else {
+
+                                p.textPane.end(" ", false, url, true);
+                                p.textPane.insertMediaPlayer(file.getAbsolutePath(), mt, null);
+                            }
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                            bg(() -> {
+                                cPage.setBusy(false);
+                                p.textPane.end("## " + I18n.t("errorOpeningMsg") + "\n", false, url, true);
+                            });
+                        }
+
+                    } else if (isImage) {
+                        bg(() -> {
+
+                            GeminiTextPane tPane = cPage.textPane;
+
+                            if (tPane.awatingImage()) {
+                                tPane.insertImage(bytes, false, isSVG);
+
+                            } else {
+                                p.textPane.end(" ", false, url, true);
+                                p.textPane.insertImage(bytes, false, isSVG);
+                            }
+                        });
+
+                    } else {
+                        bg(() -> {
+                            cPage.setBusy(false);
+                            if (xml) {
+                                String data = new String(bytes);
+                                // String data = saveBuffer.toString();
+
+                                String x = Util.convertAtomXml(data, url);
+
+                                if (x == null) {
+                                    p.textPane.end(data, false, url, true);
+                                } else {
+                                    p.textPane.end(x, false, url, true);
+                                }
+                            } else if (html) {
+                                p.textPane.end(convertHtmlToGemtext(new String(bytes), url), false, url, true);
+                            } else if (finalmd) {
+                                p.textPane.end(convertHtmlToGemtext(markdownToHtml(new String(bytes)), url), false, url, true);
+                            } else {
+                                p.textPane.end(new String(bytes), pformatted, url, true);
+                            }
+                        });
+                    }
+                } else {
+                    bg(() -> {
+                        cPage.setBusy(false);
+                        p.textPane.end("## " + I18n.t("errorOpeningMsg") + "\n", false, url, true);
+                    });
+                }
+            });
+        } else {
+            p.textPane.end("## " + I18n.t("unrecognizedFileMsg") + "\n", false, url, true);
         }
     }
 
