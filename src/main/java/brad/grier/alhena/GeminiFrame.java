@@ -259,7 +259,9 @@ public final class GeminiFrame extends JFrame {
         ArrayList<Page> prunedPages = new ArrayList<>();
         long[] curSize = {cs.cacheSize()};
         System.out.println("page cache size: " + curSize[0]);
-        if (curSize[0] > Alhena.pageCache) {
+        long pcSize = Alhena.pageCache;
+        //long pcSize = 30_000; for testing
+        if (curSize[0] > pcSize) {
             // prune pages
             cs.map().entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
@@ -267,7 +269,7 @@ public final class GeminiFrame extends JFrame {
                         // oldest pages first
                         Page p = entry.getValue();
 
-                        if (curSize[0] > Alhena.pageCache) {
+                        if (curSize[0] > pcSize) {
                             prunedPages.add(p);
                             System.out.println("pruning: " + p.getUrl());
                             curSize[0] -= p.textPane.current().currentPage().length();
@@ -327,7 +329,7 @@ public final class GeminiFrame extends JFrame {
                         tabObject.put("pages", pageArray);
                         tabArray.add(tabObject);
                     } else {
-                        if (tabCount < selTabIdx[0]) {
+                        if (selTabIdx[0] < tabCount && selTabIdx[0] > 0) {
                             selTabIdx[0]--;
                         }
                     }
@@ -4184,7 +4186,7 @@ public final class GeminiFrame extends JFrame {
                 Component wc = page.getWrappedComp();
                 if (wc != null) {
                     if (wc instanceof SplitPanel sp) {
-                        
+
                         page = sp.getFocusedPage();
                     } else {
                         page = (Page) wc;
