@@ -47,7 +47,7 @@ public class DB {
     public static String VERSION = "2";
     // atomic variables for subscriptions/feeds
     private static final AtomicBoolean running = new AtomicBoolean(false);
-    private static final AtomicInteger feedsInserted = new AtomicInteger(0);
+    private static final AtomicInteger unreadFeeds = new AtomicInteger(0);
     private static final AtomicInteger feedsDeleted = new AtomicInteger(0);
 
     public static record CertInfo(String fingerPrint, Timestamp expires, Timestamp lastModified) {
@@ -1502,7 +1502,7 @@ public class DB {
             return; // already running
         }
         EventQueue.invokeLater(() -> Alhena.showMessage(I18n.t("refreshingFeedsMsg")));
-        feedsInserted.set(0);
+        unreadFeeds.set(0);
         feedsDeleted.set(0);
 
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
@@ -1515,9 +1515,7 @@ public class DB {
             }
             if (count > 0) {
 
-                CountDownLatch latch = null;
-
-                latch = new CountDownLatch(count);
+                CountDownLatch latch = new CountDownLatch(count);
 
                 try (ResultSet rs = st.executeQuery("SELECT ID, URL, TYPE FROM SUBSCRIPTIONS")) {
 
@@ -1533,14 +1531,14 @@ public class DB {
                         latch.await();
                         running.set(false);
 
-                        int inserted = feedsInserted.get();
+                        int unread = unreadFeeds.get();
                         int deleted = feedsDeleted.get();
                         String summary;
-                        if (inserted > 0 && deleted > 0) {
-                            summary = I18n.t("combinedSummary").formatted(inserted, deleted);
-                        } else if (inserted > 0 && deleted == 0) {
-                            summary = I18n.t("newFeedsSummary").formatted(inserted);
-                        } else if (inserted == 0 && deleted > 0) {
+                        if (unread > 0 && deleted > 0) {
+                            summary = I18n.t("combinedSummary").formatted(unread, deleted);
+                        } else if (unread > 0 && deleted == 0) {
+                            summary = I18n.t("newFeedsSummary").formatted(unread);
+                        } else if (unread == 0 && deleted > 0) {
                             summary = I18n.t("removedFeedsSummary").formatted(deleted);
 
                         } else {
@@ -1612,8 +1610,10 @@ public class DB {
             finalGlist.stream()
                     .filter(link -> !savedList.contains(link))
                     .forEach(link -> {
-                        feedsInserted.addAndGet(1);
-                        insertFeed(id, link);
+
+                        if (insertFeed(id, link)) {
+                            unreadFeeds.addAndGet(1);
+                        }
                     });
 
             latch.countDown();
@@ -1646,19 +1646,31 @@ public class DB {
 
     }
 
-    public static void insertFeed(int id, GeminiLink link) {
-        String sql = "INSERT INTO FEEDS (SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER, READ) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection con = cp.getConnection(); var ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, id);
-            ps.setObject(2, link.date);
-            ps.setString(3, link.url);
-            ps.setString(4, link.label);
-            ps.setBoolean(5, link.header);
-            ps.setBoolean(6, false);
-            ps.execute();
+    public static boolean insertFeed(int id, GeminiLink link) {
+        String checkSql = "SELECT 1 FROM HISTORY WHERE URL = ?";
+        String insertSql = """
+        INSERT INTO FEEDS (SUBSCRIPTION_ID, LINKDATE, URL, LABEL, HEADER, READ)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """;
+        try (Connection con = cp.getConnection()) {
+            boolean inHistory;
+            try (var ps = con.prepareStatement(checkSql)) {
+                ps.setString(1, link.url);
+                inHistory = ps.executeQuery().next();
+            }
+            try (var ps = con.prepareStatement(insertSql)) {
+                ps.setInt(1, id);
+                ps.setObject(2, link.date);
+                ps.setString(3, link.url);
+                ps.setString(4, link.label);
+                ps.setBoolean(5, link.header);
+                ps.setBoolean(6, inHistory);
+                ps.executeUpdate();
+            }
+            return !inHistory;
         } catch (Exception ex) {
             ex.printStackTrace();
+            return false;
         }
     }
 
