@@ -82,6 +82,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -1316,12 +1317,21 @@ public class Alhena {
         }
 
         if (origURL.startsWith("file:/")) {
+            if (prevURI != null) {
+                // handle relative links in zip, gpub file
+                String zUrl = prevURI.toString();
+                var matcher = Pattern.compile("\\.(zip|gpub)/").matcher(zUrl);
+                if (matcher.find() && !url.contains(".zip/") && !url.contains(".gpub/") && url.matches("^file:/+.*")) {
+                    url = (zUrl.substring(0, matcher.end() - 1) + url.replaceFirst("^file:/+", "/"))
+                            .replaceAll("/+$", "");
+                }
+            }
             if (url.endsWith(".zip") || url.endsWith(".gpub")) {
-                zipToGemtext(origURL, p, cPage);
+                zipToGemtext(url, p, cPage);
             } else if (url.contains(".zip/")) {
-                handleZip(origURL, p, cPage, false);
+                handleZip(url, p, cPage, false);
             } else if (url.contains(".gpub/")) {
-                handleZip(origURL, p, cPage, true);
+                handleZip(url, p, cPage, true);
 
             } else {
                 handleFile(origURL, p, cPage);
