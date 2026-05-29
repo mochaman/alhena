@@ -260,7 +260,7 @@ public final class GeminiFrame extends JFrame {
         long[] curSize = {cs.cacheSize()};
         System.out.println("page cache size: " + curSize[0]);
         long pcSize = Alhena.pageCache;
-        //long pcSize = 30_000; for testing
+        //long pcSize = 30_000; //for testing
         if (curSize[0] > pcSize) {
             // prune pages
             cs.map().entrySet().stream()
@@ -2798,10 +2798,7 @@ public final class GeminiFrame extends JFrame {
         int sp = pb.getScrollPos();
         String url = pb.textPane.getDocURLString();
         CurrentPage res = pb.textPane.current();
-        streamChunks(res.currentPage(), 100, url, res.pMode(), pb, -1);
-        EventQueue.invokeLater(() -> {
-            pb.setScrollPos(sp);
-        });
+        streamChunks(res.currentPage(), 100, url, res.pMode(), pb, sp);
 
     }
 
