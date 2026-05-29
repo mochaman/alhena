@@ -2281,8 +2281,9 @@ public class GeminiTextPane extends JTextPane {
         return contentWidth;
     }
 
-    public void addPage(String geminiDoc) {
+    private boolean isStreamingLine = false;
 
+    public void addPage(String geminiDoc) {
         if (pageBuffer == null) {
             return;
         }
@@ -2292,66 +2293,49 @@ public class GeminiTextPane extends JTextPane {
             geminiDoc = bufferedLine + geminiDoc;
             bufferedLine = null;
         }
+        int lastNl = geminiDoc.lastIndexOf("\n");
+        if (lastNl != -1) {
+            String completeLines = geminiDoc.substring(0, lastNl + 1);
+            bufferedLine = geminiDoc.substring(lastNl + 1);
 
-        if (geminiDoc.endsWith("\n")) {
-            geminiDoc.lines().forEach(line -> processLine(line));
+            completeLines.lines().forEach(line -> processLine(line));
+
+            isStreamingLine = false; // a newline happened, reset streaming state
         } else {
-            int lastNl = geminiDoc.lastIndexOf("\n");
-            if (lastNl == -1) {
-                if (preformattedMode) {
-                    bufferedLine = geminiDoc; // always buffer, wait for \n
-                } else {
-                    // no newlines at all
-                    int[] classification = classifyPartialLine(geminiDoc);
-                    switch (classification[0]) {
-                        case AMBIGUOUS, BUFFER ->
-                            bufferedLine = geminiDoc;
-                        case STREAM -> {
-                            String style;
-                            char first = geminiDoc.charAt(0);
-                            style = switch (first) {
-                                case '>' ->
-                                    ">";
-                                default ->
-                                    "text";
-                            };
-                            addStyledText(geminiDoc, style, null, null, false);
-                            // bufferedLine stays null - subsequent chars stream directly
-                        }
-                    }
-                }
-            } else {
-                // process all complete lines
-                String completeLines = geminiDoc.substring(0, lastNl + 1);
-                bufferedLine = geminiDoc.substring(lastNl + 1);
+            bufferedLine = geminiDoc;
+        }
 
-                completeLines.lines().forEach(line -> processLine(line));
-                // classify the incomplete line remainder
-                if (!bufferedLine.isEmpty()) {
-                    if (preformattedMode) {
-                        // always buffer inside a ``` block, wait for \n
-                    } else {
-                        int[] classification = classifyPartialLine(bufferedLine);
-                        switch (classification[0]) {
-                            case AMBIGUOUS, BUFFER -> {
-                            }
-                            case STREAM -> {
-                                char first = bufferedLine.charAt(0);
-                                String style = switch (first) {
-                                    case '>' ->
-                                        ">";
-                                    default ->
-                                        "text";
-                                };
-                                addStyledText(bufferedLine, style, null, null, false);
-                                bufferedLine = null;
-                            }
-                        }
+        // process the remaining partial line
+        if (!bufferedLine.isEmpty()) {
+            if (preformattedMode) {
+                // always buffer inside a ``` block, wait for \n
+            } else if (isStreamingLine) {
+                // we are already mid-line - stream the incoming chunk directly
+
+                char first = bufferedLine.charAt(0);
+                String style = (first == '>') ? ">" : "text";
+
+                // if we are already streaming, we only want to push the newly arrived text
+                addStyledText(geminiDoc, style, null, null, false);
+                bufferedLine = null;
+            } else {
+                // first time evaluating this line
+                int[] classification = classifyPartialLine(bufferedLine);
+                switch (classification[0]) {
+                    case AMBIGUOUS, BUFFER -> {
+                        /* keep in bufferedLine, wait for more data */ }
+                    case STREAM -> {
+                        char first = bufferedLine.charAt(0);
+                        String style = (first == '>') ? ">" : "text";
+
+                        addStyledText(bufferedLine, style, null, null, false);
+                        bufferedLine = null;
+                        isStreamingLine = true; // lock into streaming mode until the next \n
                     }
-                } else {
-                    bufferedLine = null;
                 }
             }
+        } else {
+            bufferedLine = null;
         }
 
         if (page != null) {
