@@ -1326,13 +1326,14 @@ public class Alhena {
                             .replaceAll("/+$", "");
                 }
             }
-            if (url.endsWith(".zip") || url.endsWith(".gpub")) {
+            if (url.endsWith(".zip") || url.endsWith(".gpub") || url.endsWith(".mbook")) {
                 zipToGemtext(url, p, cPage);
             } else if (url.contains(".zip/")) {
-                handleZip(url, p, cPage, false);
+                handleZip(url, p, cPage, PublicationType.ZIP);
             } else if (url.contains(".gpub/")) {
-                handleZip(url, p, cPage, true);
-
+                handleZip(url, p, cPage, PublicationType.GPUB);
+            } else if (url.contains(".mbook/")) {
+                handleZip(url, p, cPage, PublicationType.MBOOK);
             } else {
                 handleFile(origURL, p, cPage);
             }
@@ -4493,19 +4494,35 @@ public class Alhena {
                 bg(() -> {
                     p.textPane.end("## " + I18n.t("errorOpeningMsg") + "\n", false, url, true);
                 });
+                result.cause().printStackTrace();
             }
         });
     }
 
-    private static void handleZip(String url, Page p, Page cPage, boolean gpub) {
+    public enum PublicationType {
+        ZIP,
+        GPUB,
+        MBOOK
+    }
+
+    private static void handleZip(String url, Page p, Page cPage, PublicationType pType) {
         String filePart = URLDecoder.decode(url.replaceFirst("^file:/+", "/"), StandardCharsets.UTF_8);
         String zipFilePath, innerFile;
-        if (gpub) {
-            zipFilePath = filePart.substring(0, filePart.indexOf(".gpub/") + 5);
-            innerFile = filePart.substring(filePart.indexOf(".gpub/") + 6);
-        } else {
-            zipFilePath = filePart.substring(0, filePart.indexOf(".zip/") + 4);
-            innerFile = filePart.substring(filePart.indexOf(".zip/") + 5);
+
+        switch (pType) {
+            case GPUB -> {
+                zipFilePath = filePart.substring(0, filePart.indexOf(".gpub/") + 5);
+                innerFile = filePart.substring(filePart.indexOf(".gpub/") + 6);
+            }
+            case MBOOK -> {
+                zipFilePath = filePart.substring(0, filePart.indexOf(".mbook/") + 6);
+                innerFile = filePart.substring(filePart.indexOf(".mbook/") + 7);
+            }
+            default -> {
+                zipFilePath = filePart.substring(0, filePart.indexOf(".zip/") + 4);
+                innerFile = filePart.substring(filePart.indexOf(".zip/") + 5);
+            }
+
         }
 
         boolean md = false;
@@ -4604,6 +4621,7 @@ public class Alhena {
                         });
                     }
                 } else {
+                    result.cause().printStackTrace();
                     bg(() -> {
                         cPage.setBusy(false);
                         p.textPane.end("## " + I18n.t("errorOpeningMsg") + "\n", false, url, true);
