@@ -57,6 +57,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
@@ -1877,7 +1879,7 @@ public class GeminiTextPane extends JTextPane {
             SimpleAttributeSet hidden = new SimpleAttributeSet();
             StyleConstants.setFontSize(hidden, 1); // nearly invisible
             int i = doc.getLength();
-            insertString(i, "𝗔", hidden);
+            insertString(i, "𝗔", hidden, "text");
             try {
                 doc.remove(i, 1);
             } catch (BadLocationException ex) {
@@ -3326,7 +3328,7 @@ public class GeminiTextPane extends JTextPane {
                         } catch (BadLocationException ex) {
                         }
                         if (emojis.size() == 1) {
-                            insertString(doc.getLength(), text.substring(2), style);
+                            insertString(doc.getLength(), text.substring(2), style, styleName);
                             break;
                         }
 
@@ -3372,7 +3374,7 @@ public class GeminiTextPane extends JTextPane {
                                 }
                             }
 
-                            insertString(doc.getLength(), new String(chars), style);
+                            insertString(doc.getLength(), new String(chars), style, styleName);
 
                         } else {
                             int opto = 0;
@@ -3398,14 +3400,14 @@ public class GeminiTextPane extends JTextPane {
                             } catch (BadLocationException ex) {
                             }
                             if (emojis.size() == 1 && eci < text.length()) {
-                                insertString(doc.getLength(), text.substring(eci + opto), style);
+                                insertString(doc.getLength(), text.substring(eci + opto), style, styleName);
                                 break;
                             }
 
                         }
                     } else {
                         StyleConstants.setFontFamily(style, emojiProportional);
-                        insertString(doc.getLength(), unescapeUnicode(emj.getUnicode()), style);
+                        insertString(doc.getLength(), unescapeUnicode(emj.getUnicode()), style, styleName);
 
                         int eci = emoji.getEndCharIndex();
                         int emojiSize = eci - emoji.getCharIndex();
@@ -3424,7 +3426,7 @@ public class GeminiTextPane extends JTextPane {
                                     if (emojis.indexOf(emoji) == emojis.size() - 1) { // this is last emoji
 
                                         StyleConstants.setFontFamily(style, fontFamily);
-                                        insertString(doc.getLength(), text.substring(eci), style);
+                                        insertString(doc.getLength(), text.substring(eci), style, styleName);
                                         break;
                                     }
                                 }
@@ -3442,10 +3444,10 @@ public class GeminiTextPane extends JTextPane {
                             : -1;
                     StyleConstants.setFontFamily(style, fontFamily);
                     if (nextEmojiIdx != -1) {
-                        insertString(doc.getLength(), text.substring(i, nextEmojiIdx), style);
+                        insertString(doc.getLength(), text.substring(i, nextEmojiIdx), style, styleName);
                         i = nextEmojiIdx - 1;
                     } else {
-                        insertString(doc.getLength(), text.substring(i), style);
+                        insertString(doc.getLength(), text.substring(i), style, styleName);
                         break;
                     }
 
@@ -3454,7 +3456,7 @@ public class GeminiTextPane extends JTextPane {
             StyleConstants.setFontFamily(style, fontFamily);
         } else {
 
-            insertString(start, text, style);
+            insertString(start, text, style, styleName);
         }
 
         if (action != null) {
@@ -3501,16 +3503,52 @@ public class GeminiTextPane extends JTextPane {
         return sb.toString();
     }
 
-    private void insertString(int length, String txt, AttributeSet style) {
+    private static final Pattern GEMTEXT_EMPHASIS_PATTERN = Pattern.compile(
+        "((?<=^|\\s)\\*(?=\\S)(.+?)(?<=\\S)\\*(?=$|\\s|[.,;:!?](?:\\s|$)))|" + 
+        "((?<=^|\\s)_(?=\\S)(.+?)(?<=\\S)_(?=$|\\s|[.,;:!?](?:\\s|$)))|" + 
+        "([^\\*_]+|[*_])"
+    );
+
+    private void insertString(int length, String txt, AttributeSet style, String styleName) {
         try {
             if (hasAnsi && preformattedMode && txt.indexOf(27) >= 0) {
                 handleAnsi(txt);
             } else {
-                doc.insertString(length, txt, style);
+                if (Alhena.emphasisMarkers && styleName.startsWith("t")) {
+
+                    Matcher matcher = GEMTEXT_EMPHASIS_PATTERN.matcher(txt);
+
+                    while (matcher.find()) {
+                        if (matcher.group(1) != null) {
+                            // valid Bold match found -> extract content from inner Group 2
+                            String content = matcher.group(2);
+                            insertStyledSegment(doc, content, style, true, false);
+
+                        } else if (matcher.group(3) != null) {
+                            // valid Italic match found -> extract content from inner Group 4
+                            String content = matcher.group(4);
+                            insertStyledSegment(doc, content, style, false, true);
+
+                        } else {
+                            // plain text, lone math symbols, or variables (like current_temp)
+                            String content = matcher.group(5);
+                            insertStyledSegment(doc, content, style, false, false);
+                        }
+                    }
+                } else {
+                    doc.insertString(length, txt, style);
+                }
             }
         } catch (BadLocationException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private static void insertStyledSegment(StyledDocument doc, String text, AttributeSet baseStyle, boolean bold, boolean italic) throws BadLocationException {
+        SimpleAttributeSet style = new SimpleAttributeSet(baseStyle);
+        StyleConstants.setBold(style, bold);
+        StyleConstants.setItalic(style, italic);
+        doc.insertString(doc.getLength(), text, style);
     }
 
     public void scrollLeft() {

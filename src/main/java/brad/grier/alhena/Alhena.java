@@ -246,6 +246,7 @@ public class Alhena {
     public static int streamingPort;
     public static boolean isHaiku;
     public static boolean systemFileChooser;
+    public static boolean emphasisMarkers;
     public static boolean restoreTabs;
     public static String alhenaHome;
     public static long pageCache;
@@ -692,6 +693,7 @@ public class Alhena {
         gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         useBrowser = map.getOrDefault("browser", "false").equals("true");
         systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
+        emphasisMarkers = map.getOrDefault("emphasismarkers", "false").equals("true");
         restoreTabs = map.getOrDefault("restoretabs", "false").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         socksProxy = map.getOrDefault("socksproxy", null);

@@ -852,6 +852,7 @@ public class DB {
         Alhena.gradientBG = map.getOrDefault("gradiantbg", "false").equals("true");
         Alhena.useBrowser = map.getOrDefault("browser", "false").equals("true");
         Alhena.systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
+        Alhena.emphasisMarkers = map.getOrDefault("emphasismarkers", "false").equals("true");
         Alhena.restoreTabs = map.getOrDefault("restoretabs", "false").equals("true");
         Alhena.theme = map.get("theme");
         Alhena.streamVLC = map.getOrDefault("streamvlc", "false").equals("true");

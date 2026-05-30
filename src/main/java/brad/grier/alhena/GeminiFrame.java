@@ -1759,6 +1759,16 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        JCheckBoxMenuItem emphasisItem = new JCheckBoxMenuItem(I18n.t("gemtextEmphasisItem"), Alhena.emphasisMarkers);
+        emphasisItem.addItemListener(ae -> {
+
+            Alhena.emphasisMarkers = !Alhena.emphasisMarkers;
+
+            DB.insertPref("emphasismarkers", String.valueOf(Alhena.emphasisMarkers));
+            Alhena.updateFrames(false, false, false, false);
+
+        });
+
         JCheckBoxMenuItem browserItem = new JCheckBoxMenuItem(I18n.t("browserItem"), !Alhena.useBrowser);
         browserItem.addItemListener(ae -> {
 
@@ -1876,6 +1886,7 @@ public final class GeminiFrame extends JFrame {
 
         });
 
+        settingsMenu.add(emphasisItem);
         settingsMenu.add(inlineItem);
 
         settingsMenu.add(gradientItem);
