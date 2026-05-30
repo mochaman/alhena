@@ -61,6 +61,7 @@ import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.ImageIcon;
 import javax.swing.InputMap;
 import javax.swing.JCheckBoxMenuItem;
@@ -330,41 +331,63 @@ public class GeminiTextPane extends JTextPane {
             scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, GeminiTextPane.this);
         });
 
-        // take over up and down arrow scrolling
-        InputMap inputMap = getInputMap(JComponent.WHEN_FOCUSED);
-        inputMap.put(KeyStroke.getKeyStroke("UP"), "scrollUpNow");
-        getActionMap().put("scrollUpNow", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+        ActionMap actionMap = getActionMap();
 
-                JScrollBar bar = scrollPane.getVerticalScrollBar();
-                bar.setValue(bar.getValue() - bar.getUnitIncrement(-1));
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke("DOWN"), "scrollDownNow");
-        getActionMap().put("scrollDownNow", new AbstractAction() {
+        actionMap.put("scrollUpNow", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 JScrollBar bar = scrollPane.getVerticalScrollBar();
-                bar.setValue(bar.getValue() + bar.getUnitIncrement(1));
+                if (bar != null) {
+                    bar.setValue(bar.getValue() - bar.getUnitIncrement(-1));
+                }
             }
         });
+        actionMap.put("scrollDownNow", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JScrollBar bar = scrollPane.getVerticalScrollBar();
+                if (bar != null) {
+                    bar.setValue(bar.getValue() + bar.getUnitIncrement(1));
+                }
+            }
+        });
+
+        actionMap.put("forceScrollUp", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JScrollBar bar = scrollPane.getVerticalScrollBar();
+                if (bar != null) {
+                    bar.setValue(bar.getValue() - bar.getBlockIncrement(-1));
+                }
+            }
+        });
+        actionMap.put("forceScrollDown", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JScrollBar bar = scrollPane.getVerticalScrollBar();
+                if (bar != null) {
+                    bar.setValue(bar.getValue() + bar.getBlockIncrement(1));
+                }
+            }
+        });
+
         if (!SystemInfo.isMacOS) {
-            inputMap.put(KeyStroke.getKeyStroke("HOME"), "docHome");
-            getActionMap().put("docHome", new AbstractAction() {
+            actionMap.put("docHome", new AbstractAction() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     JScrollBar bar = scrollPane.getVerticalScrollBar();
-                    bar.setValue(bar.getMinimum());
+                    if (bar != null) {
+                        bar.setValue(bar.getMinimum());
+                    }
                 }
             });
-            inputMap.put(KeyStroke.getKeyStroke("END"), "docEnd");
-            getActionMap().put("docEnd", new AbstractAction() {
+            actionMap.put("docEnd", new AbstractAction() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     JScrollBar bar = scrollPane.getVerticalScrollBar();
-                    bar.setValue(bar.getMaximum());
+                    if (bar != null) {
+                        bar.setValue(bar.getMaximum());
+                    }
                 }
             });
         }
@@ -569,6 +592,26 @@ public class GeminiTextPane extends JTextPane {
                 resetLGP();
             }
         });
+    }
+
+    @Override
+    public void updateUI() {
+
+        super.updateUI();
+
+        InputMap map = getInputMap(JComponent.WHEN_FOCUSED);
+        if (map != null) {
+            map.put(KeyStroke.getKeyStroke("UP"), "scrollUpNow");
+            map.put(KeyStroke.getKeyStroke("DOWN"), "scrollDownNow");
+
+            map.put(KeyStroke.getKeyStroke("PAGE_UP"), "forceScrollUp");
+            map.put(KeyStroke.getKeyStroke("PAGE_DOWN"), "forceScrollDown");
+
+            if (!SystemInfo.isMacOS) {
+                map.put(KeyStroke.getKeyStroke("HOME"), "docHome");
+                map.put(KeyStroke.getKeyStroke("END"), "docEnd");
+            }
+        }
     }
 
     public LinkGlassPane lgp;
