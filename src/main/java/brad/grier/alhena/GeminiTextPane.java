@@ -3504,9 +3504,13 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private static final Pattern GEMTEXT_EMPHASIS_PATTERN = Pattern.compile(
-        "((?<=^|\\s)\\*(?=\\S)(.+?)(?<=\\S)\\*(?=$|\\s|[.,;:!?](?:\\s|$)))|" + 
-        "((?<=^|\\s)_(?=\\S)(.+?)(?<=\\S)_(?=$|\\s|[.,;:!?](?:\\s|$)))|" + 
-        "([^\\*_]+|[*_])"
+            "((?<=^|\\s)`(?=\\S)(.+?)(?<=\\S)`(?=$|\\s|[.,;:!?](?:\\s|$)))|"
+            + // group 1 & 2: Code
+            "((?<=^|\\s)\\*(?=\\S)(.+?)(?<=\\S)\\*(?=$|\\s|[.,;:!?](?:\\s|$)))|"
+            + // group 3 & 4: Bold
+            "((?<=^|\\s)_(?=\\S)(.+?)(?<=\\S)_(?=$|\\s|[.,;:!?](?:\\s|$)))|"
+            + // group 5 & 6: Italic
+            "([^\\*_`]+|[*_`])" // Group 7: Catch-all
     );
 
     private void insertString(int length, String txt, AttributeSet style, String styleName) {
@@ -3520,19 +3524,24 @@ public class GeminiTextPane extends JTextPane {
 
                     while (matcher.find()) {
                         if (matcher.group(1) != null) {
-                            // valid Bold match found -> extract content from inner Group 2
+                            // group 2 contains the code string
                             String content = matcher.group(2);
-                            insertStyledSegment(doc, content, style, true, false);
+                            insertStyledSegment(doc, content, style, false, false, true);
 
                         } else if (matcher.group(3) != null) {
-                            // valid Italic match found -> extract content from inner Group 4
+                            // group 4 contains the bold string
                             String content = matcher.group(4);
-                            insertStyledSegment(doc, content, style, false, true);
+                            insertStyledSegment(doc, content, style, true, false, false);
+
+                        } else if (matcher.group(5) != null) {
+                            // group 6 contains the italic string
+                            String content = matcher.group(6);
+                            insertStyledSegment(doc, content, style, false, true, false);
 
                         } else {
-                            // plain text, lone math symbols, or variables (like current_temp)
-                            String content = matcher.group(5);
-                            insertStyledSegment(doc, content, style, false, false);
+                            // group 7 captures regular text and unclosed symbols
+                            String content = matcher.group(7);
+                            insertStyledSegment(doc, content, style, false, false, false);
                         }
                     }
                 } else {
@@ -3544,10 +3553,16 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private static void insertStyledSegment(StyledDocument doc, String text, AttributeSet baseStyle, boolean bold, boolean italic) throws BadLocationException {
+    private void insertStyledSegment(StyledDocument doc, String text, AttributeSet baseStyle,
+            boolean bold, boolean italic, boolean isCode) throws BadLocationException {
         SimpleAttributeSet style = new SimpleAttributeSet(baseStyle);
         StyleConstants.setBold(style, bold);
         StyleConstants.setItalic(style, italic);
+
+        if (isCode) {
+            StyleConstants.setFontFamily(style, pageStyle.getMonoFontFamily());
+        }
+
         doc.insertString(doc.getLength(), text, style);
     }
 
