@@ -2536,13 +2536,14 @@ public final class GeminiFrame extends JFrame {
                         first[0] = false;
                         // check to make sure user hasn't changed things in the interim
                         pb.setDataFile(null);
-                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == visiblePage());
-
+                        Page vp = visiblePage();
+                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == vp);
+                        
                         if (tabbedPane != null && !(tabbedPane.getSelectedComponent() instanceof SplitPanel)) { // ugh - tab added in interim
                             int idx = tabbedPane.getSelectedIndex();
 
                             if (tabbedPane.getComponentAt(idx) == currentPB) { // make sure we're on the same tab
-                                if (currentPB == visiblePage()) {
+                                if (currentPB == vp) {
                                     // transfer busyness
                                     setBusy(false, currentPB);
                                     setBusy(true, histPage);
@@ -2557,7 +2558,7 @@ public final class GeminiFrame extends JFrame {
                                 }
 
                             } else { // think and refactor
-                                if (currentPB == visiblePage()) {
+                                if (currentPB == vp) {
                                     // transfer busyness
                                     setBusy(false, currentPB);
                                     setBusy(true, histPage);
@@ -2571,12 +2572,20 @@ public final class GeminiFrame extends JFrame {
                             }
                             return;
                         }
-                        if (currentPB == visiblePage()) {
+
+                        Container c = currentPB.getParent();
+                        boolean visibleInSplitPanel = false;
+                        if(c instanceof SplitPanel sp){
+                            Page lp = sp.getLeftPage();
+                            Page rp = sp.getRightPage();
+                            visibleInSplitPanel = (currentPB == lp || currentPB == rp) && (vp == lp || vp == rp);
+                        }
+                        if (currentPB == vp || visibleInSplitPanel) {
 
                             setBusy(false, currentPB);
                             setBusy(true, histPage);
                             invalidate();
-                            Container c = currentPB.getParent();
+  
                             if (c instanceof SplitPanel splitPanel) {
                                 splitPanel.replacePage(currentPB, histPage);
                             } else {
@@ -2591,7 +2600,7 @@ public final class GeminiFrame extends JFrame {
                         } else {
                             histPage.runWhenDone(() -> currentPB.setBusy(false));
                         }
-                        refreshNav(visiblePage());
+                        refreshNav(vp);
 
                     }
 
