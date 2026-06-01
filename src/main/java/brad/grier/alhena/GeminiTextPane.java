@@ -3504,13 +3504,10 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private static final Pattern GEMTEXT_EMPHASIS_PATTERN = Pattern.compile(
-            "((?<=^|\\s)`(?=\\S)(.+?)(?<=\\S)`(?=$|\\s|[.,;:!?](?:\\s|$)))|"
-            + // group 1 & 2: Code
-            "((?<=^|\\s)\\*(?=\\S)(.+?)(?<=\\S)\\*(?=$|\\s|[.,;:!?](?:\\s|$)))|"
-            + // group 3 & 4: Bold
-            "((?<=^|\\s)_(?=\\S)(.+?)(?<=\\S)_(?=$|\\s|[.,;:!?](?:\\s|$)))|"
-            + // group 5 & 6: Italic
-            "([^\\*_`]+|[*_`])" // Group 7: Catch-all
+        "((?<=^|[\\s(\"'“‘])`(?=\\S)(.+?)(?<=\\S)`(?=$|[\\s.,;:!?)\"'”’]))|" +     // Group 1 & 2: Code
+        "((?<=^|[\\s(\"'“‘])\\*(?=\\S)(.+?)(?<=\\S)\\*(?=$|[\\s.,;:!?)\"'”’]))|" + // Group 3 & 4: Bold
+        "((?<=^|[\\s(\"'“‘])_(?=\\S)(.+?)(?<=\\S)_(?=$|[\\s.,;:!?)\"'”’]))|" +     // Group 5 & 6: Italic
+        "([^\\*_`]+|[*_`])"                                                       // Group 7: Catch-all
     );
 
     private void insertString(int length, String txt, AttributeSet style, String styleName) {
