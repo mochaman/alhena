@@ -4545,12 +4545,13 @@ public class Alhena {
         boolean pformatted = !(url.endsWith(".gmi") || url.endsWith(".gemini") || html || finalmd);
         String finalMime = mimeExt;
         if (matches || vlcType) {
-            p.frame().setBusy(true, cPage);
+            cPage.setBusy(true);
             vertx.executeBlocking(promise -> {
                 try {
-                    FileSystem zipFs = FileSystems.newFileSystem(Path.of(zipFilePath));
-                    byte[] bytes = Files.readAllBytes(zipFs.getPath(innerFile));
-                    zipFs.close();
+                    byte[] bytes;
+                    try (FileSystem zipFs = FileSystems.newFileSystem(Path.of(zipFilePath))) {
+                        bytes = Files.readAllBytes(zipFs.getPath(innerFile));
+                    }
                     promise.complete(bytes);
                 } catch (IOException e) {
                     promise.fail(e);
