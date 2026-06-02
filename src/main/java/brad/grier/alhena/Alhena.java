@@ -251,15 +251,22 @@ public class Alhena {
     public static String alhenaHome;
     public static long pageCache;
     private static boolean started;
-    private static final Parser parser = Parser.builder().build();
-    private static final HtmlRenderer renderer = HtmlRenderer.builder().build();
+
     public static boolean stateLoaded = true;
+
+    private static final Parser parser;
+    private static final HtmlRenderer renderer;
 
     static {
         // just do this once
         Security.addProvider(new BouncyCastleProvider());
-    }
 
+        parser = Parser.builder().build();
+        renderer = HtmlRenderer.builder()
+                .nodeRendererFactory(context -> new GemtextMarkerHtmlRenderer(context))
+                .build();
+    }
+    
     private final static int PORT = 61965;
 
     private static void startIPC(String[] args) {
