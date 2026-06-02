@@ -2842,7 +2842,7 @@ public final class GeminiFrame extends JFrame {
                     if (nextNewline != -1) {
                         endIdx = nextNewline + 1;
                     } else {
-                        endIdx = totalLength; 
+                        endIdx = totalLength;
                     }
                 }
 
@@ -4209,14 +4209,30 @@ public final class GeminiFrame extends JFrame {
                 }
                 Component wc = page.getWrappedComp();
                 if (wc != null) {
+                    boolean updateUI;
                     if (wc instanceof SplitPanel sp) {
-
+                        updateUI = sp.getLeftPage().getThemeId() != currentThemeId;
                         page = sp.getFocusedPage();
                     } else {
                         page = (Page) wc;
+                        updateUI = page.getThemeId() != currentThemeId;
 
                     }
+                    
                     tabbedPane.setComponentAt(tabbedPane.getSelectedIndex(), wc);
+                    // update l&f since component has been removed from hierarchy
+                    if (updateUI) {
+                        if (wc instanceof SplitPanel sp) {
+                            SwingUtilities.updateComponentTreeUI(sp);
+                            SwingUtilities.updateComponentTreeUI(sp.getLeftPage());
+                            SwingUtilities.updateComponentTreeUI(sp.getRightPage());
+
+                        } else {
+
+                            SwingUtilities.updateComponentTreeUI(page);
+
+                        }
+                    }
                 }
                 page.textPane.resetLGP();
                 if (!page.busy() && getGlassPane().isShowing()) {
@@ -4287,13 +4303,15 @@ public final class GeminiFrame extends JFrame {
             if (restoreComponent instanceof Page page) {
                 tabbedPane.addTab("  ", page);
                 tabbedPane.setSelectedComponent(page);
+                SwingUtilities.updateComponentTreeUI(page);
                 updatePageTheme(page);
 
             } else {
                 SplitPanel sp = (SplitPanel) restoreComponent;
+                boolean updateUI = sp.getLeftPage().getThemeId() != currentThemeId;
                 tabbedPane.addTab("  ", sp);
                 tabbedPane.setSelectedComponent(sp);
-                if (sp.getLeftPage().getThemeId() != currentThemeId) {
+                if (updateUI) {
                     SwingUtilities.updateComponentTreeUI(sp);
                     updatePageTheme(sp.getLeftPage());
                     updatePageTheme(sp.getRightPage());
