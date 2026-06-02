@@ -2538,7 +2538,7 @@ public final class GeminiFrame extends JFrame {
                         pb.setDataFile(null);
                         Page vp = visiblePage();
                         Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == vp);
-                        
+
                         if (tabbedPane != null && !(tabbedPane.getSelectedComponent() instanceof SplitPanel)) { // ugh - tab added in interim
                             int idx = tabbedPane.getSelectedIndex();
 
@@ -4168,7 +4168,7 @@ public final class GeminiFrame extends JFrame {
                                 shutdownPage(page, true);
 
                             } else { // SplitPanel
-                                SplitPanel sp = (SplitPanel) tabbedPane.getComponentAt(tabIndex);
+                                SplitPanel sp = (SplitPanel) c;
 
                                 lastTabInfo = new LastTabInfo(sp, pageHistoryMap.get(getRootPage(sp.getLeftPage())), pageHistoryMap.get(getRootPage(sp.getRightPage())));
                                 shutdownPage(sp.getLeftPage(), true);
