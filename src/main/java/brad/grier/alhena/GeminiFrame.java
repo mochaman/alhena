@@ -2575,7 +2575,7 @@ public final class GeminiFrame extends JFrame {
 
                         Container c = currentPB.getParent();
                         boolean visibleInSplitPanel = false;
-                        if(c instanceof SplitPanel sp){
+                        if (c instanceof SplitPanel sp) {
                             Page lp = sp.getLeftPage();
                             Page rp = sp.getRightPage();
                             visibleInSplitPanel = (currentPB == lp || currentPB == rp) && (vp == lp || vp == rp);
@@ -2585,7 +2585,7 @@ public final class GeminiFrame extends JFrame {
                             setBusy(false, currentPB);
                             setBusy(true, histPage);
                             invalidate();
-  
+
                             if (c instanceof SplitPanel splitPanel) {
                                 splitPanel.replacePage(currentPB, histPage);
                             } else {
@@ -2824,37 +2824,45 @@ public final class GeminiFrame extends JFrame {
 
     public void streamChunks(StringBuilder b, int chunkSize, String url, boolean pfMode, Page vp, int pos) {
         if (b == null || b.isEmpty()) {
-            // showGlassPane(false);
             return;
         }
         setBusy(true, vp);
-        new Thread(() -> {
+        Thread.ofVirtual().start(() -> {
             int idx = 0;
-            int endIdx = Math.min(chunkSize + idx, b.length());
-            final int fIdx = idx;
-            final int fEndIdx = endIdx;
+            int totalLength = b.length();
+            boolean isFirstChunk = true;
 
-            EventQueue.invokeLater(() -> {
+            while (idx < totalLength) {
 
-                vp.textPane.updatePage(b.substring(fIdx, fEndIdx), pfMode, url, false);
+                int targetEnd = Math.min(idx + chunkSize, totalLength);
+                int endIdx = targetEnd;
 
-            });
-            idx = endIdx;
-            while (endIdx < b.length()) {
-                // there's more
-                endIdx = Math.min(chunkSize + idx, b.length());
-                final int fIdx2 = idx;
-                final int fEndIdx2 = endIdx;
+                if (endIdx < totalLength) {
+                    int nextNewline = b.indexOf("\n", endIdx);
+                    if (nextNewline != -1) {
+                        endIdx = nextNewline + 1;
+                    } else {
+                        endIdx = totalLength; 
+                    }
+                }
+
+                final int fIdx = idx;
+                final int fEndIdx = endIdx;
+                final boolean first = isFirstChunk;
+
                 EventQueue.invokeLater(() -> {
-
-                    vp.textPane.addPage(b.substring(fIdx2, fEndIdx2));
-
+                    String chunkText = b.substring(fIdx, fEndIdx);
+                    if (first) {
+                        vp.textPane.updatePage(chunkText, pfMode, url, false);
+                    } else {
+                        vp.textPane.addPage(chunkText);
+                    }
                 });
-                idx = endIdx;
-            }
 
+                isFirstChunk = false;
+                idx = endIdx; // move pointer to the start of the next fresh line
+            }
             EventQueue.invokeLater(() -> {
-                //Page visiblePane = visiblePage();
                 Page groupPane = getRootPage(vp);
                 vp.textPane.end();
                 backButton.setEnabled(hasPrev(groupPane));
@@ -2862,8 +2870,7 @@ public final class GeminiFrame extends JFrame {
                 vp.setScrollPos(pos);
                 setBusy(false, vp);
             });
-
-        }).start();
+        });
     }
 
     public void showCustomPage(String label, InfoPageInfo info) {
