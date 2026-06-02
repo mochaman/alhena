@@ -3504,10 +3504,13 @@ public class GeminiTextPane extends JTextPane {
     }
 
     private static final Pattern GEMTEXT_EMPHASIS_PATTERN = Pattern.compile(
-        "((?<=^|[\\s(\"'“‘])`(?=\\S)(.+?)(?<=\\S)`(?=$|[\\s.,;:!?)\"'”’]))|" +     // Group 1 & 2: Code
-        "((?<=^|[\\s(\"'“‘])\\*(?=\\S)(.+?)(?<=\\S)\\*(?=$|[\\s.,;:!?)\"'”’]))|" + // Group 3 & 4: Bold
-        "((?<=^|[\\s(\"'“‘])_(?=\\S)(.+?)(?<=\\S)_(?=$|[\\s.,;:!?)\"'”’]))|" +     // Group 5 & 6: Italic
-        "([^\\*_`]+|[*_`])"                                                       // Group 7: Catch-all
+            "((?<=^|[\\s(\"'“‘])`(?=\\S)(.+?)(?<=\\S)`(?=$|[\\s.,;:!?)\"'”’]))|"
+            + // code
+            "((?<=^|[\\s(\"'“‘])\\*(?=\\S)(.+?)(?<=\\S)\\*(?=$|[\\s.,;:!?)\"'”’]))|"
+            + // bold
+            "((?<=^|[\\s(\"'“‘])_(?=\\S)(.+?)(?<=\\S)_(?=$|[\\s.,;:!?)\"'”’]))|"
+            + // italic
+            "([^\\*_`]+|[*_`])" // catch-all
     );
 
     private void insertString(int length, String txt, AttributeSet style, String styleName) {
@@ -3515,7 +3518,7 @@ public class GeminiTextPane extends JTextPane {
             if (hasAnsi && preformattedMode && txt.indexOf(27) >= 0) {
                 handleAnsi(txt);
             } else {
-                if (Alhena.emphasisMarkers && styleName.startsWith("t")) {
+                if (Alhena.emphasisMarkers && (styleName.startsWith("t") || styleName.equals("*") || styleName.equals(">"))) {
 
                     Matcher matcher = GEMTEXT_EMPHASIS_PATTERN.matcher(txt);
 
@@ -3550,13 +3553,19 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
-    private void insertStyledSegment(StyledDocument doc, String text, AttributeSet baseStyle,
-            boolean bold, boolean italic, boolean isCode) throws BadLocationException {
-        SimpleAttributeSet style = new SimpleAttributeSet(baseStyle);
-        StyleConstants.setBold(style, bold);
-        StyleConstants.setItalic(style, italic);
+    private void insertStyledSegment(StyledDocument doc, String text, AttributeSet baseStyle, boolean bold, boolean italic, boolean isCode) throws BadLocationException {
+        if (!bold && !italic && !isCode) {
+            doc.insertString(doc.getLength(), text, baseStyle);
+            return;
+        }
 
-        if (isCode) {
+        SimpleAttributeSet style = new SimpleAttributeSet(baseStyle);
+
+        if (bold) {
+            StyleConstants.setBold(style, true);
+        } else if (italic) {
+            StyleConstants.setItalic(style, true);
+        } else if (isCode) {
             StyleConstants.setFontFamily(style, pageStyle.getMonoFontFamily());
         }
 
