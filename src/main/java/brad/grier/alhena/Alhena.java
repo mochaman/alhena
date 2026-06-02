@@ -185,7 +185,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public static String welcomeMessage;
-    public final static String VERSION = "5.6.0";
+    public final static String VERSION = "5.6.1";
     private static final AtomicBoolean interrupted = new AtomicBoolean();
     private static final AtomicBoolean systemAsleep = new AtomicBoolean();
     // remove vlc extensions and let MimeMapper decide
@@ -266,7 +266,7 @@ public class Alhena {
                 .nodeRendererFactory(context -> new GemtextMarkerHtmlRenderer(context))
                 .build();
     }
-    
+
     private final static int PORT = 61965;
 
     private static void startIPC(String[] args) {
