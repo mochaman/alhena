@@ -3813,6 +3813,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void toggleView(GeminiTextPane textPane, boolean isPlainText) {
+        textPane.getHighlighter().removeAllHighlights();
         String url = textPane.getDocURLString();
         CurrentPage res = textPane.current();
         visiblePage().ignoreStart();
