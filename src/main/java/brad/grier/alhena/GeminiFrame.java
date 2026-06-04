@@ -2537,7 +2537,16 @@ public final class GeminiFrame extends JFrame {
                         // check to make sure user hasn't changed things in the interim
                         pb.setDataFile(null);
                         Page vp = visiblePage();
-                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == vp);
+                        // need to go deeper as visiblePage() may return the return the "wrong" page in a split view
+                        // depending on which side has focus when called
+                        Container c = currentPB.getParent();
+                        boolean visibleInSplitPanel = false;
+                        if (c instanceof SplitPanel sp) {
+                            Page lp = sp.getLeftPage();
+                            Page rp = sp.getRightPage();
+                            visibleInSplitPanel = (currentPB == lp || currentPB == rp) && (vp == lp || vp == rp);
+                        }
+                        Page histPage = addPageToHistory(getRootPage(currentPB), pb, currentPB == vp || visibleInSplitPanel);
 
                         if (tabbedPane != null && !(tabbedPane.getSelectedComponent() instanceof SplitPanel)) { // ugh - tab added in interim
                             int idx = tabbedPane.getSelectedIndex();
@@ -2573,13 +2582,6 @@ public final class GeminiFrame extends JFrame {
                             return;
                         }
 
-                        Container c = currentPB.getParent();
-                        boolean visibleInSplitPanel = false;
-                        if (c instanceof SplitPanel sp) {
-                            Page lp = sp.getLeftPage();
-                            Page rp = sp.getRightPage();
-                            visibleInSplitPanel = (currentPB == lp || currentPB == rp) && (vp == lp || vp == rp);
-                        }
                         if (currentPB == vp || visibleInSplitPanel) {
 
                             setBusy(false, currentPB);
@@ -4219,7 +4221,7 @@ public final class GeminiFrame extends JFrame {
                         updateUI = page.getThemeId() != currentThemeId;
 
                     }
-                    
+
                     tabbedPane.setComponentAt(tabbedPane.getSelectedIndex(), wc);
                     // update l&f since component has been removed from hierarchy
                     if (updateUI) {
