@@ -750,7 +750,25 @@ public class GeminiTextPane extends JTextPane {
                                     newTabItem.setEnabled(!range.dataUrl);
                                     popupMenu.add(newTabItem);
 
-                                    if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) == null) {
+                                    if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) instanceof SplitPanel sp) {
+                                        // prepare for navigator mode
+                                        // if(sp.getLeftPage().textPane == GeminiTextPane.this){
+
+                                        //     System.out.println("Navigator Page");
+                                        // }
+                                        JMenuItem oppositeItem = new JMenuItem(I18n.t("openOppItem"));
+
+                                        oppositeItem.addActionListener(ev -> {
+                                            boolean saveSetting = Alhena.useBrowser;
+                                            Alhena.useBrowser = false;
+                                            clicked(range);
+                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, false);
+                                            
+                                            Alhena.useBrowser = saveSetting;
+                                        });
+                                        oppositeItem.setEnabled(!range.dataUrl);
+                                        popupMenu.add(oppositeItem);
+                                    } else {
                                         JMenuItem splitRightItem = new JMenuItem(I18n.t("splitRightItem"));
                                         JMenuItem splitLeftItem = new JMenuItem(I18n.t("splitLeftItem"));
 
@@ -803,17 +821,6 @@ public class GeminiTextPane extends JTextPane {
                                         });
                                         splitBottomItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitBottomItem);
-                                    } else {
-                                        JMenuItem oppositeItem = new JMenuItem(I18n.t("openOppItem"));
-
-                                        oppositeItem.addActionListener(ev -> {
-                                            boolean saveSetting = Alhena.useBrowser;
-                                            Alhena.useBrowser = false;
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, false);
-                                            Alhena.useBrowser = saveSetting;
-                                        });
-                                        oppositeItem.setEnabled(!range.dataUrl);
-                                        popupMenu.add(oppositeItem);
                                     }
 
                                     JMenuItem menuItem2 = new JMenuItem(I18n.t("newWindowPopupItem"));
