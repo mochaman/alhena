@@ -316,6 +316,7 @@ public final class GeminiFrame extends JFrame {
                             jp.put("pos", page.getScrollPos());
                             jp.put("contwidth", page.textPane.getContentWidth());
                             jp.put("fetchtime", page.getFetchTime());
+                            jp.put("nav", page.textPane.isNavigator);
                             pageArray.add(jp);
                         } else {
                             if (pageNum[0] < curPageIdx[0]) {
@@ -366,6 +367,7 @@ public final class GeminiFrame extends JFrame {
                             jp.put("pos", page.getScrollPos());
                             jp.put("contwidth", page.textPane.getContentWidth());
                             jp.put("fetchtime", page.getFetchTime());
+                            jp.put("nav", page.textPane.isNavigator);
                             pageArray.add(jp);
 
                         } else {
@@ -409,6 +411,7 @@ public final class GeminiFrame extends JFrame {
                     jp.put("pos", page.getScrollPos());
                     jp.put("contwidth", page.textPane.getContentWidth());
                     jp.put("fetchtime", page.getFetchTime());
+                    jp.put("nav", page.textPane.isNavigator);
                     pageArray.add(jp);
                 } else {
                     if (pageNum[0] < curPageIdx[0]) {
@@ -1017,50 +1020,30 @@ public final class GeminiFrame extends JFrame {
         viewMenu.add(new JSeparator());
 
         splitLeftItem = createMenuItem(I18n.t("splitLeftItem"), KeyStroke.getKeyStroke(KeyEvent.VK_E, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
-            if (splitLeftItem.isEnabled()) {
-                boolean saveSetting = Alhena.useBrowser;
-                Alhena.useBrowser = false;
-                splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT, null, true);
-                Alhena.useBrowser = saveSetting;
-            }
+            menuSplit(JSplitPane.HORIZONTAL_SPLIT, true);
         });
         viewMenu.add(splitLeftItem);
 
         splitRightItem = createMenuItem(I18n.t("splitRightItem"), KeyStroke.getKeyStroke(KeyEvent.VK_R, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
-            if (splitRightItem.isEnabled()) {
-                boolean saveSetting = Alhena.useBrowser;
-                Alhena.useBrowser = false;
-                splitView("alhena:art", null, JSplitPane.HORIZONTAL_SPLIT, null, false);
-                Alhena.useBrowser = saveSetting;
-            }
+            menuSplit(JSplitPane.HORIZONTAL_SPLIT, false);
         });
         viewMenu.add(splitRightItem);
 
         splitTopItem = createMenuItem(I18n.t("splitTopItem"), KeyStroke.getKeyStroke(KeyEvent.VK_G, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
-            if (splitTopItem.isEnabled()) {
-                boolean saveSetting = Alhena.useBrowser;
-                Alhena.useBrowser = false;
-                splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT, null, true);
-                Alhena.useBrowser = saveSetting;
-            }
+            menuSplit(JSplitPane.VERTICAL_SPLIT, true);
         });
         viewMenu.add(splitTopItem);
 
         splitBottomItem = createMenuItem(I18n.t("splitBottomItem"), KeyStroke.getKeyStroke(KeyEvent.VK_B, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
-            if (splitBottomItem.isEnabled()) {
-                boolean saveSetting = Alhena.useBrowser;
-                Alhena.useBrowser = false;
-                splitView("alhena:art", null, JSplitPane.VERTICAL_SPLIT, null, false);
-                Alhena.useBrowser = saveSetting;
-            }
+            menuSplit(JSplitPane.VERTICAL_SPLIT, false);
         });
         viewMenu.add(splitBottomItem);
 
         closeSplitItem = createMenuItem(I18n.t("closeSplitItem"), KeyStroke.getKeyStroke(KeyEvent.VK_X, (mod | KeyEvent.SHIFT_DOWN_MASK)), () -> {
-            if (closeSplitItem.isEnabled()) {
-                removeSplitView();
-            }
+            removeSplitView();
+
         });
+
         closeSplitItem.setEnabled(false);
         viewMenu.add(closeSplitItem);
 
@@ -1176,6 +1159,11 @@ public final class GeminiFrame extends JFrame {
         return hotButton.getToolTipText();
     }
 
+    private void menuSplit(int splitType, boolean flip) {
+        visiblePage().textPane.isNavigator = true;
+        splitView("alhena:art", null, splitType, null, flip, null);
+    }
+
     private void restoreSplitView(JsonObject savedPage) {
 
         SplitPanel sp = new SplitPanel(this, savedPage.getInteger("orientation"));
@@ -1215,7 +1203,7 @@ public final class GeminiFrame extends JFrame {
                     if (showing == null) {
                         showing = true;
                     }
-                    showCustomPage(purl, false, pageInfo, true, showing, pge.getLong("fetchtime"), pge.getInteger("pos"));
+                    showCustomPage(purl, false, pageInfo, true, showing, pge.getLong("fetchtime"), pge.getInteger("pos"), pge.getBoolean("nav", false));
                 } else {
                     fetchURL(purl, null, false, pge, null);
                 }
@@ -2386,7 +2374,7 @@ public final class GeminiFrame extends JFrame {
         addClickedLink(url);
         if (CUSTOM_LABELS.contains(url) && !url.equals(INFO_LABEL)) {
             EventQueue.invokeLater(() -> {
-                showCustomPage(url, true, null, false, true, null, -1);
+                showCustomPage(url, true, null, false, true, null, -1, false);
             });
 
         } else {
@@ -2733,6 +2721,8 @@ public final class GeminiFrame extends JFrame {
         }
         p.textPane.savedContentWidth = page.getFloat("contwidth");
         p.setFetchTime(page.getLong("fetchtime"));
+        p.textPane.isNavigator = page.getBoolean("nav", false);
+
         Boolean showing = page.getBoolean("showing");
         if (showing == null || showing) {
             p.textPane.end(page.getString("content"), page.getBoolean("pfmode"), url, false);
@@ -2876,11 +2866,11 @@ public final class GeminiFrame extends JFrame {
     }
 
     public void showCustomPage(String label, InfoPageInfo info) {
-        showCustomPage(label, false, info, false, true, null, -1);
+        showCustomPage(label, false, info, false, true, null, -1, false);
     }
 
     public void showCustomPage(String label, boolean inPlace, InfoPageInfo info, boolean saved,
-            boolean showing, Long fetchTime, int pos) { // probably need custom refresh button handling
+            boolean showing, Long fetchTime, int pos, boolean nav) { // probably need custom refresh button handling
         if (info != null && !saved) {
             label = INFO_LABEL; // hack
         }
@@ -2895,6 +2885,7 @@ public final class GeminiFrame extends JFrame {
                 if (fetchTime != null) {
                     pb.setFetchTime(fetchTime);
                 }
+                pb.textPane.isNavigator = nav;
                 pb.ignoreStart();
                 boolean[] first = {true};
                 Runnable r = () -> {
@@ -2947,6 +2938,7 @@ public final class GeminiFrame extends JFrame {
                 if (fetchTime != null) {
                     pb.setFetchTime(fetchTime);
                 }
+                pb.textPane.isNavigator = nav;
                 pb.ignoreStart();
                 boolean[] first = {true};
                 Runnable r = () -> {
@@ -3018,6 +3010,7 @@ public final class GeminiFrame extends JFrame {
             if (fetchTime != null) {
                 nPage.setFetchTime(fetchTime);
             }
+            nPage.textPane.isNavigator = nav;
 
             if (label.equals(SUBSCRIPTION_LABEL)) {
                 loadSubscriptions(nPage.textPane, null, info, showing, pos);
@@ -3869,6 +3862,7 @@ public final class GeminiFrame extends JFrame {
             revalidate();
             splitViewChanged(remainingPage);
             remainingPage.textPane.requestFocusInWindow();
+            remainingPage.textPane.isNavigator = false;
 
         } else {
             SplitPanel sp = (SplitPanel) visiblePage().getParent();
@@ -3893,14 +3887,17 @@ public final class GeminiFrame extends JFrame {
 
             splitViewChanged(remainingPage);
             remainingPage.requestFocusInWindow();
+            remainingPage.textPane.isNavigator = false;
 
         }
     }
 
-    public void splitView(String url, JsonObject saveSplitView, int orientation, String scrollToHeading, boolean flip) {
+    public void splitView(String url, JsonObject saveSplitView, int orientation, String scrollToHeading, boolean flip, File file) {
         addClickedLink(url);
         if (visiblePage().getParent() instanceof SplitPanel sp) {
-            Page focusedPage = sp.getFocusedPage();
+            GeminiTextPane ltp = sp.getLeftPage().textPane;
+            // can't rely on getFocusedPage() because if a link is clicked quickly there is a temp focus change
+            Page focusedPage = ltp.isClicked ? sp.getLeftPage() : sp.getRightPage();
 
             boolean destRight = focusedPage == sp.getLeftPage();
             Page destPage = destRight ? sp.getRightPage() : sp.getLeftPage();
@@ -3916,7 +3913,8 @@ public final class GeminiFrame extends JFrame {
             if (CUSTOM_LABELS.contains(url)) {
                 showCustomPage(url, null);
             } else {
-                fetchURL(resolvedURI, false, scrollToHeading);
+                fetchURL(resolvedURI, file, false, null, scrollToHeading);
+                //fetchURL(resolvedURI, false, scrollToHeading);
             }
 
         } else if (tabbedPane != null) {
@@ -3953,6 +3951,7 @@ public final class GeminiFrame extends JFrame {
                 if (scrollToHeading != null) {
                     pb.runWhenDone(() -> pb.textPane.scrollToHeading(scrollToHeading));
                 }
+                pb.setDataFile(file);
                 Alhena.processURL(url, pb, null, p, false);
             } else {
                 JsonArray rpages = saveSplitView.getJsonArray("rpages");
@@ -3972,7 +3971,7 @@ public final class GeminiFrame extends JFrame {
                             if (showing == null) {
                                 showing = true;
                             }
-                            showCustomPage(purl, false, pageInfo, true, showing, pge.getLong("fetchtime"), pge.getInteger("pos"));
+                            showCustomPage(purl, false, pageInfo, true, showing, pge.getLong("fetchtime"), pge.getInteger("pos"), pge.getBoolean("nav", false));
                         } else {
                             fetchURL(purl, null, false, pge, scrollToHeading);
                         }
@@ -4029,6 +4028,7 @@ public final class GeminiFrame extends JFrame {
             if (scrollToHeading != null) {
                 pb.runWhenDone(() -> pb.textPane.scrollToHeading(scrollToHeading));
             }
+            pb.setDataFile(file);
             Alhena.processURL(url, pb, null, p, false);
 
         }

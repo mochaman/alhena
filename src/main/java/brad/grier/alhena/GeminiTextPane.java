@@ -164,6 +164,7 @@ public class GeminiTextPane extends JTextPane {
     private final int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private boolean imageOnly;
     private JScrollPane scrollPane;
+    public boolean isNavigator;
 
     private final Page page;
 
@@ -751,20 +752,26 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(newTabItem);
 
                                     if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) instanceof SplitPanel sp) {
-                                        // prepare for navigator mode
-                                        // if(sp.getLeftPage().textPane == GeminiTextPane.this){
-
-                                        //     System.out.println("Navigator Page");
-                                        // }
-                                        JMenuItem oppositeItem = new JMenuItem(I18n.t("openOppItem"));
+                                        String actionTxt = isNavigator ? "Open Here" : I18n.t("openOppItem");
+                                        JMenuItem oppositeItem = new JMenuItem(actionTxt);
 
                                         oppositeItem.addActionListener(ev -> {
-                                            boolean saveSetting = Alhena.useBrowser;
-                                            Alhena.useBrowser = false;
-                                            clicked(range);
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, false);
-                                            
-                                            Alhena.useBrowser = saveSetting;
+
+                                            if (!isNavigator) {
+
+                                                clicked(range);
+                                                navFlip = true;
+                                                range.action.run();
+                                                navFlip = false;
+
+                                            } else {
+                                                // temporarily deactive nav 
+                                                isNavigator = false;
+                                                navFlip = false;
+                                                clicked(range);
+                                                range.action.run();
+                                                isNavigator = true;
+                                            }
                                         });
                                         oppositeItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(oppositeItem);
@@ -774,24 +781,19 @@ public class GeminiTextPane extends JTextPane {
 
                                         splitLeftItem.addActionListener(ev -> {
                                             // open in new tab with gemtext converter regardless
-                                            boolean saveSetting = Alhena.useBrowser;
-                                            Alhena.useBrowser = false;
-                                            clicked(range);
+                                            isNavigator = true;
+                                            splitPage(range, JSplitPane.HORIZONTAL_SPLIT, true);
 
-                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT, range.label, true);
-                                            Alhena.useBrowser = saveSetting;
                                         });
                                         splitLeftItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitLeftItem);
 
                                         splitRightItem.addActionListener(ev -> {
                                             // open in new tab with gemtext converter regardless
-                                            boolean saveSetting = Alhena.useBrowser;
-                                            Alhena.useBrowser = false;
-                                            clicked(range);
+                                            isNavigator = true;
 
-                                            f().splitView(range.url, null, JSplitPane.HORIZONTAL_SPLIT, range.label, false);
-                                            Alhena.useBrowser = saveSetting;
+                                            splitPage(range, JSplitPane.HORIZONTAL_SPLIT, false);
+
                                         });
                                         splitRightItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitRightItem);
@@ -799,12 +801,9 @@ public class GeminiTextPane extends JTextPane {
                                         JMenuItem splitTopItem = new JMenuItem(I18n.t("splitTopItem"));
 
                                         splitTopItem.addActionListener(ev -> {
-                                            boolean saveSetting = Alhena.useBrowser;
-                                            Alhena.useBrowser = false;
-                                            clicked(range);
+                                            isNavigator = true;
+                                            splitPage(range, JSplitPane.VERTICAL_SPLIT, true);
 
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, true);
-                                            Alhena.useBrowser = saveSetting;
                                         });
                                         splitTopItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitTopItem);
@@ -812,12 +811,9 @@ public class GeminiTextPane extends JTextPane {
                                         JMenuItem splitBottomItem = new JMenuItem(I18n.t("splitBottomItem"));
 
                                         splitBottomItem.addActionListener(ev -> {
-                                            boolean saveSetting = Alhena.useBrowser;
-                                            Alhena.useBrowser = false;
-                                            clicked(range);
+                                            isNavigator = true;
+                                            splitPage(range, JSplitPane.VERTICAL_SPLIT, false);
 
-                                            f().splitView(range.url, null, JSplitPane.VERTICAL_SPLIT, range.label, false);
-                                            Alhena.useBrowser = saveSetting;
                                         });
                                         splitBottomItem.setEnabled(!range.dataUrl);
                                         popupMenu.add(splitBottomItem);
@@ -1319,6 +1315,22 @@ public class GeminiTextPane extends JTextPane {
                 }
             }
         }
+
+    }
+
+    private int navSplitType;
+    public boolean navFlip;
+
+    private void splitPage(ClickableRange range, int splitType, boolean flip) {
+        navSplitType = splitType;
+        navFlip = flip;
+        boolean saveSetting = Alhena.useBrowser;
+        Alhena.useBrowser = false;
+        clicked(range);
+        range.action.run();
+        navFlip = false;
+
+        Alhena.useBrowser = saveSetting;
 
     }
 
@@ -2702,6 +2714,8 @@ public class GeminiTextPane extends JTextPane {
         return viewSize.getWidth() > contentWidth;
     }
 
+    public boolean isClicked;
+
     private void processLine(String line) {
 
         if (page.isGopher() || (page.isNex() && docURL.endsWith("/"))) {
@@ -2722,9 +2736,10 @@ public class GeminiTextPane extends JTextPane {
 
                 String linkStyle = f().isClickedLink(url) ? "visited" : "=>";
                 String lbl = label.isEmpty() ? url : label;
-                ClickableRange cr = addStyledText(lbl, linkStyle,
+                ClickableRange cr1[] = {null};
+                cr1[0] = addStyledText(lbl, linkStyle,
                         () -> {
-
+                            isClicked = true;
                             if (Alhena.httpProxy == null && finalUrl.startsWith("http") && Alhena.browsingSupported && Alhena.useBrowser) {
                                 try {
                                     Desktop.getDesktop().browse(new URI(finalUrl));
@@ -2739,12 +2754,20 @@ public class GeminiTextPane extends JTextPane {
                                 }
 
                             } else {
-                                f().addClickedLink(finalUrl);
-                                f().fetchURL(finalUrl, false, null);
-                            }
 
+                                if (isNavigator || navFlip) {
+                                    clicked(cr1[0]);
+
+                                    f().splitView(cr1[0].url, null, navSplitType, null, navFlip, null);
+                                } else {
+
+                                    f().addClickedLink(finalUrl);
+                                    f().fetchURL(finalUrl, false, null);
+                                }
+                            }
+                            isClicked = false;
                         }, lbl, true);
-                cr.url = url;
+                cr1[0].url = url;
 
             } else {
                 addStyledText(line, "```", null, null, true); // no action so origlabel not needed
@@ -2954,10 +2977,10 @@ public class GeminiTextPane extends JTextPane {
                 origLabel = label;
                 lbl = sfx + label;
             }
-
-            ClickableRange cr = addStyledText(lbl, linkStyle,
+            ClickableRange[] cr1 = {null};
+            cr1[0] = addStyledText(lbl, linkStyle,
                     () -> {
-
+                        isClicked = true;
                         if (spartanLink) {
 
                             TextEditor textEditor = new TextEditor("", false, docURL);
@@ -2969,23 +2992,35 @@ public class GeminiTextPane extends JTextPane {
                             if (res != null) {
                                 Object result = textEditor.getResult();
                                 if (result instanceof String string) {
+                                    f().addClickedLink(finalUrl);
                                     if (!string.isBlank()) {
-                                        f().addClickedLink(finalUrl);
-                                        f().fetchURL(finalUrl + "?" + Util.uEncode(string), false, null);
+
+                                        if (isNavigator || navFlip) {
+                                            clicked(cr1[0]);
+                                            f().splitView(finalUrl + "?" + Util.uEncode(string), null, navSplitType, null, navFlip, null);
+                                        } else {
+                                            f().fetchURL(finalUrl + "?" + Util.uEncode(string), false, null);
+                                        }
                                     }
                                 } else {
-                                    f().addClickedLink(finalUrl);
-                                    f().fetchURL(finalUrl, (File) result, false, null, null);
+                                    if (isNavigator || navFlip) {
+                                        clicked(cr1[0]);
+                                        f().splitView(finalUrl, null, navSplitType, null, navFlip, (File) result);
+                                    } else {
+                                        f().fetchURL(finalUrl, (File) result, false, null, null);
+                                    }
                                 }
                             }
 
                         } else if (Alhena.httpProxy == null && finalUrl.startsWith("http") && Alhena.browsingSupported && Alhena.useBrowser) {
+                            // navigator for split view makes no sense in this context
                             try {
                                 Desktop.getDesktop().browse(new URI(finalUrl));
                             } catch (Exception ex) {
                                 ex.printStackTrace();
                             }
                         } else if (finalUrl.startsWith("mailto:") && Alhena.mailSupported) {
+                            // navigator for split view makes no sense in this context
                             try {
                                 Desktop.getDesktop().mail(new URI(finalUrl));
                             } catch (Exception ex) {
@@ -2993,24 +3028,44 @@ public class GeminiTextPane extends JTextPane {
                             }
 
                         } else if (currentMode == CERT_MODE) {
-
-                            int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
-                            boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
-                            f().toggleCert(id, !active, finalUrl);
+                            // navigator for split view makes no sense in this context
+                            if (isNavigator || navFlip) { // USER WILL HAVE TO USE POPUP MENU TO ACTIVATE/DEACTIVATE
+                                clicked(cr1[0]);
+                                f().splitView(cr1[0].url, null, navSplitType, currentMode == FEED_MODE && directive[0].endsWith("#") ? cr1[0].label : null, navFlip, null);
+                            } else {
+                                int id = Integer.parseInt(directive[0].substring(0, directive[0].indexOf(",")));
+                                boolean active = directive[0].substring(directive[0].indexOf(",") + 1).equals("true");
+                                f().toggleCert(id, !active, finalUrl);
+                            }
                         } else if (currentMode == STYLE_MODE) {
+                            // navigator for split view makes no sense in this context
                             Util.showStyleEditor(f(), Integer.parseInt(directive[0]));
                         } else if (gopherHtml) {
+
                             String resolvedURI = Util.resolveURI(getURI(), finalUrl);
                             f().addClickedLink(finalUrl);
                             char gType = getGopherType(finalUrl);
+                            if (isNavigator || navFlip) {
 
-                            f().fetchURL(resolvedURI.replace("/h/", "/" + gType + "/"), false, null);
+                                clicked(cr1[0]);
+                                f().splitView(resolvedURI.replace("/h/", "/" + gType + "/"), null, navSplitType, currentMode == FEED_MODE && directive[0].endsWith("#") ? cr1[0].label : null, navFlip, null);
+
+                            } else {
+                                f().fetchURL(resolvedURI.replace("/h/", "/" + gType + "/"), false, null);
+                            }
                         } else {
-                            f().addClickedLink(finalUrl);
-                            f().fetchURL(finalUrl, false, currentMode == FEED_MODE && directive[0].endsWith("#") ? label : null);
-                        }
 
+                            if (isNavigator || navFlip) {
+                                clicked(cr1[0]);
+                                f().splitView(cr1[0].url, null, navSplitType, currentMode == FEED_MODE && directive[0].endsWith("#") ? cr1[0].label : null, navFlip, null);
+                            } else {
+                                f().addClickedLink(finalUrl);
+                                f().fetchURL(finalUrl, false, currentMode == FEED_MODE && directive[0].endsWith("#") ? label : null);
+                            }
+                        }
+                        isClicked = false;
                     }, origLabel, true);
+            ClickableRange cr = cr1[0];
             if (Alhena.dataUrl && dataUrl) { // auto view
                 dataURL(url, true);
                 cr.imageIndex = cr.end;

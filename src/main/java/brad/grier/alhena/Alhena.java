@@ -868,7 +868,7 @@ public class Alhena {
                             JsonArray lpages = splitView.getJsonArray("lpages");
                             JsonObject lpage = lpages.getJsonObject(0);
                             gf[0].newTab(lpage.getString("url"), lpage, null, null);
-                            gf[0].splitView(null, splitView, splitView.getInteger("orientation"), null, false);
+                            gf[0].splitView(null, splitView, splitView.getInteger("orientation"), null, false, null);
 
                         }
                         tabCount[0]++;
@@ -898,7 +898,7 @@ public class Alhena {
                                     if (showing == null) {
                                         showing = true;
                                     }
-                                    gf[0].showCustomPage(url, false, pageInfo, true, showing, page.getLong("fetchtime"), page.getInteger("pos"));
+                                    gf[0].showCustomPage(url, false, pageInfo, true, showing, page.getLong("fetchtime"), page.getInteger("pos"), page.getBoolean("nav", false));
                                 } else {
                                     gf[0].fetchURL(url, null, false, page, null);
                                 }
@@ -915,7 +915,7 @@ public class Alhena {
                                         if (showing == null) {
                                             showing = true;
                                         }
-                                        gf[0].showCustomPage(url, false, pageInfo, true, showing, page.getLong("fetchtime"), page.getInteger("pos"));
+                                        gf[0].showCustomPage(url, false, pageInfo, true, showing, page.getLong("fetchtime"), page.getInteger("pos"), page.getBoolean("nav", false));
                                     } else {
                                         gf[0].fetchURL(url, null, false, page, null);
                                     }
