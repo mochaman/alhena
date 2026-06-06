@@ -752,7 +752,7 @@ public class GeminiTextPane extends JTextPane {
                                     popupMenu.add(newTabItem);
 
                                     if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) instanceof SplitPanel sp) {
-                                        String actionTxt = isNavigator ? "Open Here" : I18n.t("openOppItem");
+                                        String actionTxt = isNavigator ? I18n.t("openHereItem") : I18n.t("openOppItem");
                                         JMenuItem oppositeItem = new JMenuItem(actionTxt);
 
                                         oppositeItem.addActionListener(ev -> {
