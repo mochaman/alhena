@@ -1751,9 +1751,27 @@ public final class GeminiFrame extends JFrame {
         emphasisItem.addItemListener(ae -> {
 
             Alhena.emphasisMarkers = !Alhena.emphasisMarkers;
+            if (Alhena.emphasisMarkers && Alhena.emphasisWarning) {
 
-            DB.insertPref("emphasismarkers", String.valueOf(Alhena.emphasisMarkers));
-            Alhena.updateFrames(false, false, false, false);
+                JCheckBox selCB = new JCheckBox(I18n.t("emphasisDoNotShowCB"));
+                Object[] comps = {I18n.t("emphasisWarningTxt"), " ", selCB};
+                Object r = Util.confirmDialog(GeminiFrame.this, I18n.t("emphasisWarningDialog"), comps, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                if (r instanceof Integer result) {
+                    if (result == JOptionPane.YES_OPTION) {
+                        DB.insertPref("emphasismarkers", String.valueOf(Alhena.emphasisMarkers));
+                        Alhena.updateFrames(false, false, false, false);
+                        if(selCB.isSelected()){
+                            // will not be shown again
+                            Alhena.emphasisWarning = false;
+                            DB.insertPref("emphasiswarning", String.valueOf(false));
+                        }
+
+                    }
+                }
+            } else {
+                DB.insertPref("emphasismarkers", String.valueOf(Alhena.emphasisMarkers));
+                Alhena.updateFrames(false, false, false, false);
+            }
 
         });
 

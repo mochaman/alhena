@@ -247,6 +247,7 @@ public class Alhena {
     public static boolean isHaiku;
     public static boolean systemFileChooser;
     public static boolean emphasisMarkers;
+    public static boolean emphasisWarning;
     public static boolean restoreTabs;
     public static String alhenaHome;
     public static long pageCache;
@@ -701,6 +702,7 @@ public class Alhena {
         useBrowser = map.getOrDefault("browser", "false").equals("true");
         systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
         emphasisMarkers = map.getOrDefault("emphasismarkers", "false").equals("true");
+        emphasisWarning = map.getOrDefault("emphasiswarning", "true").equals("true");
         restoreTabs = map.getOrDefault("restoretabs", "false").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         socksProxy = map.getOrDefault("socksproxy", null);

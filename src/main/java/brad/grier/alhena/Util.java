@@ -215,7 +215,7 @@ public class Util {
         Util.fancyInfoDialog(c, I18n.t("aboutLabel"), comps);
     }
 
-    public static Object confirmDialog(Component parent, String title, String question, int optionType, Object[] options, Integer msgType) {
+    public static Object confirmDialog(Component parent, String title, Object question, int optionType, Object[] options, Integer msgType) {
 
         //JOptionPane optionPane = new JOptionPane(question, JOptionPane.QUESTION_MESSAGE, msgType);
         JOptionPane optionPane = new JOptionPane(
