@@ -1329,12 +1329,19 @@ public class Alhena {
             if (prevURI != null) {
                 // handle relative links in zip, gpub file
                 String zUrl = prevURI.toString();
-                var matcher = Pattern.compile("\\.(zip|gpub)/").matcher(zUrl);
-                if (matcher.find() && !url.contains(".zip/") && !url.contains(".gpub/") && url.matches("^file:/+.*")) {
-                    url = (zUrl.substring(0, matcher.end() - 1) + url.replaceFirst("^file:/+", "/"))
-                            .replaceAll("/+$", "");
+                var matcher = Pattern.compile("\\.(zip|gpub|mbook)/").matcher(zUrl);
+
+                if (matcher.find() && !url.contains(".zip/") && !url.contains(".gpub/") && !url.contains(".mbook/") && url.matches("^file:/+.*")) {
+                    String archivePath = zUrl.substring(0, matcher.end() - 1);
+                    String candidatePath = url.replaceFirst("^file:/+", "/");
+
+                    if (!candidatePath.equals(archivePath) && !archivePath.endsWith(candidatePath)
+                            && !new java.io.File(candidatePath).exists()) {
+                        url = (archivePath + candidatePath).replaceAll("/+$", "");
+                    }
                 }
             }
+
             if (url.endsWith(".zip") || url.endsWith(".gpub") || url.endsWith(".mbook")) {
                 zipToGemtext(url, p, cPage);
             } else if (url.contains(".zip/")) {
