@@ -1856,6 +1856,12 @@ public class GeminiTextPane extends JTextPane {
         }
     }
 
+    // Explore this as a way to force wrapping for even urls with clear line breaks, etc
+    // @Override
+    // public boolean getScrollableTracksViewportWidth(){
+    //     return true;
+    // }
+
     public void scrollToText(JTextPane embeddedTextPane, int foundPosition) {
         try {
 
@@ -2971,7 +2977,10 @@ public class GeminiTextPane extends JTextPane {
             String origLabel;
             String lbl;
             if (label.isEmpty()) {
-                origLabel = url.replace("/", "/\u200B");
+                // commented out code is workaround to allow long urls to be line wrapped at /
+                // this breaks find in page for / in urls - examine getScrollableTracksViewportWidth() as an alternative
+                //origLabel = url.replace("/", "/\u200B");
+                origLabel = url;
                 lbl = sfx + origLabel;
             } else {
                 origLabel = label;
