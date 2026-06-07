@@ -556,12 +556,18 @@ public class DB {
         return fl;
     }
 
-    public static int loadHistory(GeminiTextPane textPane) throws SQLException {
+    public static int loadHistory(GeminiTextPane textPane, boolean allHistory) throws SQLException {
 
         int count = 0;
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
+            String sql = allHistory ? "SELECT URL, TIME_STAMP FROM HISTORY ORDER BY TIME_STAMP DESC" : """
+            SELECT URL, MAX(TIME_STAMP) AS TIME_STAMP 
+                FROM HISTORY 
+                GROUP BY URL 
+                ORDER BY MAX(TIME_STAMP) DESC
+            """;
 
-            try (ResultSet rs = st.executeQuery("SELECT URL, TIME_STAMP FROM HISTORY ORDER BY TIME_STAMP DESC")) {
+            try (ResultSet rs = st.executeQuery(sql)) {
                 String saveDate = null;
 
                 Locale systemLocale = Locale.getDefault(); // Get system locale

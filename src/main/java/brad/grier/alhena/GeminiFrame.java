@@ -3266,6 +3266,9 @@ public final class GeminiFrame extends JFrame {
 
     }
 
+    // lazy way to signal whether to load full history
+    public volatile boolean allHistory;
+
     private void loadHistory(GeminiTextPane textPane, Page p, InfoPageInfo info, boolean showing, int pos) {
         setBusy(true, p);
 
@@ -3287,7 +3290,7 @@ public final class GeminiFrame extends JFrame {
             Thread.ofVirtual().start(() -> {
                 int[] count = {0};
                 try {
-                    count[0] = DB.loadHistory(textPane);
+                    count[0] = DB.loadHistory(textPane, allHistory);
 
                 } catch (SQLException ex) {
                     ex.printStackTrace();
@@ -3304,6 +3307,7 @@ public final class GeminiFrame extends JFrame {
 
                         p.loading();
                     }
+                    allHistory = false;
                     textPane.end();
                 });
 

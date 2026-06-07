@@ -1230,6 +1230,12 @@ public class GeminiTextPane extends JTextPane {
                         }
                         case HISTORY_MODE -> {
                             popupMenu.add(new JSeparator());
+                            JMenuItem showItem = new JMenuItem(I18n.t("showAllHistoryItem"));
+                            showItem.addActionListener(al -> {
+                                f().allHistory = true;
+                                f().showCustomPage(GeminiFrame.HISTORY_LABEL, null);
+                            });
+                            popupMenu.add(showItem);
                             JMenuItem whereItem = new JMenuItem(I18n.t("forgetLinksPopup"));
                             whereItem.addActionListener(al -> {
                                 f().deleteFromHistory(null, true);
@@ -1861,7 +1867,7 @@ public class GeminiTextPane extends JTextPane {
     // public boolean getScrollableTracksViewportWidth(){
     //     return true;
     // }
-    
+
     public void scrollToText(JTextPane embeddedTextPane, int foundPosition) {
         try {
 
