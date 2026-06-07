@@ -1766,6 +1766,9 @@ public final class GeminiFrame extends JFrame {
                             DB.insertPref("emphasiswarning", String.valueOf(false));
                         }
 
+                    }else{
+                        emphasisItem.setSelected(false);
+                        Alhena.emphasisMarkers = false;
                     }
                 }
             } else {
