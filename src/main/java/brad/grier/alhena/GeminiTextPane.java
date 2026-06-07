@@ -1844,12 +1844,12 @@ public class GeminiTextPane extends JTextPane {
         });
     }
 
-    public static void highlight(JTextPane textPane, String pattern) throws BadLocationException {
+    public void highlight(JTextPane textPane, String pattern) throws BadLocationException {
         Highlighter highlighter = textPane.getHighlighter();
         highlighter.removeAllHighlights();
         String text = textPane.getDocument().getText(0, textPane.getDocument().getLength()).toLowerCase();
         int pos = 0;
-        Color painterColor = UIManager.getBoolean("laf.dark") ? new Color(180, 80, 0) : Color.YELLOW;
+        Color painterColor = isDark ? new Color(180, 80, 0) : Color.YELLOW;
         while ((pos = text.indexOf(pattern, pos)) >= 0) {
             highlighter.addHighlight(pos, pos + pattern.length(),
                     new DefaultHighlighter.DefaultHighlightPainter(painterColor));
@@ -1861,6 +1861,7 @@ public class GeminiTextPane extends JTextPane {
     // public boolean getScrollableTracksViewportWidth(){
     //     return true;
     // }
+    
     public void scrollToText(JTextPane embeddedTextPane, int foundPosition) {
         try {
 
