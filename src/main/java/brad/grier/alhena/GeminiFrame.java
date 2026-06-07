@@ -2730,6 +2730,7 @@ public final class GeminiFrame extends JFrame {
         } else {
             p.textPane.cachePage(page.getString("content"), page.getBoolean("pfmode"), url, page.getInteger("pos"));
         }
+        updateComboBox(url);
 
     }
 
