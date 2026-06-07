@@ -1769,6 +1769,7 @@ public class GeminiTextPane extends JTextPane {
                 requestFocusInWindow();
                 setCaretPosition(finalPos);
                 moveCaretPosition(finalPos + word.length());
+                setCaretPosition(getCaretPosition());
                 lastSearchIdx = finalPos + word.length();
 
                 // scroll to the position
@@ -1799,7 +1800,7 @@ public class GeminiTextPane extends JTextPane {
                             textPane.requestFocusInWindow();
                             textPane.setCaretPosition(foundIndex);
                             textPane.moveCaretPosition(foundIndex + word.length());
-
+                            textPane.setCaretPosition(getCaretPosition());
                             scrollToText(textPane, foundIndex);
 
                             found = true;
@@ -1846,22 +1847,20 @@ public class GeminiTextPane extends JTextPane {
     public static void highlight(JTextPane textPane, String pattern) throws BadLocationException {
         Highlighter highlighter = textPane.getHighlighter();
         highlighter.removeAllHighlights();
-
         String text = textPane.getDocument().getText(0, textPane.getDocument().getLength()).toLowerCase();
         int pos = 0;
+        Color painterColor = UIManager.getBoolean("laf.dark") ? new Color(180, 80, 0) : Color.YELLOW;
         while ((pos = text.indexOf(pattern, pos)) >= 0) {
             highlighter.addHighlight(pos, pos + pattern.length(),
-                    new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW));
+                    new DefaultHighlighter.DefaultHighlightPainter(painterColor));
             pos += pattern.length();
         }
     }
-
     // Explore this as a way to force wrapping for even urls with clear line breaks, etc
     // @Override
     // public boolean getScrollableTracksViewportWidth(){
     //     return true;
     // }
-
     public void scrollToText(JTextPane embeddedTextPane, int foundPosition) {
         try {
 
