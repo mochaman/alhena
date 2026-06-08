@@ -2357,8 +2357,6 @@ public class GeminiTextPane extends JTextPane {
         return contentWidth;
     }
 
-    private boolean isStreamingLine = false;
-
     public void addPage(String geminiDoc) {
         if (pageBuffer == null) {
             return;
@@ -2375,43 +2373,8 @@ public class GeminiTextPane extends JTextPane {
             bufferedLine = geminiDoc.substring(lastNl + 1);
 
             completeLines.lines().forEach(line -> processLine(line));
-
-            isStreamingLine = false; // a newline happened, reset streaming state
         } else {
             bufferedLine = geminiDoc;
-        }
-
-        // process the remaining partial line
-        if (!bufferedLine.isEmpty()) {
-            if (preformattedMode) {
-                // always buffer inside a ``` block, wait for \n
-            } else if (isStreamingLine) {
-                // we are already mid-line - stream the incoming chunk directly
-
-                char first = bufferedLine.charAt(0);
-                String style = (first == '>') ? ">" : "text";
-
-                // if we are already streaming, we only want to push the newly arrived text
-                addStyledText(geminiDoc, style, null, null, false);
-                bufferedLine = null;
-            } else {
-                // first time evaluating this line
-                int[] classification = classifyPartialLine(bufferedLine);
-                switch (classification[0]) {
-                    case AMBIGUOUS, BUFFER -> {
-                        /* keep in bufferedLine, wait for more data */ }
-                    case STREAM -> {
-                        char first = bufferedLine.charAt(0);
-                        String style = (first == '>') ? ">" : "text";
-
-                        addStyledText(bufferedLine, style, null, null, false);
-                        bufferedLine = null;
-                        isStreamingLine = true; // lock into streaming mode until the next \n
-                    }
-                }
-            }
-        } else {
-            bufferedLine = null;
         }
 
         if (page != null) {
