@@ -4478,7 +4478,8 @@ public class Alhena {
     }
 
     private static void zipToGemtext(String url, Page p, Page cPage) {
-        String filePart = URLDecoder.decode(url.replaceFirst("^file:/+", "/"), StandardCharsets.UTF_8);
+        String fp = URLDecoder.decode(url.replaceFirst("^file:/+", "/"), StandardCharsets.UTF_8);
+        String filePart = SystemInfo.isWindows ? fp.substring(1) : fp;
         p.frame().setBusy(true, cPage);
         vertx.executeBlocking(promise -> {
             try {
@@ -4525,6 +4526,7 @@ public class Alhena {
 
     private static void handleZip(String url, Page p, Page cPage, PublicationType pType) {
         String filePart = URLDecoder.decode(url.replaceFirst("^file:/+", "/"), StandardCharsets.UTF_8);
+        filePart = SystemInfo.isWindows ? filePart.substring(1) : filePart;
         String zipFilePath, innerFile;
 
         switch (pType) {
