@@ -2517,7 +2517,17 @@ public class GeminiTextPane extends JTextPane {
         try {
             URI u = getURI();
             if (u != null) {
-                dbStyle = DB.getStyle(docURL, u.getAuthority(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
+                String url = u.toString();
+
+                if (url.startsWith("file:/")) {
+                    Matcher m = Pattern.compile(".*\\.(zip|gpub|mbook)").matcher(url);
+                    if (m.find()) {
+                        dbStyle = DB.getStyle(docURL, m.group(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
+                    }
+                }
+                if(dbStyle == null){
+                    dbStyle = DB.getStyle(docURL, u.getAuthority(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
+                }
             }
         } catch (SQLException ex) {
             ex.printStackTrace();

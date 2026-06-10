@@ -254,6 +254,7 @@ public class TextEditor extends JPanel implements ActionListener {
         try {
             URI u = URI.create(url);
             if (u != null) {
+                // do not need to do zip, gpub, mpub authority adjustment here because those files are not editable
                 dbStyle = DB.getStyle(url, u.getAuthority(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
             }
         } catch (SQLException ex) {

@@ -1371,10 +1371,21 @@ public class Util {
                 }
                 case 2 -> {
                     scope = "DOMAIN";
-                    scopeValue = gf.visiblePage().textPane.getURI().getAuthority();
-                    if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
-                        scope = "URL";
-                        scopeValue = gf.visiblePage().textPane.getDocURLString();
+                    String url = gf.visiblePage().textPane.getDocURLString();
+
+                    if (url.startsWith("file:/")) {
+                        Matcher m = Pattern.compile(".*\\.(zip|gpub|mbook)").matcher(url);
+                        if (m.find()) {
+                            scopeValue = m.group();
+                        }
+                    }
+
+                    if(scopeValue == null){
+                        scopeValue = gf.visiblePage().textPane.getURI().getAuthority();
+                        if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
+                            scope = "URL";
+                            scopeValue = gf.visiblePage().textPane.getDocURLString();
+                        }
                     }
 
                 }
@@ -1548,7 +1559,7 @@ public class Util {
         return sb.toString();
     }
 
-    public static boolean translucencySupported(JFrame parent){
+    public static boolean translucencySupported(JFrame parent) {
         GraphicsDevice gd = parent.getGraphicsConfiguration().getDevice();
         boolean translucencySupported = gd.isWindowTranslucencySupported(
                 GraphicsDevice.WindowTranslucency.TRANSLUCENT
