@@ -1380,7 +1380,7 @@ public class Util {
                         }
                     }
 
-                    if(scopeValue == null){
+                    if (scopeValue == null) {
                         scopeValue = gf.visiblePage().textPane.getURI().getAuthority();
                         if (scopeValue == null) { // when saving style for certs or bookmarks but user picked domain
                             scope = "URL";
@@ -1421,7 +1421,38 @@ public class Util {
                     pt.fromJson(apJo); // merge in changes
                     apt.fromJson(apJo);
                 } else {
-                    pt = GeminiTextPane.getDefaultTheme(ui);
+                    //pt = GeminiTextPane.getDefaultTheme(ui);
+                    Integer styleId = gf.visiblePage().textPane.styleId;
+                    if (styleId != null) {
+                        PageStyleInfo psi = DB.getStyle(styleId);
+                        String jstring1 = psi.style();
+
+                        if (jstring1 != null) {
+
+                            boolean isDark = UIManager.getBoolean("laf.dark");
+                            if (psi.theme().startsWith("com")) {
+                                ui = loadDefaults(psi.theme());
+                                pt = GeminiTextPane.getDefaultTheme(ui);
+                            } else if (psi.theme().equals("LIGHT") && isDark) {
+                                ui = loadDefaults("com.formdev.flatlaf.FlatLightLaf");
+                                pt = GeminiTextPane.getDefaultTheme(ui);
+                            } else if (psi.theme().equals("DARK") && !isDark) {
+                                ui = loadDefaults("com.formdev.flatlaf.FlatDarkLaf");
+                                pt = GeminiTextPane.getDefaultTheme(ui);
+
+                            } else {
+                                ui = UIManager.getDefaults();
+                                pt = GeminiTextPane.getDefaultTheme(ui);
+                            }
+                            JsonObject apJo = new JsonObject(jstring1);
+                            pt.fromJson(apJo); // merge in changes
+                            apt.fromJson(apJo);
+                        } else {
+                            pt = GeminiTextPane.getDefaultTheme(UIManager.getDefaults());
+                        }
+                    } else {
+                        pt = GeminiTextPane.getDefaultTheme(ui);
+                    }
                 }
                 StylePicker sp = new StylePicker(pt, apt, ui, styleName);
                 Object[] cmps = {sp};
