@@ -1706,19 +1706,22 @@ public class GeminiTextPane extends JTextPane {
     public Float savedContentWidth;
 
     public String getFirstHeading() {
+        if(cacheContent != null){
+            return createHeading(cacheContent);
+        }
         return firstHeading;
     }
 
-    private String createHeading() {
-        if (pageBuffer == null) {
+    private String createHeading(StringBuilder content) {
+        if (content == null) {
             return null;
         }
 
-        int hIdx = pageBuffer.indexOf("#");
+        int hIdx = content.indexOf("#");
         if (hIdx != -1) {
-            int idx = pageBuffer.indexOf("\n");
+            int idx = content.indexOf("\n");
             if (idx > hIdx) {
-                String heading = pageBuffer.substring(hIdx, pageBuffer.indexOf("\n", hIdx));
+                String heading = content.substring(hIdx, content.indexOf("\n", hIdx));
                 // remove emojis using a regular expression
                 heading = heading.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "");
 
@@ -1920,7 +1923,7 @@ public class GeminiTextPane extends JTextPane {
             //processLine(" \n");
         }
         JTabbedPane tabbedPane = page.frame().tabbedPane;
-        firstHeading = createHeading();
+        firstHeading = createHeading(pageBuffer);
         String title = f().createTitle(docURL, firstHeading);
         if (title != null) {
             if (tabbedPane != null) {
@@ -4004,11 +4007,14 @@ public class GeminiTextPane extends JTextPane {
         cacheUrl = url;
         docURL = url;
         cacheScrollPos = scrollPos;
-        String title = docURL;
-        if (f().tabbedPane != null) {
-            int i = f().tabbedPane.getSelectedIndex();
-            f().tabbedPane.setTitleAt(i, title);
-        }
+        //String title = docURL;
+        // String title = f().createTitle(docURL, page.textPane.getHeadingFromCache());
+        
+        // if (f().tabbedPane != null) {
+        //     int i = f().tabbedPane.getSelectedIndex();
+        //     f().tabbedPane.setTitleAt(i, title);
+        //     System.out.println("caching title: idx: " + i + " " + title);
+        // }
         page.ignoreStart();
         if (page != null) {
             page.loading();
