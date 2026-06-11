@@ -4184,12 +4184,13 @@ public final class GeminiFrame extends JFrame {
                             GeminiFrame.this.validate();
                             ignoreTabChange = false;
                         } else {
-
                             // prevent tab change from firing if closing a tab which is not the currently selected tab
-                            // rollback for now
-                            // if (tabIndex != tabbedPane.getSelectedIndex()) {
-                            //     ignoreTabChange = true;
-                            // }
+                            if (tabIndex != tabbedPane.getSelectedIndex()) {
+                                ignoreTabChange = true;
+                                if(tabIndex < prevIndex){
+                                    prevIndex--;
+                                }
+                            }
 
                             Component c = tabbedPane.getComponentAt(tabIndex);
                             if (c instanceof Page wp) {
