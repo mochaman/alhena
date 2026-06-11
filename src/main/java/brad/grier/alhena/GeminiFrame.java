@@ -4186,9 +4186,10 @@ public final class GeminiFrame extends JFrame {
                         } else {
 
                             // prevent tab change from firing if closing a tab which is not the currently selected tab
-                            if (tabIndex != tabbedPane.getSelectedIndex()) {
-                                ignoreTabChange = true;
-                            }
+                            // rollback for now
+                            // if (tabIndex != tabbedPane.getSelectedIndex()) {
+                            //     ignoreTabChange = true;
+                            // }
 
                             Component c = tabbedPane.getComponentAt(tabIndex);
                             if (c instanceof Page wp) {
@@ -4342,8 +4343,10 @@ public final class GeminiFrame extends JFrame {
             if (restoreComponent instanceof Page page) {
                 tabbedPane.addTab("  ", page);
                 tabbedPane.setSelectedComponent(page);
-                SwingUtilities.updateComponentTreeUI(page);
-                updatePageTheme(page);
+                if (page.getThemeId() != currentThemeId) {
+                    SwingUtilities.updateComponentTreeUI(page);
+                    updatePageTheme(page);
+                }
 
             } else {
                 SplitPanel sp = (SplitPanel) restoreComponent;
