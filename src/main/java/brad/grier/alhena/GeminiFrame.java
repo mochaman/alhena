@@ -4271,9 +4271,9 @@ public final class GeminiFrame extends JFrame {
                         } else {
 
                             SwingUtilities.updateComponentTreeUI(page);
-
                         }
                     }
+                    page.textPane.requestFocusInWindow();
                 }
                 page.textPane.resetLGP();
                 if (!page.busy() && getGlassPane().isShowing()) {
