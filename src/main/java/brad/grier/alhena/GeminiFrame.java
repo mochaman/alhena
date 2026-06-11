@@ -1760,13 +1760,13 @@ public final class GeminiFrame extends JFrame {
                     if (result == JOptionPane.YES_OPTION) {
                         DB.insertPref("emphasismarkers", String.valueOf(Alhena.emphasisMarkers));
                         Alhena.updateFrames(false, false, false, false);
-                        if(selCB.isSelected()){
+                        if (selCB.isSelected()) {
                             // will not be shown again
                             Alhena.emphasisWarning = false;
                             DB.insertPref("emphasiswarning", String.valueOf(false));
                         }
 
-                    }else{
+                    } else {
                         emphasisItem.setSelected(false);
                         Alhena.emphasisMarkers = false;
                     }
@@ -4088,6 +4088,7 @@ public final class GeminiFrame extends JFrame {
     }
 
     private int prevIndex;
+    private boolean ignoreTabChange;
 
     public void newTab(String url, JsonObject savedPage, Component restoreComponent, String scrollToHeading) {
         addClickedLink(url);
@@ -4118,11 +4119,8 @@ public final class GeminiFrame extends JFrame {
                         if (tabbedPane.getTabCount() == 2) {
                             prevIndex = 0;
                             GeminiFrame.this.invalidate();
-                            ChangeListener[] cl = tabbedPane.getChangeListeners();
-                            for (ChangeListener ev : cl) {
-                                tabbedPane.removeChangeListener(ev);
-                                break; // REMOVES tabbedPanes changeListener but not the L&F changeListener - CAN ORDER CHANGE?
-                            }
+                            ignoreTabChange = true;
+
                             Component csi = tabbedPane.getComponentAt(tabIndex); // tab we're closing
                             if (csi instanceof Page wp) {
                                 Component wc = wp.getWrappedComp();
@@ -4184,7 +4182,14 @@ public final class GeminiFrame extends JFrame {
                                 forwardButton.setEnabled(false);
                             }
                             GeminiFrame.this.validate();
+                            ignoreTabChange = false;
                         } else {
+
+                            // prevent tab change from firing if closing a tab which is not the currently selected tab
+                            if (tabIndex != tabbedPane.getSelectedIndex()) {
+                                ignoreTabChange = true;
+                            }
+
                             Component c = tabbedPane.getComponentAt(tabIndex);
                             if (c instanceof Page wp) {
                                 Component wc = wp.getWrappedComp();
@@ -4206,6 +4211,7 @@ public final class GeminiFrame extends JFrame {
                             }
                             closeTabItem.setEnabled(true);
                             tabbedPane.remove(tabIndex);
+                            ignoreTabChange = false;
                         }
                     });
 
@@ -4222,6 +4228,10 @@ public final class GeminiFrame extends JFrame {
             selectComboBoxItem("");
 
             tabbedPane.addChangeListener(ce -> {
+
+                if (ignoreTabChange) {
+                    return;
+                }
 
                 Page page = visiblePage();
 
