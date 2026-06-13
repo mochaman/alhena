@@ -211,7 +211,7 @@ public class Util {
         EventQueue.invokeLater(() -> ptp.setCaretPosition(0));
         ptp.addText(colorize(GeminiFrame.getArt()));
 
-        Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "© 2025 Brad Grier", ptp};
+        Object[] comps = {Alhena.PROG_NAME + " " + Alhena.VERSION, "© 2026 Brad Grier", ptp};
         Util.fancyInfoDialog(c, I18n.t("aboutLabel"), comps);
     }
 
