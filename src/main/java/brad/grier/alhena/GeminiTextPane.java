@@ -57,6 +57,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -66,6 +67,7 @@ import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.ImageIcon;
 import javax.swing.InputMap;
+import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -589,12 +591,48 @@ public class GeminiTextPane extends JTextPane {
             }
         }
         );
+
         addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
                 resetLGP();
             }
+
+            @Override
+            public void focusGained(FocusEvent e) {
+                JTabbedPane tPane = f().tabbedPane;
+                if (tPane == null) {
+                    return;
+                }
+
+                Component oppComponent = e.getOppositeComponent();
+
+                if (oppComponent == null) {
+                    tPane.requestFocusInWindow();
+                    return;
+                }
+
+                if (oppComponent instanceof JTabbedPane || oppComponent instanceof JButton) {
+                    int tabIndex = tPane.getSelectedIndex();
+
+                    if (!initializedTabs.contains(tabIndex) || f().mouseSelectedTab) {
+                        f().mouseSelectedTab = false;
+                        // automatic first-visit - bounce back
+                        initializedTabs.add(tabIndex);
+                        tPane.requestFocusInWindow();
+                    }
+                }
+            }
         });
+    }
+    // only access on EDT
+    public static Set<Integer> initializedTabs = new HashSet<>();
+
+    public static void removeAndShift(int removed) {
+        initializedTabs = initializedTabs.stream()
+                .filter(v -> v != removed)
+                .map(v -> v > removed ? v - 1 : v)
+                .collect(Collectors.toCollection(TreeSet::new));
     }
 
     @Override
@@ -1706,7 +1744,7 @@ public class GeminiTextPane extends JTextPane {
     public Float savedContentWidth;
 
     public String getFirstHeading() {
-        if(cacheContent != null){
+        if (cacheContent != null) {
             return createHeading(cacheContent);
         }
         return firstHeading;
@@ -1717,24 +1755,37 @@ public class GeminiTextPane extends JTextPane {
             return null;
         }
 
-        int hIdx = content.indexOf("#");
-        if (hIdx != -1) {
-            int idx = content.indexOf("\n");
-            if (idx > hIdx) {
-                String heading = content.substring(hIdx, content.indexOf("\n", hIdx));
-                // remove emojis using a regular expression
-                heading = heading.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "");
+        int start = 0;
+        int len = content.length();
 
-                if (heading.startsWith("###")) {
-                    return heading.substring(3).trim();
-                } else if (heading.startsWith("##")) {
-                    return heading.substring(2).trim();
-                } else {
-                    return heading.substring(1).trim();
-                }
+        // skip leading blank/whitespace-only lines
+        while (start < len) {
+            int newlineIdx = content.indexOf("\n", start);
+            int lineEnd = (newlineIdx == -1) ? len : newlineIdx;
+            String line = content.substring(start, lineEnd).trim();
+            if (!line.isEmpty()) {
+                break;
             }
+            start = lineEnd + 1;
         }
-        return null;
+
+        if (start >= len || content.charAt(start) != '#') {
+            return null;
+        }
+
+        int newlineIdx = content.indexOf("\n", start);
+        int firstLineEnd = (newlineIdx == -1) ? len : newlineIdx;
+
+        String firstLine = content.substring(start, firstLineEnd);
+        firstLine = firstLine.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "");
+
+        if (firstLine.startsWith("###")) {
+            return firstLine.substring(3).trim();
+        } else if (firstLine.startsWith("##")) {
+            return firstLine.substring(2).trim();
+        } else {
+            return firstLine.substring(1).trim();
+        }
     }
 
     public void resetSearch() {
@@ -2528,7 +2579,7 @@ public class GeminiTextPane extends JTextPane {
                         dbStyle = DB.getStyle(docURL, m.group(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
                     }
                 }
-                if(dbStyle == null){
+                if (dbStyle == null) {
                     dbStyle = DB.getStyle(docURL, u.getAuthority(), u.getScheme(), dbTheme, !UIManager.getBoolean("laf.dark"));
                 }
             }
@@ -4007,14 +4058,12 @@ public class GeminiTextPane extends JTextPane {
         cacheUrl = url;
         docURL = url;
         cacheScrollPos = scrollPos;
-        //String title = docURL;
-        // String title = f().createTitle(docURL, page.textPane.getHeadingFromCache());
-        
-        // if (f().tabbedPane != null) {
-        //     int i = f().tabbedPane.getSelectedIndex();
-        //     f().tabbedPane.setTitleAt(i, title);
-        //     System.out.println("caching title: idx: " + i + " " + title);
-        // }
+        String title = docURL;
+
+        if (f().tabbedPane != null) {
+            int i = f().tabbedPane.getSelectedIndex();
+            f().tabbedPane.setTitleAt(i, title);
+        }
         page.ignoreStart();
         if (page != null) {
             page.loading();
@@ -4023,7 +4072,7 @@ public class GeminiTextPane extends JTextPane {
 
     public void restoreFromCache() {
         if (cacheContent != null) {
-            // System.out.println("restoring: " + docURL);
+            firstHeading = createHeading(cacheContent);
             if (cacheContent.length() > 2048) {
                 //end(cacheContent, cacheMode, cacheUrl, false);
                 f().streamChunks(cacheContent, 100, cacheUrl, cacheMode, page, cacheScrollPos);

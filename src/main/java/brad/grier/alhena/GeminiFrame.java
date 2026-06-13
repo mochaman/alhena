@@ -25,6 +25,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelListener;
@@ -2031,6 +2032,41 @@ public final class GeminiFrame extends JFrame {
                     JTabbedPane.RIGHT;
             };
             tabbedPane.setTabPlacement(newPos);
+            addTabForwardingListener(newPos);
+        }
+    }
+
+    private void addTabForwardingListener(int newPos) {
+        mouseSelectedTab = false;
+        GeminiTextPane.initializedTabs.clear();
+        if (newPos == JTabbedPane.TOP || newPos == JTabbedPane.BOTTOM) {
+            if (tabForwardingListener == null) {
+                tabForwardingListener = new KeyAdapter() {
+                    @Override
+                    public void keyPressed(KeyEvent e) {
+                        int key = e.getKeyCode();
+
+                        if (e.isMetaDown() || e.isControlDown() || e.isAltDown()) {
+                            return;
+                        }
+
+                        if (key == KeyEvent.VK_LEFT || key == KeyEvent.VK_RIGHT) {
+                            return;
+                        }
+                        GeminiTextPane textPane = visiblePage().textPane;
+                        if (textPane != null) {
+                            textPane.dispatchEvent(e);
+                            e.consume();
+                        }
+                    }
+                };
+                tabbedPane.addKeyListener(tabForwardingListener);
+            }
+        } else {
+            if (tabForwardingListener != null) {
+                tabbedPane.removeKeyListener(tabForwardingListener);
+                tabForwardingListener = null;
+            }
         }
     }
 
@@ -4089,6 +4125,8 @@ public final class GeminiFrame extends JFrame {
 
     private int prevIndex;
     private boolean ignoreTabChange;
+    private KeyListener tabForwardingListener = null;
+    public boolean mouseSelectedTab;
 
     public void newTab(String url, JsonObject savedPage, Component restoreComponent, String scrollToHeading) {
         addClickedLink(url);
@@ -4109,6 +4147,14 @@ public final class GeminiFrame extends JFrame {
                     JTabbedPane.RIGHT;
             };
             tabbedPane.setTabPlacement(newPos);
+            addTabForwardingListener(newPos);
+            tabbedPane.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    tabbedPane.requestFocusInWindow();
+                    mouseSelectedTab = true;
+                }
+            });
 
             tabbedPane.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSABLE, true);
 
@@ -4147,6 +4193,7 @@ public final class GeminiFrame extends JFrame {
                             tabbedPane.remove(c);
                             GeminiFrame.this.remove(tabbedPane);
                             tabbedPane = null;
+                            GeminiTextPane.initializedTabs.clear();
                             if (c instanceof Page wp) {
                                 Component wc = wp.getWrappedComp();
                                 if (wc != null) {
@@ -4184,10 +4231,11 @@ public final class GeminiFrame extends JFrame {
                             GeminiFrame.this.validate();
                             ignoreTabChange = false;
                         } else {
+                            GeminiTextPane.removeAndShift(tabIndex);
                             // prevent tab change from firing if closing a tab which is not the currently selected tab
                             if (tabIndex != tabbedPane.getSelectedIndex()) {
                                 ignoreTabChange = true;
-                                if(tabIndex < prevIndex){
+                                if (tabIndex < prevIndex) {
                                     prevIndex--;
                                 }
                             }
@@ -4273,7 +4321,7 @@ public final class GeminiFrame extends JFrame {
                             SwingUtilities.updateComponentTreeUI(page);
                         }
                     }
-                    page.textPane.requestFocusInWindow();
+                    //page.textPane.requestFocusInWindow();
                 }
                 page.textPane.resetLGP();
                 if (!page.busy() && getGlassPane().isShowing()) {
