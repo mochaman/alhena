@@ -1745,13 +1745,13 @@ public class GeminiTextPane extends JTextPane {
 
     public String getFirstHeading() {
         if (cacheContent != null) {
-            return createHeading(cacheContent);
+            return createHeading(cacheContent, cacheMode);
         }
         return firstHeading;
     }
 
-    private String createHeading(StringBuilder content) {
-        if (content == null) {
+    private String createHeading(StringBuilder content, boolean ptm) {
+        if (content == null || page.isGopher() || page.isNex() || ptm) {
             return null;
         }
 
@@ -1968,13 +1968,17 @@ public class GeminiTextPane extends JTextPane {
             try {
                 doc.remove(i, 1);
             } catch (BadLocationException ex) {
-                System.getLogger(GeminiTextPane.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                // ignore
+            }
+
+            if (totalWidth == 0) {
+                EventQueue.invokeLater(() -> resized());
             }
 
             //processLine(" \n");
         }
         JTabbedPane tabbedPane = page.frame().tabbedPane;
-        firstHeading = createHeading(pageBuffer);
+        firstHeading = createHeading(pageBuffer, plainTextMode);
         String title = f().createTitle(docURL, firstHeading);
         if (title != null) {
             if (tabbedPane != null) {
@@ -4072,9 +4076,8 @@ public class GeminiTextPane extends JTextPane {
 
     public void restoreFromCache() {
         if (cacheContent != null) {
-            firstHeading = createHeading(cacheContent);
+            firstHeading = createHeading(cacheContent, cacheMode);
             if (cacheContent.length() > 2048) {
-                //end(cacheContent, cacheMode, cacheUrl, false);
                 f().streamChunks(cacheContent, 100, cacheUrl, cacheMode, page, cacheScrollPos);
             } else {
                 end(cacheContent.toString(), cacheMode, cacheUrl, false);
