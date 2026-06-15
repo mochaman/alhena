@@ -193,6 +193,7 @@ public class GeminiTextPane extends JTextPane {
     private boolean cacheMode;
     private String cacheUrl;
     private int cacheScrollPos;
+    public boolean showingAllFeeds;
 
     private GeminiFrame f() {
         GeminiFrame frame = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
@@ -1324,6 +1325,7 @@ public class GeminiTextPane extends JTextPane {
                             allFeedsItem.addActionListener(al -> {
                                 f().loadAllFeeds = true;
                                 f().refresh(false);
+                                showingAllFeeds = true;
 
                             });
                             popupMenu.add(allFeedsItem);

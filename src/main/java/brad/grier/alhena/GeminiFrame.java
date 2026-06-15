@@ -2818,7 +2818,9 @@ public final class GeminiFrame extends JFrame {
                     int sp = visiblePage.getScrollPos();
                     loadFeeds(visiblePage.textPane, visiblePage, null, true, -1);
                     // use invokeLater because loadFeed uses background thread that posts to EDT
-                    if (reposition) {
+                    if (visiblePage.textPane.showingAllFeeds) {
+                        visiblePage.textPane.showingAllFeeds = false;
+                    } else if (reposition) {
                         EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
                     }
                 }
@@ -3446,7 +3448,6 @@ public final class GeminiFrame extends JFrame {
                 int[] count = {0};
                 try {
                     count[0] = DB.loadSubscriptions(textPane);
-                    loadAllFeeds = false;
 
                 } catch (SQLException ex) {
                     ex.printStackTrace();
