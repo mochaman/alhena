@@ -1794,13 +1794,17 @@ public class GeminiTextPane extends JTextPane {
         lastSearchDoc = -1;
     }
 
+    private void clearHighlights() {
+        getHighlighter().removeAllHighlights();
+        for (PreformattedTextPane p : ptpList) {
+            Highlighter highlighter = p.getHighlighter();
+            highlighter.removeAllHighlights();
+        }
+    }
+
     public void find(String word, boolean recurse) {
         if (word.isBlank()) {
-            getHighlighter().removeAllHighlights();
-            for (PreformattedTextPane p : ptpList) {
-                Highlighter highlighter = p.getHighlighter();
-                highlighter.removeAllHighlights();
-            }
+            clearHighlights();
             return;
         }
         boolean found = false;
@@ -2016,6 +2020,7 @@ public class GeminiTextPane extends JTextPane {
         page.doneLoading();
 
         page.setBusy(false);
+        clearHighlights();
         requestFocusInWindow();
     }
 
@@ -4066,7 +4071,7 @@ public class GeminiTextPane extends JTextPane {
         if (f().tabbedPane != null) {
             int i = f().tabbedPane.getSelectedIndex();
             String fh = createHeading(cacheContent, cacheMode);
-            String title  = f().createTitle(cacheUrl, fh);
+            String title = f().createTitle(cacheUrl, fh);
             f().tabbedPane.setTitleAt(i, f().abbrev(title));
         }
         page.ignoreStart();
