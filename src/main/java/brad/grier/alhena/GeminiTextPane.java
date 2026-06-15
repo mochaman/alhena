@@ -1991,7 +1991,7 @@ public class GeminiTextPane extends JTextPane {
                             f().setTitle(title);
                         } else {
 
-                            tabbedPane.setTitleAt(i, title);
+                            tabbedPane.setTitleAt(i, f().abbrev(title));
                         }
                         break;
                     }
@@ -4062,11 +4062,12 @@ public class GeminiTextPane extends JTextPane {
         cacheUrl = url;
         docURL = url;
         cacheScrollPos = scrollPos;
-        String title = docURL;
 
         if (f().tabbedPane != null) {
             int i = f().tabbedPane.getSelectedIndex();
-            f().tabbedPane.setTitleAt(i, title);
+            String fh = createHeading(cacheContent, cacheMode);
+            String title  = f().createTitle(cacheUrl, fh);
+            f().tabbedPane.setTitleAt(i, f().abbrev(title));
         }
         page.ignoreStart();
         if (page != null) {
