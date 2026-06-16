@@ -462,6 +462,15 @@ public class Page extends JPanel {
         }
     }
 
+    // needed when jumping directly to a page via tab history
+    public void setArrayIndex(int idx){
+        if(isRoot()){
+            arrayIndex = idx;
+        }else{
+            rootPage.arrayIndex = idx;
+        }
+    }
+
     public int decAndGetArrayIndex() {
         if (isRoot()) {
             // this is a root page, use it's index

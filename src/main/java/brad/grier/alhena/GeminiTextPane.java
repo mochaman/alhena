@@ -71,6 +71,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -87,6 +88,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIDefaults;
 import javax.swing.UIManager;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
@@ -1196,8 +1199,27 @@ public class GeminiTextPane extends JTextPane {
 
                         popupMenu.add(socksItem);
                     }
+                    JMenu histMenu = new JMenu(I18n.t("navHistoryMenu"));
 
+                    histMenu.addMenuListener(new MenuListener() {
+                        @Override
+                        public void menuSelected(MenuEvent e) {
+                            histMenu.removeAll(); // clear stale items
+                            f().populateHistNav(histMenu);
+                        }
+
+                        @Override
+                        public void menuDeselected(MenuEvent e) {
+                        }
+
+                        @Override
+                        public void menuCanceled(MenuEvent e) {
+                        }
+                    });
+
+                    popupMenu.add(histMenu);
                     popupMenu.add(new JSeparator());
+
                     JMenuItem saveItem = new JMenuItem(I18n.t("savePageItem"));
                     saveItem.setEnabled(!imageOnly);
                     saveItem.addActionListener(al -> {

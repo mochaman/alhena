@@ -101,7 +101,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -1358,6 +1357,52 @@ public final class GeminiFrame extends JFrame {
             forwardButton.setEnabled(hasNext(rootPage));
 
         }
+
+        validate();
+        repaint();
+        visiblePage().textPane.requestFocusInWindow();
+    }
+
+    public void goTo(Page tp, int pIdx) {
+        Page vPage = visiblePage();
+        Page rootPage = getRootPage(tp);
+        rootPage.setArrayIndex(pIdx);
+
+        String cUrl = tp.textPane.getDocURLString();
+        updateComboBox(cUrl);
+        if (tabbedPane == null || tabbedPane.getSelectedComponent() instanceof SplitPanel) {
+            invalidate();
+            Container c = vPage.getParent();
+            if (c instanceof SplitPanel splitPanel) {
+                tp.setVisible(true);
+                splitPanel.replacePage(vPage, tp);
+                if (Alhena.stateLoaded) {
+                    tp.textPane.restoreFromCache();
+                }
+            } else {
+                remove(vPage);
+                tp.setVisible(true);
+                add(tp, BorderLayout.CENTER);
+                if (Alhena.stateLoaded) {
+                    tp.textPane.restoreFromCache();
+                }
+
+            }
+            revalidate();
+
+        } else {
+            int idx = tabbedPane.getSelectedIndex();
+            tabbedPane.setComponentAt(idx, tp);
+            if (Alhena.stateLoaded) {
+                tp.textPane.restoreFromCache();
+            }
+
+        }
+        updatePageTheme(tp);
+
+        setTitle(createTitle(cUrl, tp.textPane.getFirstHeading()));
+        backButton.setEnabled(hasPrev(rootPage));
+        forwardButton.setEnabled(hasNext(rootPage));
 
         validate();
         repaint();
@@ -4438,6 +4483,27 @@ public final class GeminiFrame extends JFrame {
             page.setThemeId(currentThemeId);
             refreshFromCache(page);
         }
+    }
+
+    public void populateHistNav(JMenu menu) {
+
+        Page vp = visiblePage();
+        ArrayList<Page> pList = pageHistoryMap.get(getRootPage(vp));
+
+        int idx = 0;
+        ButtonGroup bg = new ButtonGroup();
+        for (Page tp : pList) {
+            String frameTitle = createTitle(tp.textPane.getDocURLString(), tp.textPane.getFirstHeading());
+            JRadioButtonMenuItem mi1 = new JRadioButtonMenuItem(frameTitle, tp == vp);
+            int i = idx;
+            mi1.addActionListener(al -> {
+                goTo(tp, i);
+            });
+            bg.add(mi1);
+            menu.add(mi1);
+            idx++;
+        }
+
     }
 
     public void refreshNav(Page page) {
