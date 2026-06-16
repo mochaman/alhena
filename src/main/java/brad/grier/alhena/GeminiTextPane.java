@@ -473,14 +473,11 @@ public class GeminiTextPane extends JTextPane {
         addMouseListener(new MouseAdapter() {
 
             @Override
-            public void mouseClicked(MouseEvent e) {
-
-                showPopup(e);
-
-            }
-
-            @Override
             public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showPopup(e);
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = e.getLocationOnScreen();
                     pressTime = System.currentTimeMillis();
@@ -489,6 +486,10 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showPopup(e);
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = null;
                     pressTime = 0;
@@ -3320,6 +3321,11 @@ public class GeminiTextPane extends JTextPane {
         pfTextPane.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+
+                if (e.isPopupTrigger()) {
+                    GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = e.getLocationOnScreen();
                     pressTime = System.currentTimeMillis();
@@ -3330,6 +3336,10 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = null;
                     pressTime = 0;
@@ -3347,11 +3357,6 @@ public class GeminiTextPane extends JTextPane {
             @Override
             public void mouseExited(MouseEvent e) {
                 f().setTmpStatus(" ");
-            }
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
             }
         });
 
