@@ -87,6 +87,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
@@ -848,13 +849,8 @@ public final class GeminiFrame extends JFrame {
             if (tabbedPane == null) {
                 Alhena.exit(GeminiFrame.this);
             } else {
-                Object callbackObj = tabbedPane.getClientProperty("JTabbedPane.tabCloseCallback");
-                if (callbackObj instanceof IntConsumer callback) {
-                    int selectedIndex = tabbedPane.getSelectedIndex();
-
-                    callback.accept(selectedIndex);
-
-                }
+                int selectedIndex = tabbedPane.getSelectedIndex();
+                closeTab(selectedIndex);
             }
         }));
         fileMenu.add(new JSeparator());
@@ -1141,6 +1137,14 @@ public final class GeminiFrame extends JFrame {
             } else {
                 setPageInfo(savedPage, r.get());
             }
+        }
+    }
+
+    public void closeTab(int idx) {
+        Object callbackObj = tabbedPane.getClientProperty("JTabbedPane.tabCloseCallback");
+        if (callbackObj instanceof IntConsumer callback) {
+            callback.accept(idx);
+
         }
     }
 
@@ -4194,11 +4198,66 @@ public final class GeminiFrame extends JFrame {
             };
             tabbedPane.setTabPlacement(newPos);
             addTabForwardingListener(newPos);
+
             tabbedPane.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
                     tabbedPane.requestFocusInWindow();
                     mouseSelectedTab = true;
+                    maybeShowPopup(e);
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    maybeShowPopup(e);
+                }
+
+                private void maybeShowPopup(MouseEvent e) {
+                    if (!e.isPopupTrigger()) {
+                        return;
+                    }
+                    mouseSelectedTab = false;
+                    
+                    int tabIndex = tabbedPane.indexAtLocation(e.getX(), e.getY());
+                    if (tabIndex < 0) {
+                        return; // clicked on empty area, not a tab
+                    }
+                    JPopupMenu popup = new JPopupMenu();
+                    JMenuItem closeTabItem = new JMenuItem("Close Tab");
+                    closeTabItem.addActionListener(al -> {
+                        closeTab(tabIndex);
+                    });
+                    popup.add(closeTabItem);
+
+                    JMenuItem closeTabsItem = new JMenuItem("Close Other Tabs");
+                    closeTabsItem.addActionListener(al -> {
+                        for (int i = tabbedPane.getTabCount() - 1; i >= 0; i--) {
+                            if (i != tabIndex) {
+                                closeTab(i);
+                            }
+                        }
+                    });
+                    popup.add(closeTabsItem);
+
+                    JMenuItem closeLeftItem = new JMenuItem("Close Tabs To Left");
+                    closeLeftItem.addActionListener(al -> {
+                        for (int i = tabIndex - 1; i >= 0; i--) {
+                            closeTab(i);
+                        }
+
+                    });
+                    popup.add(closeLeftItem);
+
+                    JMenuItem closeRightItem = new JMenuItem("Close Tabs To Right");
+                    closeRightItem.addActionListener(al -> {
+                        for (int i = tabbedPane.getTabCount() - 1; i > tabIndex; i--) {
+                            closeTab(i);
+                        }
+
+                    });
+                    popup.add(closeRightItem);
+
+                    popup.show(e.getComponent(), e.getX(), e.getY());
                 }
             });
 
@@ -4238,6 +4297,7 @@ public final class GeminiFrame extends JFrame {
                             Component c = tabbedPane.getSelectedComponent();
                             tabbedPane.remove(c);
                             GeminiFrame.this.remove(tabbedPane);
+                            tabForwardingListener = null;
                             tabbedPane = null;
                             GeminiTextPane.initializedTabs.clear();
                             if (c instanceof Page wp) {
