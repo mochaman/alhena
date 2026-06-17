@@ -471,18 +471,20 @@ public class GeminiTextPane extends JTextPane {
         });
 
         addMouseListener(new MouseAdapter() {
+
             @Override
             public void mouseClicked(MouseEvent e) {
-
-                showPopup(e);
-
+                if (!SwingUtilities.isRightMouseButton(e) && !(e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
+                    handleClick(e);
+                }
             }
+
             @Override
             public void mousePressed(MouseEvent e) {
-                // if (e.isPopupTrigger()) {
-                //     showPopup(e);
-                //     return;
-                // }
+                if (e.isPopupTrigger()) {
+                    showContextMenu(e);
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = e.getLocationOnScreen();
                     pressTime = System.currentTimeMillis();
@@ -491,10 +493,10 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                // if (e.isPopupTrigger()) {
-                //     showPopup(e);
-                //     return;
-                // }
+                if (e.isPopupTrigger()) {
+                    showContextMenu(e);
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = null;
                     pressTime = 0;
@@ -745,651 +747,670 @@ public class GeminiTextPane extends JTextPane {
         sheetImage = sheet;
     }
 
-    private void showPopup(MouseEvent e) {
+    private void showContextMenu(MouseEvent e) {
         requestFocusInWindow();
-        if (doc != null) {
-            int pos = viewToModel2D(e.getPoint());
-            boolean linkClicked = false;
-            if (pos >= 0 && pos < doc.getLength()) {
-                for (ClickableRange range : clickableRegions) {
-                    if (pos >= range.start && pos < range.end) {
-                        Rectangle rect = getCharacterBounds(range.start, range.end);
-                        if (rect != null && rect.contains(e.getPoint())) {
-                            linkClicked = true;
-                            if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
-
-                                JPopupMenu popupMenu = new JPopupMenu();
-
-                                String selectedText = getSelectedText();
-                                if (selectedText != null && !selectedText.isEmpty()) {
-                                    JMenuItem copyItem = new JMenuItem(I18n.t("copyPopupItem"));
-
-                                    copyItem.addActionListener(ev -> {
-                                        copyText(selectedText);
-                                    });
-                                    popupMenu.add(copyItem);
-
-                                }
-                                String resolvedURI;
-                                if (range.url.startsWith("alhena:")) {
-                                    resolvedURI = range.url;
-                                } else {
-                                    resolvedURI = Util.resolveURI(getURI(), range.url);
-                                }
-                                if (currentMode != STYLE_MODE) {
-                                    JMenuItem copyLinkItem = new JMenuItem(I18n.t("copyLinkPopupItem"));
-
-                                    copyLinkItem.addActionListener(ev -> {
-                                        copyText(resolvedURI);
-                                    });
-                                    popupMenu.add(copyLinkItem);
-
-                                    popupMenu.add(new JSeparator());
-                                    JMenuItem newTabItem = new JMenuItem(I18n.t("newTabPopupItem"));
-
-                                    newTabItem.addActionListener(ev -> {
-                                        // open in new tab with gemtext converter regardless
-                                        boolean saveSetting = Alhena.useBrowser;
-                                        Alhena.useBrowser = false;
-                                        clicked(range);
-
-                                        f().newTab(range.url, null, null, range.label == null ? null : range.label);
-                                        Alhena.useBrowser = saveSetting;
-                                    });
-                                    newTabItem.setEnabled(!range.dataUrl);
-                                    popupMenu.add(newTabItem);
-
-                                    if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) instanceof SplitPanel sp) {
-                                        String actionTxt = isNavigator ? I18n.t("openHereItem") : I18n.t("openOppItem");
-                                        JMenuItem oppositeItem = new JMenuItem(actionTxt);
-
-                                        oppositeItem.addActionListener(ev -> {
-
-                                            if (!isNavigator) {
-
-                                                clicked(range);
-                                                navFlip = true;
-                                                range.action.run();
-                                                navFlip = false;
-
-                                            } else {
-                                                // temporarily deactive nav 
-                                                isNavigator = false;
-                                                navFlip = false;
-                                                clicked(range);
-                                                range.action.run();
-                                                isNavigator = true;
-                                            }
-                                        });
-                                        oppositeItem.setEnabled(!range.dataUrl);
-                                        popupMenu.add(oppositeItem);
-                                    } else {
-                                        JMenuItem splitRightItem = new JMenuItem(I18n.t("splitRightItem"));
-                                        JMenuItem splitLeftItem = new JMenuItem(I18n.t("splitLeftItem"));
-
-                                        splitLeftItem.addActionListener(ev -> {
-                                            // open in new tab with gemtext converter regardless
-                                            isNavigator = true;
-                                            splitPage(range, JSplitPane.HORIZONTAL_SPLIT, true);
-
-                                        });
-                                        splitLeftItem.setEnabled(!range.dataUrl);
-                                        popupMenu.add(splitLeftItem);
-
-                                        splitRightItem.addActionListener(ev -> {
-                                            // open in new tab with gemtext converter regardless
-                                            isNavigator = true;
-
-                                            splitPage(range, JSplitPane.HORIZONTAL_SPLIT, false);
-
-                                        });
-                                        splitRightItem.setEnabled(!range.dataUrl);
-                                        popupMenu.add(splitRightItem);
-
-                                        JMenuItem splitTopItem = new JMenuItem(I18n.t("splitTopItem"));
-
-                                        splitTopItem.addActionListener(ev -> {
-                                            isNavigator = true;
-                                            splitPage(range, JSplitPane.VERTICAL_SPLIT, true);
-
-                                        });
-                                        splitTopItem.setEnabled(!range.dataUrl);
-                                        popupMenu.add(splitTopItem);
-
-                                        JMenuItem splitBottomItem = new JMenuItem(I18n.t("splitBottomItem"));
-
-                                        splitBottomItem.addActionListener(ev -> {
-                                            isNavigator = true;
-                                            splitPage(range, JSplitPane.VERTICAL_SPLIT, false);
-
-                                        });
-                                        splitBottomItem.setEnabled(!range.dataUrl);
-                                        popupMenu.add(splitBottomItem);
-                                    }
-
-                                    JMenuItem menuItem2 = new JMenuItem(I18n.t("newWindowPopupItem"));
-                                    menuItem2.setEnabled(!range.dataUrl);
-                                    menuItem2.addActionListener(ev -> {
-                                        // open in new tab with gemtext converter regardless
-                                        boolean saveSetting = Alhena.useBrowser;
-                                        Alhena.useBrowser = false;
-                                        Alhena.newWindow(range.url, docURL, null, null, range.label);
-                                        Alhena.useBrowser = saveSetting;
-
-                                    });
-                                    popupMenu.add(menuItem2);
-
-                                }
-
-                                if (Alhena.browsingSupported && resolvedURI.toLowerCase().startsWith("http")) {
-                                    JMenuItem httpMenuItem = new JMenuItem(I18n.t("browserPopupItem"));
-                                    httpMenuItem.addActionListener(al -> {
-
-                                        boolean saveBrowser = Alhena.useBrowser;
-                                        Alhena.useBrowser = true;
-                                        f().fetchURL(resolvedURI, false, null);
-                                        Alhena.useBrowser = saveBrowser;
-                                    });
-
-                                    popupMenu.add(httpMenuItem);
-                                }
-
-                                switch (currentMode) {
-                                    case CERT_MODE -> {
-                                        popupMenu.add(new JSeparator());
-                                        String[] tokens = range.directive.split(",", 3);
-                                        int id = Integer.parseInt(tokens[0]);
-                                        boolean active = tokens[1].equals("true");
-                                        JMenuItem exportItem = new JMenuItem(I18n.t("exportPopupItem"));
-                                        exportItem.addActionListener(al -> {
-                                            f().exportCert(id, GeminiTextPane.this);
-                                        });
-                                        popupMenu.add(exportItem);
-                                        String command = active ? I18n.t("deactivatePopupItem") : I18n.t("activatePopupItem");
-                                        JMenuItem actionItem = new JMenuItem(command);
-                                        actionItem.addActionListener(al -> {
-
-                                            f().toggleCert(id, !active, range.url);
-                                        });
-                                        popupMenu.add(actionItem);
-                                        JMenuItem delItem = new JMenuItem(I18n.t("deletePopupItem"));
-                                        delItem.addActionListener(al -> {
-                                            f().deleteCert(id);
-                                        });
-                                        popupMenu.add(delItem);
-                                    }
-                                    case STYLE_MODE -> {
-                                        JMenuItem jsonItem = new JMenuItem(I18n.t("styleJsonItem"));
-                                        jsonItem.addActionListener(al -> {
-                                            try {
-                                                PageStyleInfo psi = DB.getStyle(Integer.parseInt(range.directive));
-                                                JTextArea jta = new JTextArea(new JsonObject(psi.style()).encodePrettily());
-                                                jta.setEditable(false);
-                                                jta.setLineWrap(true);
-                                                jta.setWrapStyleWord(true);
-
-                                                JScrollPane jsp = new JScrollPane(jta);
-                                                jsp.setPreferredSize(new Dimension(700, 400));
-                                                Object[] comps = {jsp};
-                                                Util.fancyInfoDialog(f(), I18n.t("styleJsonDialog"), comps);
-
-                                            } catch (SQLException ex) {
-                                                ex.printStackTrace();
-                                            }
-
-                                        });
-                                        popupMenu.add(jsonItem);
-                                        JMenuItem delStyleItem = new JMenuItem(I18n.t("deleteStyleItem"));
-                                        delStyleItem.addActionListener(al -> {
-                                            Object r = Util.confirmDialog(f(), I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
-                                            if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
-                                                try {
-                                                    DB.deleteStyle(Integer.parseInt(range.directive));
-                                                } catch (SQLException ex) {
-                                                    ex.printStackTrace();
-                                                }
-                                                Alhena.updateFrames(false, false, false, false);
-                                                EventQueue.invokeLater(() -> f().refresh());
-                                            }
-
-                                        });
-                                        popupMenu.add(delStyleItem);
-
-                                    }
-                                    case HISTORY_MODE -> {
-                                        popupMenu.add(new JSeparator());
-                                        JMenuItem forgetItem = new JMenuItem(I18n.t("forgetLinkItem"));
-                                        forgetItem.addActionListener(al -> {
-                                            f().deleteFromHistory(range.url, false);
-                                        });
-
-                                        popupMenu.add(forgetItem);
-                                        JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryItem"));
-
-                                        clearItem.addActionListener(al -> {
-                                            f().clearHistory();
-                                        });
-                                        popupMenu.add(clearItem);
-                                    }
-                                    case BOOKMARK_MODE -> {
-                                        popupMenu.add(new JSeparator());
-                                        JMenuItem editItem = new JMenuItem(I18n.t("editBookmarkItem"));
-                                        editItem.addActionListener(ev -> {
-                                            f().updateBookmark(f(), range.directive);
-
-                                        });
-                                        popupMenu.add(editItem);
-                                        JMenuItem deleteItem = new JMenuItem(I18n.t("deleteBookmarkItem"));
-                                        deleteItem.addActionListener(ev -> {
-                                            f().deleteBookmark(f(), range.directive);
-
-                                        });
-                                        popupMenu.add(deleteItem);
-                                    }
-                                    case FEED_MODE -> {
-                                        popupMenu.add(new JSeparator());
-                                        JMenuItem openFeedItem = new JMenuItem(I18n.t("openFeedItem"));
-                                        openFeedItem.addActionListener(ev -> {
-                                            String token = range.directive.split(",", 4)[1];
-                                            String pUrl = DB.getFeedUrl(Integer.parseInt(token));
-                                            if (pUrl != null) {
-                                                f().fetchURL(pUrl, false, null);
-                                            }
-
-                                        });
-                                        popupMenu.add(openFeedItem);
-                                        boolean read = Integer.parseInt(range.directive.split(",", 4)[2]) == 1;
-                                        JMenuItem markReadItem = new JMenuItem(read ? I18n.t("markAsUnreadItem") : I18n.t("markAsReadItem"));
-                                        markReadItem.addActionListener(ev -> {
-                                            DB.markUrlRead(range.url, !read);
-                                            f().refresh(false);
-
-                                        });
-                                        popupMenu.add(markReadItem);
-
-                                        JMenuItem markBelowItem = new JMenuItem(I18n.t("markBelowItem"));
-                                        markBelowItem.addActionListener(ev -> {
-                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
-
-                                            DB.markOlderFeedRecords(id);
-                                            f().refresh(false);
-
-                                        });
-                                        popupMenu.add(markBelowItem);
-
-                                        JMenuItem unsubscribeItem = new JMenuItem(I18n.t("unsubscribeItem"));
-                                        unsubscribeItem.addActionListener(ev -> {
-                                            int id = Integer.parseInt(range.directive.split(",", 3)[1]);
-                                            String s = DB.getFeedUrl(id);
-                                            Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubMsg") + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
-                                            if (r instanceof Integer result) {
-                                                if (result == JOptionPane.YES_OPTION) {
-
-                                                    DB.unsubscribe(id);
-                                                    f().refresh(false);
-                                                }
-                                            }
-
-                                        });
-                                        popupMenu.add(unsubscribeItem);
-
-                                    }
-                                    case SUBSCRIPTION_MODE -> {
-                                        popupMenu.add(new JSeparator());
-
-                                        JMenuItem editItem = new JMenuItem(I18n.t("editLabelItem"));
-                                        editItem.addActionListener(ev -> {
-                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
-                                            String origLabel = DB.getSubLabel(id);
-                                            String label = Util.inputDialog(f(), I18n.t("editLabelDialog"), I18n.t("editLabelMsg"),
-                                                    false, origLabel, null);
-                                            if (label != null && !label.isBlank()) {
-                                                label = Util.truncate(label, 125);
-
-                                                DB.updateSubLabel(id, label);
-                                                f().refresh();
-                                            }
-                                        });
-                                        popupMenu.add(editItem);
-
-                                        JMenuItem markReadItem = new JMenuItem(I18n.t("markAsReadItem"));
-                                        markReadItem.addActionListener(ev -> {
-                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
-
-                                            DB.markSubscriptionRead(id, true);
-
-                                            Util.infoDialog(f(), I18n.t("infoLabel"), I18n.t("subMarkedReadMsg") + range.url);
-
-                                        });
-                                        popupMenu.add(markReadItem);
-
-                                        JMenuItem markUnreadItem = new JMenuItem(I18n.t("markAsUnreadItem"));
-                                        markUnreadItem.addActionListener(ev -> {
-                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
-                                            DB.markSubscriptionRead(id, false);
-
-                                            Util.infoDialog(f(), I18n.t("infoLabel"), I18n.t("subMarkedUnreadMsg") + range.url);
-
-                                        });
-                                        popupMenu.add(markUnreadItem);
-
-                                        JMenuItem unsubscribeItem = new JMenuItem(I18n.t("unsubscribeItem"));
-                                        unsubscribeItem.addActionListener(ev -> {
-                                            int id = Integer.parseInt(range.directive.split(",", 2)[0]);
-                                            String s = DB.getFeedUrl(id);
-                                            Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubMsg") + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
-                                            if (r instanceof Integer result) {
-                                                if (result == JOptionPane.YES_OPTION) {
-
-                                                    DB.unsubscribe(id);
-                                                    f().refresh();
-                                                }
-                                            }
-
-                                        });
-                                        popupMenu.add(unsubscribeItem);
-                                    }
-                                    default -> {
-                                    }
-                                }
-
-                                popupMenu.show(e.getComponent(), e.getX(), e.getY());
-
-                            } else if (SwingUtilities.isLeftMouseButton(e)) {
-
-                                if (range.imageIndex != -1) {
-                                    removeItemAtIndex(range);
-                                    range.imageIndex = -1;
-
-                                } else {
-                                    lastClicked = range;
-                                    if (!range.dataUrl) {
-                                        clicked(range);
-                                        range.action.run();
-                                    } else {
-                                        dataURL(range.url, false);
-
-                                    }
-
-                                }
-                            } else if (SwingUtilities.isMiddleMouseButton(e)) {
-                                if (!range.dataUrl) {
-                                    boolean saveSetting = Alhena.useBrowser;
-                                    Alhena.useBrowser = false;
-                                    f().newTab(range.url, null, null, range.label);
-                                    Alhena.useBrowser = saveSetting;
-                                }
-                            }
-                            break;
-                        }
+        if (doc == null) {
+            return;
+        }
+
+        int pos = viewToModel2D(e.getPoint());
+        if (pos >= 0 && pos < doc.getLength()) {
+            for (ClickableRange range : clickableRegions) {
+                if (pos >= range.start && pos < range.end) {
+                    Rectangle rect = getCharacterBounds(range.start, range.end);
+                    if (rect != null && rect.contains(e.getPoint())) {
+                        showLinkContextMenu(e, range);
+                        return;
                     }
                 }
             }
-            if (!linkClicked) {
-                if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
+        }
+        showPageContextMenu(e);
+    }
 
-                    JPopupMenu popupMenu = new JPopupMenu();
+    private void showLinkContextMenu(MouseEvent e, ClickableRange range) {
 
-                    String selectedText = getSelectedText();
-                    if (selectedText != null && !selectedText.isEmpty()) {
-                        JMenuItem copyItem = new JMenuItem(I18n.t("copyPopupItem"));
+        JPopupMenu popupMenu = new JPopupMenu();
 
-                        copyItem.addActionListener(ev -> {
-                            copyText(selectedText);
-                        });
-                        popupMenu.add(copyItem);
-                        popupMenu.add(new JSeparator());
+        String selectedText = getSelectedText();
+        if (selectedText != null && !selectedText.isEmpty()) {
+            JMenuItem copyItem = new JMenuItem(I18n.t("copyPopupItem"));
 
+            copyItem.addActionListener(ev -> {
+                copyText(selectedText);
+            });
+            popupMenu.add(copyItem);
+
+        }
+        String resolvedURI;
+        if (range.url.startsWith("alhena:")) {
+            resolvedURI = range.url;
+        } else {
+            resolvedURI = Util.resolveURI(getURI(), range.url);
+        }
+        if (currentMode != STYLE_MODE) {
+            JMenuItem copyLinkItem = new JMenuItem(I18n.t("copyLinkPopupItem"));
+
+            copyLinkItem.addActionListener(ev -> {
+                copyText(resolvedURI);
+            });
+            popupMenu.add(copyLinkItem);
+
+            popupMenu.add(new JSeparator());
+            JMenuItem newTabItem = new JMenuItem(I18n.t("newTabPopupItem"));
+
+            newTabItem.addActionListener(ev -> {
+                // open in new tab with gemtext converter regardless
+                boolean saveSetting = Alhena.useBrowser;
+                Alhena.useBrowser = false;
+                clicked(range);
+
+                f().newTab(range.url, null, null, range.label == null ? null : range.label);
+                Alhena.useBrowser = saveSetting;
+            });
+            newTabItem.setEnabled(!range.dataUrl);
+            popupMenu.add(newTabItem);
+
+            if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) instanceof SplitPanel sp) {
+                String actionTxt = isNavigator ? I18n.t("openHereItem") : I18n.t("openOppItem");
+                JMenuItem oppositeItem = new JMenuItem(actionTxt);
+
+                oppositeItem.addActionListener(ev -> {
+
+                    if (!isNavigator) {
+
+                        clicked(range);
+                        navFlip = true;
+                        range.action.run();
+                        navFlip = false;
+
+                    } else {
+                        // temporarily deactive nav 
+                        isNavigator = false;
+                        navFlip = false;
+                        clicked(range);
+                        range.action.run();
+                        isNavigator = true;
+                    }
+                });
+                oppositeItem.setEnabled(!range.dataUrl);
+                popupMenu.add(oppositeItem);
+            } else {
+                JMenuItem splitRightItem = new JMenuItem(I18n.t("splitRightItem"));
+                JMenuItem splitLeftItem = new JMenuItem(I18n.t("splitLeftItem"));
+
+                splitLeftItem.addActionListener(ev -> {
+                    // open in new tab with gemtext converter regardless
+                    isNavigator = true;
+                    splitPage(range, JSplitPane.HORIZONTAL_SPLIT, true);
+
+                });
+                splitLeftItem.setEnabled(!range.dataUrl);
+                popupMenu.add(splitLeftItem);
+
+                splitRightItem.addActionListener(ev -> {
+                    // open in new tab with gemtext converter regardless
+                    isNavigator = true;
+
+                    splitPage(range, JSplitPane.HORIZONTAL_SPLIT, false);
+
+                });
+                splitRightItem.setEnabled(!range.dataUrl);
+                popupMenu.add(splitRightItem);
+
+                JMenuItem splitTopItem = new JMenuItem(I18n.t("splitTopItem"));
+
+                splitTopItem.addActionListener(ev -> {
+                    isNavigator = true;
+                    splitPage(range, JSplitPane.VERTICAL_SPLIT, true);
+
+                });
+                splitTopItem.setEnabled(!range.dataUrl);
+                popupMenu.add(splitTopItem);
+
+                JMenuItem splitBottomItem = new JMenuItem(I18n.t("splitBottomItem"));
+
+                splitBottomItem.addActionListener(ev -> {
+                    isNavigator = true;
+                    splitPage(range, JSplitPane.VERTICAL_SPLIT, false);
+
+                });
+                splitBottomItem.setEnabled(!range.dataUrl);
+                popupMenu.add(splitBottomItem);
+            }
+
+            JMenuItem menuItem2 = new JMenuItem(I18n.t("newWindowPopupItem"));
+            menuItem2.setEnabled(!range.dataUrl);
+            menuItem2.addActionListener(ev -> {
+                // open in new tab with gemtext converter regardless
+                boolean saveSetting = Alhena.useBrowser;
+                Alhena.useBrowser = false;
+                Alhena.newWindow(range.url, docURL, null, null, range.label);
+                Alhena.useBrowser = saveSetting;
+
+            });
+            popupMenu.add(menuItem2);
+
+        }
+
+        if (Alhena.browsingSupported && resolvedURI.toLowerCase().startsWith("http")) {
+            JMenuItem httpMenuItem = new JMenuItem(I18n.t("browserPopupItem"));
+            httpMenuItem.addActionListener(al -> {
+
+                boolean saveBrowser = Alhena.useBrowser;
+                Alhena.useBrowser = true;
+                f().fetchURL(resolvedURI, false, null);
+                Alhena.useBrowser = saveBrowser;
+            });
+
+            popupMenu.add(httpMenuItem);
+        }
+
+        switch (currentMode) {
+            case CERT_MODE -> {
+                popupMenu.add(new JSeparator());
+                String[] tokens = range.directive.split(",", 3);
+                int id = Integer.parseInt(tokens[0]);
+                boolean active = tokens[1].equals("true");
+                JMenuItem exportItem = new JMenuItem(I18n.t("exportPopupItem"));
+                exportItem.addActionListener(al -> {
+                    f().exportCert(id, GeminiTextPane.this);
+                });
+                popupMenu.add(exportItem);
+                String command = active ? I18n.t("deactivatePopupItem") : I18n.t("activatePopupItem");
+                JMenuItem actionItem = new JMenuItem(command);
+                actionItem.addActionListener(al -> {
+
+                    f().toggleCert(id, !active, range.url);
+                });
+                popupMenu.add(actionItem);
+                JMenuItem delItem = new JMenuItem(I18n.t("deletePopupItem"));
+                delItem.addActionListener(al -> {
+                    f().deleteCert(id);
+                });
+                popupMenu.add(delItem);
+            }
+            case STYLE_MODE -> {
+                JMenuItem jsonItem = new JMenuItem(I18n.t("styleJsonItem"));
+                jsonItem.addActionListener(al -> {
+                    try {
+                        PageStyleInfo psi = DB.getStyle(Integer.parseInt(range.directive));
+                        JTextArea jta = new JTextArea(new JsonObject(psi.style()).encodePrettily());
+                        jta.setEditable(false);
+                        jta.setLineWrap(true);
+                        jta.setWrapStyleWord(true);
+
+                        JScrollPane jsp = new JScrollPane(jta);
+                        jsp.setPreferredSize(new Dimension(700, 400));
+                        Object[] comps = {jsp};
+                        Util.fancyInfoDialog(f(), I18n.t("styleJsonDialog"), comps);
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
                     }
 
-                    JMenuItem homePageMenuItem = new JMenuItem(I18n.t("homePageItem"));
-                    homePageMenuItem.addActionListener(al -> {
-                        DB.insertPref("home", docURL);
-                    });
-
-                    popupMenu.add(homePageMenuItem);
-                    homePageMenuItem.setEnabled(currentMode != INFO_MODE);
-                    if (!page.isNex() && !page.isGopher()) {
-                        String menuText = plainTextMode ? I18n.t("gemTextItem") : I18n.t("plainTextItem");
-                        JMenuItem ptMenuItem = new JMenuItem(menuText);
-                        ptMenuItem.setEnabled(!imageOnly);
-                        ptMenuItem.addActionListener(al -> {
-                            plainTextMode = !plainTextMode;
-                            f().toggleView(GeminiTextPane.this, plainTextMode);
-                        });
-
-                        popupMenu.add(ptMenuItem);
-                    }
-
-                    URI uri = getURI();
-                    if (!imageOnly && uri != null && "gemini".equals(uri.getScheme())) {
-                        JMenuItem crtMenuItem = new JMenuItem(I18n.t("viewCertItem"));
-                        crtMenuItem.addActionListener(al -> {
-
-                            f().viewServerCert(GeminiTextPane.this, getURI());
-                        });
-
-                        popupMenu.add(crtMenuItem);
-                    }
-
-                    if (currentMode == DEFAULT_MODE && Alhena.socksFilter && uri != null && !"alhena".equals(uri.getScheme())) {
-                        JCheckBoxMenuItem socksItem = new JCheckBoxMenuItem(I18n.t("socksPopupItem"));
-
-                        boolean socksDomain;
+                });
+                popupMenu.add(jsonItem);
+                JMenuItem delStyleItem = new JMenuItem(I18n.t("deleteStyleItem"));
+                delStyleItem.addActionListener(al -> {
+                    Object r = Util.confirmDialog(f(), I18n.t("styleDeleteDialog"), I18n.t("styleDeleteDialogTxt"), JOptionPane.YES_NO_OPTION, null, null);
+                    if (r instanceof Integer rs && rs == JOptionPane.YES_OPTION) {
                         try {
-                            socksDomain = DB.socksDomainExists(uri.getHost());
-                            socksItem.setSelected(socksDomain);
+                            DB.deleteStyle(Integer.parseInt(range.directive));
                         } catch (SQLException ex) {
-                            socksItem.setSelected(false); // in case
+                            ex.printStackTrace();
+                        }
+                        Alhena.updateFrames(false, false, false, false);
+                        EventQueue.invokeLater(() -> f().refresh());
+                    }
+
+                });
+                popupMenu.add(delStyleItem);
+
+            }
+            case HISTORY_MODE -> {
+                popupMenu.add(new JSeparator());
+                JMenuItem forgetItem = new JMenuItem(I18n.t("forgetLinkItem"));
+                forgetItem.addActionListener(al -> {
+                    f().deleteFromHistory(range.url, false);
+                });
+
+                popupMenu.add(forgetItem);
+                JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryItem"));
+
+                clearItem.addActionListener(al -> {
+                    f().clearHistory();
+                });
+                popupMenu.add(clearItem);
+            }
+            case BOOKMARK_MODE -> {
+                popupMenu.add(new JSeparator());
+                JMenuItem editItem = new JMenuItem(I18n.t("editBookmarkItem"));
+                editItem.addActionListener(ev -> {
+                    f().updateBookmark(f(), range.directive);
+
+                });
+                popupMenu.add(editItem);
+                JMenuItem deleteItem = new JMenuItem(I18n.t("deleteBookmarkItem"));
+                deleteItem.addActionListener(ev -> {
+                    f().deleteBookmark(f(), range.directive);
+
+                });
+                popupMenu.add(deleteItem);
+            }
+            case FEED_MODE -> {
+                popupMenu.add(new JSeparator());
+                JMenuItem openFeedItem = new JMenuItem(I18n.t("openFeedItem"));
+                openFeedItem.addActionListener(ev -> {
+                    String token = range.directive.split(",", 4)[1];
+                    String pUrl = DB.getFeedUrl(Integer.parseInt(token));
+                    if (pUrl != null) {
+                        f().fetchURL(pUrl, false, null);
+                    }
+
+                });
+                popupMenu.add(openFeedItem);
+                boolean read = Integer.parseInt(range.directive.split(",", 4)[2]) == 1;
+                JMenuItem markReadItem = new JMenuItem(read ? I18n.t("markAsUnreadItem") : I18n.t("markAsReadItem"));
+                markReadItem.addActionListener(ev -> {
+                    DB.markUrlRead(range.url, !read);
+                    f().refresh(false);
+
+                });
+                popupMenu.add(markReadItem);
+
+                JMenuItem markBelowItem = new JMenuItem(I18n.t("markBelowItem"));
+                markBelowItem.addActionListener(ev -> {
+                    int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+
+                    DB.markOlderFeedRecords(id);
+                    f().refresh(false);
+
+                });
+                popupMenu.add(markBelowItem);
+
+                JMenuItem unsubscribeItem = new JMenuItem(I18n.t("unsubscribeItem"));
+                unsubscribeItem.addActionListener(ev -> {
+                    int id = Integer.parseInt(range.directive.split(",", 3)[1]);
+                    String s = DB.getFeedUrl(id);
+                    Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubMsg") + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                    if (r instanceof Integer result) {
+                        if (result == JOptionPane.YES_OPTION) {
+
+                            DB.unsubscribe(id);
+                            f().refresh(false);
+                        }
+                    }
+
+                });
+                popupMenu.add(unsubscribeItem);
+
+            }
+            case SUBSCRIPTION_MODE -> {
+                popupMenu.add(new JSeparator());
+
+                JMenuItem editItem = new JMenuItem(I18n.t("editLabelItem"));
+                editItem.addActionListener(ev -> {
+                    int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+                    String origLabel = DB.getSubLabel(id);
+                    String label = Util.inputDialog(f(), I18n.t("editLabelDialog"), I18n.t("editLabelMsg"),
+                            false, origLabel, null);
+                    if (label != null && !label.isBlank()) {
+                        label = Util.truncate(label, 125);
+
+                        DB.updateSubLabel(id, label);
+                        f().refresh();
+                    }
+                });
+                popupMenu.add(editItem);
+
+                JMenuItem markReadItem = new JMenuItem(I18n.t("markAsReadItem"));
+                markReadItem.addActionListener(ev -> {
+                    int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+
+                    DB.markSubscriptionRead(id, true);
+
+                    Util.infoDialog(f(), I18n.t("infoLabel"), I18n.t("subMarkedReadMsg") + range.url);
+
+                });
+                popupMenu.add(markReadItem);
+
+                JMenuItem markUnreadItem = new JMenuItem(I18n.t("markAsUnreadItem"));
+                markUnreadItem.addActionListener(ev -> {
+                    int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+                    DB.markSubscriptionRead(id, false);
+
+                    Util.infoDialog(f(), I18n.t("infoLabel"), I18n.t("subMarkedUnreadMsg") + range.url);
+
+                });
+                popupMenu.add(markUnreadItem);
+
+                JMenuItem unsubscribeItem = new JMenuItem(I18n.t("unsubscribeItem"));
+                unsubscribeItem.addActionListener(ev -> {
+                    int id = Integer.parseInt(range.directive.split(",", 2)[0]);
+                    String s = DB.getFeedUrl(id);
+                    Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubMsg") + s, JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                    if (r instanceof Integer result) {
+                        if (result == JOptionPane.YES_OPTION) {
+
+                            DB.unsubscribe(id);
+                            f().refresh();
+                        }
+                    }
+
+                });
+                popupMenu.add(unsubscribeItem);
+            }
+            default -> {
+            }
+        }
+
+        popupMenu.show(e.getComponent(), e.getX(), e.getY());
+    }
+
+    private void showPageContextMenu(MouseEvent e) {
+        if (SwingUtilities.isRightMouseButton(e) || (e.getButton() == MouseEvent.BUTTON1 && e.isControlDown())) {
+
+            JPopupMenu popupMenu = new JPopupMenu();
+
+            String selectedText = getSelectedText();
+            if (selectedText != null && !selectedText.isEmpty()) {
+                JMenuItem copyItem = new JMenuItem(I18n.t("copyPopupItem"));
+
+                copyItem.addActionListener(ev -> {
+                    copyText(selectedText);
+                });
+                popupMenu.add(copyItem);
+                popupMenu.add(new JSeparator());
+
+            }
+
+            JMenuItem homePageMenuItem = new JMenuItem(I18n.t("homePageItem"));
+            homePageMenuItem.addActionListener(al -> {
+                DB.insertPref("home", docURL);
+            });
+
+            popupMenu.add(homePageMenuItem);
+            homePageMenuItem.setEnabled(currentMode != INFO_MODE);
+            if (!page.isNex() && !page.isGopher()) {
+                String menuText = plainTextMode ? I18n.t("gemTextItem") : I18n.t("plainTextItem");
+                JMenuItem ptMenuItem = new JMenuItem(menuText);
+                ptMenuItem.setEnabled(!imageOnly);
+                ptMenuItem.addActionListener(al -> {
+                    plainTextMode = !plainTextMode;
+                    f().toggleView(GeminiTextPane.this, plainTextMode);
+                });
+
+                popupMenu.add(ptMenuItem);
+            }
+
+            URI uri = getURI();
+            if (!imageOnly && uri != null && "gemini".equals(uri.getScheme())) {
+                JMenuItem crtMenuItem = new JMenuItem(I18n.t("viewCertItem"));
+                crtMenuItem.addActionListener(al -> {
+
+                    f().viewServerCert(GeminiTextPane.this, getURI());
+                });
+
+                popupMenu.add(crtMenuItem);
+            }
+
+            if (currentMode == DEFAULT_MODE && Alhena.socksFilter && uri != null && !"alhena".equals(uri.getScheme())) {
+                JCheckBoxMenuItem socksItem = new JCheckBoxMenuItem(I18n.t("socksPopupItem"));
+
+                boolean socksDomain;
+                try {
+                    socksDomain = DB.socksDomainExists(uri.getHost());
+                    socksItem.setSelected(socksDomain);
+                } catch (SQLException ex) {
+                    socksItem.setSelected(false); // in case
+                    ex.printStackTrace();
+                }
+
+                socksItem.addActionListener(al -> {
+                    if (socksItem.isSelected()) {
+                        try {
+                            DB.insertSocksDomain(uri.getHost());
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                        }
+                    } else {
+                        try {
+                            DB.deleteSocksDomain(uri.getHost());
+                        } catch (SQLException ex) {
                             ex.printStackTrace();
                         }
 
-                        socksItem.addActionListener(al -> {
-                            if (socksItem.isSelected()) {
-                                try {
-                                    DB.insertSocksDomain(uri.getHost());
-                                } catch (SQLException ex) {
-                                    ex.printStackTrace();
-                                }
-                            } else {
-                                try {
-                                    DB.deleteSocksDomain(uri.getHost());
-                                } catch (SQLException ex) {
-                                    ex.printStackTrace();
-                                }
-
-                            }
-                            Alhena.closeNetClientByDomain(uri.getHost());
-
-                        });
-
-                        popupMenu.add(socksItem);
                     }
-                    JMenu histMenu = new JMenu(I18n.t("navHistoryMenu"));
+                    Alhena.closeNetClientByDomain(uri.getHost());
 
-                    histMenu.addMenuListener(new MenuListener() {
-                        @Override
-                        public void menuSelected(MenuEvent e) {
-                            histMenu.removeAll(); // clear stale items
-                            f().populateHistNav(histMenu);
+                });
+
+                popupMenu.add(socksItem);
+            }
+            JMenu histMenu = new JMenu(I18n.t("navHistoryMenu"));
+
+            histMenu.addMenuListener(new MenuListener() {
+                @Override
+                public void menuSelected(MenuEvent e) {
+                    histMenu.removeAll(); // clear stale items
+                    f().populateHistNav(histMenu);
+                }
+
+                @Override
+                public void menuDeselected(MenuEvent e) {
+                }
+
+                @Override
+                public void menuCanceled(MenuEvent e) {
+                }
+            });
+
+            popupMenu.add(histMenu);
+            popupMenu.add(new JSeparator());
+
+            JMenuItem saveItem = new JMenuItem(I18n.t("savePageItem"));
+            saveItem.setEnabled(!imageOnly);
+            saveItem.addActionListener(al -> {
+                f().savePage(GeminiTextPane.this, pageBuffer, currentMode);
+            });
+
+            popupMenu.add(saveItem);
+
+            if (docURL.startsWith("gemini://")) {
+                JMenuItem subscribeItem = new JMenuItem(I18n.t("subscribeItem"));
+                subscribeItem.setEnabled(!imageOnly);
+                subscribeItem.addActionListener(al -> {
+                    try {
+                        if (DB.isSubscribed(docURL)) {
+                            Util.infoDialog(f, I18n.t("infoLabel"), "Already subscribed to " + docURL);
+                        } else {
+
+                            String suggestedName = getFirstHeading();
+                            if (suggestedName == null) {
+                                suggestedName = URI.create(docURL).getHost();
+                            }
+                            int type = DB.insertSubscribed(docURL, pageBuffer.toString(), suggestedName);
+                            String tString = type == 1 ? "YYYY-MM-DD Links" : "Headings";
+                            Util.infoDialog(f, I18n.t("infoLabel"), "Subscribed to " + docURL + "\nSubscription type: " + tString);
                         }
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
 
-                        @Override
-                        public void menuDeselected(MenuEvent e) {
-                        }
+                });
 
-                        @Override
-                        public void menuCanceled(MenuEvent e) {
-                        }
-                    });
+                popupMenu.add(subscribeItem);
+            }
 
-                    popupMenu.add(histMenu);
+            // TODO: When is URI actually null? Investigate.
+            boolean showGeminiItems = !imageOnly && currentMode == DEFAULT_MODE && uri != null && uri.getHost() != null && "gemini".equals(uri.getScheme());
+
+            if (showGeminiItems) {
+                JMenuItem titanItem = new JMenuItem(I18n.t("titanItem"));
+                titanItem.setEnabled(!imageOnly && currentMode == DEFAULT_MODE && uri != null && "gemini".equals(uri.getScheme()));
+                titanItem.addActionListener(al -> {
+
+                    f().editPage();
+                });
+                popupMenu.add(titanItem);
+                JMenuItem pemItem = new JMenuItem(I18n.t("importPEMPopup"));
+                pemItem.setEnabled(!imageOnly);
+                pemItem.addActionListener(al -> {
+                    f().importPem(getURI(), null);
+                });
+                popupMenu.add(pemItem);
+
+                JMenuItem certItem = new JMenuItem(I18n.t("newClientCertPopup"));
+                certItem.setEnabled(!imageOnly);
+                certItem.addActionListener(al -> {
+                    f().createCert(getURI());
+                });
+                popupMenu.add(certItem);
+            }
+
+            switch (currentMode) {
+                case STYLE_MODE -> {
                     popupMenu.add(new JSeparator());
-
-                    JMenuItem saveItem = new JMenuItem(I18n.t("savePageItem"));
-                    saveItem.setEnabled(!imageOnly);
-                    saveItem.addActionListener(al -> {
-                        f().savePage(GeminiTextPane.this, pageBuffer, currentMode);
+                    JMenuItem newStyleItem = new JMenuItem(I18n.t("stylesItem"));
+                    newStyleItem.addActionListener(al -> {
+                        Util.newStyle(f());
                     });
+                    popupMenu.add(newStyleItem);
+                }
+                case HISTORY_MODE -> {
+                    popupMenu.add(new JSeparator());
+                    JMenuItem showItem = new JMenuItem(I18n.t("showAllHistoryItem"));
+                    showItem.addActionListener(al -> {
+                        f().allHistory = true;
+                        f().showCustomPage(GeminiFrame.HISTORY_LABEL, null);
+                    });
+                    popupMenu.add(showItem);
+                    JMenuItem whereItem = new JMenuItem(I18n.t("forgetLinksPopup"));
+                    whereItem.addActionListener(al -> {
+                        f().deleteFromHistory(null, true);
+                    });
+                    popupMenu.add(whereItem);
+                    JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryPopup"));
+                    clearItem.addActionListener(al -> {
+                        f().clearHistory();
+                    });
+                    popupMenu.add(clearItem);
+                }
+                case FEED_MODE -> {
+                    popupMenu.add(new JSeparator());
+                    JMenuItem allReadItem = new JMenuItem(I18n.t("markAllReadItem"));
+                    allReadItem.addActionListener(al -> {
+                        DB.markAllFeeds(true);
+                        f().refresh(false);
+                    });
+                    popupMenu.add(allReadItem);
+                    JMenuItem allUnreadItem = new JMenuItem(I18n.t("markAllUnreadItem"));
+                    allUnreadItem.addActionListener(al -> {
+                        DB.markAllFeeds(false);
+                        f().refresh(false);
+                    });
+                    popupMenu.add(allUnreadItem);
+                    JMenuItem refreshItem = new JMenuItem(I18n.t("refreshAllFeedsItem"));
+                    refreshItem.addActionListener(al -> {
 
-                    popupMenu.add(saveItem);
-
-                    if (docURL.startsWith("gemini://")) {
-                        JMenuItem subscribeItem = new JMenuItem(I18n.t("subscribeItem"));
-                        subscribeItem.setEnabled(!imageOnly);
-                        subscribeItem.addActionListener(al -> {
+                        f().setBusy(true, page);
+                        Thread.ofVirtual().start(() -> {
+                            // new Thread(() -> {
                             try {
-                                if (DB.isSubscribed(docURL)) {
-                                    Util.infoDialog(f, I18n.t("infoLabel"), "Already subscribed to " + docURL);
-                                } else {
-
-                                    String suggestedName = getFirstHeading();
-                                    if (suggestedName == null) {
-                                        suggestedName = URI.create(docURL).getHost();
-                                    }
-                                    int type = DB.insertSubscribed(docURL, pageBuffer.toString(), suggestedName);
-                                    String tString = type == 1 ? "YYYY-MM-DD Links" : "Headings";
-                                    Util.infoDialog(f, I18n.t("infoLabel"), "Subscribed to " + docURL + "\nSubscription type: " + tString);
-                                }
+                                DB.updateFeeds();
+                                EventQueue.invokeLater(() -> {
+                                    f().refresh(false);
+                                    f().setBusy(false, page);
+                                });
                             } catch (SQLException ex) {
                                 ex.printStackTrace();
                             }
 
                         });
 
-                        popupMenu.add(subscribeItem);
-                    }
+                    });
+                    popupMenu.add(refreshItem);
+                    popupMenu.add(new JSeparator());
+                    JMenuItem allFeedsItem = new JMenuItem(I18n.t("showAllFeedsItem"));
+                    allFeedsItem.addActionListener(al -> {
+                        f().loadAllFeeds = true;
+                        f().refresh(false);
+                        showingAllFeeds = true;
 
-                    // TODO: When is URI actually null? Investigate.
-                    boolean showGeminiItems = !imageOnly && currentMode == DEFAULT_MODE && uri != null && uri.getHost() != null && "gemini".equals(uri.getScheme());
+                    });
+                    popupMenu.add(allFeedsItem);
+                }
+                case SUBSCRIPTION_MODE -> {
+                    popupMenu.add(new JSeparator());
+                    JMenuItem allFeedsItem = new JMenuItem(I18n.t("unsubAllItem"));
+                    allFeedsItem.addActionListener(al -> {
+                        Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubAllMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
+                        if (r instanceof Integer result) {
+                            if (result == JOptionPane.YES_OPTION) {
 
-                    if (showGeminiItems) {
-                        JMenuItem titanItem = new JMenuItem(I18n.t("titanItem"));
-                        titanItem.setEnabled(!imageOnly && currentMode == DEFAULT_MODE && uri != null && "gemini".equals(uri.getScheme()));
-                        titanItem.addActionListener(al -> {
-
-                            f().editPage();
-                        });
-                        popupMenu.add(titanItem);
-                        JMenuItem pemItem = new JMenuItem(I18n.t("importPEMPopup"));
-                        pemItem.setEnabled(!imageOnly);
-                        pemItem.addActionListener(al -> {
-                            f().importPem(getURI(), null);
-                        });
-                        popupMenu.add(pemItem);
-
-                        JMenuItem certItem = new JMenuItem(I18n.t("newClientCertPopup"));
-                        certItem.setEnabled(!imageOnly);
-                        certItem.addActionListener(al -> {
-                            f().createCert(getURI());
-                        });
-                        popupMenu.add(certItem);
-                    }
-
-                    switch (currentMode) {
-                        case STYLE_MODE -> {
-                            popupMenu.add(new JSeparator());
-                            JMenuItem newStyleItem = new JMenuItem(I18n.t("stylesItem"));
-                            newStyleItem.addActionListener(al -> {
-                                Util.newStyle(f());
-                            });
-                            popupMenu.add(newStyleItem);
+                                DB.unsubscribeAll();
+                                f().refresh();
+                            }
                         }
-                        case HISTORY_MODE -> {
-                            popupMenu.add(new JSeparator());
-                            JMenuItem showItem = new JMenuItem(I18n.t("showAllHistoryItem"));
-                            showItem.addActionListener(al -> {
-                                f().allHistory = true;
-                                f().showCustomPage(GeminiFrame.HISTORY_LABEL, null);
-                            });
-                            popupMenu.add(showItem);
-                            JMenuItem whereItem = new JMenuItem(I18n.t("forgetLinksPopup"));
-                            whereItem.addActionListener(al -> {
-                                f().deleteFromHistory(null, true);
-                            });
-                            popupMenu.add(whereItem);
-                            JMenuItem clearItem = new JMenuItem(I18n.t("deleteHistoryPopup"));
-                            clearItem.addActionListener(al -> {
-                                f().clearHistory();
-                            });
-                            popupMenu.add(clearItem);
+
+                    });
+                    popupMenu.add(allFeedsItem);
+                }
+                default -> {
+                }
+            }
+            if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) != null) {
+                popupMenu.add(new JSeparator());
+                JMenuItem splitItem = new JMenuItem(I18n.t("closeSplitItem"));
+                splitItem.addActionListener(al -> {
+                    f().removeSplitView();
+                });
+                popupMenu.add(splitItem);
+            }
+            popupMenu.show(e.getComponent(), e.getX(), e.getY());
+        }
+    }
+
+    private void handleClick(MouseEvent e) {
+        if (doc == null) {
+            return;
+        }
+
+        int pos = viewToModel2D(e.getPoint());
+        if (pos < 0 || pos >= doc.getLength()) {
+            return;
+        }
+
+        for (ClickableRange range : clickableRegions) {
+            if (pos >= range.start && pos < range.end) {
+                Rectangle rect = getCharacterBounds(range.start, range.end);
+                if (rect != null && rect.contains(e.getPoint())) {
+                    if (SwingUtilities.isLeftMouseButton(e)) {
+                        if (range.imageIndex != -1) {
+                            removeItemAtIndex(range);
+                            range.imageIndex = -1;
+                        } else {
+                            lastClicked = range;
+                            if (!range.dataUrl) {
+                                clicked(range);
+                                range.action.run();
+                            } else {
+                                dataURL(range.url, false);
+                            }
                         }
-                        case FEED_MODE -> {
-                            popupMenu.add(new JSeparator());
-                            JMenuItem allReadItem = new JMenuItem(I18n.t("markAllReadItem"));
-                            allReadItem.addActionListener(al -> {
-                                DB.markAllFeeds(true);
-                                f().refresh(false);
-                            });
-                            popupMenu.add(allReadItem);
-                            JMenuItem allUnreadItem = new JMenuItem(I18n.t("markAllUnreadItem"));
-                            allUnreadItem.addActionListener(al -> {
-                                DB.markAllFeeds(false);
-                                f().refresh(false);
-                            });
-                            popupMenu.add(allUnreadItem);
-                            JMenuItem refreshItem = new JMenuItem(I18n.t("refreshAllFeedsItem"));
-                            refreshItem.addActionListener(al -> {
-
-                                f().setBusy(true, page);
-                                Thread.ofVirtual().start(() -> {
-                                    // new Thread(() -> {
-                                    try {
-                                        DB.updateFeeds();
-                                        EventQueue.invokeLater(() -> {
-                                            f().refresh(false);
-                                            f().setBusy(false, page);
-                                        });
-                                    } catch (SQLException ex) {
-                                        ex.printStackTrace();
-                                    }
-
-                                });
-
-                            });
-                            popupMenu.add(refreshItem);
-                            popupMenu.add(new JSeparator());
-                            JMenuItem allFeedsItem = new JMenuItem(I18n.t("showAllFeedsItem"));
-                            allFeedsItem.addActionListener(al -> {
-                                f().loadAllFeeds = true;
-                                f().refresh(false);
-                                showingAllFeeds = true;
-
-                            });
-                            popupMenu.add(allFeedsItem);
-                        }
-                        case SUBSCRIPTION_MODE -> {
-                            popupMenu.add(new JSeparator());
-                            JMenuItem allFeedsItem = new JMenuItem(I18n.t("unsubAllItem"));
-                            allFeedsItem.addActionListener(al -> {
-                                Object r = Util.confirmDialog(f(), I18n.t("confirmUnsubDialog"), I18n.t("confirmUnsubAllMsg"), JOptionPane.YES_NO_OPTION, null, JOptionPane.WARNING_MESSAGE);
-                                if (r instanceof Integer result) {
-                                    if (result == JOptionPane.YES_OPTION) {
-
-                                        DB.unsubscribeAll();
-                                        f().refresh();
-                                    }
-                                }
-
-                            });
-                            popupMenu.add(allFeedsItem);
-                        }
-                        default -> {
+                    } else if (SwingUtilities.isMiddleMouseButton(e)) {
+                        if (!range.dataUrl) {
+                            boolean saveSetting = Alhena.useBrowser;
+                            Alhena.useBrowser = false;
+                            f().newTab(range.url, null, null, range.label);
+                            Alhena.useBrowser = saveSetting;
                         }
                     }
-                    if (SwingUtilities.getAncestorOfClass(SplitPanel.class, GeminiTextPane.this) != null) {
-                        popupMenu.add(new JSeparator());
-                        JMenuItem splitItem = new JMenuItem(I18n.t("closeSplitItem"));
-                        splitItem.addActionListener(al -> {
-                            f().removeSplitView();
-                        });
-                        popupMenu.add(splitItem);
-                    }
-                    popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                    return;
                 }
             }
         }
-
     }
 
     private int navSplitType;
@@ -1434,7 +1455,8 @@ public class GeminiTextPane extends JTextPane {
                 int y = mousePoint.y;
                 MouseEvent pressEvent = new MouseEvent(this, MouseEvent.MOUSE_PRESSED, now,
                         InputEvent.BUTTON3_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON3);
-                showPopup(pressEvent);
+                //showPopup(pressEvent);
+                showPageContextMenu(pressEvent);
 
             }
         } else {
@@ -3327,10 +3349,11 @@ public class GeminiTextPane extends JTextPane {
             @Override
             public void mousePressed(MouseEvent e) {
 
-                // if (e.isPopupTrigger()) {
-                //     GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
-                //     return;
-                // }
+                if (e.isPopupTrigger()) {
+                    GeminiTextPane.this.dispatchEvent(
+                            SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = e.getLocationOnScreen();
                     pressTime = System.currentTimeMillis();
@@ -3341,10 +3364,11 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                // if (e.isPopupTrigger()) {
-                //     GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
-                //     return;
-                // }
+                if (e.isPopupTrigger()) {
+                    GeminiTextPane.this.dispatchEvent(
+                            SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+                    return;
+                }
                 if (dragToScroll) {
                     lastScreen = null;
                     pressTime = 0;
@@ -3366,9 +3390,14 @@ public class GeminiTextPane extends JTextPane {
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+                GeminiTextPane.this.dispatchEvent(
+                        SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
             }
-    
+            // @Override
+            // public void mouseClicked(MouseEvent e) {
+            //     GeminiTextPane.this.dispatchEvent(SwingUtilities.convertMouseEvent(pfTextPane, e, GeminiTextPane.this));
+            // }
+
         });
 
         pfTextPane.addMouseWheelListener(e -> {
@@ -3992,7 +4021,8 @@ public class GeminiTextPane extends JTextPane {
 
                     MouseEvent pressEvent = new MouseEvent(this, MouseEvent.MOUSE_PRESSED, now,
                             InputEvent.BUTTON3_DOWN_MASK, newRect.x, newRect.y, 1, false, MouseEvent.BUTTON3);
-                    showPopup(pressEvent);
+                    //showPopup(pressEvent);
+                    showLinkContextMenu(pressEvent, cr);
                     break;
                 } else {
                     idx++;
