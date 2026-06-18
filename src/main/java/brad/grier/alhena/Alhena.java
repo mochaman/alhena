@@ -1142,13 +1142,15 @@ public class Alhena {
             List<Page> showList = gf.getVisiblePages();
             gf.setVisible(false);
 
-            if (SystemInfo.isMacOS && restoreTabs && frameList.size() == 1) {
+            if (SystemInfo.isMacOS && restoreTabs) {
                 deleteFrameState();
-                try {
-                    Path stateFile = Paths.get(alhenaHome, "framestate_0.json");
-                    Files.writeString(stateFile, gf.getAppState(showList).encode(), StandardCharsets.UTF_8);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+                if (frameList.size() == 1) {
+                    try {
+                        Path stateFile = Paths.get(alhenaHome, "framestate_0.json");
+                        Files.writeString(stateFile, gf.getAppState(showList).encode(), StandardCharsets.UTF_8);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
 
             }
@@ -1174,7 +1176,7 @@ public class Alhena {
 
             gf.dispose();
             MenuItem mi = gf.getMenuItem();
-            
+
             if (mi != null) { // clear gf reference in taskbar actionListener
                 ActionListener[] al = mi.getActionListeners();
                 for (ActionListener a : al) {
