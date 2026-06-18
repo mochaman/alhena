@@ -104,6 +104,8 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.StyledEditorKit;
 
@@ -165,7 +167,7 @@ public final class GeminiFrame extends JFrame {
     private int mod = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
     private MenuItem mi;
     private Color saveButtonFG = null;
-    private static JRadioButtonMenuItem lastSelectedItem;
+    private JRadioButtonMenuItem lastSelectedItem;
     public static int tabPosition = 0;
     // set to true when compiling native image
     private static final boolean NATIVE_IMAGE = false;
@@ -582,7 +584,7 @@ public final class GeminiFrame extends JFrame {
         return pb.getRootPage() == Page.ROOT_PAGE ? pb : pb.getRootPage(); // returning null means this page has no history (new window/tab)
     }
 
-    public GeminiFrame(String url, String baseUrl, JsonObject savedPage, Rectangle windowBounds, String scrollToHeading) {
+    public GeminiFrame(String url, String baseUrl, JsonObject savedPage, Rectangle windowBounds, String scrollToHeading, LastTabInfo centerComp) {
         // Ubuntu seems to use the frame icon for the dock icon, using the 64x64 image improves the
         // resolution of the dock image at some cost to the frame image (bad downscaling)
         String pngName = SystemInfo.isWindows ? "alhena_32x32.png" : "alhena_64x64.png";
@@ -842,7 +844,7 @@ public final class GeminiFrame extends JFrame {
 
         fileMenu.add(createMenuItem(I18n.t("newWindowItem"), KeyStroke.getKeyStroke(KeyEvent.VK_N, mod), () -> {
             String home = Util.getHome();
-            Alhena.newWindow(home, home, null, null, null);
+            Alhena.newWindow(home, home, null, null, null, null);
         }));
 
         fileMenu.add(createMenuItem(I18n.t("closeTabItem"), KeyStroke.getKeyStroke(KeyEvent.VK_W, mod), () -> {
@@ -1110,32 +1112,79 @@ public final class GeminiFrame extends JFrame {
             setLocationRelativeTo(null);
             setMinimumSize(new Dimension(320, 200));
         }
-        Supplier<Page> r = () -> {
-            boolean addToHistory = url != null || baseUrl != null;
-            Page pb = newPage(baseUrl, null, addToHistory);
-            add(pb, BorderLayout.CENTER);
 
-            setVisible(true);
+        if (centerComp != null) {
 
-            // do this so alhena doesn't open behind the terminal when launching from command line on macos
-            if (SystemInfo.isMacOS) {
-                setAlwaysOnTop(true);
-                toFront();
-                requestFocus();
-                setAlwaysOnTop(false);
-            }
+            if (centerComp.comp instanceof Page page) {
 
-            return pb;
-        };
+                page.textPane.closed = false;
+                page.setVisible(true);
 
-        if (savedPage == null && url != null) {
-            init(url, r.get(), scrollToHeading);
-        } else {
-            if (savedPage.containsKey("lpages")) {
-                restoreSplitView(savedPage);
+                pageHistoryMap.put(getRootPage(page), centerComp.pageHistory1);
+
+                add(page, BorderLayout.CENTER);
+
+                EventQueue.invokeLater(() -> {
+
+                    setVisible(true);
+                    page.textPane.restoreFromCache();
+                    page.textPane.requestFocusInWindow();
+                    setTitle(createTitle(url, page.textPane.getFirstHeading()));
+                    updateComboBox(url);
+                });
 
             } else {
-                setPageInfo(savedPage, r.get());
+                SplitPanel sp = (SplitPanel) centerComp.comp;
+                sp.setFrame(this);
+
+                sp.setVisible(true);
+                pageHistoryMap.put(getRootPage(sp.getLeftPage()), centerComp.pageHistory1);
+                pageHistoryMap.put(getRootPage(sp.getRightPage()), centerComp.pageHistory2);
+
+                sp.getLeftPage().textPane.closed = false;
+                sp.getRightPage().textPane.closed = false;
+
+                add(sp, BorderLayout.CENTER);
+                EventQueue.invokeLater(() -> {
+                    setVisible(true);
+                    sp.getRightPage().textPane.restoreFromCache();
+                    sp.getLeftPage().textPane.restoreFromCache();
+                    sp.getLeftPage().textPane.requestFocusInWindow();
+                    setTitle(createTitle(url, sp.getLeftPage().textPane.getFirstHeading()));
+                    updateComboBox(url);
+                    //setTitle(createTitle(url, sp.getLeftPage().textPane.getFirstHeading()));
+                });
+
+            }
+
+        } else {
+            Supplier<Page> r = () -> {
+                boolean addToHistory = url != null || baseUrl != null;
+                Page pb = newPage(baseUrl, null, addToHistory);
+                add(pb, BorderLayout.CENTER);
+
+                setVisible(true);
+
+                // do this so alhena doesn't open behind the terminal when launching from command line on macos
+                if (SystemInfo.isMacOS) {
+                    setAlwaysOnTop(true);
+                    toFront();
+                    requestFocus();
+                    setAlwaysOnTop(false);
+                }
+
+                return pb;
+            };
+
+            if (savedPage == null && url != null) {
+                init(url, r.get(), scrollToHeading);
+            } else {
+                if (savedPage.containsKey("lpages")) {
+                    restoreSplitView(savedPage);
+
+                } else {
+                    setPageInfo(savedPage, r.get());
+                }
             }
         }
     }
@@ -1427,8 +1476,23 @@ public final class GeminiFrame extends JFrame {
             settingsMenu.removeAll();
         } else {
             settingsMenu = new JMenu(I18n.t("settingsMenu"));
+            settingsMenu.addMenuListener(new MenuListener() {
+                @Override
+                public void menuSelected(MenuEvent e) {
+                    addWindowsMenu();
+                }
+
+                @Override
+                public void menuDeselected(MenuEvent e) {
+                }
+
+                @Override
+                public void menuCanceled(MenuEvent e) {
+                }
+            });
             settingsMenu.setMnemonic('S');
             menuBar.add(settingsMenu);
+            return;
         }
 
         JMenu darkThemeMenu = new JMenu(I18n.t("darkThemesItem"));
@@ -4257,6 +4321,22 @@ public final class GeminiFrame extends JFrame {
                     });
                     popup.add(closeRightItem);
 
+                    JMenuItem newFrameItem = new JMenuItem("Move To New Window");
+                    newFrameItem.addActionListener(al -> {
+                        closeTab(tabIndex);
+                        String url;
+                        Component c = lastTabInfo.comp;
+                        if (c instanceof Page p) {
+                            url = p.getUrl();
+                        } else {
+                            url = ((SplitPanel) c).getLeftPage().getUrl();
+                        }
+                        Alhena.newWindow(url, url, null, null, null, lastTabInfo);
+                        lastTabInfo = null;
+
+                    });
+                    popup.add(newFrameItem);
+
                     popup.show(e.getComponent(), e.getX(), e.getY());
                 }
             });
@@ -4605,6 +4685,7 @@ public final class GeminiFrame extends JFrame {
         ArrayList<Page> hPageList = pageHistoryMap.get(getRootPage(page));
 
         for (Page p : hPageList) {
+            p.setFrame(null);
             if (closeLinks) {
                 p.textPane.closePlayerLinks();
             } else {
@@ -4870,6 +4951,7 @@ public final class GeminiFrame extends JFrame {
 
                 page.setFrame(GeminiFrame.this);
             } else {
+                ((SplitPanel) tabInfo.comp).setFrame(GeminiFrame.this);
                 ((SplitPanel) tabInfo.comp).getLeftPage().setFrame(GeminiFrame.this);
                 ((SplitPanel) tabInfo.comp).getRightPage().setFrame(GeminiFrame.this);
             }
@@ -4877,4 +4959,5 @@ public final class GeminiFrame extends JFrame {
             lastTabInfo = tabInfo;
         }
     }
+
 }

@@ -19,6 +19,7 @@ import java.awt.desktop.AppReopenedListener;
 import java.awt.desktop.OpenFilesEvent;
 import java.awt.desktop.SystemSleepEvent;
 import java.awt.desktop.SystemSleepListener;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -295,7 +296,7 @@ public class Alhena {
                                 // this should only happen on mac where app can be running without open windows
                                 String[] fs = {furl[0]};
                                 if (!(restoreTabs && loadState(null, fs))) {
-                                    newWindow(furl[0], furl[0], null, null, null);
+                                    newWindow(furl[0], furl[0], null, null, null, null);
                                 }
                             }
                         });
@@ -621,7 +622,7 @@ public class Alhena {
                     menuItem.addActionListener(al -> {
 
                         String home = Util.getHome();
-                        Alhena.newWindow(home, home, null, null, null);
+                        Alhena.newWindow(home, home, null, null, null, null);
                     });
 
                     menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, MOD));
@@ -641,7 +642,7 @@ public class Alhena {
                             if (frameList.isEmpty()) {
                                 if (!(restoreTabs && loadState(null, null))) {
                                     String u = Util.getHome();
-                                    newWindow(u, u, null, null, null);
+                                    newWindow(u, u, null, null, null, null);
                                 }
                             }
 
@@ -660,7 +661,7 @@ public class Alhena {
                                 if (started) {
                                     // started but all windows closed
                                     if (!(restoreTabs && loadState(f, null))) {
-                                        newWindow(f, f, null, null, null);
+                                        newWindow(f, f, null, null, null, null);
                                     }
 
                                 } else {
@@ -767,7 +768,7 @@ public class Alhena {
             }
             if (!(restoreTabs && loadState(pendingFile[0], args))) {
                 String u = getStartUrl(pendingFile[0], args);
-                newWindow(u, u, null, null, null);
+                newWindow(u, u, null, null, null, null);
             }
 
         });
@@ -863,7 +864,7 @@ public class Alhena {
                         if (first[0]) {
                             first[0] = false;
                             Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
-                            newWindow(null, null, splitView, windowBounds, null);
+                            newWindow(null, null, splitView, windowBounds, null, null);
                             gf[0] = frameList.getLast();
                         } else {
 
@@ -888,7 +889,7 @@ public class Alhena {
                             if (first[0]) {
                                 first[0] = false;
                                 Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
-                                newWindow(url, url, page, windowBounds, null);
+                                newWindow(url, url, page, windowBounds, null, null);
 
                                 gf[0] = frameList.getLast();
 
@@ -939,7 +940,7 @@ public class Alhena {
                     Rectangle windowBounds = new Rectangle(jo.getInteger("winx"), jo.getInteger("winy"), jo.getInteger("winw"), jo.getInteger("winh"));
                     String u = getStartUrl(pendingFile, args);
 
-                    newWindow(u, u, null, windowBounds, null);
+                    newWindow(u, u, null, windowBounds, null, null);
                 } else {
                     if (tabCount[0] > 1 && tabCount[0] != selectedTab && gf[0].tabbedPane != null) {
                         int st = selectedTab;
@@ -981,7 +982,7 @@ public class Alhena {
         MenuItem frameItem = new MenuItem(I18n.t("newWindowItem"));
         frameItem.addActionListener(al -> {
             String home = Util.getHome();
-            newWindow(home, home, null, null, null);
+            newWindow(home, home, null, null, null, null);
         });
 
         for (GeminiFrame gf : frameList) {
@@ -1002,8 +1003,9 @@ public class Alhena {
         return popupMenu;
     }
 
-    public static void newWindow(String url, String baseUrl, JsonObject page, Rectangle frameBounds, String scrollToHeading) {
-        GeminiFrame gf = new GeminiFrame(url, baseUrl, page, frameBounds, scrollToHeading);
+    public static void newWindow(String url, String baseUrl, JsonObject page, Rectangle frameBounds,
+            String scrollToHeading, LastTabInfo centerComp) {
+        GeminiFrame gf = new GeminiFrame(url, baseUrl, page, frameBounds, scrollToHeading, centerComp);
         gf.setLastTabInfo(lastTabInfo);
         lastTabInfo = null;
         frameList.add(gf);
@@ -1136,11 +1138,11 @@ public class Alhena {
             gf.forEachPage(page -> {
                 page.textPane().closePlayers();
             });
-            //gf.shutDown();
+
             List<Page> showList = gf.getVisiblePages();
             gf.setVisible(false);
 
-            if (SystemInfo.isMacOS && restoreTabs) {
+            if (SystemInfo.isMacOS && restoreTabs && frameList.size() == 1) {
                 deleteFrameState();
                 try {
                     Path stateFile = Paths.get(alhenaHome, "framestate_0.json");
@@ -1160,6 +1162,7 @@ public class Alhena {
 
                         page.setFrame(null);
                     } else {
+                        ((SplitPanel) c).setFrame(null);
                         ((SplitPanel) c).getLeftPage().setFrame(null);
                         ((SplitPanel) c).getRightPage().setFrame(null);
                     }
@@ -1168,7 +1171,16 @@ public class Alhena {
             }
 
             frameList.remove(gf);
+
             gf.dispose();
+            MenuItem mi = gf.getMenuItem();
+            
+            if (mi != null) { // clear gf reference in taskbar actionListener
+                ActionListener[] al = mi.getActionListeners();
+                for (ActionListener a : al) {
+                    mi.removeActionListener(a);
+                }
+            }
 
             Taskbar taskbar = getTaskbar();
             if (taskbar != null) {

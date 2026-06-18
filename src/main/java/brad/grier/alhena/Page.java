@@ -91,6 +91,7 @@ public class Page extends JPanel {
     private GeminiFrame f() {
         GeminiFrame f = (GeminiFrame) SwingUtilities.getWindowAncestor(this);
         if (f != null) {
+            frame = f;
             return f;
         }
         return frame;

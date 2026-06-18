@@ -885,7 +885,7 @@ public class GeminiTextPane extends JTextPane {
                 // open in new tab with gemtext converter regardless
                 boolean saveSetting = Alhena.useBrowser;
                 Alhena.useBrowser = false;
-                Alhena.newWindow(range.url, docURL, null, null, range.label);
+                Alhena.newWindow(range.url, docURL, null, null, range.label, null);
                 Alhena.useBrowser = saveSetting;
 
             });

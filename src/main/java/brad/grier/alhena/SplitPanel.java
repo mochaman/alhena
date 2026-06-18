@@ -10,11 +10,15 @@ import javax.swing.JSplitPane;
 public class SplitPanel extends JSplitPane {
 
     private Page leftPage, rightPage, focusedPage;
-    private final GeminiFrame frame;
+    private GeminiFrame frame;
 
     public SplitPanel(GeminiFrame frame, int orientation) {
         super(orientation);
         this.frame = frame;
+    }
+
+    public void setFrame(GeminiFrame gf){
+        frame = gf;
     }
 
     public Page getFocusedPage() {
