@@ -1969,6 +1969,7 @@ public class Alhena {
                 boolean isSVG = path.toLowerCase().endsWith(".svg");
 
                 boolean isText = txtExtensions.stream().anyMatch(ext -> path.toLowerCase().endsWith(ext));
+                boolean noExt = path.indexOf('.') == -1;
                 String mimeFromExt = MimeMapping.getMimeTypeForFilename(path);
                 boolean isMedia = mimeFromExt != null && (mimeFromExt.startsWith("audio") || mimeFromExt.startsWith("video"));
                 connection.result().write(path.equals("/") ? "/\n" : path + "\n");
@@ -1989,7 +1990,7 @@ public class Alhena {
                         }
                         saveBuffer.appendBuffer(buffer);
                         cPage.frame().setTmpStatus(Util.bytesDecimal(saveBuffer.length()));
-                    } else if (isText || path.endsWith("/")) {
+                    } else if (isText || noExt || path.endsWith("/")) {
                         if (firstBuffer[0]) {
                             firstBuffer[0] = false;
                             rcvdData[0] = true;
