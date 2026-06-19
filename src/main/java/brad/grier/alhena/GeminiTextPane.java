@@ -1848,9 +1848,11 @@ public class GeminiTextPane extends JTextPane {
 
     private void clearHighlights() {
         getHighlighter().removeAllHighlights();
-        for (PreformattedTextPane p : ptpList) {
-            Highlighter highlighter = p.getHighlighter();
-            highlighter.removeAllHighlights();
+        if (ptpList != null) {
+            for (PreformattedTextPane p : ptpList) {
+                Highlighter highlighter = p.getHighlighter();
+                highlighter.removeAllHighlights();
+            }
         }
     }
 
