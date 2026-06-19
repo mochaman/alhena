@@ -4287,13 +4287,13 @@ public final class GeminiFrame extends JFrame {
                         return; // clicked on empty area, not a tab
                     }
                     JPopupMenu popup = new JPopupMenu();
-                    JMenuItem closeTabItem = new JMenuItem("Close Tab");
+                    JMenuItem closeTabItem = new JMenuItem(I18n.t("closeTabItem"));
                     closeTabItem.addActionListener(al -> {
                         closeTab(tabIndex);
                     });
                     popup.add(closeTabItem);
 
-                    JMenuItem closeTabsItem = new JMenuItem("Close Other Tabs");
+                    JMenuItem closeTabsItem = new JMenuItem(I18n.t("closeOtherItem"));
                     closeTabsItem.addActionListener(al -> {
                         for (int i = tabbedPane.getTabCount() - 1; i >= 0; i--) {
                             if (i != tabIndex) {
@@ -4303,7 +4303,7 @@ public final class GeminiFrame extends JFrame {
                     });
                     popup.add(closeTabsItem);
 
-                    JMenuItem closeLeftItem = new JMenuItem("Close Tabs To Left");
+                    JMenuItem closeLeftItem = new JMenuItem(I18n.t("closeLeftItem"));
                     closeLeftItem.addActionListener(al -> {
                         for (int i = tabIndex - 1; i >= 0; i--) {
                             closeTab(i);
@@ -4312,7 +4312,7 @@ public final class GeminiFrame extends JFrame {
                     });
                     popup.add(closeLeftItem);
 
-                    JMenuItem closeRightItem = new JMenuItem("Close Tabs To Right");
+                    JMenuItem closeRightItem = new JMenuItem(I18n.t("closeRightItem"));
                     closeRightItem.addActionListener(al -> {
                         for (int i = tabbedPane.getTabCount() - 1; i > tabIndex; i--) {
                             closeTab(i);
@@ -4321,7 +4321,7 @@ public final class GeminiFrame extends JFrame {
                     });
                     popup.add(closeRightItem);
 
-                    JMenuItem newFrameItem = new JMenuItem("Move To New Window");
+                    JMenuItem newFrameItem = new JMenuItem(I18n.t("moveToWindowItem"));
                     newFrameItem.addActionListener(al -> {
                         closeTab(tabIndex);
                         String url;
