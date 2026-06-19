@@ -149,6 +149,8 @@ public class Util {
             dressDialog(dialog);
         }
         dialog.setVisible(true);
+        optionPane.setMessage(null);
+        dialog.dispose();
 
     }
 
@@ -188,6 +190,9 @@ public class Util {
         }
 
         dialog.setVisible(true);
+        // help gc
+        optionPane.setMessage(null);
+        dialog.dispose();
 
     }
 
@@ -237,6 +242,9 @@ public class Util {
         }
 
         dialog.setVisible(true);
+        // help gc
+        optionPane.setMessage(null);
+        dialog.dispose();
 
         return optionPane.getValue();
 
@@ -299,7 +307,9 @@ public class Util {
             }
         }
         dialog.setVisible(true);
-
+        // help gc
+        optionPane.setMessage(null);
+        dialog.dispose();
         // return null for cancel as a shortcut
         if (options == null && optionPane.getValue() instanceof Integer val) {
             if (val == JOptionPane.CANCEL_OPTION || val == JOptionPane.CLOSED_OPTION) {
@@ -421,6 +431,9 @@ public class Util {
 
         });
         dialog.setVisible(true);
+        // help gc
+        optionPane.setMessage(null);
+        dialog.dispose();
 
         if (optionPane.getValue() instanceof Integer result) {
             if (result == JOptionPane.OK_OPTION) {
@@ -506,6 +519,11 @@ public class Util {
             dressDialog(dialog);
         }
         dialog.setVisible(true);
+
+        // help gc
+        optionPane.setMessage(null);
+        dialog.dispose();
+
         Object selectedValue = optionPane.getValue();
         if (selectedValue instanceof String val) {
             if (val.equals(I18n.t("okLabel"))) {
@@ -557,6 +575,9 @@ public class Util {
             dressDialog(dialog);
         }
         dialog.setVisible(true);
+        // help gc
+        optionPane.setMessage(null);
+        dialog.dispose();
         Object selectedValue = optionPane.getValue();
         if (selectedValue instanceof String val) {
             if (val.equals(I18n.t("okLabel"))) {
@@ -640,7 +661,7 @@ public class Util {
             dialog.setSize(600, 400);
             dialog.setLocationRelativeTo(f);
             dialog.setVisible(true);
-
+            dialog.dispose(); // help gc
             return selectedFile[0];
         }
     }
