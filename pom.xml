@@ -36,6 +36,16 @@
             <artifactId>commonmark</artifactId>
             <version>0.24.0</version>
         </dependency>
+        <dependency>
+            <groupId>me.saharnooby</groupId>
+            <artifactId>qoi-java</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>me.saharnooby</groupId>
+            <artifactId>qoi-java-awt</artifactId>
+            <version>1.2.1</version>
+        </dependency>
         <!-- include the following for native-image only -->   
         <!---
         <dependency>

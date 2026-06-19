@@ -190,8 +190,8 @@ public class Alhena {
     private static final AtomicBoolean interrupted = new AtomicBoolean();
     private static final AtomicBoolean systemAsleep = new AtomicBoolean();
     // remove vlc extensions and let MimeMapper decide
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg");
-    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg");
+    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg", ".qoi");
+    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg", ".qoi");
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
     public static final List<String> vlcDirectTypes = List.of("application/x-mpegURL", "application/vnd.apple.mpegurl", "application/dash+xml", "audio/x-mpegurl", "audio/x-scpls", "application/xspf+xml");
     private static final List<String> validFetchHeaders = List.of("20 text/gemini", "20 text/plain", "20 text/xml", "20 application/xml", "20 application/atom+xml");
@@ -1678,6 +1678,11 @@ public class Alhena {
                                     }
                                 }
 
+                                boolean isImage = Alhena.imageExtensions.stream().anyMatch(uri.getPath().toLowerCase()::endsWith);
+                                if (isImage && !mime.startsWith("image/")) {
+                                    mime = "image/jpeg"; // actual image type doesn't matter
+                                }
+
                                 if (mime.startsWith("text/gemini")) {
 
                                     BufferSplit split = splitBuffer(saveBuffer.slice(i + 1, saveBuffer.length()));
@@ -2869,6 +2874,11 @@ public class Alhena {
                                         mime = "text/gemini";
 
                                     }
+                                }
+                                
+                                boolean isImage = Alhena.imageExtensions.stream().anyMatch(uri.getPath().toLowerCase()::endsWith);
+                                if (isImage && !mime.startsWith("image/")) {
+                                    mime = "image/jpeg"; // actual image type doesn't matter
                                 }
 
                                 if (mime.startsWith("text/gemini")) {
