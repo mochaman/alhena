@@ -34,7 +34,7 @@
 - Embedded text and media from data URLs
 - Custom page styles by domain, url and theme
 - Address bar autocomplete from history
-- SVG and animated GIF support
+- SVG, QOI and animated GIF support
 - Gradient backgrounds
 - SOCKS5 proxy support
 - Gopher and Gophers (Gopher over TLS)
@@ -90,16 +90,16 @@ Privacy Considerations: Per the author of vlcj, "it may be possible that a remot
 
 Prebuilt binaries are available for Windows, Mac, Linux and FreeBSD. Java is NOT required (except for the Basic install). The platform specific installs each include a small, custom jvm created with jlink.
 
-- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_windows_x64.zip) MSI installer
-- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_aarch64.dmg) DMG  (unsigned)
-- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_x64.dmg) DMG (unsigned)
-- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_linux_x64.tgz) untar and run 'Alhena' script
-- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_linux_aarch64.tgz) untar and run 'Alhena' script
-- [Linux deb amd64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_amd64.deb) Debian amd64 package
-- [Linux deb arm64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_arm64.deb) Debian arm64 package
-- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_freebsd_x64.tgz) untar and run script
-- [Haiku x64](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_haiku_x64.tgz) untar and run script
-- [Basic](https://github.com/mochaman/alhena/releases/download/v5.6.3/alhena-5.6.3_nojava.zip) JAVA_HOME must point to Java 21+ directory. Run via .bat or .sh scripts.
+- [Windows x64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_windows_x64.zip) MSI installer
+- [MacOS aarch64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_aarch64.dmg) DMG  (unsigned)
+- [MacOS x64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_x64.dmg) DMG (unsigned)
+- [Linux x64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_linux_x64.tgz) untar and run 'Alhena' script
+- [Linux aarch64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_linux_aarch64.tgz) untar and run 'Alhena' script
+- [Linux deb amd64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_amd64.deb) Debian amd64 package
+- [Linux deb arm64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_arm64.deb) Debian arm64 package
+- [FreeBSD x64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_freebsd_x64.tgz) untar and run script
+- [Haiku x64](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_haiku_x64.tgz) untar and run script
+- [Basic](https://github.com/mochaman/alhena/releases/download/v5.6.4/alhena-5.6.4_nojava.zip) JAVA_HOME must point to Java 21+ directory. Run via .bat or .sh scripts.
 
 ## 🐳 Docker
 
