@@ -1492,7 +1492,7 @@ public final class GeminiFrame extends JFrame {
             });
             settingsMenu.setMnemonic('S');
             menuBar.add(settingsMenu);
-            return;
+
         }
 
         JMenu darkThemeMenu = new JMenu(I18n.t("darkThemesItem"));
