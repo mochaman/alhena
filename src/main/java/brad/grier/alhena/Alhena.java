@@ -1148,6 +1148,7 @@ public class Alhena {
                     try {
                         Path stateFile = Paths.get(alhenaHome, "framestate_0.json");
                         Files.writeString(stateFile, gf.getAppState(showList).encode(), StandardCharsets.UTF_8);
+                        gf.free(); // macos taskbar holds frame reference
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }

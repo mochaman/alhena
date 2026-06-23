@@ -4697,6 +4697,18 @@ public final class GeminiFrame extends JFrame {
 
     }
 
+    // should only call on macos when last window closed but app left running
+    public void free() {
+
+        if (tabbedPane != null) {
+            tabbedPane.removeAll();
+        }
+        Component centerComponent = ((BorderLayout) getContentPane().getLayout()).getLayoutComponent(BorderLayout.CENTER);
+        tabbedPane = null;
+        remove(centerComponent);
+        pageHistoryMap.clear();
+    }
+
     public void setStatus(String msg) {
         statusField.setText(msg);
     }
