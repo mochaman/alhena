@@ -1861,6 +1861,7 @@ public class GeminiTextPane extends JTextPane {
             clearHighlights();
             return;
         }
+        word = protectContractions(word);
         boolean found = false;
         try {
             highlight(this, word.toLowerCase());
@@ -2474,12 +2475,22 @@ public class GeminiTextPane extends JTextPane {
         return contentWidth;
     }
 
+    private static final Pattern CONTRACTION = Pattern.compile("(\\w)['\u2019](\\w)");
+
+    private String protectContractions(String text) {
+        if (text.indexOf('\'') == -1 && text.indexOf('\u2019') == -1) {
+            return text;
+        }
+        return CONTRACTION.matcher(text).replaceAll(m
+                -> m.group(1) + "\u02BC" + m.group(2)
+        );
+    }
+
     public void addPage(String geminiDoc) {
         if (pageBuffer == null) {
             return;
         }
         pageBuffer.append(geminiDoc);
-
         if (bufferedLine != null) {
             geminiDoc = bufferedLine + geminiDoc;
             bufferedLine = null;
@@ -2488,76 +2499,17 @@ public class GeminiTextPane extends JTextPane {
         if (lastNl != -1) {
             String completeLines = geminiDoc.substring(0, lastNl + 1);
             bufferedLine = geminiDoc.substring(lastNl + 1);
-
-            completeLines.lines().forEach(line -> processLine(line));
+            // JTextPane will word wrap on apostrophe in contractions
+            completeLines.lines().forEach(line -> processLine(preformattedMode ? line : protectContractions(line)));
+            //completeLines.lines().forEach(line -> processLine(line));
         } else {
             bufferedLine = geminiDoc;
         }
-
         if (page != null) {
             page.loading();
         }
     }
 
-    private static final int AMBIGUOUS = 0;
-    private static final int BUFFER = 1;
-    private static final int STREAM = 2;
-
-    private int[] classifyPartialLine(String partial) {
-
-        if (partial.isEmpty()) {
-
-            return new int[]{AMBIGUOUS};
-        }
-
-        char first = partial.charAt(0);
-        switch (first) {
-            case '=' -> {
-                if (partial.length() == 1) {
-                    return new int[]{AMBIGUOUS};
-                }
-                if (partial.charAt(1) == '>') {
-                    return new int[]{BUFFER}; // "=>" confirmed link
-
-                }
-                return new int[]{STREAM, 0}; // "=x" confirmed plain text
-            }
-            case '`' -> {
-                if (partial.length() < 3) {
-                    return new int[]{AMBIGUOUS};
-                }
-                return new int[]{BUFFER}; // "```" confirmed
-            }
-            case '#' -> {
-                if (partial.length() == 1) {
-                    return new int[]{AMBIGUOUS};
-                }
-                if (partial.charAt(1) == '#') {
-                    if (partial.length() == 2) {
-                        return new int[]{AMBIGUOUS};
-                    }
-                    return new int[]{BUFFER}; // "###" or "##x" confirmed heading
-                }
-                return new int[]{BUFFER}; // "#x" confirmed heading
-            }
-            case '>' -> {
-                return new int[]{STREAM, 0}; // confirmed blockquote, streamable
-            }
-            case '*' -> {
-                if (partial.length() == 1) {
-                    return new int[]{AMBIGUOUS};
-                }
-                if (partial.charAt(1) == ' ') {
-                    return new int[]{BUFFER}; // "* " list item
-
-                }
-                return new int[]{STREAM, 0}; // "*x" plain text
-            }
-            default -> {
-                return new int[]{STREAM, 0}; // confirmed plain text
-            }
-        }
-    }
     private String emojiProportional;
     private int customFontSize;
     private boolean isDark;
