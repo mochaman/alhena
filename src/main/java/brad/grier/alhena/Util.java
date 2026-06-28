@@ -1671,8 +1671,13 @@ public class Util {
 
     public static byte[] convertToPng(byte[] inputImageBytes, int size) throws IOException, InterruptedException {
 
-        ProcessBuilder pb = new ProcessBuilder(Alhena.magickPath, "-background", "none", "-", "-resize", size + "x>", "png:-");
-
+        ProcessBuilder pb = new ProcessBuilder(
+                Alhena.magickPath,
+                "-background", "none",
+                "-[0]",
+                "-resize", size + "x>",
+                "png:-"
+        );
         Process process = pb.start();
 
         try (OutputStream processStdin = process.getOutputStream(); InputStream processStdout = process.getInputStream(); ByteArrayOutputStream convertedPngStream = new ByteArrayOutputStream()) {
