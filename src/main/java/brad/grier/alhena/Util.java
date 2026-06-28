@@ -25,6 +25,7 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -112,7 +113,6 @@ import com.formdev.flatlaf.util.SystemInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.PageStyleInfo;
 import io.vertx.core.json.JsonObject;
-import java.io.ByteArrayOutputStream;
 
 /**
  * Static utility methods
@@ -1671,7 +1671,7 @@ public class Util {
 
     public static byte[] convertToPng(byte[] inputImageBytes, int size) throws IOException, InterruptedException {
 
-        ProcessBuilder pb = new ProcessBuilder(Alhena.magickPath, "-", "-resize", size + "x>", "png:-");
+        ProcessBuilder pb = new ProcessBuilder(Alhena.magickPath, "-background", "none", "-", "-resize", size + "x>", "png:-");
 
         Process process = pb.start();
 
