@@ -112,6 +112,7 @@ import com.formdev.flatlaf.util.SystemInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.PageStyleInfo;
 import io.vertx.core.json.JsonObject;
+import java.io.ByteArrayOutputStream;
 
 /**
  * Static utility methods
@@ -1666,6 +1667,33 @@ public class Util {
 
     public static String truncate(String str, int max) {
         return str.length() > max ? str.substring(0, max) + "..." : str;
+    }
+
+    public static byte[] convertToPng(byte[] inputImageBytes, int size) throws IOException, InterruptedException {
+
+        ProcessBuilder pb = new ProcessBuilder(Alhena.magickPath, "-", "-resize", size + "x>", "png:-");
+
+        Process process = pb.start();
+
+        try (OutputStream processStdin = process.getOutputStream(); InputStream processStdout = process.getInputStream(); ByteArrayOutputStream convertedPngStream = new ByteArrayOutputStream()) {
+
+            processStdin.write(inputImageBytes);
+            processStdin.flush();
+            processStdin.close();
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = processStdout.read(buffer)) != -1) {
+                convertedPngStream.write(buffer, 0, bytesRead);
+            }
+
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new IOException("ImageMagick exited with an error code: " + exitCode);
+            }
+
+            return convertedPngStream.toByteArray();
+        }
     }
 
 }

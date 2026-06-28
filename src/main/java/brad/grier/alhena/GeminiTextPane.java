@@ -1692,7 +1692,7 @@ public class GeminiTextPane extends JTextPane {
         return "GIF87a".equals(sig) || "GIF89a".equals(sig);
     }
 
-    public void insertImage(byte[] imageBytes, boolean curPos, boolean isSVG) {
+    public void insertImage(byte[] imageBytes, boolean curPos, boolean isSVG, boolean useMagick) {
 
         inserting = true;
         // if restoring from json saved state, use the saved width because actual width can't be computed
@@ -1701,9 +1701,20 @@ public class GeminiTextPane extends JTextPane {
         // 50 pixel fudge factor. Unable to land on a programmatic width insets plus scrollbar width, etc
         // that doesn't cause the horizontal scrollbar to appear
         int width = (int) useContentWidth - 50;
+        width = printing ? printWidth : width;
+        if (useMagick) {
+            try {
+                imageBytes = Util.convertToPng(imageBytes, width);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                f().setBusy(false, page);
+                return;
+                // no conversion
+            }
+        }
         BufferedImage image;
         ImageIcon icon = null;
-        if (isSVG) {
+        if (isSVG && !useMagick) {
             SVGLoader loader = new SVGLoader();
             try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
                 LoaderContext ctx = LoaderContext.builder().build();
@@ -1717,6 +1728,7 @@ public class GeminiTextPane extends JTextPane {
                     g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
                     svgDoc.render(null, g);
                     g.dispose();
+
                     image = Util.getImage(null, width, width * 2, svgImage, false);
                     // TODO: needed (maybe)
                     if (image == null) {
@@ -1731,8 +1743,17 @@ public class GeminiTextPane extends JTextPane {
         } else if (isGif(imageBytes) && !printing) {
             icon = new ImageIcon(imageBytes);
         } else {
-            int scaleWidth = printing ? printWidth : width;
-            image = Util.getImage(imageBytes, scaleWidth, scaleWidth * 2, null, false);
+            if (useMagick) {
+                ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
+                try {
+                    image = ImageIO.read(bis);
+                } catch (IOException ex) {
+                    image = null;
+                    ex.printStackTrace();
+                }
+            } else {
+                image = Util.getImage(imageBytes, width, width * 2, null, false);
+            }
 
             if (image == null) {
                 f().setBusy(false, page);
@@ -3228,7 +3249,7 @@ public class GeminiTextPane extends JTextPane {
             }
 
         } else if (mime.startsWith("image")) {
-            insertImage(byteData, curPos, mime.contains("svg+xml"));
+            insertImage(byteData, curPos, mime.contains("svg+xml"), false);
         } else if (mime.startsWith("text")) {
             String s;
             try {

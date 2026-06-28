@@ -173,6 +173,8 @@ import io.vertx.core.net.impl.NetSocketInternal;
 import io.vertx.core.spi.tls.SslContextFactory;
 import io.vertx.core.streams.Pump;
 import io.vertx.core.streams.ReadStream;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  * Static main class to manage frame creation and connectivity
@@ -190,8 +192,11 @@ public class Alhena {
     private static final AtomicBoolean interrupted = new AtomicBoolean();
     private static final AtomicBoolean systemAsleep = new AtomicBoolean();
     // remove vlc extensions and let MimeMapper decide
-    public static final List<String> fileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg", ".qoi");
-    public static final List<String> imageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg", ".qoi");
+    private static final List<String> fixedFileExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".pem", ".csv", ".png", ".jpg", ".jpeg", ".webp", ".xml", ".json", ".gif", ".bmp", ".md", ".tif", ".svg", ".qoi");
+    public static final List<String> fileExtensions = new ArrayList<>(fixedFileExtensions);
+    private static final List<String> fixedImageExtensions = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".svg", ".qoi");
+    public static final List<String> imageExtensions = new ArrayList<>(fixedImageExtensions);
+    public static final List<String> magickList = new ArrayList<>();// = new ArrayList<>(List.of(".jxl", ".qoi"));
     public static final List<String> txtExtensions = List.of(".txt", ".gemini", ".gmi", ".log", ".html", ".csv", ".xml", ".json", ".md");
     public static final List<String> vlcDirectTypes = List.of("application/x-mpegURL", "application/vnd.apple.mpegurl", "application/dash+xml", "audio/x-mpegurl", "audio/x-scpls", "application/xspf+xml");
     private static final List<String> validFetchHeaders = List.of("20 text/gemini", "20 text/plain", "20 text/xml", "20 application/xml", "20 application/atom+xml");
@@ -204,6 +209,8 @@ public class Alhena {
     public static String geminiProxy;
     public static String playerCommand;
     public static String socksProxy;
+    public static String magickPath;
+    public static String magickExtensions;
     public static boolean socksFilter;
     public static String searchUrl;
     public static AtomicLong lastFeedRefresh = new AtomicLong();
@@ -742,6 +749,11 @@ public class Alhena {
         GeminiFrame.fontSize = Integer.parseInt(map.getOrDefault("fontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.monoFontSize = Integer.parseInt(map.getOrDefault("monofontsize", String.valueOf(GeminiFrame.DEFAULT_FONT_SIZE)));
         GeminiFrame.saveFont = new Font(DB.getPref("font", "SansSerif"), Font.PLAIN, GeminiFrame.fontSize);
+        magickPath = map.getOrDefault("magickpath", null);
+        magickExtensions = map.getOrDefault("magickext", null);
+        if (magickPath != null && new File(magickPath).exists() && magickExtensions != null) {
+            addExtensions(magickExtensions);
+        }
 
         theme = map.get("theme");
         EventQueue.invokeLater(() -> {
@@ -1885,13 +1897,14 @@ public class Alhena {
 
                             GeminiTextPane tPane = cPage.textPane;
 
+                            boolean useMagick = magickList.stream().anyMatch(uri.getPath().toLowerCase()::endsWith);
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0], useMagick);
 
                             } else {
                                 cPage.setBusy(false);
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0], useMagick);
                             }
                         });
                     } else {
@@ -2111,13 +2124,13 @@ public class Alhena {
                             // get rid of this - maybe put spawning page in page ref
 
                             GeminiTextPane tPane = cPage.textPane;
-
+                            boolean useMagick = magickList.stream().anyMatch(path.toLowerCase()::endsWith);
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG, useMagick);
 
                             } else {
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG, useMagick);
                             }
                         });
                     } else {
@@ -2410,13 +2423,13 @@ public class Alhena {
                             // get rid of this - maybe put spawning page in page ref
 
                             GeminiTextPane tPane = cPage.textPane;
-
+                            boolean useMagick = magickList.stream().anyMatch(finalUrl.toLowerCase()::endsWith);
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG);
+                                tPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG, useMagick);
 
                             } else {
                                 p.textPane.end(" ", false, finalUrl, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG);
+                                p.textPane.insertImage(saveBuffer.getBytes(0, saveBuffer.length()), false, isSVG, useMagick);
                             }
                         });
                     } else {
@@ -2876,7 +2889,7 @@ public class Alhena {
 
                                     }
                                 }
-                                
+
                                 boolean isImage = Alhena.imageExtensions.stream().anyMatch(uri.getPath().toLowerCase()::endsWith);
                                 if (isImage && !mime.startsWith("image/")) {
                                     mime = "image/jpeg"; // actual image type doesn't matter
@@ -3151,14 +3164,14 @@ public class Alhena {
                         bg(() -> {
 
                             GeminiTextPane tPane = cPage.textPane;
-
+                            boolean useMagick = magickList.stream().anyMatch(uri.getPath().toLowerCase()::endsWith);
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
+                                tPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0], useMagick);
 
                             } else {
                                 cPage.setBusy(false);
                                 p.textPane.end(" ", false, origURL, true);
-                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0]);
+                                p.textPane.insertImage(saveBuffer.getBytes(imageStartIdx[0], saveBuffer.length()), false, isSVG[0], useMagick);
                             }
                         });
                     } else {
@@ -4634,13 +4647,13 @@ public class Alhena {
                         bg(() -> {
 
                             GeminiTextPane tPane = cPage.textPane;
-
+                            boolean useMagick = magickList.stream().anyMatch(url.toLowerCase()::endsWith);
                             if (tPane.awatingImage()) {
-                                tPane.insertImage(bytes, false, isSVG);
+                                tPane.insertImage(bytes, false, isSVG, useMagick);
 
                             } else {
                                 p.textPane.end(" ", false, url, true);
-                                p.textPane.insertImage(bytes, false, isSVG);
+                                p.textPane.insertImage(bytes, false, isSVG, useMagick);
                             }
                         });
 
@@ -4760,13 +4773,13 @@ public class Alhena {
                                         bg(() -> {
 
                                             GeminiTextPane tPane = cPage.textPane;
-
+                                            boolean useMagick = magickList.stream().anyMatch(url.toLowerCase()::endsWith);
                                             if (tPane.awatingImage()) {
-                                                tPane.insertImage(saveBuffer.getBytes(), false, isSVG);
+                                                tPane.insertImage(saveBuffer.getBytes(), false, isSVG, useMagick);
 
                                             } else {
                                                 p.textPane.end(" ", false, fUrl, true);
-                                                p.textPane.insertImage(saveBuffer.getBytes(), false, isSVG);
+                                                p.textPane.insertImage(saveBuffer.getBytes(), false, isSVG, useMagick);
                                             }
                                         });
 
@@ -4989,16 +5002,16 @@ public class Alhena {
                                     bg(() -> {
 
                                         GeminiTextPane tPane = cPage.textPane;
-
+                                        boolean useMagick = magickList.stream().anyMatch(finalURL.toLowerCase()::endsWith);
                                         try {
                                             byte[] data = Files.readAllBytes(file.toPath());
                                             file.delete();
                                             if (tPane.awatingImage()) {
-                                                tPane.insertImage(data, false, isSVG);
+                                                tPane.insertImage(data, false, isSVG, useMagick);
 
                                             } else {
                                                 p.textPane.end(" ", false, finalURL, true);
-                                                p.textPane.insertImage(data, false, isSVG);
+                                                p.textPane.insertImage(data, false, isSVG, useMagick);
                                             }
                                         } catch (IOException ex) {
                                             ex.printStackTrace();
@@ -5433,6 +5446,25 @@ public class Alhena {
     public static String markdownToHtml(String markdown) {
         Node document = parser.parse(markdown);
         return renderer.render(document);
+    }
+
+    public static void addExtensions(String exts) {
+        magickList.clear();
+        fileExtensions.clear();
+        imageExtensions.clear();
+        fileExtensions.addAll(fixedFileExtensions);
+        imageExtensions.addAll(fixedImageExtensions);
+        
+        List<String> extensions = Arrays.stream(exts.split(","))
+                .map(String::strip)
+                .filter(s -> !s.isEmpty())
+                .map(s -> s.startsWith(".") ? s : "." + s)
+                .collect(Collectors.toList());
+        extensions.stream().forEach(ext -> {
+            fileExtensions.add(ext);
+            imageExtensions.add(ext);
+            magickList.add(ext);
+        });
     }
 
 }

@@ -1843,6 +1843,45 @@ public final class GeminiFrame extends JFrame {
             }
         }));
 
+        settingsMenu.add(createMenuItem("ImageMagick", null, () -> {
+            JPanel inlinePanel = new JPanel(new GridLayout(4, 1));
+            inlinePanel.add(new JLabel("Enter path to ImageMagick executable"));
+
+            JTextField pathField = new JTextField();
+            if (Alhena.magickPath != null) {
+                pathField.setText(Alhena.magickPath);
+            }
+            inlinePanel.add(pathField);
+            inlinePanel.add(new JLabel("Enter comma-delimited list of image file extensions"));
+            JTextField extField = new JTextField();
+            if (Alhena.magickExtensions != null) {
+                extField.setText(Alhena.magickExtensions);
+            }
+            inlinePanel.add(extField);
+
+            Object[] comps = {inlinePanel};
+            Object res = Util.inputDialog2(GeminiFrame.this, "ImageMagick", comps, null, false);
+            if (res != null) {
+                String pf = pathField.getText();
+                if (!pf.isBlank()) {
+                    if (!new File(pf).exists()) {
+                        Util.infoDialog(this, "Not Found", "Invalid path to ImageMagick");
+                        return;
+                    }
+                    Alhena.magickPath = pf;
+                    String exts = extField.getText();
+                    Alhena.magickExtensions = exts;
+
+                    Alhena.addExtensions(exts);
+                    DB.insertPref("magickpath", Alhena.magickPath);
+                    DB.insertPref("magickext", Alhena.magickExtensions);
+
+                }else{
+                    DB.insertPref("magickpath", null);
+                }
+            }
+        }));
+
         settingsMenu.add(new JSeparator());
         JCheckBoxMenuItem smoothItem = new JCheckBoxMenuItem(I18n.t("smoothScrollingItem"), Alhena.smoothScrolling);
         smoothItem.addItemListener(ae -> {
@@ -4281,7 +4320,7 @@ public final class GeminiFrame extends JFrame {
                         return;
                     }
                     mouseSelectedTab = false;
-                    
+
                     int tabIndex = tabbedPane.indexAtLocation(e.getX(), e.getY());
                     if (tabIndex < 0) {
                         return; // clicked on empty area, not a tab
