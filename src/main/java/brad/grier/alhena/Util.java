@@ -590,7 +590,7 @@ public class Util {
 
     }
 
-    public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter) {
+    public static File getFile(GeminiFrame f, String fileName, boolean isOpenMode, String title, FileNameExtensionFilter filter, boolean dirOnly) {
         if (Alhena.systemFileChooser) {
 
             SystemFileChooser fc = new SystemFileChooser();
@@ -1148,7 +1148,7 @@ public class Util {
     }
 
     public static String uEncode(String s) {
-        return URLEncoder.encode(s).replace("+", "%20");
+        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     public static String mapTheme(String t) {

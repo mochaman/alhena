@@ -865,7 +865,7 @@ public final class GeminiFrame extends JFrame {
             LocalDateTime now = LocalDateTime.now();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
             String formattedDate = now.format(formatter);
-            File f = Util.getFile(GeminiFrame.this, "alhenadb_" + formattedDate + ".zip", false, "Save", filter);
+            File f = Util.getFile(GeminiFrame.this, "alhenadb_" + formattedDate + ".zip", false, "Save", filter, false);
             if (f != null) {
 
                 try {
@@ -883,7 +883,7 @@ public final class GeminiFrame extends JFrame {
 
         userMenu.add(createMenuItem(I18n.t("importDataItem"), null, () -> {
             FileNameExtensionFilter filter = new FileNameExtensionFilter("zip files (*.zip)", "zip");
-            File f = Util.getFile(GeminiFrame.this, null, true, I18n.t("importFileDialog"), filter);
+            File f = Util.getFile(GeminiFrame.this, null, true, I18n.t("importFileDialog"), filter, false);
             if (f != null) {
                 Util.importData(GeminiFrame.this, f, false, false);
             }
@@ -3917,7 +3917,7 @@ public final class GeminiFrame extends JFrame {
         }
         if (f == null) {
             FileNameExtensionFilter filter = new FileNameExtensionFilter("PEM files (*.pem)", "pem");
-            f = Util.getFile(this, null, true, I18n.t("selectPEMDialog"), filter);
+            f = Util.getFile(this, null, true, I18n.t("selectPEMDialog"), filter, false);
         }
 
         if (f != null) {
@@ -3958,7 +3958,7 @@ public final class GeminiFrame extends JFrame {
     public void openFile(File file) {
 
         if (file == null) {
-            file = Util.getFile(this, null, true, I18n.t("selectFileDialog"), null);
+            file = Util.getFile(this, null, true, I18n.t("selectFileDialog"), null, false);
         }
 
         if (file != null && file.exists()) {
@@ -3993,7 +3993,7 @@ public final class GeminiFrame extends JFrame {
             }
         }
         FileNameExtensionFilter filter = new FileNameExtensionFilter("gemini files (*.gmi, *.pem)", "gmi", "pem");
-        File saveFile = Util.getFile(this, suggestedName, false, I18n.t("saveFileDialog"), filter);
+        File saveFile = Util.getFile(this, suggestedName, false, I18n.t("saveFileDialog"), filter, false);
         if (saveFile != null) {
             setBusy(true, textPane);
 

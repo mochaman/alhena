@@ -66,6 +66,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
@@ -84,6 +85,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -173,8 +175,6 @@ import io.vertx.core.net.impl.NetSocketInternal;
 import io.vertx.core.spi.tls.SslContextFactory;
 import io.vertx.core.streams.Pump;
 import io.vertx.core.streams.ReadStream;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 /**
  * Static main class to manage frame creation and connectivity
@@ -1792,7 +1792,7 @@ public class Alhena {
 
                                             EventQueue.invokeAndWait(() -> {
                                                 String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
-                                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+                                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null, false);
 
                                             });
                                         } catch (Exception ex) {
@@ -2092,7 +2092,7 @@ public class Alhena {
 
                                 EventQueue.invokeAndWait(() -> {
                                     String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
-                                    file[0] = Util.getFile(p.frame(), fileName, false, I18n.t("saveFileDialog"), null);
+                                    file[0] = Util.getFile(p.frame(), fileName, false, I18n.t("saveFileDialog"), null, false);
 
                                 });
                             } catch (Exception ex) {
@@ -2391,7 +2391,7 @@ public class Alhena {
 
                                 EventQueue.invokeAndWait(() -> {
                                     String fileName = finalUrl.substring(finalUrl.lastIndexOf("/") + 1);
-                                    file[0] = Util.getFile(p.frame(), fileName, false, I18n.t("saveFileDialog"), null);
+                                    file[0] = Util.getFile(p.frame(), fileName, false, I18n.t("saveFileDialog"), null, false);
 
                                 });
                             } catch (Exception ex) {
@@ -3005,7 +3005,7 @@ public class Alhena {
 
                                             EventQueue.invokeAndWait(() -> {
                                                 String fileName = origURL.substring(origURL.lastIndexOf("/") + 1);
-                                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null);
+                                                file[0] = Util.getFile(p.frame(), fileName, false, "Save File", null, false);
 
                                             });
                                         } catch (Exception ex) {
@@ -4524,16 +4524,18 @@ public class Alhena {
             try {
                 StringBuilder sb = new StringBuilder();
                 sb.append("# ").append(Path.of(filePart).getFileName()).append("\n\n");
-
                 try (FileSystem fs = FileSystems.newFileSystem(Path.of(filePart))) {
                     Files.walk(fs.getPath("/"))
                             .filter(l -> !Files.isDirectory(l))
                             .sorted()
                             .forEach(l -> {
-                                // build a file:/ url by inserting the inner path after .zip
-                                String innerPath = l.toString(); // e.g. /folder/index.txt
-                                String fileUrl = url + innerPath;
-                                String label = innerPath.startsWith("/") ? innerPath.substring(1) : innerPath;
+                                String rawPath = l.toString(); // e.g. /folder/index.txt
+                                String encodedPath = rawPath.startsWith("/")
+                                        ? "/" + Util.uEncode(rawPath.substring(1))
+                                        : Util.uEncode(rawPath);
+                                String fileUrl = url + encodedPath;
+
+                                String label = rawPath.startsWith("/") ? rawPath.substring(1) : rawPath;
                                 sb.append("=> ").append(fileUrl).append(" ").append(label).append("\n");
                             });
                 }
@@ -5100,7 +5102,7 @@ public class Alhena {
                             File[] file = new File[1];
                             resp.pause();
                             EventQueue.invokeAndWait(() -> {
-                                file[0] = Util.getFile(p.frame(), finalName, false, I18n.t("saveFileDialog"), null);
+                                file[0] = Util.getFile(p.frame(), finalName, false, I18n.t("saveFileDialog"), null, false);
                             });
                             if (file[0] != null) {
                                 vertx.fileSystem().open(file[0].getAbsolutePath(), new OpenOptions().setCreate(true).setTruncateExisting(true), fileResult -> {
@@ -5454,7 +5456,7 @@ public class Alhena {
         imageExtensions.clear();
         fileExtensions.addAll(fixedFileExtensions);
         imageExtensions.addAll(fixedImageExtensions);
-        
+
         List<String> extensions = Arrays.stream(exts.split(","))
                 .map(String::strip)
                 .filter(s -> !s.isEmpty())
