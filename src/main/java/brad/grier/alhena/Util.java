@@ -602,6 +602,9 @@ public class Util {
             if (filter != null) {
                 fc.addChoosableFileFilter(new SystemFileChooser.FileNameExtensionFilter(filter.getDescription(), filter.getExtensions()));
             }
+            if (dirOnly) {
+                fc.setFileSelectionMode(SystemFileChooser.DIRECTORIES_ONLY);
+            }
             if (isOpenMode) {
                 if (fc.showOpenDialog(f) == SystemFileChooser.APPROVE_OPTION) {
                     return fc.getSelectedFile();
@@ -629,6 +632,7 @@ public class Util {
                 fileChooser.setFileFilter(filter);
             }
             fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            fileChooser.setFileSelectionMode(dirOnly ? JFileChooser.DIRECTORIES_ONLY : JFileChooser.FILES_ONLY);
             fileChooser.setApproveButtonText(isOpenMode ? I18n.t("importFileDialog") : I18n.t("saveLabel"));
 
             if (fileName != null && !fileName.trim().isEmpty()) {

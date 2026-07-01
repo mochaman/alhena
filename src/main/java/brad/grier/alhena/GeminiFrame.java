@@ -788,6 +788,10 @@ public final class GeminiFrame extends JFrame {
         fileMenu.add(createMenuItem(I18n.t("openFileItem"), KeyStroke.getKeyStroke(KeyEvent.VK_O, mod), () -> {
             openFile(null);
         }));
+        fileMenu.add(createMenuItem(I18n.t("openDirItem"), null, () -> {
+            openDir();
+        }));
+
         if (!NATIVE_IMAGE) {
             fileMenu.add(createMenuItem(I18n.t("printItem"), KeyStroke.getKeyStroke(KeyEvent.VK_P, mod), () -> {
                 if (!Util.isPrintingAvailable()) {
@@ -3953,6 +3957,19 @@ public final class GeminiFrame extends JFrame {
             }
         }
 
+    }
+
+    public void openDir(){
+        File file = Util.getFile(this, null, true, I18n.t("openDirDialog"), null, true);
+        if (file != null && file.exists()) {
+            try {
+                URI fileUri = file.toURI();
+                fetchURL(fileUri.toString(), false, null);
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 
     public void openFile(File file) {

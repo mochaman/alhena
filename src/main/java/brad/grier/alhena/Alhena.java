@@ -4565,6 +4565,61 @@ public class Alhena {
         MBOOK
     }
 
+    private static void handleDir(File dir, String url, Page p, Page cPage) {
+        p.frame().setBusy(true, cPage);
+        vertx.executeBlocking(promise -> {
+
+            promise.complete(generateDirectoryListing(dir));
+
+        }, result -> {
+            if (result.succeeded()) {
+                String page = (String) result.result();
+                bg(() -> {
+                    p.textPane.end(page, false, url, true);
+                });
+
+            } else {
+                bg(() -> {
+                    p.textPane.end("## " + I18n.t("errorOpeningMsg") + "\n", false, url, true);
+                });
+                result.cause().printStackTrace();
+            }
+        });
+    }
+
+    private static String generateDirectoryListing(File directory) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("# ").append(directory.getName()).append("\n\n");
+
+        File[] entries = directory.listFiles();
+        if (entries == null) {
+            sb.append(I18n.t("dirReadErrorMsg"));
+            return sb.toString();
+        }
+
+        Arrays.sort(entries, (a, b) -> {
+            if (a.isDirectory() != b.isDirectory()) {
+                return a.isDirectory() ? -1 : 1;
+            }
+            return a.getName().compareToIgnoreCase(b.getName());
+        });
+
+        for (File entry : entries) {
+            String rawName = entry.getName();
+            boolean isDir = entry.isDirectory();
+
+            String encodedName = Util.uEncode(rawName);
+            String fileUrl = "file:/" + Util.uEncode(directory.getAbsolutePath().replace(File.separatorChar, '/'))
+                    + "/" + encodedName + (isDir ? "/" : "");
+
+            String label = rawName + (isDir ? "/" : "");
+
+            sb.append("=> ").append(fileUrl).append(" ").append(label).append("\n");
+        }
+
+        return sb.toString();
+    }
+
     private static void handleZip(String url, Page p, Page cPage, PublicationType pType) {
         String filePart = URLDecoder.decode(url.replaceFirst("^file:/+", "/"), StandardCharsets.UTF_8);
         filePart = SystemInfo.isWindows ? filePart.substring(1) : filePart;
@@ -4704,6 +4759,10 @@ public class Alhena {
 
             File file = new File(fileUrl.toURI());
             if (file.exists()) {
+                if(file.isDirectory()){
+                    handleDir(file, url, p, cPage);
+                    return;
+                }
                 boolean md = false;
                 String mimeExt = MimeMapping.getMimeTypeForFilename(url);
                 if (mimeExt == null && url.toLowerCase().endsWith(".md")) {
