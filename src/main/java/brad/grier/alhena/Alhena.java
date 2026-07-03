@@ -265,6 +265,7 @@ public class Alhena {
 
     private static final Parser parser;
     private static final HtmlRenderer renderer;
+    public static boolean desktopSupported;
 
     static {
         // just do this once
@@ -589,6 +590,7 @@ public class Alhena {
         }
         String[] pendingFile = {null};
         if (Desktop.isDesktopSupported()) {
+            desktopSupported = true;
             Desktop desktop = Desktop.getDesktop();
             if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
                 desktop.setAboutHandler(e -> {
@@ -4752,12 +4754,9 @@ public class Alhena {
 
     // only call from EDT
     private static void handleFile(String url, Page p, Page cPage) {
-        URL fileUrl;
+
         try {
-
-            fileUrl = new URL(url);
-
-            File file = new File(fileUrl.toURI());
+            File file = new File(new URI(url));
             if (file.exists()) {
                 if(file.isDirectory()){
                     handleDir(file, url, p, cPage);
