@@ -122,6 +122,8 @@ import brad.grier.alhena.DB.StyleInfo;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.net.MalformedURLException;
+import java.net.URL;
 import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.fellbaum.jemoji.IndexedEmoji;
@@ -890,6 +892,62 @@ public class GeminiTextPane extends JTextPane {
 
             });
             popupMenu.add(menuItem2);
+
+            try {
+
+                if (docURL.startsWith("file:/") && range.url.startsWith("file:/")) {
+
+                    File df = new File(new URI(docURL));
+                    if (df.isDirectory()) {
+
+                        File tf = new File(new URI(range.url));
+                        JSeparator sep = null;
+
+                        if (!tf.isDirectory()) {
+                            popupMenu.add(sep = new JSeparator());
+                            if (Alhena.desktopSupported) {
+                                JMenuItem openExtItem = new JMenuItem(I18n.t("openExtItem"));
+                                openExtItem.addActionListener(al -> {
+                                    Util.openWithDefaultApp(tf, f());
+                                });
+                                popupMenu.add(openExtItem);
+                            }
+                            boolean trashSupported = Alhena.desktopSupported
+                                    && Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH);
+
+                            String verbiage;
+                            if (SystemInfo.isWindows) {
+                                verbiage = I18n.t("winDeleteItem");
+                            } else if (SystemInfo.isMacOS) {
+                                verbiage = I18n.t("macDeleteItem");
+                            } else {
+                                // Linux
+                                verbiage = trashSupported ? I18n.t("linuxTrashItem") : I18n.t("linuxDelItem");
+                            }
+                            JMenuItem deleteItem = new JMenuItem(verbiage);
+                            deleteItem.addActionListener(al -> {
+                                if (Util.sendToTrash(tf, f())) {
+                                    f().refresh(true);
+                                }
+                            });
+                            popupMenu.add(deleteItem);
+                        }
+                        if (sep == null) {
+                            popupMenu.add(new JSeparator());
+                        }
+                        if (Alhena.desktopSupported) {
+                            String verbiage = SystemInfo.isMacOS ? I18n.t("macFinderItem") : SystemInfo.isWindows ? I18n.t("winFinderItem") : I18n.t("linuxFinderItem");
+                            JMenuItem finderItem = new JMenuItem(verbiage);
+                            finderItem.addActionListener(al -> {
+                                Util.openInFinder(tf, f());
+                            });
+                            popupMenu.add(finderItem);
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
 
         }
 

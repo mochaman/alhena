@@ -113,6 +113,8 @@ import com.formdev.flatlaf.util.SystemInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.PageStyleInfo;
 import io.vertx.core.json.JsonObject;
+import java.awt.Desktop;
+import java.text.MessageFormat;
 
 /**
  * Static utility methods
@@ -1053,11 +1055,10 @@ public class Util {
     }
 
     public static boolean downloadFile(String urlString, File outputFile) {
-
         URL url;
         try {
-            url = new URL(urlString);
-        } catch (MalformedURLException ex) {
+            url = new URI(urlString).toURL();
+        } catch (URISyntaxException | MalformedURLException ex) {
             ex.printStackTrace();
             return false;
         }
@@ -1067,9 +1068,7 @@ public class Util {
             io.printStackTrace();
             return false;
         }
-
         return true;
-
     }
 
     public static String getMimeType(String path) {
@@ -1702,6 +1701,64 @@ public class Util {
             }
 
             return convertedPngStream.toByteArray();
+        }
+    }
+
+    public static boolean sendToTrash(File file, GeminiFrame gf) {
+        boolean trashSupported = Alhena.desktopSupported && Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH);
+
+        String destination = SystemInfo.isWindows ? "Recycle Bin" : "Trash";
+
+        String message = trashSupported
+                ? MessageFormat.format(I18n.t("delTrashMsg"), file.getName(), destination)
+                : MessageFormat.format(I18n.t("delPermMsg"), file.getName());
+        Object res = Util.confirmDialog(gf, I18n.t("confirmDelDialog"), message, JOptionPane.YES_NO_OPTION, null, JOptionPane.QUESTION_MESSAGE);
+        if (res instanceof Integer result) {
+            if (result == JOptionPane.YES_OPTION) {
+
+                if (trashSupported) {
+                    return Desktop.getDesktop().moveToTrash(file);
+                } else {
+                    return file.delete();
+                }
+
+            }
+        }
+        return false;
+
+    }
+
+    // do not call this method unless isDesktopSupported() is true
+    public static void openInFinder(File file, GeminiFrame gf) {
+        Desktop desktop = Desktop.getDesktop();
+        if (desktop.isSupported(Desktop.Action.BROWSE_FILE_DIR)) {
+            desktop.browseFileDirectory(file);
+        } else {
+            try {
+                // open the containing folder instead
+                desktop.open(file.getParentFile());
+            } catch (IOException ex) {
+                
+                ex.printStackTrace();
+                infoDialog(gf, I18n.t("defAppErrorDialog"), I18n.t("defAppErrorMsg"), JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
+    }
+
+    // do not call this method unless isDesktopSupported() is true
+    public static void openWithDefaultApp(File file, GeminiFrame gf) {
+        Desktop desktop = Desktop.getDesktop();
+        if (desktop.isSupported(Desktop.Action.OPEN)) {
+            try {
+                desktop.open(file);
+            } catch (IOException e) {
+                infoDialog(gf, I18n.t("defAppErrorDialog"), I18n.t("noDefAppMsg"), JOptionPane.ERROR_MESSAGE);
+            } catch (IllegalArgumentException e) {
+                infoDialog(gf, I18n.t("defAppErrorDialog"), I18n.t("defAppFileNotFound"), JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            infoDialog(gf, I18n.t("defAppErrorDialog"), I18n.t("defAppErrorMsg"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
