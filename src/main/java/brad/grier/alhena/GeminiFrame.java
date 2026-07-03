@@ -1880,7 +1880,7 @@ public final class GeminiFrame extends JFrame {
                     DB.insertPref("magickpath", Alhena.magickPath);
                     DB.insertPref("magickext", Alhena.magickExtensions);
 
-                }else{
+                } else {
                     DB.insertPref("magickpath", null);
                 }
             }
@@ -3004,8 +3004,12 @@ public final class GeminiFrame extends JFrame {
                     loadStyles(visiblePage.textPane, visiblePage, null, true, -1);
                 case GeminiTextPane.DEFAULT_MODE -> {
                     if (!cURL.isEmpty()) {
+                        int sp = visiblePage.getScrollPos();
                         visiblePage.setStart();
                         Alhena.processURL(cURL, visiblePage, null, visiblePage, false);
+                        if (reposition) {
+                            EventQueue.invokeLater(() -> visiblePage.setScrollPos(sp));
+                        }
                     }
                 }
                 default -> {
@@ -3959,7 +3963,7 @@ public final class GeminiFrame extends JFrame {
 
     }
 
-    public void openDir(){
+    public void openDir() {
         File file = Util.getFile(this, null, true, I18n.t("openDirDialog"), null, true);
         if (file != null && file.exists()) {
             try {
