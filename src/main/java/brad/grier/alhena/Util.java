@@ -1705,7 +1705,7 @@ public class Util {
     }
 
     public static boolean sendToTrash(File file, GeminiFrame gf) {
-        boolean trashSupported = Alhena.desktopSupported && Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH);
+        boolean trashSupported = !Alhena.isHaiku && Alhena.desktopSupported && Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH);
 
         String destination = SystemInfo.isWindows ? "Recycle Bin" : "Trash";
 
@@ -1734,11 +1734,16 @@ public class Util {
         if (desktop.isSupported(Desktop.Action.BROWSE_FILE_DIR)) {
             desktop.browseFileDirectory(file);
         } else {
+            
             try {
-                // open the containing folder instead
-                desktop.open(file.getParentFile());
+                if (SystemInfo.isWindows) {
+                    Runtime.getRuntime().exec(new String[]{"Explorer", "/select,", file.getAbsolutePath()});
+                } else // open the containing folder instead
+                {
+                    desktop.open(file.getParentFile());
+                }
             } catch (IOException ex) {
-                
+
                 ex.printStackTrace();
                 infoDialog(gf, I18n.t("defAppErrorDialog"), I18n.t("defAppErrorMsg"), JOptionPane.ERROR_MESSAGE);
             }

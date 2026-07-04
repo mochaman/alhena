@@ -922,7 +922,7 @@ public class GeminiTextPane extends JTextPane {
                                 verbiage = I18n.t("macDeleteItem");
                             } else {
                                 // Linux
-                                verbiage = trashSupported ? I18n.t("linuxTrashItem") : I18n.t("linuxDelItem");
+                                verbiage = trashSupported && !Alhena.isHaiku ? I18n.t("linuxTrashItem") : I18n.t("linuxDelItem");
                             }
                             JMenuItem deleteItem = new JMenuItem(verbiage);
                             deleteItem.addActionListener(al -> {
@@ -932,16 +932,18 @@ public class GeminiTextPane extends JTextPane {
                             });
                             popupMenu.add(deleteItem);
                         }
-                        if (sep == null) {
-                            popupMenu.add(new JSeparator());
-                        }
-                        if (Alhena.desktopSupported) {
-                            String verbiage = SystemInfo.isMacOS ? I18n.t("macFinderItem") : SystemInfo.isWindows ? I18n.t("winFinderItem") : I18n.t("linuxFinderItem");
-                            JMenuItem finderItem = new JMenuItem(verbiage);
-                            finderItem.addActionListener(al -> {
-                                Util.openInFinder(tf, f());
-                            });
-                            popupMenu.add(finderItem);
+                        if (!Alhena.isHaiku) {
+                            if (sep == null) {
+                                popupMenu.add(new JSeparator());
+                            }
+                            if (Alhena.desktopSupported) {
+                                String verbiage = SystemInfo.isMacOS ? I18n.t("macFinderItem") : SystemInfo.isWindows ? I18n.t("winFinderItem") : I18n.t("linuxFinderItem");
+                                JMenuItem finderItem = new JMenuItem(verbiage);
+                                finderItem.addActionListener(al -> {
+                                    Util.openInFinder(tf, f());
+                                });
+                                popupMenu.add(finderItem);
+                            }
                         }
                     }
                 }
