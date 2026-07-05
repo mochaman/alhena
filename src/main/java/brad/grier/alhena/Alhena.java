@@ -188,7 +188,7 @@ public class Alhena {
     private final static List<GeminiFrame> frameList = new ArrayList<>();
     public final static String PROG_NAME = "Alhena";
     public static String welcomeMessage;
-    public final static String VERSION = "5.6.4";
+    public final static String VERSION = "5.6.5";
     private static final AtomicBoolean interrupted = new AtomicBoolean();
     private static final AtomicBoolean systemAsleep = new AtomicBoolean();
     // remove vlc extensions and let MimeMapper decide
