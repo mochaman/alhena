@@ -92,6 +92,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
@@ -1360,9 +1362,9 @@ public class Alhena {
             if (prevURI != null) {
                 // handle relative links in zip, gpub file
                 String zUrl = prevURI.toString();
-                var matcher = Pattern.compile("\\.(zip|gpub|mbook)/").matcher(zUrl);
+                var matcher = Pattern.compile("\\.(zip|jar|gpub|mbook)/").matcher(zUrl);
 
-                if (matcher.find() && !url.contains(".zip/") && !url.contains(".gpub/") && !url.contains(".mbook/") && url.matches("^file:/+.*")) {
+                if (matcher.find() && !url.contains(".zip/") && !url.contains(".gpub/") && !url.contains(".mbook/") && !url.contains(".jar/") && url.matches("^file:/+.*")) {
                     String archivePath = zUrl.substring(0, matcher.end() - 1);
                     String candidatePath = url.replaceFirst("^file:/+", "/");
 
@@ -1373,10 +1375,12 @@ public class Alhena {
                 }
             }
 
-            if (url.endsWith(".zip") || url.endsWith(".gpub") || url.endsWith(".mbook")) {
+            if (url.endsWith(".zip") || url.endsWith(".gpub") || url.endsWith(".mbook") || url.endsWith(".jar")) {
                 zipToGemtext(url, p, cPage);
             } else if (url.contains(".zip/")) {
                 handleZip(url, p, cPage, PublicationType.ZIP);
+            } else if (url.contains(".jar/")) {
+                handleZip(url, p, cPage, PublicationType.JAR);
             } else if (url.contains(".gpub/")) {
                 handleZip(url, p, cPage, PublicationType.GPUB);
             } else if (url.contains(".mbook/")) {
@@ -3856,11 +3860,28 @@ public class Alhena {
         // create a KeyManagerFactory and initialize it with the KeyStore
         KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "password".toCharArray());
+        TrustManager[] blindTrustManagers = new TrustManager[]{
+            new X509TrustManager() {
+                @Override
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                }
 
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                    // DO NOT throw any exceptions here. 
+                    // let both expired and untrusted certificates finish the handshake
+                }
+
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+            }
+        };
         // create and initialize the SSLContext
         SSLContext sslContext = SSLContext.getInstance("TLS");
 
-        sslContext.init(kmf.getKeyManagers(), null, new SecureRandom());
+        sslContext.init(kmf.getKeyManagers(), blindTrustManagers, new SecureRandom());
         return sslContext;
     }
 
@@ -4563,6 +4584,7 @@ public class Alhena {
 
     public enum PublicationType {
         ZIP,
+        JAR,
         GPUB,
         MBOOK
     }
@@ -4635,6 +4657,10 @@ public class Alhena {
             case MBOOK -> {
                 zipFilePath = filePart.substring(0, filePart.indexOf(".mbook/") + 6);
                 innerFile = filePart.substring(filePart.indexOf(".mbook/") + 7);
+            }
+            case JAR -> {
+                zipFilePath = filePart.substring(0, filePart.indexOf(".jar/") + 4);
+                innerFile = filePart.substring(filePart.indexOf(".jar/") + 5);
             }
             default -> {
                 zipFilePath = filePart.substring(0, filePart.indexOf(".zip/") + 4);
@@ -4758,7 +4784,7 @@ public class Alhena {
         try {
             File file = new File(new URI(url));
             if (file.exists()) {
-                if(file.isDirectory()){
+                if (file.isDirectory()) {
                     handleDir(file, url, p, cPage);
                     return;
                 }
