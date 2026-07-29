@@ -23,7 +23,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -757,42 +756,12 @@ public class DB {
     }
 
     public static void dumpDB(File outputFile) throws Exception {
-        runStatement("DROP TABLE IF EXISTS CACERTS");
-        // create a cacerts table and copy the x509certs from cacerts for each host in clientcerts
-        String sql = """
-            CREATE TABLE CACERTS (
-                DOMAIN VARCHAR(256),
-                CERT VARCHAR(8192)
-            );
-            """;
-        runStatement(sql);
-        List<DBClientCertInfo> cCerts = loadCerts();
-        List<String> domainList = cCerts.stream()
-                .map(DBClientCertInfo::domain) // Extract domains
-                .distinct() // keep only unique domains
-                .toList();
-
-        // extract the certificate from cacerts for each domain
-        HashMap<String, X509Certificate> certMap = Alhena.getServerCerts(domainList);
-
-        certMap.entrySet().stream().forEach(es -> {
-            try {
-                String certPem = "-----BEGIN CERTIFICATE-----\n"
-                        + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(es.getValue().getEncoded())
-                        + "\n-----END CERTIFICATE-----";
-
-                insertCACert(es.getKey(), certPem);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        });
 
         try (Connection con = cp.getConnection(); var st = con.createStatement()) {
             //ResultSet rs = st.executeQuery("SCRIPT");
             st.execute("SCRIPT DROP TO '" + outputFile.getAbsolutePath() + "' COMPRESSION ZIP");
 
         }
-        runStatement("DROP TABLE CACERTS");
         addFileToZip(outputFile.getAbsolutePath(), "version.txt", VERSION);
 
     }
@@ -814,11 +783,6 @@ public class DB {
             st.execute("RUNSCRIPT FROM '" + inputFile + "' COMPRESSION ZIP");
         }
 
-        if (tableExists(cp.getConnection(), "CACERTS")) { // for some backward compatibility
-            HashMap<String, X509Certificate> certMap = getSavedCerts(cp);
-            Alhena.setServerCerts(certMap);
-            runStatement("DROP TABLE CACERTS");
-        }
 
         DB.insertPref("allowvlc", String.valueOf(vlc)); //  do not restore vlc setting as vlc may not exist on different machine
 

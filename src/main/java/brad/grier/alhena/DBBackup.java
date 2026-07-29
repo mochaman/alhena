@@ -4,13 +4,11 @@ import java.io.File;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
 
 import org.h2.jdbcx.JdbcConnectionPool;
@@ -70,11 +68,6 @@ public class DBBackup {
 
             }
 
-            if (DB.tableExists(cp.getConnection(), "CACERTS")) { // for some backward compatibility
-                HashMap<String, X509Certificate> certMap = DB.getSavedCerts(cp);
-                Alhena.setServerCerts(certMap);
-                // DB.runStatement("DROP TABLE CACERTS");
-            }
 
         }
         cp.dispose();

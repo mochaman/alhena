@@ -12,6 +12,7 @@ import java.awt.RenderingHints;
 import java.io.File;
 import java.security.cert.X509Certificate;
 
+import javax.net.ssl.SSLSession;
 import javax.swing.BoundedRangeModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -429,12 +430,13 @@ public class Page extends JPanel {
             elapsed = System.currentTimeMillis() - start;
 
             if (protocol != null) {
-                f().setTmpStatus(elapsed + " ms " + protocol + " " + cipherSuite);
+                f().setTmpStatus(elapsed + " ms " + protocol + " " + cipherSuite + " " + Util.getCAString(session));
+
             } else {
                 f().setTmpStatus(elapsed + " ms");
             }
         }
-
+        session = null;
         if (onDone != null) {
             onDone.run();
             onDone = null;
@@ -464,10 +466,10 @@ public class Page extends JPanel {
     }
 
     // needed when jumping directly to a page via tab history
-    public void setArrayIndex(int idx){
-        if(isRoot()){
+    public void setArrayIndex(int idx) {
+        if (isRoot()) {
             arrayIndex = idx;
-        }else{
+        } else {
             rootPage.arrayIndex = idx;
         }
     }
@@ -553,10 +555,13 @@ public class Page extends JPanel {
     }
 
     private String protocol, cipherSuite;
+    private SSLSession session;
 
-    public void setConnectInfo(String protocol, String cipherSuite) {
-        this.protocol = protocol;
-        this.cipherSuite = cipherSuite;
+    public void setConnectInfo(SSLSession session) {
+        protocol = session.getProtocol();
+        cipherSuite = session.getCipherSuite();
+        this.session = session;
+
     }
 
     public String getProtocol() {

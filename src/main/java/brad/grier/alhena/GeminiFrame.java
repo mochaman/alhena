@@ -3948,7 +3948,6 @@ public final class GeminiFrame extends JFrame {
                         }
 
                         DB.insertClientCert(prunedUrl, pemData.cert(), pemData.key(), true, null);
-                        Alhena.addCertToTrustStore(uri, visiblePage().getCert(), false);
 
                         Alhena.closeNetClient(DB.getClientCertInfo(prunedUrl)); //lazy
                         String message = MessageFormat.format(I18n.t("pemAddedDialogMsg"), uri);

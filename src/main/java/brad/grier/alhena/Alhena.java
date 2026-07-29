@@ -23,8 +23,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -41,11 +39,9 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -53,7 +49,6 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
@@ -545,28 +540,7 @@ public class Alhena {
         );
 
         Files.createDirectories(Paths.get(alhenaHome));
-        if (!new File(alhenaHome + "/cacerts").exists()) {
 
-            // first time
-            // java will not negotiate a ssl handshake between a client cert and a server with
-            // a self-signed certificate unless the server's certificate is in java's trustore
-            // it will work with ca signed server certs but most Gemini servers use self-signed certs
-            // ...and no - making a separate truststore with the server certs will not work
-            // so...
-            // copy Java's original cacerts file and use that to start storing server certs
-            // we need to specify this is the new trustore for the app with javax.net.ssl.trustStore
-            Path source = Paths.get(System.getProperty("java.home") + "/lib/security/cacerts");
-            Path destination = Paths.get(alhenaHome + "/cacerts");
-
-            try {
-                Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        System.setProperty("javax.net.ssl.trustStore", alhenaHome + "/cacerts"); // current dir
-        System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
         if (SystemInfo.isMacOS) {
             System.setProperty("apple.awt.application.appearance", "system");
             System.setProperty("apple.awt.application.name", PROG_NAME);
@@ -2736,7 +2710,7 @@ public class Alhena {
                 });
 
                 SSLSession sslSession = connection.result().sslSession();
-                p.setConnectInfo(sslSession.getProtocol(), sslSession.getCipherSuite());
+                p.setConnectInfo(sslSession);
 
                 boolean[] titanEdit = {uri.getScheme().equals("titan") && uri.getPath().endsWith(";edit")};
                 StringBuilder titanSB = new StringBuilder();
@@ -3411,8 +3385,7 @@ public class Alhena {
             String fp = hexString.substring(0, hexString.length());
             java.sql.Timestamp ts = new java.sql.Timestamp(cert.getNotAfter().getTime());
             DB.upsertCert(host, fp, ts, null);
-            // Update the server cert in cacerts file if and only if it's already there
-            addCertToTrustStore(URI.create("gemini://" + host), cert, true);
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -3652,7 +3625,6 @@ public class Alhena {
             if (I18n.t("okLabel").equals(cn)) {
                 String cnString = cnField.getText();
                 cnString = cnString.isEmpty() ? PROG_NAME : cnString;
-                addCertToTrustStore(uri, cert, false);
 
                 if (dcButton.isSelected()) {
                     URI newURI = URI.create(uri.getScheme() + "://" + uri.getHost() + ":" + Util.getPort(uri) + "/");
@@ -3703,44 +3675,7 @@ public class Alhena {
         return false; // value doesn't matter when called from type 60 (sent to bg())
     }
 
-    public static void addCertToTrustStore(URI uri, X509Certificate cert, boolean replaceExistingAlias) {
-        // add server certs for sites that require a client certificate
 
-        String cacertsPath = alhenaHome + "/cacerts"; // Default cacerts path
-        String cacertsPassword = "changeit"; // Default cacerts password
-        File f = new File(cacertsPath);
-        if (f.exists()) {
-            try {
-
-                // load the cacerts keystore
-                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                try (FileInputStream is = new FileInputStream(cacertsPath)) {
-                    keyStore.load(is, cacertsPassword.toCharArray());
-                }
-
-                String newAlias = uri.getHost() + "." + Util.getPort(uri);
-                if (replaceExistingAlias) {
-                    // return if alias does not exist in cacerts file
-                    if (!java.util.Collections.list(keyStore.aliases()).contains(newAlias)) {
-                        return;
-                    }
-                }
-
-                if (certExists(keyStore, calculateFingerprint(cert)) != null) {
-                    return;
-                }
-
-                // add the certificate to the keystore
-                keyStore.setCertificateEntry(newAlias, cert);
-
-                try (FileOutputStream os = new FileOutputStream(cacertsPath)) {
-                    keyStore.store(os, cacertsPassword.toCharArray());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     private static String calculateFingerprint(X509Certificate cert) throws NoSuchAlgorithmException, CertificateEncodingException {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -3754,98 +3689,7 @@ public class Alhena {
 
     }
 
-    public static HashMap<String, X509Certificate> getServerCerts(List<String> hostList) {
-        // add server certs for sites that require a client certificate
-        HashMap<String, X509Certificate> cMap = new HashMap<>();
-        String cacertsPath = alhenaHome + "/cacerts"; // Default cacerts path
-        String cacertsPassword = "changeit"; // Default cacerts password
-        File f = new File(cacertsPath);
-        if (f.exists()) {
-            try {
 
-                // load the cacerts keystore
-                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                try (FileInputStream is = new FileInputStream(cacertsPath)) {
-                    keyStore.load(is, cacertsPassword.toCharArray());
-                }
-
-                for (String host : hostList) {
-                    URI uri = URI.create("gemini://" + host);
-                    host = uri.getHost();
-                    int port = Util.getPort(uri);
-
-                    X509Certificate cert = (X509Certificate) keyStore.getCertificate(host);
-                    if (cert == null) {
-                        // try with port 
-                        cert = (X509Certificate) keyStore.getCertificate(host + "." + port);
-                    }
-                    if (cert != null /* && certExists(keyStore, calculateFingerprint(cert)) != null*/) {
-                        // TODO: make sure host in correct format BELIEVE OKAY
-                        cMap.put(host + ":" + port, cert);
-                    }
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        return cMap;
-    }
-
-    // used when restoring database
-    public static void setServerCerts(HashMap<String, X509Certificate> certMap) {
-
-        String cacertsPath = alhenaHome + "/cacerts"; // Default cacerts path
-        String cacertsPassword = "changeit"; // Default cacerts password
-        File f = new File(cacertsPath);
-        if (f.exists()) {
-            try {
-
-                // load the cacerts keystore
-                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                try (FileInputStream is = new FileInputStream(cacertsPath)) {
-                    keyStore.load(is, cacertsPassword.toCharArray());
-                }
-
-                certMap.entrySet().stream().forEach(es -> {
-                    try {
-
-                        if (certExists(keyStore, calculateFingerprint(es.getValue())) == null) {
-                            // add the certificate to the keystore
-                            String alias = es.getKey().replace(':', '.');
-                            keyStore.setCertificateEntry(alias, es.getValue());
-                        }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                });
-
-                try (FileOutputStream os = new FileOutputStream(cacertsPath)) {
-                    keyStore.store(os, cacertsPassword.toCharArray());
-                }
-
-            } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private static String certExists(KeyStore keystore, String certFingerprint) throws Exception {
-        for (String alias : java.util.Collections.list(keystore.aliases())) {
-            if (keystore.isCertificateEntry(alias)) {
-                Certificate cert = keystore.getCertificate(alias);
-                if (cert instanceof X509Certificate x509Cert) {
-                    String fingerprint = calculateFingerprint(x509Cert);
-                    if (fingerprint.equalsIgnoreCase(certFingerprint)) {
-
-                        return alias;
-                    }
-                }
-            }
-        }
-        return null;
-    }
 
     private static SSLContext createSSLContext(ClientCertInfo certInfo) throws Exception {
         X509Certificate cert = (X509Certificate) loadCertificate(certInfo.cert());

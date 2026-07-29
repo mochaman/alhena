@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Desktop;
 import java.awt.Dialog;
 import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
@@ -51,11 +52,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
+import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.Signature;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.Map;
@@ -65,6 +70,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.swing.AbstractAction;
@@ -113,8 +122,6 @@ import com.formdev.flatlaf.util.SystemInfo;
 import brad.grier.alhena.DB.ClientCertInfo;
 import brad.grier.alhena.DB.PageStyleInfo;
 import io.vertx.core.json.JsonObject;
-import java.awt.Desktop;
-import java.text.MessageFormat;
 
 /**
  * Static utility methods
@@ -1734,7 +1741,7 @@ public class Util {
         if (desktop.isSupported(Desktop.Action.BROWSE_FILE_DIR)) {
             desktop.browseFileDirectory(file);
         } else {
-            
+
             try {
                 if (SystemInfo.isWindows) {
                     Runtime.getRuntime().exec(new String[]{"Explorer", "/select,", file.getAbsolutePath()});
@@ -1765,6 +1772,46 @@ public class Util {
         } else {
             infoDialog(gf, I18n.t("defAppErrorDialog"), I18n.t("defAppErrorMsg"), JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    public static String getCAString(SSLSession session) {
+        boolean isTrustedCA = false;
+
+        try {
+            Certificate[] peerCerts = session.getPeerCertificates();
+
+            if (peerCerts != null && peerCerts.length > 0) {
+                X509Certificate[] chain = new X509Certificate[peerCerts.length];
+                for (int i = 0; i < peerCerts.length; i++) {
+                    chain[i] = (X509Certificate) peerCerts[i];
+                }
+
+                isTrustedCA = isCertificateTrustedCA(chain);
+            }
+        } catch (Exception e) {
+            isTrustedCA = false;
+        }
+
+        return isTrustedCA ? "Trusted CA" : "Self-Signed";
+    }
+
+    public static boolean isCertificateTrustedCA(X509Certificate[] chain) {
+        try {
+            TrustManagerFactory factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            factory.init((KeyStore) null);
+
+            for (TrustManager trustManager : factory.getTrustManagers()) {
+                if (trustManager instanceof X509TrustManager) {
+                    ((X509TrustManager) trustManager).checkServerTrusted(chain, "UNKNOWN");
+                    return true;
+                }
+            }
+        } catch (CertificateException e) {
+            return false; 
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
     }
 
 }
