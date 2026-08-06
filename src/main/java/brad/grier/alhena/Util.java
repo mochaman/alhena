@@ -1686,7 +1686,7 @@ public class Util {
                 "-background", "none",
                 "-[0]",
                 "-resize", size + "x>",
-                "png:-"
+                "bmp:-"
         );
         Process process = pb.start();
 
