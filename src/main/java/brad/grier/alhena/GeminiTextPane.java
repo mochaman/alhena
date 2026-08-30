@@ -119,11 +119,10 @@ import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
 import brad.grier.alhena.DB.PageStyleInfo;
 import brad.grier.alhena.DB.StyleInfo;
+import io.vertx.core.Promise;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.net.MalformedURLException;
-import java.net.URL;
 import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.fellbaum.jemoji.IndexedEmoji;
@@ -3120,35 +3119,72 @@ public class GeminiTextPane extends JTextPane {
                     () -> {
                         isClicked = true;
                         if (spartanLink) {
-
                             TextEditor textEditor = new TextEditor("", false, docURL);
                             Object[] comps = new Object[1];
                             comps[0] = textEditor;
                             f().titanEditorOpen = true;
-                            Object res = Util.inputDialog2(f(), "Edit", comps, null, true);
-                            f().titanEditorOpen = false;
-                            if (res != null) {
-                                Object result = textEditor.getResult();
-                                if (result instanceof String string) {
-                                    f().addClickedLink(finalUrl);
-                                    if (!string.isBlank()) {
 
+                            Promise<Object> editPromise = Promise.promise();
+                            editPromise.future().onComplete(ar -> {
+                                f().titanEditorOpen = false;
+                                Object res = ar.succeeded() ? ar.result() : null;
+                                if (res != null) {
+                                    Object result = textEditor.getResult();
+                                    if (result instanceof String string) {
+                                        f().addClickedLink(finalUrl);
+                                        if (!string.isBlank()) {
+                                            if (isNavigator || navFlip) {
+                                                clicked(cr1[0]);
+                                                f().splitView(finalUrl + "?" + Util.uEncode(string), null, navSplitType, null, navFlip, null);
+                                            } else {
+                                                f().fetchURL(finalUrl + "?" + Util.uEncode(string), false, null);
+                                            }
+                                        }
+                                    } else {
                                         if (isNavigator || navFlip) {
                                             clicked(cr1[0]);
-                                            f().splitView(finalUrl + "?" + Util.uEncode(string), null, navSplitType, null, navFlip, null);
+                                            f().splitView(finalUrl, null, navSplitType, null, navFlip, (File) result);
                                         } else {
-                                            f().fetchURL(finalUrl + "?" + Util.uEncode(string), false, null);
+                                            f().fetchURL(finalUrl, (File) result, false, null, null);
                                         }
                                     }
-                                } else {
-                                    if (isNavigator || navFlip) {
-                                        clicked(cr1[0]);
-                                        f().splitView(finalUrl, null, navSplitType, null, navFlip, (File) result);
-                                    } else {
-                                        f().fetchURL(finalUrl, (File) result, false, null, null);
-                                    }
                                 }
+                            });
+
+                            if (page.willFit(textEditor)) {
+                                page.showInputDialog2("Edit", comps, null, null, editPromise);
+                            } else {
+                                Object res = Util.inputDialog2(f(), "Edit", comps, null, true, null);
+                                editPromise.complete(res);
                             }
+//                            TextEditor textEditor = new TextEditor("", false, docURL);
+//                            Object[] comps = new Object[1];
+//                            comps[0] = textEditor;
+//                            f().titanEditorOpen = true;
+//                            Object res = Util.inputDialog2(f(), "Edit", comps, null, true);
+//                            f().titanEditorOpen = false;
+//                            if (res != null) {
+//                                Object result = textEditor.getResult();
+//                                if (result instanceof String string) {
+//                                    f().addClickedLink(finalUrl);
+//                                    if (!string.isBlank()) {
+//
+//                                        if (isNavigator || navFlip) {
+//                                            clicked(cr1[0]);
+//                                            f().splitView(finalUrl + "?" + Util.uEncode(string), null, navSplitType, null, navFlip, null);
+//                                        } else {
+//                                            f().fetchURL(finalUrl + "?" + Util.uEncode(string), false, null);
+//                                        }
+//                                    }
+//                                } else {
+//                                    if (isNavigator || navFlip) {
+//                                        clicked(cr1[0]);
+//                                        f().splitView(finalUrl, null, navSplitType, null, navFlip, (File) result);
+//                                    } else {
+//                                        f().fetchURL(finalUrl, (File) result, false, null, null);
+//                                    }
+//                                }
+//                            }
 
                         } else if (Alhena.httpProxy == null && finalUrl.startsWith("http") && Alhena.browsingSupported && Alhena.useBrowser) {
                             // navigator for split view makes no sense in this context

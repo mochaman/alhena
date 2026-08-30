@@ -3,34 +3,51 @@ package brad.grier.alhena;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.security.cert.X509Certificate;
+import java.util.function.BooleanSupplier;
 
 import javax.net.ssl.SSLSession;
+import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
 import javax.swing.BoundedRangeModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JLayer;
+import javax.swing.JLayeredPane;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JViewport;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.plaf.LayerUI;
+import javax.swing.text.JTextComponent;
 
 import com.formdev.flatlaf.util.SystemInfo;
 
 import brad.grier.alhena.Alhena.FavIconInfo;
+import io.vertx.core.Promise;
 import net.fellbaum.jemoji.EmojiManager;
 
 /**
@@ -102,18 +119,16 @@ public class Page extends JPanel {
         frame = gf;
         textPane.setFrame(gf);
     }
+    private JLayeredPane layeredPane;
+    private JPanel promptDialog;
 
     private void init() {
         scrollPane = new JScrollPane(textPane);
         scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
-
         textPane.setOpaque(false);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
-
-        scrollPane.getViewport().addChangeListener(e -> {
-            textPane.resetLGP();
-        });
+        scrollPane.getViewport().addChangeListener(e -> textPane.resetLGP());
 
         gradientPanel = new JPanel(new BorderLayout()) {
             @Override
@@ -123,14 +138,12 @@ public class Page extends JPanel {
             }
         };
         gradientPanel.add(scrollPane, BorderLayout.CENTER);
-        // }
+
         overlayLabel = new JLabel("");
         updateFavIconFont();
-
         overlayLabel.setBounds(50, 10, 50, 50);
 
         layer = new JLayer<>(gradientPanel, new LayerUI<>() {
-
             @Override
             public void paint(Graphics g, JComponent c) {
                 super.paint(g, c);
@@ -145,7 +158,249 @@ public class Page extends JPanel {
                 }
             }
         });
-        add(layer, BorderLayout.CENTER);
+
+        // swap dd() for a layered pane
+        layeredPane = new JLayeredPane() {
+            @Override
+            public void doLayout() {
+                layer.setBounds(0, 0, getWidth(), getHeight());
+                if (promptDialog != null && promptDialog.isVisible()) {
+                    Dimension d = promptDialog.getPreferredSize();
+                    int x = (getWidth() - d.width) / 2;
+                    int y = (getHeight() - d.height) / 3;
+                    promptDialog.setBounds(x, y, d.width, d.height);
+                }
+            }
+        };
+        layeredPane.add(layer, JLayeredPane.DEFAULT_LAYER);
+        add(layeredPane, BorderLayout.CENTER);
+    }
+
+    private JPanel promptContainer;
+
+    public void showInputPrompt(String title, String msg, boolean pswd,
+            String inputFieldText, JComponent addComp,
+            Promise<String> result) {
+        JTextArea textArea = new JTextArea(1, 35);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setToolTipText(I18n.t("inputTip"));
+
+        JTextComponent textField = pswd ? new JPasswordField() : textArea;
+        textField.addMouseListener(new ContextMenuMouseListener());
+        if (inputFieldText != null) {
+            textField.setText(inputFieldText);
+        }
+
+        Object[] message = {msg, textField, addComp};
+        JOptionPane optionPane = new JOptionPane(
+                message,
+                JOptionPane.QUESTION_MESSAGE,
+                JOptionPane.OK_CANCEL_OPTION,
+                null, null, null
+        );
+        optionPane.setWantsInput(false);
+
+        if (promptContainer == null) {
+            promptContainer = new JPanel(new BorderLayout());
+            promptContainer.setOpaque(true);
+            promptContainer.setBackground(UIManager.getColor("Panel.background"));
+            promptContainer.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color.GRAY, 1),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)
+            ));
+            layeredPane.add(promptContainer, JLayeredPane.PALETTE_LAYER);
+        }
+        promptContainer.removeAll();
+        if (title != null) {
+            JLabel titleLabel = new JLabel(title);
+            titleLabel.setBorder(BorderFactory.createEmptyBorder(6, 8, 0, 8));
+            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
+            promptContainer.add(titleLabel, BorderLayout.NORTH);
+        }
+        promptContainer.add(optionPane, BorderLayout.CENTER);
+        promptContainer.setVisible(true);
+        resizeAndPositionPrompt();
+
+        // was dialog.pack()
+        textArea.getDocument().addDocumentListener(new DocumentListener() {
+            private void updateSize() {
+                EventQueue.invokeLater(SwingUtilities.getWindowAncestor(promptContainer) != null
+                        ? this::doResize : this::doResize); // keep simple, see below
+            }
+
+            private void doResize() {
+                resizeAndPositionPrompt();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateSize();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateSize();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                updateSize();
+            }
+        });
+
+        KeyStroke shiftEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.SHIFT_DOWN_MASK);
+        textArea.getInputMap().put(shiftEnter, "insert-newline");
+        textArea.getActionMap().put("insert-newline", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                textArea.append("\n");
+                resizeAndPositionPrompt();
+            }
+        });
+
+        KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
+        textArea.getInputMap().put(enter, "submit-dialog");
+        textArea.getActionMap().put("submit-dialog", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                optionPane.setValue(JOptionPane.OK_OPTION);
+            }
+        });
+
+        // was dialog.dispose()
+        optionPane.addPropertyChangeListener(evt -> {
+            if (!JOptionPane.VALUE_PROPERTY.equals(evt.getPropertyName())) {
+                return;
+            }
+            Object value = optionPane.getValue();
+            if (value == JOptionPane.UNINITIALIZED_VALUE) {
+                return;
+            }
+
+            promptContainer.setVisible(false);
+            layeredPane.revalidate();
+            layeredPane.repaint();
+
+            if (value instanceof Integer i && i == JOptionPane.OK_OPTION) {
+                String val = pswd ? new String(((JPasswordField) textField).getPassword())
+                        : textField.getText();
+                result.complete(val);
+            } else {
+                result.fail("cancelled");
+            }
+        });
+
+        textField.requestFocusInWindow();
+    }
+
+    private void resizeAndPositionPrompt() {
+        Dimension d = promptContainer.getPreferredSize();
+        int x = (layeredPane.getWidth() - d.width) / 2;
+        int y = (layeredPane.getHeight() - d.height) / 3;
+        promptContainer.setBounds(x, y, d.width, d.height);
+        layeredPane.revalidate();
+        layeredPane.repaint();
+    }
+
+    public boolean willFitPrompt(String msg, boolean pswd) {
+        JTextArea textArea = new JTextArea(1, 35);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        JTextComponent textField = pswd ? new JPasswordField() : textArea;
+
+        Object[] message = {msg, textField};
+        JOptionPane testPane = new JOptionPane(
+                message, JOptionPane.QUESTION_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
+
+        Dimension pref = testPane.getPreferredSize();
+        Dimension avail = getSize();
+        int margin = 40;
+        return pref.width + margin <= avail.width && pref.height + margin <= avail.height;
+    }
+
+    public void showInputDialog2(String title, Object[] components, Object[] options,
+            BooleanSupplier[] suppliers, Promise<Object> result) {
+        JOptionPane optionPane = new JOptionPane(
+                components, // Message
+                JOptionPane.QUESTION_MESSAGE, // Message type
+                JOptionPane.OK_CANCEL_OPTION, // Option type
+                null, // Icon
+                options, // Options
+                options != null ? options[0] : null // Initial value
+        );
+        optionPane.setWantsInput(false);
+
+        if (promptContainer == null) {
+            promptContainer = new JPanel(new BorderLayout());
+            promptContainer.setOpaque(true);
+            promptContainer.setBackground(UIManager.getColor("Panel.background"));
+            promptContainer.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color.GRAY, 1),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)
+            ));
+            layeredPane.add(promptContainer, JLayeredPane.PALETTE_LAYER);
+        }
+        promptContainer.removeAll();
+        if (title != null) {
+            JLabel titleLabel = new JLabel(title);
+            titleLabel.setBorder(BorderFactory.createEmptyBorder(6, 8, 0, 8));
+            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
+            promptContainer.add(titleLabel, BorderLayout.NORTH);
+        }
+        promptContainer.add(optionPane, BorderLayout.CENTER);
+        promptContainer.setVisible(true);
+        resizeAndPositionPrompt();
+
+        // was button -> dialog.dispose(); now -> button -> optionPane.setValue(...)
+        if (suppliers != null) {
+            for (int i = 0; i < suppliers.length; i++) {
+                if (options[i] instanceof JButton button) {
+                    int j = i; // annoying
+                    button.addActionListener(al -> {
+                        if (suppliers[j].getAsBoolean()) {
+                            optionPane.setValue(options[j]);
+                        }
+                        // supplier returned false -> validation failed, leave prompt open
+                    });
+                }
+            }
+        }
+
+        // dialog.setVisible(true) blocking + return optionPane.getValue() after dispose
+        optionPane.addPropertyChangeListener(evt -> {
+            if (!JOptionPane.VALUE_PROPERTY.equals(evt.getPropertyName())) {
+                return;
+            }
+            Object value = optionPane.getValue();
+            if (value == JOptionPane.UNINITIALIZED_VALUE) {
+                return;
+            }
+
+            promptContainer.setVisible(false);
+            optionPane.setMessage(null); // help gc
+            layeredPane.revalidate();
+            layeredPane.repaint();
+
+            // return null for cancel as a shortcut
+            if (options == null && value instanceof Integer val
+                    && (val == JOptionPane.CANCEL_OPTION || val == JOptionPane.CLOSED_OPTION)) {
+                result.complete(null);
+            } else {
+                result.complete(value);
+            }
+        });
+
+        Util.focusText(promptContainer);
+    }
+
+    public boolean willFit(JComponent content) {
+        JOptionPane testPane = new JOptionPane(
+                new Object[]{content}, JOptionPane.QUESTION_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
+        Dimension pref = testPane.getPreferredSize();
+        Dimension avail = getSize();
+        int margin = 40; // room for the title label + line border + padding
+        return pref.width + margin <= avail.width && pref.height + margin <= avail.height;
     }
 
     public static void paintGradient(Graphics g, GeminiTextPane textPane, int x, int y, int width, int height) {

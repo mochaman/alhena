@@ -10,6 +10,7 @@ import java.awt.KeyboardFocusManager;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.Rectangle;
+import java.awt.SecondaryLoop;
 import java.awt.Taskbar;
 import java.awt.Taskbar.Feature;
 import java.awt.Toolkit;
@@ -1393,23 +1394,52 @@ public class Alhena {
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
                 p.frame().titanEditorOpen = true;
-                Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
-                p.frame().titanEditorOpen = false;
-                if (res == null) {
+                if (cPage.willFit(textEditor)) {
+                    Promise<Object> editPromise = Promise.promise();
+                    SecondaryLoop loop = Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
+                    Object[] resultHolder = new Object[1];
+                    editPromise.future().onComplete(ar -> {
+                        resultHolder[0] = ar.succeeded() ? ar.result() : null;
+                        loop.exit();
+                    });
 
-                    return;
-                } else {
-                    Object rsp = textEditor.getResult();
-                    p.setTitanEdited(true);
-                    if (rsp instanceof String string) {
-                        titanText = string;
+                    cPage.showInputDialog2("Edit", comps, null, null, editPromise);
+                    loop.enter(); // blocks here, EDT keeps pumping, editor stays interactive
+
+                    p.frame().titanEditorOpen = false;
+                    Object res = resultHolder[0];
+
+                    if (res == null) {
+                        return;
                     } else {
-                        titanFile = (File) rsp;
+                        Object rsp = textEditor.getResult();
+                        p.setTitanEdited(true);
+                        if (rsp instanceof String string) {
+                            titanText = string;
+                        } else {
+                            titanFile = (File) rsp;
+                        }
+                        token = textEditor.getTokenParam();
                     }
-                    token = textEditor.getTokenParam();
+                } else {
 
+                    Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
+                    p.frame().titanEditorOpen = false;
+                    if (res == null) {
+
+                        return;
+                    } else {
+                        Object rsp = textEditor.getResult();
+                        p.setTitanEdited(true);
+                        if (rsp instanceof String string) {
+                            titanText = string;
+                        } else {
+                            titanFile = (File) rsp;
+                        }
+                        token = textEditor.getTokenParam();
+
+                    }
                 }
-
                 if (titanFile != null) {
                     String mimeType = Util.getMimeType(titanFile.getAbsolutePath());
                     String titanUrl = "titan://" + punyURI.getHost() + port + punyURI.getPath() + token + ";size=" + titanFile.length() + ";mime=" + mimeType + query;
@@ -2145,8 +2175,8 @@ public class Alhena {
 
     }
 
-    private static void gopher(URI uri, Page p, String origURL, Page cPage, boolean gopherS) {
-
+    private static void gopher(URI uri, Page p, final String ogURL, Page cPage, boolean gopherS) {
+        String[] oURL = {ogURL};
         p.setGopher(true, gopherS);
         ProxyOptions proxyOptions = getSocksProxy(uri);
         NetClient sClient;
@@ -2196,21 +2226,50 @@ public class Alhena {
 
         if (uri.getQuery() != null) {
             gopherPath[0] = path.substring(3) + "\t" + uri.getQuery() + "\r\n";
-
         } else if (type[0] == '7') {
+            if (cPage.willFitPrompt(I18n.t("gopherDialogText"), false)) {
+                Promise<String> inputPromise = Promise.promise();
+                java.awt.SecondaryLoop loop = Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
+                String[] result = new String[1];
 
-            String query = Util.inputDialog(p.frame(), I18n.t("gopherDialog"), I18n.t("gopherDialogText"), false);
+                inputPromise.future()
+                        .onSuccess(input -> {
+                            result[0] = input;
+                            loop.exit();
+                        })
+                        .onFailure(err -> {
+                            result[0] = null;
+                            loop.exit();
+                        });
 
-            if (query == null) {
-                p.frame().setBusy(false, cPage);
-                return;
+                cPage.showInputPrompt(I18n.t("gopherDialog"), I18n.t("gopherDialogText"), false, null, null, inputPromise);
+
+                loop.enter(); // blocks here on the EDT, but events keep pumping — prompt stays interactive
+
+                String query = result[0];
+                if (query == null) {
+                    p.frame().setBusy(false, cPage);
+                    return;
+                } else {
+                    //<selector><TAB><search-text><CRLF>
+                    gopherPath[0] = path.substring(2) + "\t" + query + "\r\n";
+                    oURL[0] += "?" + Util.uEncode(query);
+                }
             } else {
-                //<selector><TAB><search-text><CRLF>
-                gopherPath[0] = path.substring(2) + "\t" + query + "\r\n";
-                origURL += "?" + Util.uEncode(query);
+                String query = Util.inputDialog(p.frame(), I18n.t("gopherDialog"), I18n.t("gopherDialogText"), false);
+
+                if (query == null) {
+                    p.frame().setBusy(false, cPage);
+                    return;
+                } else {
+                    //<selector><TAB><search-text><CRLF>
+                    gopherPath[0] = path.substring(2) + "\t" + query + "\r\n";
+                    oURL[0] += "?" + Util.uEncode(query);
+                }
             }
         }
-        String finalUrl = origURL;
+
+        String finalUrl = oURL[0];
         p.frame().setBusy(true, cPage);
 
         sClient.connect(port[0], host, connection -> {
@@ -2836,20 +2895,42 @@ public class Alhena {
                                 String reqMsg = i == 3 ? "" : saveBuffer.getString(3, i - 1);
                                 char respType = (char) saveBuffer.getByte(1);
                                 bg(() -> {
+                                    if (cPage.willFitPrompt(reqMsg, respType == '1')) {
+                                        Promise<String> inputPromise = Promise.promise();
+                                        cPage.showInputPrompt(I18n.t("serverRequestMsg"), reqMsg, respType == '1', null, null, inputPromise);
+                                        inputPromise.future().onSuccess(input -> {
+                                            if (input != null) {
+                                                String nUrl = uri.toString();
+                                                int idx = nUrl.indexOf('?');
+                                                if (idx != -1) {
+                                                    nUrl = nUrl.substring(0, idx);
+                                                }
 
-                                    String input = Util.inputDialog(p.frame(), I18n.t("serverRequestMsg"), reqMsg, respType == '1');
+                                                p.setStart();
+                                                processURL(nUrl + "?" + Util.uEncode(input), p, null, cPage, false);
+                                            } else {
+                                                cPage.textPane.resetLastClicked();
+                                            }
+                                        }).onFailure(err -> {
+                                            // user cancelled / navigated away — abort the request
+                                            cPage.textPane.resetLastClicked();
 
-                                    if (input != null) {
-                                        String nUrl = uri.toString();
-                                        int idx = nUrl.indexOf('?');
-                                        if (idx != -1) {
-                                            nUrl = nUrl.substring(0, idx);
-                                        }
-
-                                        p.setStart();
-                                        processURL(nUrl + "?" + Util.uEncode(input), p, null, cPage, false);
+                                        });
                                     } else {
-                                        cPage.textPane.resetLastClicked();
+                                        String input = Util.inputDialog(p.frame(), I18n.t("serverRequestMsg"), reqMsg, respType == '1');
+
+                                        if (input != null) {
+                                            String nUrl = uri.toString();
+                                            int idx = nUrl.indexOf('?');
+                                            if (idx != -1) {
+                                                nUrl = nUrl.substring(0, idx);
+                                            }
+
+                                            p.setStart();
+                                            processURL(nUrl + "?" + Util.uEncode(input), p, null, cPage, false);
+                                        } else {
+                                            cPage.textPane.resetLastClicked();
+                                        }
                                     }
                                 });
                             }
@@ -3187,31 +3268,67 @@ public class Alhena {
                                         p.textPane.end(content[0], false, origURL, true);
                                     });
                                 } else if (titanEdit[0]) {
+
                                     TextEditor textEditor = new TextEditor(titanSB.toString(), true, origURL);
-                                    Object[] comps = new Object[1];
-                                    comps[0] = textEditor;
-                                    p.frame().titanEditorOpen = true;
-                                    Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
-
-                                    p.frame().titanEditorOpen = false;
-                                    if (res != null) {
-                                        Object rsp = textEditor.getResult();
-                                        p.setTitanEdited(true);
-                                        String uriString = uri.toString();
-                                        if (rsp instanceof String string) {
-                                            if (!string.isBlank()) {
-                                                p.setEditedText(string);
-                                            } else {
-                                                p.setEditedText("");
-                                            }
-                                        } else {
-                                            p.setDataFile((File) rsp);
-                                        }
-                                        p.setTitanToken(textEditor.getTokenParam());
-                                        processURL(uriString.substring(0, uriString.indexOf(";edit")), p, origURL, cPage, false);
-
-                                    } else {
+                                    if (cPage.willFit(textEditor)) {
                                         p.frame().setBusy(false, cPage);
+                                        Object[] comps = new Object[1];
+                                        comps[0] = textEditor;
+                                        p.frame().titanEditorOpen = true;
+
+                                        Promise<Object> editPromise = Promise.promise();
+                                        editPromise.future().onComplete(ar -> {
+                                            p.frame().titanEditorOpen = false;
+                                            Object res = ar.succeeded() ? ar.result() : null;
+                                            if (res != null) {
+                                                p.frame().setBusy(true, cPage);
+                                                Object rsp = textEditor.getResult();
+                                                p.setTitanEdited(true);
+                                                String uriString = uri.toString();
+                                                if (rsp instanceof String string) {
+                                                    if (!string.isBlank()) {
+                                                        p.setEditedText(string);
+                                                    } else {
+                                                        p.setEditedText("");
+                                                    }
+                                                } else {
+                                                    p.setDataFile((File) rsp);
+                                                }
+                                                p.setTitanToken(textEditor.getTokenParam());
+                                                processURL(uriString.substring(0, uriString.indexOf(";edit")), p, origURL, cPage, false);
+                                            } else {
+                                                p.frame().setBusy(false, cPage);
+                                            }
+                                        });
+
+                                        cPage.showInputDialog2("Edit", comps, null, null, editPromise);
+                                    } else {
+                                        //TextEditor textEditor = new TextEditor(titanSB.toString(), true, origURL);
+                                        Object[] comps = new Object[1];
+                                        comps[0] = textEditor;
+                                        p.frame().titanEditorOpen = true;
+                                        Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
+
+                                        p.frame().titanEditorOpen = false;
+                                        if (res != null) {
+                                            Object rsp = textEditor.getResult();
+                                            p.setTitanEdited(true);
+                                            String uriString = uri.toString();
+                                            if (rsp instanceof String string) {
+                                                if (!string.isBlank()) {
+                                                    p.setEditedText(string);
+                                                } else {
+                                                    p.setEditedText("");
+                                                }
+                                            } else {
+                                                p.setDataFile((File) rsp);
+                                            }
+                                            p.setTitanToken(textEditor.getTokenParam());
+                                            processURL(uriString.substring(0, uriString.indexOf(";edit")), p, origURL, cPage, false);
+
+                                        } else {
+                                            p.frame().setBusy(false, cPage);
+                                        }
                                     }
 
                                 } else {
@@ -3675,8 +3792,6 @@ public class Alhena {
         return false; // value doesn't matter when called from type 60 (sent to bg())
     }
 
-
-
     private static String calculateFingerprint(X509Certificate cert) throws NoSuchAlgorithmException, CertificateEncodingException {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         byte[] digest = md.digest(cert.getEncoded());
@@ -3688,8 +3803,6 @@ public class Alhena {
         //return sb.toString();
 
     }
-
-
 
     private static SSLContext createSSLContext(ClientCertInfo certInfo) throws Exception {
         X509Certificate cert = (X509Certificate) loadCertificate(certInfo.cert());

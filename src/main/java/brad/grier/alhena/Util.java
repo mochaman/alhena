@@ -330,7 +330,7 @@ public class Util {
 
     }
 
-    private static void focusText(Container c) {
+    public static void focusText(Container c) {
         for (Object obj : c.getComponents()) {
             if (obj instanceof JTextComponent jtf) {
 
