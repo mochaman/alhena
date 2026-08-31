@@ -1405,7 +1405,7 @@ public class Alhena {
                         loop.exit();
                     });
 
-                    cPage.showInputDialog2("Edit", comps, null, null, editPromise);
+                    cPage.showInputDialog2(I18n.t("editLabelDialog"), comps, null, null, editPromise);
                     loop.enter(); // blocks here, EDT keeps pumping, editor stays interactive
 
                     p.frame().titanEditorOpen = false;
@@ -1425,7 +1425,7 @@ public class Alhena {
                     }
                 } else {
 
-                    Object res = Util.inputDialog2(p.frame(), "Edit", comps, null, true);
+                    Object res = Util.inputDialog2(p.frame(), I18n.t("editLabelDialog"), comps, null, true);
                     p.frame().titanEditorOpen = false;
                     if (res == null) {
 
@@ -3303,7 +3303,7 @@ public class Alhena {
                                             }
                                         });
 
-                                        cPage.showInputDialog2("Edit", comps, null, null, editPromise);
+                                        cPage.showInputDialog2(I18n.t("editLabelDialog"), comps, null, null, editPromise);
                                     } else {
                                         //TextEditor textEditor = new TextEditor(titanSB.toString(), true, origURL);
                                         Object[] comps = new Object[1];
