@@ -3151,40 +3151,12 @@ public class GeminiTextPane extends JTextPane {
                                 }
                             });
 
-                            if (page.willFit(textEditor)) {
-                                page.showInputDialog2("Edit", comps, null, null, editPromise);
+                            if (Alhena.inlinePrompts && page.willFit(textEditor)) {
+                                page.showInputDialog2(I18n.t("editLabelDialog"), comps, null, null, editPromise);
                             } else {
                                 Object res = Util.inputDialog2(f(), "Edit", comps, null, true, null);
                                 editPromise.complete(res);
                             }
-//                            TextEditor textEditor = new TextEditor("", false, docURL);
-//                            Object[] comps = new Object[1];
-//                            comps[0] = textEditor;
-//                            f().titanEditorOpen = true;
-//                            Object res = Util.inputDialog2(f(), "Edit", comps, null, true);
-//                            f().titanEditorOpen = false;
-//                            if (res != null) {
-//                                Object result = textEditor.getResult();
-//                                if (result instanceof String string) {
-//                                    f().addClickedLink(finalUrl);
-//                                    if (!string.isBlank()) {
-//
-//                                        if (isNavigator || navFlip) {
-//                                            clicked(cr1[0]);
-//                                            f().splitView(finalUrl + "?" + Util.uEncode(string), null, navSplitType, null, navFlip, null);
-//                                        } else {
-//                                            f().fetchURL(finalUrl + "?" + Util.uEncode(string), false, null);
-//                                        }
-//                                    }
-//                                } else {
-//                                    if (isNavigator || navFlip) {
-//                                        clicked(cr1[0]);
-//                                        f().splitView(finalUrl, null, navSplitType, null, navFlip, (File) result);
-//                                    } else {
-//                                        f().fetchURL(finalUrl, (File) result, false, null, null);
-//                                    }
-//                                }
-//                            }
 
                         } else if (Alhena.httpProxy == null && finalUrl.startsWith("http") && Alhena.browsingSupported && Alhena.useBrowser) {
                             // navigator for split view makes no sense in this context

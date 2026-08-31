@@ -255,6 +255,7 @@ public class Alhena {
     public static boolean emphasisMarkers;
     public static boolean emphasisWarning;
     public static boolean restoreTabs;
+    public static boolean inlinePrompts;
     public static String alhenaHome;
     public static long pageCache;
     private static boolean started;
@@ -691,6 +692,7 @@ public class Alhena {
         emphasisMarkers = map.getOrDefault("emphasismarkers", "false").equals("true");
         emphasisWarning = map.getOrDefault("emphasiswarning", "true").equals("true");
         restoreTabs = map.getOrDefault("restoretabs", "false").equals("true");
+        inlinePrompts = map.getOrDefault("inlineprompts", "true").equals("true");
         httpProxy = map.getOrDefault("httpproxy", null);
         socksProxy = map.getOrDefault("socksproxy", null);
         socksFilter = map.getOrDefault("socksfilter", "false").equals("true");
@@ -1394,7 +1396,7 @@ public class Alhena {
                 Object[] comps = new Object[1];
                 comps[0] = textEditor;
                 p.frame().titanEditorOpen = true;
-                if (cPage.willFit(textEditor)) {
+                if (inlinePrompts && cPage.willFit(textEditor)) {
                     Promise<Object> editPromise = Promise.promise();
                     SecondaryLoop loop = Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
                     Object[] resultHolder = new Object[1];
@@ -2227,7 +2229,7 @@ public class Alhena {
         if (uri.getQuery() != null) {
             gopherPath[0] = path.substring(3) + "\t" + uri.getQuery() + "\r\n";
         } else if (type[0] == '7') {
-            if (cPage.willFitPrompt(I18n.t("gopherDialogText"), false)) {
+            if (inlinePrompts && cPage.willFitPrompt(I18n.t("gopherDialogText"), false)) {
                 Promise<String> inputPromise = Promise.promise();
                 java.awt.SecondaryLoop loop = Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
                 String[] result = new String[1];
@@ -2895,7 +2897,7 @@ public class Alhena {
                                 String reqMsg = i == 3 ? "" : saveBuffer.getString(3, i - 1);
                                 char respType = (char) saveBuffer.getByte(1);
                                 bg(() -> {
-                                    if (cPage.willFitPrompt(reqMsg, respType == '1')) {
+                                    if (inlinePrompts && cPage.willFitPrompt(reqMsg, respType == '1')) {
                                         Promise<String> inputPromise = Promise.promise();
                                         cPage.showInputPrompt(I18n.t("serverRequestMsg"), reqMsg, respType == '1', null, null, inputPromise);
                                         inputPromise.future().onSuccess(input -> {
@@ -3270,7 +3272,7 @@ public class Alhena {
                                 } else if (titanEdit[0]) {
 
                                     TextEditor textEditor = new TextEditor(titanSB.toString(), true, origURL);
-                                    if (cPage.willFit(textEditor)) {
+                                    if (inlinePrompts && cPage.willFit(textEditor)) {
                                         p.frame().setBusy(false, cPage);
                                         Object[] comps = new Object[1];
                                         comps[0] = textEditor;

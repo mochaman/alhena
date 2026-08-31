@@ -1961,6 +1961,15 @@ public final class GeminiFrame extends JFrame {
             DB.insertPref("restoretabs", String.valueOf(Alhena.restoreTabs));
 
         });
+        
+        JCheckBoxMenuItem inlinePromptsItem = new JCheckBoxMenuItem(I18n.t("inlinePromptsItem"), Alhena.inlinePrompts);
+        inlinePromptsItem.addItemListener(ae -> {
+
+            Alhena.inlinePrompts = !Alhena.inlinePrompts;
+
+            DB.insertPref("inlineprompts", String.valueOf(Alhena.inlinePrompts));
+
+        });
 
         JCheckBoxMenuItem gradientItem = new JCheckBoxMenuItem(I18n.t("gradientBGItem"), Alhena.gradientBG);
         gradientItem.addItemListener(ae -> {
@@ -2070,6 +2079,7 @@ public final class GeminiFrame extends JFrame {
             Alhena.systemFileChooser = false;
         }
         settingsMenu.add(restoreItem);
+        settingsMenu.add(inlinePromptsItem);
         settingsMenu.add(new JSeparator());
         settingsMenu.add(smoothItem);
         settingsMenu.add(scrollSizeItem);

@@ -824,6 +824,7 @@ public class DB {
         Alhena.systemFileChooser = map.getOrDefault("systemchooser", "false").equals("true");
         Alhena.emphasisMarkers = map.getOrDefault("emphasismarkers", "false").equals("true");
         Alhena.restoreTabs = map.getOrDefault("restoretabs", "false").equals("true");
+        Alhena.inlinePrompts = map.getOrDefault("inlineprompts", "true").equals("true");
         Alhena.theme = map.get("theme");
         Alhena.streamVLC = map.getOrDefault("streamvlc", "false").equals("true");
         Alhena.audioVisualizer = map.getOrDefault("visualizer", "Off");
