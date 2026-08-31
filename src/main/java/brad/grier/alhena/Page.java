@@ -281,6 +281,7 @@ public class Page extends JPanel {
             promptContainer.setVisible(false);
             layeredPane.revalidate();
             layeredPane.repaint();
+            textPane.requestFocusInWindow();
 
             if (value instanceof Integer i && i == JOptionPane.OK_OPTION) {
                 String val = pswd ? new String(((JPasswordField) textField).getPassword())
@@ -381,6 +382,7 @@ public class Page extends JPanel {
             optionPane.setMessage(null); // help gc
             layeredPane.revalidate();
             layeredPane.repaint();
+            textPane.requestFocusInWindow();
 
             // return null for cancel as a shortcut
             if (options == null && value instanceof Integer val
