@@ -4994,7 +4994,7 @@ public class Alhena {
                     String finalCT = contentType;
                     String finalName = fileName;
                     boolean vlcDirect = vlcDirectTypes.stream().anyMatch(m -> finalCT.equalsIgnoreCase(m));
-
+                    boolean useMagick = magickList.stream().anyMatch(finalURL.toLowerCase()::endsWith);
                     if (contentType != null && contentType.startsWith("text/")) {
                         resp.body().onSuccess(buffer -> {
                             bg(() -> {
@@ -5016,7 +5016,7 @@ public class Alhena {
                             req.end();
                             System.out.println("connection closed");
                         });
-                    } else if (contentType != null && inlineImages && contentType.startsWith("image/")) {
+                    } else if (contentType != null && inlineImages && (contentType.startsWith("image/") || useMagick)) {
                         File file;
                         resp.pause();
                         boolean isSVG = contentType.contains("image/svg+xml");
@@ -5047,7 +5047,6 @@ public class Alhena {
                                     bg(() -> {
 
                                         GeminiTextPane tPane = cPage.textPane;
-                                        boolean useMagick = magickList.stream().anyMatch(finalURL.toLowerCase()::endsWith);
                                         try {
                                             byte[] data = Files.readAllBytes(file.toPath());
                                             file.delete();
