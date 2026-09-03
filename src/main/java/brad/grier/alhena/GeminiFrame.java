@@ -120,8 +120,10 @@ import brad.grier.alhena.DB.PageStyleInfo;
 import brad.grier.alhena.GeminiTextPane.ClickableRange;
 import brad.grier.alhena.GeminiTextPane.CurrentPage;
 import brad.grier.alhena.Util.PemData;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.awt.Toolkit;
 
 /**
  * Alhena frame
@@ -1005,13 +1007,38 @@ public final class GeminiFrame extends JFrame {
         viewMenu.add(new JSeparator());
 
         viewMenu.add(createMenuItem(I18n.t("findItem"), KeyStroke.getKeyStroke(KeyEvent.VK_F, mod), () -> {
+            if (Alhena.inlinePrompts && visiblePage().willFitPrompt(I18n.t("findDialogMsg"), false)) {
+                Promise<String> inputPromise = Promise.promise();
+                java.awt.SecondaryLoop loop = Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
+                String[] result = new String[1];
 
-            String input = Util.inputDialog(this, I18n.t("findDialog"), I18n.t("findDialogMsg"), false, "", null);
-            if (input != null) {
-                visiblePage().textPane.resetSearch();
-                lastSearch = input;
-                visiblePage().textPane.find(input, false);
+                inputPromise.future()
+                        .onSuccess(input -> {
+                            result[0] = input;
+                            loop.exit();
+                        })
+                        .onFailure(err -> {
+                            result[0] = null;
+                            loop.exit();
+                        });
 
+                visiblePage().showInputPrompt(I18n.t("findDialog"), I18n.t("findDialogMsg"), false, null, null, inputPromise);
+
+                loop.enter(); // blocks here on the EDT, but events keep pumping — prompt stays interactive
+                if (result[0] != null) {
+                    visiblePage().textPane.resetSearch();
+                    lastSearch = result[0];
+                    visiblePage().textPane.find(result[0], false);
+
+                }
+            } else {
+                String input = Util.inputDialog(this, I18n.t("findDialog"), I18n.t("findDialogMsg"), false, "", null);
+                if (input != null) {
+                    visiblePage().textPane.resetSearch();
+                    lastSearch = input;
+                    visiblePage().textPane.find(input, false);
+
+                }
             }
         }));
 
@@ -1961,7 +1988,7 @@ public final class GeminiFrame extends JFrame {
             DB.insertPref("restoretabs", String.valueOf(Alhena.restoreTabs));
 
         });
-        
+
         JCheckBoxMenuItem inlinePromptsItem = new JCheckBoxMenuItem(I18n.t("inlinePromptsItem"), Alhena.inlinePrompts);
         inlinePromptsItem.addItemListener(ae -> {
 
