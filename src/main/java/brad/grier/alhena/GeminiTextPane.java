@@ -119,6 +119,8 @@ import com.techsenger.ansi4j.core.impl.ParserFactoryProvider;
 
 import brad.grier.alhena.DB.PageStyleInfo;
 import brad.grier.alhena.DB.StyleInfo;
+import static brad.grier.alhena.Util.infoDialog;
+import static brad.grier.alhena.Util.showStyleEditor;
 import io.vertx.core.Promise;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.core.json.JsonArray;
@@ -1275,6 +1277,17 @@ public class GeminiTextPane extends JTextPane {
             });
 
             popupMenu.add(saveItem);
+
+            JMenuItem styleItem = new JMenuItem("Edit Style");
+            styleItem.addActionListener(al -> {
+                if (styleId != null) {
+                    showStyleEditor(f(), styleId);
+                } else {
+                    infoDialog(f(), I18n.t("noStyleDialog"), I18n.t("noStyleText"));
+                }
+            });
+            
+            popupMenu.add(styleItem);
 
             if (docURL.startsWith("gemini://")) {
                 JMenuItem subscribeItem = new JMenuItem(I18n.t("subscribeItem"));
