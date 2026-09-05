@@ -1278,7 +1278,7 @@ public class GeminiTextPane extends JTextPane {
 
             popupMenu.add(saveItem);
 
-            JMenuItem styleItem = new JMenuItem("Edit Style");
+            JMenuItem styleItem = new JMenuItem(I18n.t("editStyleItem"));
             styleItem.addActionListener(al -> {
                 if (styleId != null) {
                     showStyleEditor(f(), styleId);
