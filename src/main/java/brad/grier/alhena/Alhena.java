@@ -4069,7 +4069,30 @@ public class Alhena {
             case "a" -> {
                 String href = element.attr("href");
                 String origHref = href;
-                if (href.isBlank() || href.startsWith("#") || href.startsWith("javascript")) {
+
+                boolean hasUsableHref = !(href.isBlank() || href.startsWith("#") || href.startsWith("javascript"));
+                Element img = element.selectFirst("img");
+
+                // image-only link - emit the image itself, plus the page link
+                if (img != null && element.text().isBlank()) {
+                    StringBuilder sb = new StringBuilder();
+                    String src = bestImageSrc(img, host);
+                    String alt = img.attr("alt").trim();
+                    if (!src.isEmpty()) {
+                        sb.append("=> ").append(src).append(" ")
+                                .append(alt.isEmpty() ? "[image]" : alt).append("\n");
+                    }
+                    if (hasUsableHref) {
+                        int h = href.indexOf('#');
+                        String pageHref = (h != -1) ? href.substring(0, h) : href;
+                        sb.append("=> ").append(resolve(pageHref, host)).append(" ")
+                                .append(I18n.t("htmlLinkLabel")).append("\n");
+                    }
+                    yield sb.toString();
+                }
+
+                // ordinary text link (original behavior)
+                if (!hasUsableHref) {
                     yield "";
                 }
                 // strip fragment if present
@@ -4077,10 +4100,10 @@ public class Alhena {
                 if (hashIndex != -1) {
                     href = href.substring(0, hashIndex);
                 }
-
+            
                 href = resolve(href, host);
                 String elemText = element.text();
-
+                
                 if (elemText == null || elemText.isEmpty()) {
                     elemText = origHref;
                 }
@@ -4124,6 +4147,26 @@ public class Alhena {
             }
 
         };
+    }
+
+    private static String bestImageSrc(Element img, String host) {
+        String src = img.attr("src").trim();
+        if (src.isEmpty() || src.startsWith("data:")) { // lazy-load placeholders
+            for (String attr : new String[]{"data-src", "data-lazy-src", "data-original"}) {
+                String v = img.attr(attr).trim();
+                if (!v.isEmpty()) {
+                    src = v;
+                    break;
+                }
+            }
+        }
+        if (src.isEmpty()) { // fall back to srcset
+            String srcset = img.attr("srcset").trim();
+            if (!srcset.isEmpty()) {
+                src = srcset.split(",")[0].trim().split("\\s+")[0];
+            }
+        }
+        return src.isEmpty() ? "" : resolve(src, host);
     }
 
     private static boolean processBlock(StringBuilder sb, Element element, String host, String text) {
