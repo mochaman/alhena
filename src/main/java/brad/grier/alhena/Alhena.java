@@ -4100,10 +4100,10 @@ public class Alhena {
                 if (hashIndex != -1) {
                     href = href.substring(0, hashIndex);
                 }
-            
+
                 href = resolve(href, host);
                 String elemText = element.text();
-                
+
                 if (elemText == null || elemText.isEmpty()) {
                     elemText = origHref;
                 }
@@ -4295,6 +4295,9 @@ public class Alhena {
 
         if (base == null) {
             return href;
+        }
+        if (href.regionMatches(true, 0, "mailto:", 0, 7)) { // apod issue
+            return href.trim();
         }
         URI hrefUri;
         if (base.startsWith("file:")) {
