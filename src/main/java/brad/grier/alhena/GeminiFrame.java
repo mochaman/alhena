@@ -1865,9 +1865,9 @@ public final class GeminiFrame extends JFrame {
                         Alhena.hotButtonType = 1;
                         Util.infoDialog(GeminiFrame.this, I18n.t("infoLabel"), I18n.t("bmAlertkDialogTxt"));
                     }
-                    setHotButtonToolTip();
 
                 }
+                setHotButtonToolTip();
                 DB.insertPref("hotbuttontype", String.valueOf(Alhena.hotButtonType));
                 DB.insertPref("hotfolder", Alhena.hotFolder);
 
