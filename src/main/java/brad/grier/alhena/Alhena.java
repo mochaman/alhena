@@ -50,6 +50,7 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
@@ -89,6 +90,7 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
@@ -4926,6 +4928,87 @@ public class Alhena {
         }
     }
 
+    // for https certs - allow all but display cert status in status bar
+    public enum CertStatus {
+        TRUSTED, SELF_SIGNED, UNTRUSTED, HOSTNAME_MISMATCH, UNKNOWN
+    }
+
+    final class CertCheck {
+
+        private static final X509TrustManager TM = defaultTrustManager();
+
+        private static X509TrustManager defaultTrustManager() {
+            try {
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+                        TrustManagerFactory.getDefaultAlgorithm());
+                tmf.init((KeyStore) null); // JVM default cacerts
+                for (TrustManager t : tmf.getTrustManagers()) {
+                    if (t instanceof X509TrustManager x) {
+                        return x;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            return null;
+        }
+
+        static CertStatus check(List<Certificate> certs, String host) {
+            if (TM == null || certs.isEmpty()) {
+                return CertStatus.UNKNOWN;
+            }
+
+            X509Certificate[] chain = certs.stream()
+                    .map(c -> (X509Certificate) c)
+                    .toArray(X509Certificate[]::new);
+
+            String authType = "EC".equals(chain[0].getPublicKey().getAlgorithm())
+                    ? "ECDHE_ECDSA" : "ECDHE_RSA";
+            try {
+                TM.checkServerTrusted(chain, authType);
+            } catch (CertificateException e) {
+                boolean selfSigned = chain.length == 1
+                        && chain[0].getSubjectX500Principal()
+                                .equals(chain[0].getIssuerX500Principal());
+                return selfSigned ? CertStatus.SELF_SIGNED : CertStatus.UNTRUSTED;
+            }
+            return hostMatches(chain[0], host)
+                    ? CertStatus.TRUSTED : CertStatus.HOSTNAME_MISMATCH;
+        }
+
+        private static boolean hostMatches(X509Certificate cert, String host) {
+            try {
+                Collection<List<?>> sans = cert.getSubjectAlternativeNames();
+                if (sans == null) {
+                    return false;
+                }
+                boolean isIp = host.contains(":") || host.matches("[0-9.]+");
+                String h = host.toLowerCase(Locale.ROOT);
+                for (List<?> san : sans) {
+                    int type = (Integer) san.get(0);
+                    String val = (String) san.get(1);
+                    if (isIp) {
+                        if (type == 7 && val.equalsIgnoreCase(host)) {
+                            return true;
+                        }
+                    } else if (type == 2 && dnsMatches(val.toLowerCase(Locale.ROOT), h)) {
+                        return true;
+                    }
+                }
+            } catch (CertificateParsingException ignored) {
+            }
+            return false;
+        }
+
+        // wildcard only matches the single leftmost label, per RFC 6125
+        private static boolean dnsMatches(String pattern, String host) {
+            if (pattern.startsWith("*.")) {
+                int dot = host.indexOf('.');
+                return dot > 0 && host.substring(dot + 1).equals(pattern.substring(2));
+            }
+            return pattern.equals(host);
+        }
+    }
+
     // only call on EDT
     private static void handleHttp(String url, URI prevURI, Page p, Page cPage, int redirectCount) {
 
@@ -5008,7 +5091,15 @@ public class Alhena {
             req.send().onComplete(ar2 -> {
                 if (ar2.succeeded()) {
                     HttpClientResponse resp = ar2.result();
-
+                    
+                    if (isSSL) {
+                        try {
+                            List<Certificate> certs = req.connection().peerCertificates();
+                            p.setCertStatus(CertCheck.check(certs, finalURI.getHost()));
+                        } catch (SSLPeerUnverifiedException e) {
+                            p.setCertStatus(CertStatus.UNTRUSTED);
+                        }
+                    }
                     String contentType = resp.getHeader("Content-Type");
                     if (resp.statusCode() >= 300 && resp.statusCode() < 400) {
 

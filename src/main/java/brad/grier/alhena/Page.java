@@ -1,5 +1,6 @@
 package brad.grier.alhena;
 
+import brad.grier.alhena.Alhena.CertStatus;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -688,7 +689,8 @@ public class Page extends JPanel {
 
             if (protocol != null) {
                 f().setTmpStatus(elapsed + " ms " + protocol + " " + cipherSuite + " " + Util.getCAString(session));
-
+            }else if(certStatus != null){
+                f().setTmpStatus(elapsed + " ms " + certStatus);
             } else {
                 f().setTmpStatus(elapsed + " ms");
             }
@@ -819,6 +821,12 @@ public class Page extends JPanel {
         cipherSuite = session.getCipherSuite();
         this.session = session;
 
+    }
+    
+    private CertStatus certStatus;
+    
+    public void setCertStatus(CertStatus cs){
+        certStatus = cs;
     }
 
     public String getProtocol() {
